@@ -1,0 +1,78 @@
+
+
+services:
+  db:
+    image: postgres:15
+    container_name: tafakor_db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tafakor}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tafakor_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: tafakor_backend
+    command: ["/entrypoint.sh"]
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - DB_NAME=${DB_NAME:-tafakor}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-admin}
+      - DB_HOST=db
+      - DB_PORT=5432
+    volumes:
+      - static_volume:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tafakor_net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_BASE_URL=/
+    container_name: tafakor_frontend
+    ports:
+      - "${FRONTEND_PORT:-8085}:80"   # قابل تغییر از طریق متغیر محیطی FRONTEND_PORT
+    volumes:
+      - static_volume:/app/staticfiles
+    depends_on:
+      - backend
+    networks:
+      - tafakor_net
+
+  bot_runner:
+    build: ./bot_runner
+    container_name: tafakor_bot
+    environment:
+      - BALE_BOT_TOKEN=${BALE_BOT_TOKEN}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_PROXY_URL=${TELEGRAM_PROXY_URL:-}
+      - BACKEND_API_URL=http://backend:8000/api
+      - BOT_API_KEY=${BOT_API_KEY:-}
+      - ENABLE_TELEGRAM=${ENABLE_TELEGRAM:-false}
+    depends_on:
+      - backend
+    networks:
+      - tafakor_net
+
+volumes:
+  postgres_data:
+  static_volume:
+
+networks:
+  tafakor_net:
+    driver: bridge

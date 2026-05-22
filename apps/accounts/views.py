@@ -1,0 +1,133 @@
+import uuid
+
+from django.conf import settings
+from django.core.cache import cache
+from rest_framework import viewsets, status, permissions
+from rest_framework.decorators import action
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+
+from apps.accounts.services import (
+    SMSDeliveryError,
+    kavenegar_configured,
+    send_otp_sms,
+)
+
+from .models import User, BotConnectionToken
+from .serializers import (
+    ConnectTokenResponseSerializer,
+    RequestOTPSerializer,
+    UserSerializer,
+    VerifyOTPSerializer,
+)
+
+class AuthViewSet(viewsets.GenericViewSet):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = RequestOTPSerializer
+
+    # ۱ - درخواست کد
+    @action(methods=['post'], detail=False, url_path='request-otp')
+    def request_otp(self, request):
+        serializer = RequestOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone']
+
+        cache_key = f"otp_{phone}"
+        existing_otp = cache.get(cache_key)
+
+        if existing_otp:
+            if settings.DEBUG:
+                print(f"\n📱 OTP قبلاً برای {phone} ارسال شده است: {existing_otp}\n")
+            return Response(
+                {"error": "کد تأیید قبلاً ارسال شده است. لطفاً ۲ دقیقه صبر کنید."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        otp = str(uuid.uuid4().int)[:4]
+
+        sent_via_kavenegar = False
+        if kavenegar_configured():
+            # کد را قبل از ارسال پیامک در کش بگذار تا تأیید فوری بعد از دریافت SMS کار کند
+            # (در غیر این صورت تا پایان send_otp_sms کش خالی است و verify خطا می‌دهد).
+            cache.set(cache_key, otp, timeout=120)
+            if not settings.DEBUG:
+                try:
+                    send_otp_sms(phone, otp)
+                except SMSDeliveryError:
+                    cache.delete(cache_key)
+                    return Response(
+                        {
+                            "error": "ارسال پیامک با خطا مواجه شد. لطفاً چند لحظه بعد دوباره تلاش کنید.",
+                        },
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                sent_via_kavenegar = True
+            else:
+                print(f"\n📱 OTP for {phone}: {otp}\n")
+        else:
+            if not settings.DEBUG:
+                return Response(
+                    {
+                        "error": "سرویس پیامک پیکربندی نشده است.",
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            print(f"\n📱 OTP for {phone}: {otp}\n")
+            cache.set(cache_key, otp, timeout=120)
+
+        return Response({
+            "message": "کد تأیید ارسال شد.",
+            "otp": otp if settings.DEBUG and not sent_via_kavenegar else None,
+        })
+
+    # ۲ - تأیید کد و ورود
+    @action(methods=['post'], detail=False, url_path='verify-otp')
+    def verify_otp(self, request):
+        serializer = VerifyOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data['phone']
+        otp = serializer.validated_data['otp']
+
+        cache_key = f"otp_{phone}"
+        stored_otp = cache.get(cache_key)
+
+        if stored_otp is None:
+            return Response(
+                {"error": "کد تأیید منقضی شده است. لطفاً دوباره درخواست کنید."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if stored_otp != otp:
+            return Response(
+                {"error": "کد تأیید نادرست است."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        cache.delete(cache_key)
+
+        user, created = User.objects.get_or_create(phone=phone)
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response({
+            "token": token.key,
+            "user": UserSerializer(user).data
+        })
+
+    # ۳ - دریافت توکن اتصال به ربات‌ها
+    @action(methods=['get'], detail=False, url_path='connect-token',
+            permission_classes=[permissions.IsAuthenticated])
+    def connect_token(self, request):
+        platform = request.query_params.get('platform')
+        if platform not in ['telegram', 'bale']:
+            return Response({"error": "پلتفرم نامعتبر."}, status=status.HTTP_400_BAD_REQUEST)
+
+        BotConnectionToken.objects.filter(
+            user=request.user,
+            platform=platform,
+            is_used=False
+        ).update(is_used=True)
+
+        token = BotConnectionToken.objects.create(
+            user=request.user,
+            platform=platform
+        )
+        return Response(ConnectTokenResponseSerializer(token).data)

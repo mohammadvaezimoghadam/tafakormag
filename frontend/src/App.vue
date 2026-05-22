@@ -1,0 +1,31 @@
+<template>
+  <div class="font-sans antialiased text-gray-900 bg-gray-50 min-h-screen relative max-w-md mx-auto shadow-xl">
+    <template v-if="showLayout">
+      <AppHeader @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+      <SidebarDrawer :open="sidebarOpen" @close="sidebarOpen = false" />
+    </template>
+    
+    <!-- محتوای صفحات -->
+    <main :class="showLayout ? 'pt-14 pb-20 px-4' : 'px-4'">
+      <router-view />
+    </main>
+    
+    <!-- نویگیشن بار پایین -->
+    <BottomNav v-if="showLayout" />
+    
+    <BaseToast />
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import AppHeader from './components/layout/AppHeader.vue'
+import SidebarDrawer from './components/layout/SidebarDrawer.vue'
+import BaseToast from './components/ui/BaseToast.vue'
+import BottomNav from './components/layout/BottomNav.vue'
+
+const route = useRoute()
+const showLayout = computed(() => route.name !== 'login')
+const sidebarOpen = ref(false)
+</script>
