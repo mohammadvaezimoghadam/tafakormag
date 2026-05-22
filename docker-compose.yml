@@ -31,6 +31,9 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-admin}
       - DB_HOST=db
       - DB_PORT=5432
+      - KAVENEGAR_API_KEY=${KAVENEGAR_API_KEY:-}
+      - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
+      - BOT_API_KEY=${BOT_API_KEY:-}
     volumes:
       - static_volume:/app/staticfiles
     depends_on:
