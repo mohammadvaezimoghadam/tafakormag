@@ -116,5 +116,22 @@ class APIClient:
             logger.error(f"get_user_id_by_chat failed: {e}")
             raise
 
+    async def register_phone_chat(self, platform: str, phone: str, chat_id: int) -> dict:
+        """همگام‌سازی شماره تلفن و شناسه چت پیام‌رسان در مدل کاربر"""
+        url = f"{BACKEND_API_URL}/bot/register-phone-chat/"
+        payload = {
+            "platform": platform,
+            "phone": phone,
+            "chat_id": str(chat_id)
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            logger.info(f"register_phone_chat success for phone={phone}, chat_id={chat_id}")
+            return resp.json()
+        except Exception as e:
+            logger.error(f"register_phone_chat failed for phone={phone}: {e}")
+            raise
+
     async def close(self):
         await self.client.aclose()

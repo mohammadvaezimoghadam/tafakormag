@@ -143,3 +143,31 @@ def user_by_chat(request):
         )
 
     return Response({"user_id": user.id})
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([IsBotService])
+def register_phone_chat(request):
+    phone = request.data.get("phone")
+    platform = request.data.get("platform")
+    chat_id = request.data.get("chat_id")
+
+    if not phone or not _valid_platform(platform) or chat_id in (None, ""):
+        return Response(
+            {"error": "phone, platform and chat_id are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    phone = str(phone).strip()
+    if phone.startswith("+98"):
+        phone = "0" + phone[3:]
+    elif phone.startswith("98"):
+        phone = "0" + phone[2:]
+
+    user, created = User.objects.get_or_create(phone=phone)
+    field = f"{platform}_chat_id"
+    setattr(user, field, str(chat_id))
+    user.save()
+
+    return Response({"success": True, "created": created})

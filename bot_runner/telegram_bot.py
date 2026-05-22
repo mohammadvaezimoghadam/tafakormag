@@ -16,6 +16,7 @@ from telegram.error import TelegramError
 from config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_PROXY_URL,
+    TELEGRAM_API_URL,
     POLL_INTERVAL
 )
 from api_client import APIClient
@@ -34,6 +35,25 @@ def get_main_keyboard():
         [KeyboardButton("❓ راهنما")],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+
+def get_start_keyboard():
+    """ساخت منوی ثبت‌نام/شروع برای کاربرانی که هنوز متصل نشده‌اند"""
+    keyboard = [
+        [KeyboardButton("📱 ثبت شماره موبایل برای دریافت کد ورود", request_contact=True)],
+        [KeyboardButton("❓ راهنما")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+
+async def is_user_linked(chat_id: int) -> bool:
+    """بررسی اینکه آیا چت کاربر متصل به حسابی در تفکر است یا خیر"""
+    try:
+        user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
+        return bool(user_id)
+    except Exception:
+        return False
+
 
 WELCOME_TEXT = (
     "🧠 به ربات تفکر خوش آمدید!\n\n"
@@ -189,17 +209,32 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        WELCOME_TEXT,
-        reply_markup=get_main_keyboard()
-    )
+    chat_id = update.effective_chat.id
+    if await is_user_linked(chat_id):
+        await update.message.reply_text(
+            WELCOME_TEXT,
+            reply_markup=get_main_keyboard()
+        )
+    else:
+        await update.message.reply_text(
+            "🧠 *به ربات تفکر خوش آمدید!*\n\n"
+            "برای دریافت آسان و سریع کد تایید ورود در همین ربات، لطفاً با کلیک بر روی دکمه زیر شماره موبایل خود را به اشتراک بگذارید یا توکن اتصال از اپلیکیشن را ارسال کنید.",
+            parse_mode="Markdown",
+            reply_markup=get_start_keyboard()
+        )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if await is_user_linked(chat_id):
+        reply_markup = get_main_keyboard()
+    else:
+        reply_markup = get_start_keyboard()
+
     await update.message.reply_text(
         HELP_TEXT,
         parse_mode="Markdown",
-        reply_markup=get_main_keyboard()
+        reply_markup=reply_markup
     )
 
 
@@ -225,13 +260,58 @@ async def handle_token(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         logger.info(f"User {update.effective_user.id} connected")
     except Exception as e:
+        linked = await is_user_linked(chat_id)
+        reply_markup = get_main_keyboard() if linked else get_start_keyboard()
         await context.bot.send_message(
             chat_id,
             "❌ *توکن نامعتبر یا منقضی شده است*\n\n"
             "لطفاً دوباره از اپلیکیشن تفکر توکن جدید دریافت کنید و آن را ارسال نمایید.",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=reply_markup
         )
         logger.warning(f"Connection failed: {e}")
+
+
+async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """دریافت شماره موبایل از طریق اشتراک‌گذاری مخاطب (Contact)"""
+    contact = update.message.contact
+    chat_id = update.effective_chat.id
+    user = update.effective_user
+
+    if not contact:
+        return
+
+    # بررسی امنیت: آیا مخاطب ارسال شده متعلق به خود فرستنده است؟
+    if contact.user_id and contact.user_id != user.id:
+        await update.message.reply_text(
+            "⚠️ خطا: لطفاً فقط شماره موبایل خود را به اشتراک بگذارید (از دکمه ثبت شماره موبایل استفاده کنید).",
+            reply_markup=get_start_keyboard()
+        )
+        return
+
+    phone = contact.phone_number.strip()
+
+    try:
+        # همگام‌سازی شماره تلفن با بک‌اند
+        await api_client.register_phone_chat("telegram", phone, chat_id)
+
+        await update.message.reply_text(
+            f"✅ *شماره موبایل شما با موفقیت ثبت شد!*\n\n"
+            f"📱 شماره ثبت شده: `{phone}`\n\n"
+            f"از این پس می‌توانید برای دریافت سریع کد ورود به اپلیکیشن تفکر، "
+            f"از این ربات استفاده کنید. کدهای تأیید مستقیماً همین‌جا برای شما ارسال خواهند شد.",
+            parse_mode="Markdown",
+            reply_markup=get_main_keyboard()
+        )
+        logger.info(f"Phone registered via Telegram contact sharing for user {user.id}: {phone}")
+    except Exception as e:
+        await update.message.reply_text(
+            "❌ خطا در ثبت شماره موبایل.\n"
+            "لطفاً مطمئن شوید شماره به درستی ارسال شده یا بعداً تلاش کنید.",
+            reply_markup=get_start_keyboard()
+        )
+        logger.error(f"Contact registration failed: {e}")
+
 
 
 async def handle_menu_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -308,6 +388,11 @@ async def run():
 
     builder = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN)
 
+    # Apply custom Telegram API base URL (Bypass Relay) if configured
+    if TELEGRAM_API_URL and TELEGRAM_API_URL != "https://api.telegram.org/bot":
+        builder.base_url(TELEGRAM_API_URL)
+        logger.info(f"Using custom Telegram API URL (Bypass Relay): {TELEGRAM_API_URL}")
+
     if TELEGRAM_PROXY_URL:
         proxy_client = httpx.AsyncClient(proxy=TELEGRAM_PROXY_URL)
         builder.http_client(proxy_client)
@@ -320,6 +405,9 @@ async def run():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("register", register_chat))
     app.add_handler(CommandHandler("destinations", destinations_menu))
+
+    # Contact sharing handler (must be registered before generic text/token handler)
+    app.add_handler(MessageHandler(filters.CONTACT, handle_contact))
 
     # Callback query handler (for inline buttons)
     app.add_handler(CallbackQueryHandler(button_callback))

@@ -14,6 +14,11 @@ urlpatterns = [
         name="bot-register-destination",
     ),
     path(
+        "register-phone-chat/",
+        accounts_bot_views.register_phone_chat,
+        name="bot-register-phone-chat",
+    ),
+    path(
         "destinations/",
         accounts_bot_views.list_destinations,
         name="bot-list-destinations",

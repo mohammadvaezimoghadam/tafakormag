@@ -6,16 +6,17 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt || \
     (echo "Primary PyPI registry failed/unreachable. Falling back to devneeds mirror..." && \
      pip install --no-cache-dir -r requirements.txt --index-url https://pypi.devneeds.ir/simple/)
 
-COPY . .
+COPY backend/ .
+COPY otp_dispatcher/ /app/otp_dispatcher/
 
 RUN python manage.py collectstatic --noinput
 
-COPY entrypoint.sh /entrypoint.sh
+COPY backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

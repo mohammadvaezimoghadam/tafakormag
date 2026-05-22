@@ -3,10 +3,15 @@ Django settings for note_platform project.
 """
 
 import os
+import sys
 from pathlib import Path
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add project root and backend folder to PYTHONPATH dynamically
+sys.path.insert(0, str(BASE_DIR.parent))
+sys.path.insert(0, str(BASE_DIR))
 
 # ==============================================================================
 # امنیت
@@ -51,6 +56,7 @@ REST_FRAMEWORK = {
 # توکن‌های ربات‌ها و کلیدهای API
 # ==============================================================================
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', config('TELEGRAM_BOT_TOKEN', default=''))
+TELEGRAM_API_URL = os.getenv('TELEGRAM_API_URL', config('TELEGRAM_API_URL', default='https://api.telegram.org/bot'))
 BALE_BOT_TOKEN = os.getenv('BALE_BOT_TOKEN', config('BALE_BOT_TOKEN', default=''))
 BOT_API_KEY = os.getenv('BOT_API_KEY', config('BOT_API_KEY', default=''))
 KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY', config('KAVENEGAR_API_KEY', default=''))

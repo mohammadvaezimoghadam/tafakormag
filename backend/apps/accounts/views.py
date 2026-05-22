@@ -7,12 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 
-from apps.accounts.services import (
-    SMSDeliveryError,
-    kavenegar_configured,
-    send_otp_sms,
-)
-
+from otp_dispatcher.dispatcher import send_otp, OTPDeliveryError
 from .models import User, BotConnectionToken
 from .serializers import (
     ConnectTokenResponseSerializer,
@@ -45,35 +40,15 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         otp = str(uuid.uuid4().int)[:4]
 
-        sent_via_kavenegar = False
-        if kavenegar_configured():
-            # کد را قبل از ارسال پیامک در کش بگذار تا تأیید فوری بعد از دریافت SMS کار کند
-            # (در غیر این صورت تا پایان send_otp_sms کش خالی است و verify خطا می‌دهد).
+        try:
+            channel = send_otp(phone, otp)
             cache.set(cache_key, otp, timeout=120)
-            if not settings.DEBUG:
-                try:
-                    send_otp_sms(phone, otp)
-                except SMSDeliveryError:
-                    cache.delete(cache_key)
-                    return Response(
-                        {
-                            "error": "ارسال پیامک با خطا مواجه شد. لطفاً چند لحظه بعد دوباره تلاش کنید.",
-                        },
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    )
-                sent_via_kavenegar = True
-            else:
-                print(f"\n📱 OTP for {phone}: {otp}\n")
-        else:
-            if not settings.DEBUG:
-                return Response(
-                    {
-                        "error": "سرویس پیامک پیکربندی نشده است.",
-                    },
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-            print(f"\n📱 OTP for {phone}: {otp}\n")
-            cache.set(cache_key, otp, timeout=120)
+            sent_via_kavenegar = (channel == "sms")
+        except OTPDeliveryError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         return Response({
             "message": "کد تأیید ارسال شد.",

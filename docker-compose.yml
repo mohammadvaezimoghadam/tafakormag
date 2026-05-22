@@ -19,7 +19,9 @@ services:
       retries: 5
 
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: tafakor_backend
     command: ["/entrypoint.sh"]
     environment:
@@ -34,6 +36,7 @@ services:
       - KAVENEGAR_API_KEY=${KAVENEGAR_API_KEY:-}
       - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
       - BOT_API_KEY=${BOT_API_KEY:-}
+      - TELEGRAM_API_URL=${TELEGRAM_API_URL:-https://api.telegram.org/bot}
     volumes:
       - static_volume:/app/staticfiles
     depends_on:
@@ -67,8 +70,22 @@ services:
       - BACKEND_API_URL=http://backend:8000/api
       - BOT_API_KEY=${BOT_API_KEY:-}
       - ENABLE_TELEGRAM=${ENABLE_TELEGRAM:-false}
+      - TELEGRAM_API_URL=${TELEGRAM_API_URL:-https://api.telegram.org/bot}
     depends_on:
       - backend
+    networks:
+      - tafakor_net
+
+  telegram_proxy:
+    build: ./telegram_proxy
+    container_name: tafakor_telegram_proxy
+    environment:
+      - GAS_URL=${GAS_URL}
+      - RELAY_TOKEN=${RELAY_TOKEN}
+      - PROXY_PORT=8080
+      - PROXY_HOST=0.0.0.0
+    profiles:
+      - proxy
     networks:
       - tafakor_net
 
