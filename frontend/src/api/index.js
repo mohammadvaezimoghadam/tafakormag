@@ -3,7 +3,8 @@ import { toastState } from '../store/toastState'
 
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 10000
 })
 
 // Request interceptor: attach token
