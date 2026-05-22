@@ -38,8 +38,9 @@ const handleSubmit = async () => {
   error.value = ''
   loading.value = true
   try {
-    await requestOtp(phone.value)
-    emit('otp-sent', phone.value)
+    const res = await requestOtp(phone.value)
+    const channel = res.data?.channel || 'sms'
+    emit('otp-sent', { phone: phone.value, channel })
   } catch (err) {
     error.value = 'خطا در ارسال کد'
   } finally {

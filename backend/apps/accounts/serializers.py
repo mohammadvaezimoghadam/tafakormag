@@ -30,6 +30,7 @@ class RequestOTPSerializer(serializers.Serializer):
             'invalid': IRAN_MOBILE_ERROR
         }
     )
+    force_sms = serializers.BooleanField(required=False, default=False)
 
 
 class VerifyOTPSerializer(serializers.Serializer):

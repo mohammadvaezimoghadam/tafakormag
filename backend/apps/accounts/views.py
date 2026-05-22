@@ -26,11 +26,13 @@ class AuthViewSet(viewsets.GenericViewSet):
         serializer = RequestOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         phone = serializer.validated_data['phone']
+        force_sms = serializer.validated_data.get('force_sms', False)
 
         cache_key = f"otp_{phone}"
         existing_otp = cache.get(cache_key)
 
-        if existing_otp:
+        # در صورتی که درخواست پیامک اجباری باشد (bypass limit)، برای راحتی کاربر زمان‌بندی کش مجدد را نادیده می‌گیریم یا تایید می‌کنیم
+        if existing_otp and not force_sms:
             if settings.DEBUG:
                 print(f"\n📱 OTP قبلاً برای {phone} ارسال شده است: {existing_otp}\n")
             return Response(
@@ -41,7 +43,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         otp = str(uuid.uuid4().int)[:4]
 
         try:
-            channel = send_otp(phone, otp)
+            channel = send_otp(phone, otp, force_sms=force_sms)
             cache.set(cache_key, otp, timeout=120)
             sent_via_kavenegar = (channel == "sms")
         except OTPDeliveryError as e:
@@ -52,6 +54,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         return Response({
             "message": "کد تأیید ارسال شد.",
+            "channel": channel,
             "otp": otp if settings.DEBUG and not sent_via_kavenegar else None,
         })
 

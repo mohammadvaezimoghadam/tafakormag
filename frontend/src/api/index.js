@@ -46,7 +46,7 @@ instance.interceptors.response.use(
 )
 
 // API functions
-export const requestOtp = (phone) => instance.post('/api/auth/request-otp/', { phone })
+export const requestOtp = (phone, forceSms = false) => instance.post('/api/auth/request-otp/', { phone, force_sms: forceSms })
 
 export const verifyOtp = (phone, otp) => instance.post('/api/auth/verify-otp/', { phone, otp })
 

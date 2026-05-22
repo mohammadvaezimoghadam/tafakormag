@@ -37,6 +37,8 @@ services:
       - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
       - BOT_API_KEY=${BOT_API_KEY:-}
       - TELEGRAM_API_URL=${TELEGRAM_API_URL:-https://api.telegram.org/bot}
+      - BALE_BOT_TOKEN=${BALE_BOT_TOKEN}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     volumes:
       - static_volume:/app/staticfiles
     depends_on:

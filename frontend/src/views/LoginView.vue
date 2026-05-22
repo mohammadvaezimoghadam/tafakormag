@@ -13,6 +13,7 @@
         <OtpForm
           v-else
           :phone="phone"
+          :channel="sentChannel"
           @back="step = 'phone'"
         />
       </Transition>
@@ -27,9 +28,11 @@ import OtpForm from '../components/auth/OtpForm.vue'
 
 const step = ref('phone')
 const phone = ref('')
+const sentChannel = ref('sms')
 
-const onOtpSent = (phoneValue) => {
-  phone.value = phoneValue
+const onOtpSent = (data) => {
+  phone.value = data.phone
+  sentChannel.value = data.channel
   step.value = 'otp'
 }
 </script>
