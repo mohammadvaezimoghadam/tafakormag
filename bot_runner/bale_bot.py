@@ -31,6 +31,7 @@ def get_main_keyboard():
     keyboard = [
         [KeyboardButton("📋 کانال‌ها و گروه‌های من")],
         [KeyboardButton("🔗 اتصال گروه/کانال جدید")],
+        [KeyboardButton("📱 ثبت/بروزرسانی شماره موبایل", request_contact=True)],
         [KeyboardButton("❓ راهنما")],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -39,7 +40,7 @@ def get_main_keyboard():
 def get_start_keyboard():
     """ساخت منوی ثبت‌نام/شروع برای کاربرانی که هنوز متصل نشده‌اند"""
     keyboard = [
-        [KeyboardButton("📱 ثبت شماره موبایل برای دریافت کد ورود", request_contact=True)],
+        [KeyboardButton("📱 ثبت شماره موبایل", request_contact=True)],
         [KeyboardButton("❓ راهنما")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
