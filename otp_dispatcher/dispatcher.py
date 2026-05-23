@@ -33,7 +33,7 @@ def send_otp(phone: str, otp: str, force_sms: bool = False) -> str:
         if user and user.bale_chat_id:
             bale_token = (getattr(settings, "BALE_BOT_TOKEN", None) or "").strip()
             if bale_token:
-                url = f"https://api.bale.ai/bot{bale_token}/sendMessage"
+                url = f"https://tapi.bale.ai/bot{bale_token}/sendMessage"
                 text = f"به تفکر خوش آمدید، بفرمایید کد ورود : {otp}"
                 try:
                     res = requests.post(url, json={
@@ -59,9 +59,15 @@ def send_otp(phone: str, otp: str, force_sms: bool = False) -> str:
                 proxies = {"https": proxy_url} if proxy_url else None
 
                 telegram_api_url = (getattr(settings, "TELEGRAM_API_URL", None) or "https://api.telegram.org/bot").strip()
-                if not telegram_api_url.endswith("/"):
-                    telegram_api_url += "/"
-                url = f"{telegram_api_url}{telegram_token}/sendMessage"
+                if telegram_api_url.endswith("/bot/"):
+                    telegram_api_url = telegram_api_url[:-1]
+                
+                if telegram_api_url.endswith("/bot"):
+                    url = f"{telegram_api_url}{telegram_token}/sendMessage"
+                else:
+                    if not telegram_api_url.endswith("/"):
+                        telegram_api_url += "/"
+                    url = f"{telegram_api_url}bot{telegram_token}/sendMessage"
                 text = f"به تفکر خوش آمدید، بفرمایید کد ورود : {otp}"
                 try:
                     res = requests.post(url, json={
