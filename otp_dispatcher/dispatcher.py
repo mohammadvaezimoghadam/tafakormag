@@ -23,6 +23,11 @@ def send_otp(phone: str, otp: str, force_sms: bool = False) -> str:
     """
     user = User.objects.filter(phone=phone).first()
 
+    # چاپ لاگ‌های دیباگ برای رهگیری دقیق در سرور
+    logger.info(f"[OTP DEBUG] Requested Phone: '{phone}', User exists: {bool(user)}")
+    if user:
+        logger.info(f"[OTP DEBUG] User in DB -> Phone: '{user.phone}', Telegram Chat ID: '{user.telegram_chat_id}', Bale Chat ID: '{user.bale_chat_id}'")
+
     if not force_sms:
         # ۱. تلاش برای ارسال از طریق پیام‌رسان بله
         if user and user.bale_chat_id:
@@ -47,6 +52,7 @@ def send_otp(phone: str, otp: str, force_sms: bool = False) -> str:
         # ۲. تلاش برای ارسال از طریق پیام‌رسان تلگرام
         if user and user.telegram_chat_id:
             telegram_token = (getattr(settings, "TELEGRAM_BOT_TOKEN", None) or "").strip()
+            logger.info(f"[OTP DEBUG] Telegram Bot Token present in settings: {bool(telegram_token)}")
             if telegram_token:
                 # بررسی پروکسی تلگرام
                 proxy_url = (getattr(settings, "TELEGRAM_PROXY_URL", None) or "").strip()
