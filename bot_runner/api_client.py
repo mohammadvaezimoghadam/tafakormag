@@ -103,6 +103,24 @@ class APIClient:
             logger.error(f"set_default_destination failed: {e}")
             return False
 
+    async def delete_destination(
+        self, user_id: int, platform: str, destination_id: int
+    ) -> bool:
+        url = f"{BACKEND_API_URL}/bot/delete-destination/"
+        payload = {
+            "user_id": user_id,
+            "platform": platform,
+            "destination_id": destination_id,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            logger.info(f"Destination {destination_id} deleted for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"delete_destination failed: {e}")
+            return False
+
     async def get_user_id_by_chat(self, platform: str, chat_id: int) -> int:
         """دریافت user_id از روی chat_id (برای ثبت مقصد)"""
         url = f"{BACKEND_API_URL}/bot/user-by-chat/"
@@ -132,6 +150,19 @@ class APIClient:
         except Exception as e:
             logger.error(f"register_phone_chat failed for phone={phone}: {e}")
             raise
+
+    async def get_active_custom_bots(self) -> list:
+        url = f"{BACKEND_API_URL}/auth/active-tokens/"
+        headers = {}
+        if BOT_API_KEY.strip():
+            headers["X-Bot-Service-Key"] = BOT_API_KEY.strip()
+        try:
+            resp = await self.client.get(url, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"get_active_custom_bots failed: {e}")
+            return []
 
     async def close(self):
         await self.client.aclose()

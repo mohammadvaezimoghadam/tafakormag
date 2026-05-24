@@ -6,18 +6,31 @@ IRAN_MOBILE_REGEX = r'^09\d{9}$'
 IRAN_MOBILE_ERROR = 'شماره موبایل باید به صورت 09123456789 باشد'
 
 class UserSerializer(serializers.ModelSerializer):
-    is_telegram_connected = serializers.SerializerMethodField()
-    is_bale_connected = serializers.SerializerMethodField()
+    is_telegram_bot_connected = serializers.SerializerMethodField()
+    is_bale_bot_connected = serializers.SerializerMethodField()
+    is_telegram_otp_connected = serializers.SerializerMethodField()
+    is_bale_otp_connected = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['phone', 'is_telegram_connected', 'is_bale_connected']
-        read_only_fields = ['phone', 'is_telegram_connected', 'is_bale_connected']
+        fields = [
+            'phone', 
+            'is_telegram_bot_connected', 'telegram_bot_username',
+            'is_bale_bot_connected', 'bale_bot_username',
+            'is_telegram_otp_connected', 'is_bale_otp_connected'
+        ]
+        read_only_fields = fields
 
-    def get_is_telegram_connected(self, obj):
+    def get_is_telegram_bot_connected(self, obj):
+        return bool(obj.telegram_bot_token)
+
+    def get_is_bale_bot_connected(self, obj):
+        return bool(obj.bale_bot_token)
+
+    def get_is_telegram_otp_connected(self, obj):
         return bool(obj.telegram_chat_id)
 
-    def get_is_bale_connected(self, obj):
+    def get_is_bale_otp_connected(self, obj):
         return bool(obj.bale_chat_id)
 
 

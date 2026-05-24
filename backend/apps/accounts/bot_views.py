@@ -116,8 +116,54 @@ def set_default_destination(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
+    # اول وضعیت پیش‌فرض همه مقاصد دیگر کاربر روی این پلتفرم غیرفعال شود
+    MessagingTarget.objects.filter(
+        user_id=user_id,
+        platform=platform,
+    ).update(is_default=False)
+
     target.is_default = True
     target.save()
+    return Response({"success": True})
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([IsBotService])
+def delete_destination(request):
+    user_id = request.data.get("user_id")
+    platform = request.data.get("platform")
+    destination_id = request.data.get("destination_id")
+
+    if not user_id or not _valid_platform(platform) or not destination_id:
+        return Response(
+            {"error": "user_id, platform and destination_id are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    target = MessagingTarget.objects.filter(
+        pk=destination_id,
+        user_id=user_id,
+        platform=platform,
+    ).first()
+    if target is None:
+        return Response(
+            {"error": "Destination not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    was_default = target.is_default
+    target.delete()
+
+    # اگر مقصد حذف شده پیش‌فرض بود، مقصد بعدی (در صورت وجود) پیش‌فرض شود
+    if was_default:
+        next_target = MessagingTarget.objects.filter(
+            user_id=user_id, platform=platform
+        ).first()
+        if next_target:
+            next_target.is_default = True
+            next_target.save()
+
     return Response({"success": True})
 
 

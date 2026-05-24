@@ -1,56 +1,189 @@
 <template>
-  <div class="p-4 bg-white rounded-2xl shadow-sm border space-y-3">
+  <div class="p-5 bg-white rounded-2xl shadow-sm border border-gray-100 space-y-4 transition-all duration-300 hover:shadow-md">
+    <!-- بخش سربرگ کامپوننت -->
     <div class="flex items-center justify-between">
-      <span class="font-medium text-gray-800 capitalize">{{ platform }}</span>
-      <span v-if="connected" class="text-emerald-500 text-sm flex items-center gap-1">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-        متصل
-      </span>
-      <BaseButton
-        v-else
-        @click="getToken"
-        :loading="loading"
-        variant="outline"
-        size="sm"
+      <div class="flex items-center gap-2">
+        <span v-if="platform === 'telegram'" class="text-2xl">✈️</span>
+        <span v-else class="text-2xl">💬</span>
+        <span class="font-bold text-gray-800 capitalize text-lg">
+          ربات اختصاصی {{ platform === 'telegram' ? 'تلگرام' : 'بله' }}
+        </span>
+      </div>
+
+      <!-- چیپس تلویند نمایش وضعیت اتصال زنده -->
+      <span
+        v-if="connected && !isEditing"
+        class="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full flex items-center gap-1.5 animate-fade-in"
       >
-        دریافت توکن
-      </BaseButton>
+        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        {{ botUsername || 'متصل' }}
+      </span>
+      <span
+        v-else-if="!connected"
+        class="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold rounded-full flex items-center gap-1.5"
+      >
+        <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+        نامتصل
+      </span>
     </div>
-    <div v-if="token" class="p-3 bg-gray-50 rounded-xl text-sm text-gray-700 break-all border">
-      {{ token }}
-      <button @click="copyToken" class="block mt-2 text-indigo-600 text-xs hover:text-indigo-800">
-        کپی توکن
-      </button>
-    </div>
+
+    <!-- راهنمای ساخت ربات اختصاصی -->
+    <p class="text-sm text-gray-500 leading-relaxed" v-if="!connected || isEditing">
+      برای انتشار خودکار یادداشت‌ها، ابتدا در BotFather پیام‌رسان {{ platform === 'telegram' ? 'تلگرام' : 'بله' }} یک ربات اختصاصی بسازید و توکن API آن را در کادر زیر وارد کنید.
+    </p>
+
+    <!-- لایه فرم اتصال یا ویرایش توکن -->
+    <Transition name="fade" mode="out-in">
+      <div v-if="!connected || isEditing" class="space-y-3" :key="'form'">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold text-gray-500">توکن API ربات اختصاصی:</label>
+          <input
+            v-model="token"
+            type="text"
+            placeholder="مثال: 123456:ABC-DEF1234ghIkl-zyx"
+            class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+            :disabled="loading"
+          />
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <BaseButton
+            @click="handleSave"
+            :loading="loading"
+            variant="primary"
+            size="sm"
+            class="flex-1"
+            :disabled="!token.trim()"
+          >
+            {{ isEditing ? 'ذخیره تغییرات' : 'ثبت و اتصال ربات' }}
+          </BaseButton>
+          
+          <BaseButton
+            v-if="isEditing"
+            @click="cancelEdit"
+            variant="outline"
+            size="sm"
+            :disabled="loading"
+          >
+            انصراف
+          </BaseButton>
+        </div>
+      </div>
+
+      <!-- لایه نمایش وضعیت متصل -->
+      <div v-else class="space-y-3" :key="'status'">
+        <div class="p-3 bg-gray-50 rounded-xl text-sm border border-gray-100 flex flex-col gap-1">
+          <div class="flex justify-between items-center text-xs text-gray-400">
+            <span>آدرس ربات شما:</span>
+            <a 
+              :href="platform === 'telegram' ? `https://t.me/${botUsername?.replace('@','')}` : `https://ble.ir/${botUsername?.replace('@','')}`" 
+              target="_blank" 
+              class="text-indigo-600 hover:underline font-semibold"
+            >
+              باز کردن چت ربات ↗
+            </a>
+          </div>
+          <span class="font-mono text-gray-700 font-semibold break-all text-center py-1.5">
+            {{ botUsername }}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- دکمه ویرایش مستقیم توکن -->
+          <BaseButton
+            @click="isEditing = true"
+            variant="outline"
+            size="sm"
+            class="flex-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          >
+            🔧 ویرایش توکن
+          </BaseButton>
+
+          <!-- دکمه قطع اتصال ربات -->
+          <BaseButton
+            @click="handleDisconnect"
+            :loading="disconnectLoading"
+            variant="danger"
+            size="sm"
+            class="flex-1"
+          >
+            🔌 قطع اتصال ربات
+          </BaseButton>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import BaseButton from '../ui/BaseButton.vue'
-import { getConnectToken } from '../../api'
+import { updateCustomBot } from '../../api'
+import { useToast } from '../../composables/useToast'
 
 const props = defineProps({
   platform: { type: String, required: true },
-  connected: { type: Boolean, default: false }
+  connected: { type: Boolean, default: false },
+  botUsername: { type: String, default: '' }
 })
 
+const emit = defineEmits(['updated'])
+
+const { showToast } = useToast()
 const token = ref('')
 const loading = ref(false)
+const disconnectLoading = ref(false)
+const isEditing = ref(false)
 
-const getToken = async () => {
+const handleSave = async () => {
+  if (!token.value.trim()) return
   loading.value = true
   try {
-    const res = await getConnectToken(props.platform)
-    token.value = res.data.token
+    const res = await updateCustomBot(props.platform, token.value.trim())
+    if (res.data?.success) {
+      showToast(res.data.message || 'ربات اختصاصی با موفقیت متصل شد.', 'success')
+      token.value = ''
+      isEditing.value = false
+      emit('updated')
+    }
   } catch (err) {
-    // error handled by interceptor
+    // خطا توسط اینترسپتور نمایش داده می‌شود
   } finally {
     loading.value = false
   }
 }
 
-const copyToken = () => {
-  navigator.clipboard.writeText(token.value)
+const handleDisconnect = async () => {
+  if (!window.confirm(`آیا مطمئن هستید که می‌خواهید ربات اختصاصی ${props.platform === 'telegram' ? 'تلگرام' : 'بله'} را قطع اتصال کنید؟`)) return
+  disconnectLoading.value = true
+  try {
+    const res = await updateCustomBot(props.platform, '')
+    if (res.data?.success) {
+      showToast('ربات اختصاصی با موفقیت قطع اتصال شد.', 'success')
+      isEditing.value = false
+      emit('updated')
+    }
+  } catch (err) {
+    // خطا توسط اینترسپتور مدیریت می‌شود
+  } finally {
+    disconnectLoading.value = false
+  }
+}
+
+const cancelEdit = () => {
+  token.value = ''
+  isEditing.value = false
 }
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+</style>

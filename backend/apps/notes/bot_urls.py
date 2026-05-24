@@ -29,6 +29,11 @@ urlpatterns = [
         name="bot-set-default-destination",
     ),
     path(
+        "delete-destination/",
+        accounts_bot_views.delete_destination,
+        name="bot-delete-destination",
+    ),
+    path(
         "user-by-chat/",
         accounts_bot_views.user_by_chat,
         name="bot-user-by-chat",

@@ -35,6 +35,9 @@ COPY . .
 ARG VITE_API_BASE_URL=/
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
+ARG VITE_BALE_OTP_BOT_URL=https://ble.ir/tafakor_otp_bot
+ENV VITE_BALE_OTP_BOT_URL=$VITE_BALE_OTP_BOT_URL
+
 RUN npm run build
 
 # ============================================

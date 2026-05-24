@@ -7,6 +7,9 @@
       placeholder="۰۹xxxxxxxxx"
       :error="error"
       maxlength="11"
+      inputmode="numeric"
+      class="text-center font-semibold tracking-wider text-base"
+      :disabled="loading"
     />
     <BaseButton
       type="submit"
@@ -14,7 +17,7 @@
       :disabled="!isPhoneValid"
       :loading="loading"
     >
-      ارسال کد تأیید
+      ارسال کد تأیید ورود
     </BaseButton>
   </form>
 </template>
@@ -24,14 +27,16 @@ import { ref, computed } from 'vue'
 import BaseInput from '../ui/BaseInput.vue'
 import BaseButton from '../ui/BaseButton.vue'
 import { requestOtp } from '../../api'
+import { useToast } from '../../composables/useToast'
 
 const emit = defineEmits(['otp-sent'])
+const { showToast } = useToast()
 
 const phone = ref('')
 const loading = ref(false)
 const error = ref('')
 
-const isPhoneValid = computed(() => phone.value.length === 11 && /^\d+$/.test(phone.value))
+const isPhoneValid = computed(() => phone.value.length === 11 && /^09\d{9}$/.test(phone.value))
 
 const handleSubmit = async () => {
   if (!isPhoneValid.value) return
@@ -42,7 +47,9 @@ const handleSubmit = async () => {
     const channel = res.data?.channel || 'sms'
     emit('otp-sent', { phone: phone.value, channel })
   } catch (err) {
-    error.value = 'خطا در ارسال کد'
+    // خطا در ارسال پیامک: کاربر را باز هم به فرم بعد می‌بریم تا بتواند از بله استفاده کند
+    showToast('سامانه پیامکی با اختلال مواجه شد. در مرحله بعد می‌توانید کد را از ربات بله دریافت کنید.', 'error')
+    emit('otp-sent', { phone: phone.value, channel: 'sms' })
   } finally {
     loading.value = false
   }

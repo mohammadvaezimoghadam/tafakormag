@@ -12,7 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt || \
      pip install --no-cache-dir -r requirements.txt --index-url https://pypi.devneeds.ir/simple/)
 
 COPY backend/ .
-COPY otp_dispatcher/ /app/otp_dispatcher/
 
 RUN python manage.py collectstatic --noinput
 

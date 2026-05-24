@@ -52,6 +52,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
             msg_id = getattr(note, f"{platform}_message_id")
             chat_id = get_chat_id_for_platform(note, platform)
             if msg_id and chat_id:
+                bot_token = note.user.telegram_bot_token if platform == "telegram" else note.user.bale_bot_token
                 BotTask.objects.create(
                     action="delete",
                     platform=platform,
@@ -59,6 +60,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
                     text="",
                     message_id=str(msg_id),
                     note_id=note.id,
+                    bot_token=bot_token,
                 )
         return
 
@@ -73,6 +75,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
         old_send = getattr(old_instance, send_field, False) if old_instance else False
         new_send = getattr(note, send_field)
         old_msg_id = getattr(old_instance, msg_field, None) if old_instance else None
+        bot_token = note.user.telegram_bot_token if platform == "telegram" else note.user.bale_bot_token
 
         if old_instance is None:
             if new_send:
@@ -83,6 +86,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
                     text=_note_markdown_text(note),
                     message_id=None,
                     note_id=note.id,
+                    bot_token=bot_token,
                 )
             continue
 
@@ -94,6 +98,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
                 text="",
                 message_id=str(old_msg_id),
                 note_id=note.id,
+                bot_token=bot_token,
             )
         elif not old_send and new_send:
             BotTask.objects.create(
@@ -103,6 +108,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
                 text=_note_markdown_text(note),
                 message_id=None,
                 note_id=note.id,
+                bot_token=bot_token,
             )
         elif old_send and new_send:
             if old_msg_id:
@@ -114,6 +120,7 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
                         text=_note_markdown_text(note),
                         message_id=str(old_msg_id),
                         note_id=note.id,
+                        bot_token=bot_token,
                     )
             else:
                 BotTask.objects.create(
@@ -123,4 +130,5 @@ def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_dele
                     text=_note_markdown_text(note),
                     message_id=None,
                     note_id=note.id,
+                    bot_token=bot_token,
                 )

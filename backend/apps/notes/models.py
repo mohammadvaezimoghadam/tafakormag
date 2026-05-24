@@ -42,6 +42,7 @@ class BotTask(models.Model):
     text = models.TextField(blank=True)
     message_id = models.CharField(max_length=100, null=True, blank=True)
     note_id = models.BigIntegerField(null=True, blank=True)
+    bot_token = models.CharField(max_length=255, null=True, blank=True)
     processed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

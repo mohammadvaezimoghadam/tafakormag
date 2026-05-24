@@ -62,4 +62,8 @@ export const deleteNote = (id) => instance.delete(`/api/notes/${id}/`)
 
 export const getConnectToken = (platform) => instance.get('/api/auth/connect-token/', { params: { platform } })
 
+export const updateCustomBot = (platform, token) => instance.post('/api/auth/update-custom-bot/', { platform, token })
+
+export const fetchProfile = () => instance.get('/api/auth/profile/')
+
 export default instance

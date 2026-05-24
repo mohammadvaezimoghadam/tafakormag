@@ -59,8 +59,20 @@ def verify_link(request):
 @permission_classes([IsBotService])
 def fetch_tasks(request):
     tasks = BotTask.objects.filter(processed=False).order_by("created_at")
-    data = [
-        {
+    data = []
+    for t in tasks:
+        bot_token = t.bot_token
+        if not bot_token and t.note_id:
+            try:
+                note = Note.objects.select_related('user').get(pk=t.note_id)
+                if t.platform == "telegram":
+                    bot_token = note.user.telegram_bot_token
+                elif t.platform == "bale":
+                    bot_token = note.user.bale_bot_token
+            except Note.DoesNotExist:
+                pass
+
+        data.append({
             "id": t.id,
             "action": t.action,
             "platform": t.platform,
@@ -68,9 +80,8 @@ def fetch_tasks(request):
             "text": t.text,
             "message_id": t.message_id or None,
             "note_id": t.note_id,
-        }
-        for t in tasks
-    ]
+            "bot_token": bot_token,
+        })
     return Response(data)
 
 

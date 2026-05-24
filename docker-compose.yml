@@ -23,7 +23,8 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
     container_name: tafakor_backend
-    command: ["/entrypoint.sh"]
+    entrypoint: []
+    command: ["sh", "-c", "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py createcachetable && gunicorn note_platform.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
     environment:
       - DEBUG=False
       - SECRET_KEY=${SECRET_KEY}
@@ -52,6 +53,7 @@ services:
       context: ./frontend
       args:
         - VITE_API_BASE_URL=/
+        - VITE_BALE_OTP_BOT_URL=${VITE_BALE_OTP_BOT_URL:-https://ble.ir/tafakor_otp_bot}
     container_name: tafakor_frontend
     ports:
       - "${FRONTEND_PORT:-8085}:80"   # قابل تغییر از طریق متغیر محیطی FRONTEND_PORT
@@ -75,6 +77,29 @@ services:
       - TELEGRAM_API_URL=${TELEGRAM_API_URL:-https://api.telegram.org/bot}
     depends_on:
       - backend
+    networks:
+      - tafakor_net
+
+  bale_otp_bot:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: tafakor_bale_otp_bot
+    entrypoint: []
+    command: ["python", "otp/bale_bot.py"]
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_NAME=${DB_NAME:-tafakor}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-admin}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - BALE_OTP_BOT_TOKEN=${BALE_OTP_BOT_TOKEN:-}
+      - BALE_BOT_TOKEN=${BALE_BOT_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - tafakor_net
 

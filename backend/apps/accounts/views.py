@@ -7,7 +7,9 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 
-from otp_dispatcher.dispatcher import send_otp, OTPDeliveryError
+import requests
+from django.db.models import Q
+from otp.dispatcher import send_sms_otp, OTPDeliveryError
 from .models import User, BotConnectionToken
 from .serializers import (
     ConnectTokenResponseSerializer,
@@ -43,7 +45,8 @@ class AuthViewSet(viewsets.GenericViewSet):
         otp = str(uuid.uuid4().int)[:4]
 
         try:
-            channel = send_otp(phone, otp, force_sms=force_sms)
+            # منحصراً تلاش برای ارسال پیامک
+            channel = send_sms_otp(phone, otp)
             cache.set(cache_key, otp, timeout=120)
             sent_via_kavenegar = (channel == "sms")
         except OTPDeliveryError as e:
@@ -90,7 +93,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             "user": UserSerializer(user).data
         })
 
-    # ۳ - دریافت توکن اتصال به ربات‌ها
+    # ۳ - دریافت توکن اتصال به ربات‌ها (برای ربات عمومی OTP بله)
     @action(methods=['get'], detail=False, url_path='connect-token',
             permission_classes=[permissions.IsAuthenticated])
     def connect_token(self, request):
@@ -109,3 +112,90 @@ class AuthViewSet(viewsets.GenericViewSet):
             platform=platform
         )
         return Response(ConnectTokenResponseSerializer(token).data)
+
+    # ۴ - به‌روزرسانی ربات اختصاصی کاربر
+    @action(methods=['post'], detail=False, url_path='update-custom-bot',
+            permission_classes=[permissions.IsAuthenticated])
+    def update_custom_bot(self, request):
+        platform = request.data.get('platform')
+        token = request.data.get('token', '').strip()
+        
+        if platform not in ['telegram', 'bale']:
+            return Response({"error": "پلتفرم نامعتبر."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not token:
+            # در صورتی که کاربر بخواهد توکن را حذف کند (قطع اتصال)
+            if platform == 'telegram':
+                request.user.telegram_bot_token = None
+                request.user.telegram_bot_username = None
+            else:
+                request.user.bale_bot_token = None
+                request.user.bale_bot_username = None
+            request.user.save()
+            return Response({"success": True, "message": "ربات با موفقیت حذف شد."})
+
+        # اعتبارسنجی توکن از طریق متد getMe پیام‌رسان مربوطه
+        try:
+            if platform == 'telegram':
+                url = f"https://api.telegram.org/bot{token}/getMe"
+            else:
+                url = f"https://tapi.bale.ai/bot{token}/getMe"
+                
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                bot_data = res.json().get('result', {})
+                username = f"@{bot_data.get('username')}"
+                
+                if platform == 'telegram':
+                    request.user.telegram_bot_token = token
+                    request.user.telegram_bot_username = username
+                else:
+                    request.user.bale_bot_token = token
+                    request.user.bale_bot_username = username
+                
+                request.user.save()
+                return Response({
+                    "success": True, 
+                    "username": username,
+                    "message": "ربات با موفقیت متصل و ثبت شد."
+                })
+            else:
+                return Response({"error": "توکن نامعتبر است. لطفاً توکن دریافتی از BotFather را بررسی کنید."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({"error": "خطا در برقراری ارتباط با سرور پیام‌رسان."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # ۵ - دریافت لیست ربات‌های اختصاصی فعال (برای ربات‌رانر)
+    @action(methods=['get'], detail=False, url_path='active-tokens')
+    def active_tokens(self, request):
+        # بررسی کلید امنیتی بات
+        api_key = request.headers.get("X-Bot-Service-Key")
+        if not api_key or api_key != settings.BOT_API_KEY:
+            return Response({"error": "غیر مجاز"}, status=status.HTTP_403_FORBIDDEN)
+            
+        # فیلتر کردن کاربرانی که حداقل یکی از توکن‌ها را پر کرده‌اند
+        users = User.objects.filter(
+            Q(telegram_bot_token__isnull=False) | Q(bale_bot_token__isnull=False)
+        )
+        data = []
+        for u in users:
+            if u.telegram_bot_token:
+                data.append({
+                    "user_id": u.id,
+                    "phone": u.phone,
+                    "platform": "telegram",
+                    "token": u.telegram_bot_token
+                })
+            if u.bale_bot_token:
+                data.append({
+                    "user_id": u.id,
+                    "phone": u.phone,
+                    "platform": "bale",
+                    "token": u.bale_bot_token
+                })
+        return Response(data)
+
+    # ۶ - دریافت اطلاعات پروفایل جاری کاربر
+    @action(methods=['get'], detail=False, url_path='profile',
+            permission_classes=[permissions.IsAuthenticated])
+    def profile(self, request):
+        return Response(UserSerializer(request.user).data)
