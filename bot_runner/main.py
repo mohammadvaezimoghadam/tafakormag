@@ -114,7 +114,7 @@ async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Auto-registration failed: {e}")
 
 async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش لیست مقاصد متصل با قابلیت حذف و پیش‌فرض کردن"""
+    """نمایش لیست مقاصد متصل با قابلیت فعال/غیرفعال‌سازی و حذف کامل"""
     chat = update.effective_chat
     user_id = context.bot_data.get("user_id")
     platform = context.bot_data.get("platform")
@@ -134,20 +134,22 @@ async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_T
         dest_id = dest["id"]
         label = dest["label"]
         chat_id = dest["chat_id"]
-        is_default = dest.get("is_default", False)
+        is_active = dest.get("is_active", True)
         
-        default_status = "⭐ [پیش‌فرض]" if is_default else "◽ [معمولی]"
+        status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
         
         text = (
             f"📢 *نام:* {label}\n"
             f"🆔 *شناسه:* `{chat_id}`\n"
-            f"📊 *وضعیت:* {default_status}"
+            f"📊 *وضعیت:* {status_text}"
         )
         
         # ساخت دکمه‌های شیشه‌ای (Inline Keyboard)
         buttons = []
-        if not is_default:
-            buttons.append(InlineKeyboardButton("⭐ پیش‌فرض", callback_data=f"default_{dest_id}"))
+        if is_active:
+            buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
+        else:
+            buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
         buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
         
         reply_markup = InlineKeyboardMarkup([buttons])
@@ -166,17 +168,40 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = context.bot_data.get("user_id")
     platform = context.bot_data.get("platform")
     
-    if data.startswith("default_"):
+    if data.startswith("toggle_"):
         dest_id = int(data.split("_")[1])
-        success = await api_client.set_default_destination(user_id, platform, dest_id)
-        if success:
-            await query.edit_message_text(
-                text=query.message.text + "\n\n✅ با موفقیت به عنوان پیش‌فرض انتخاب شد."
-            )
+        result = await api_client.toggle_active_destination(user_id, platform, dest_id)
+        if result and result.get("success"):
+            is_active = result.get("is_active", False)
+            status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
+            
+            orig_text = query.message.text
+            lines = orig_text.split("\n")
+            new_lines = []
+            for line in lines:
+                if "📊 وضعیت:" in line or "وضعیت:" in line:
+                    new_lines.append(f"📊 وضعیت: {status_text}")
+                else:
+                    new_lines.append(line)
+            new_text = "\n".join(new_lines)
+            
+            buttons = []
+            if is_active:
+                buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
+            else:
+                buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
+            buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
+            
+            reply_markup = InlineKeyboardMarkup([buttons])
+            try:
+                await query.edit_message_text(
+                    text=new_text,
+                    reply_markup=reply_markup
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit message in callback: {e}")
         else:
-            await query.edit_message_text(
-                text=query.message.text + "\n\n❌ خطا در تنظیم پیش‌فرض."
-            )
+            await query.answer("❌ خطا در تغییر وضعیت مقصد.", show_alert=True)
             
     elif data.startswith("delete_"):
         dest_id = int(data.split("_")[1])
@@ -186,9 +211,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
                 text=query.message.text + "\n\n❌ این مقصد با موفقیت حذف شد."
             )
         else:
-            await query.edit_message_text(
-                text=query.message.text + "\n\n❌ خطا در حذف مقصد."
-            )
+            await query.answer("❌ خطا در حذف مقصد.", show_alert=True)
 
 async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat

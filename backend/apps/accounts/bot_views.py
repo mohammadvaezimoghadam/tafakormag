@@ -59,6 +59,7 @@ def register_destination(request):
             "chat_id": target.chat_id,
             "label": target.label,
             "is_default": target.is_default,
+            "is_active": target.is_active,
         },
         status=status.HTTP_201_CREATED,
     )
@@ -84,6 +85,7 @@ def list_destinations(request):
             "chat_id": t.chat_id,
             "label": t.label,
             "is_default": t.is_default,
+            "is_active": t.is_active,
             "created_at": t.created_at.isoformat(),
         }
         for t in targets
@@ -217,3 +219,33 @@ def register_phone_chat(request):
     user.save()
 
     return Response({"success": True, "created": created})
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([IsBotService])
+def toggle_active_destination(request):
+    user_id = request.data.get("user_id")
+    platform = request.data.get("platform")
+    destination_id = request.data.get("destination_id")
+
+    if not user_id or not _valid_platform(platform) or not destination_id:
+        return Response(
+            {"error": "user_id, platform and destination_id are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    target = MessagingTarget.objects.filter(
+        pk=destination_id,
+        user_id=user_id,
+        platform=platform,
+    ).first()
+    if target is None:
+        return Response(
+            {"error": "Destination not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    target.is_active = not target.is_active
+    target.save()
+    return Response({"success": True, "is_active": target.is_active})

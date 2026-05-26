@@ -81,6 +81,7 @@ class MessagingTarget(models.Model):
     chat_id = models.CharField(max_length=100)
     label = models.CharField(max_length=255)
     is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

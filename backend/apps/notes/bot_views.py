@@ -8,6 +8,7 @@ from apps.accounts.models import BotConnectionToken, User
 
 from .bot_permissions import IsBotService
 from .models import BotTask, Note
+from .services import get_message_ids, set_message_ids
 
 
 @api_view(["POST"])
@@ -102,10 +103,20 @@ def complete_task(request, task_id):
     task.save()
 
     if task.note_id and task.platform in ("telegram", "bale"):
-        field = f"{task.platform}_message_id"
-        if task.action == "send" and task.message_id:
-            Note.objects.filter(id=task.note_id).update(**{field: task.message_id})
-        elif task.action == "delete":
-            Note.objects.filter(id=task.note_id).update(**{field: None})
+        try:
+            note = Note.objects.get(id=task.note_id)
+            if task.action == "send" and task.message_id:
+                msg_ids = get_message_ids(note, task.platform)
+                msg_ids[str(task.chat_id)] = str(task.message_id)
+                set_message_ids(note, task.platform, msg_ids)
+            elif task.action == "delete":
+                msg_ids = get_message_ids(note, task.platform)
+                if str(task.chat_id) in msg_ids:
+                    del msg_ids[str(task.chat_id)]
+                elif "default" in msg_ids:
+                    del msg_ids["default"]
+                set_message_ids(note, task.platform, msg_ids)
+        except Note.DoesNotExist:
+            pass
 
     return Response({"success": True})

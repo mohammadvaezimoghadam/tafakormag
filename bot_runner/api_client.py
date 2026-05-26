@@ -151,6 +151,24 @@ class APIClient:
             logger.error(f"register_phone_chat failed for phone={phone}: {e}")
             raise
 
+    async def toggle_active_destination(
+        self, user_id: int, platform: str, destination_id: int
+    ) -> dict:
+        url = f"{BACKEND_API_URL}/bot/toggle-active-destination/"
+        payload = {
+            "user_id": user_id,
+            "platform": platform,
+            "destination_id": destination_id,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            logger.info(f"Active status toggled for destination {destination_id}")
+            return resp.json()
+        except Exception as e:
+            logger.error(f"toggle_active_destination failed: {e}")
+            return {}
+
     async def get_active_custom_bots(self) -> list:
         url = f"{BACKEND_API_URL}/auth/active-tokens/"
         headers = {}

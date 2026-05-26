@@ -50,6 +50,7 @@ class Migration(migrations.Migration):
                     models.CharField(blank=True, max_length=100, null=True),
                 ),
                 ("note_id", models.BigIntegerField(blank=True, null=True)),
+                ("bot_token", models.CharField(blank=True, max_length=255, null=True)),
                 ("processed", models.BooleanField(default=False)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],

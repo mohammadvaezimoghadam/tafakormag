@@ -137,7 +137,7 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def destinations_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش منوی مدیریت مقصدها با دکمه‌های inline"""
+    """نمایش لیست مقاصد متصل با قابلیت فعال/غیرفعال‌سازی و حذف کامل"""
     chat_id = update.effective_chat.id
     try:
         user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
@@ -152,31 +152,36 @@ async def destinations_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        keyboard = []
-        for dest in destinations:
-            label = dest.get("label", "بدون نام")
-            dest_id = dest["id"]
-            is_default = dest.get("is_default", False)
-            prefix = "✅ " if is_default else "⬜ "
-            keyboard.append([
-                InlineKeyboardButton(
-                    f"{prefix}{label}",
-                    callback_data=f"setdef_{dest_id}"
-                )
-            ])
-        keyboard.append([
-            InlineKeyboardButton("➕ راهنمای ثبت جدید", callback_data="how_to_register")
-        ])
+        await update.message.reply_text("📋 *لیست مقاصد متصل شده به تفکر:*")
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "📌 *مقصدهای ثبت‌شده شما:*\n\n"
-            "برای انتخاب مقصد پیش‌فرض، روی نام آن کلیک کنید.\n"
-            "✅ = مقصد پیش‌فرض فعلی\n"
-            "⬜ = سایر مقصدها",
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
+        for dest in destinations:
+            dest_id = dest["id"]
+            label = dest.get("label", "بدون نام")
+            chat_num_id = dest["chat_id"]
+            is_active = dest.get("is_active", True)
+
+            status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
+
+            text = (
+                f"📢 *نام:* {label}\n"
+                f"🆔 *شناسه:* `{chat_num_id}`\n"
+                f"📊 *وضعیت:* {status_text}"
+            )
+
+            buttons = []
+            if is_active:
+                buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
+            else:
+                buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
+            buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
+
+            reply_markup = InlineKeyboardMarkup([buttons])
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                parse_mode="Markdown",
+                reply_markup=reply_markup
+            )
     except Exception as e:
         await update.message.reply_text(
             "❌ خطا در دریافت مقصدها.\n"
@@ -196,17 +201,57 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             HOW_TO_REGISTER_TEXT,
             parse_mode="Markdown"
         )
-    elif data.startswith("setdef_"):
+    elif data.startswith("toggle_"):
         try:
             dest_id = int(data.split("_")[1])
             user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
-            if await api_client.set_default_destination(user_id, "telegram", dest_id):
-                await query.edit_message_text("✅ مقصد پیش‌فرض با موفقیت تغییر کرد.")
+            result = await api_client.toggle_active_destination(user_id, "telegram", dest_id)
+            if result and result.get("success"):
+                is_active = result.get("is_active", False)
+                status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
+
+                orig_text = query.message.text
+                lines = orig_text.split("\n")
+                new_lines = []
+                for line in lines:
+                    if "📊 وضعیت:" in line or "وضعیت:" in line:
+                        new_lines.append(f"📊 وضعیت: {status_text}")
+                    else:
+                        new_lines.append(line)
+                new_text = "\n".join(new_lines)
+
+                buttons = []
+                if is_active:
+                    buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
+                else:
+                    buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
+                buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
+
+                reply_markup = InlineKeyboardMarkup([buttons])
+                await query.edit_message_text(
+                    text=new_text,
+                    reply_markup=reply_markup
+                )
             else:
-                await query.edit_message_text("❌ خطا در تغییر مقصد پیش‌فرض. لطفاً دوباره تلاش کنید.")
+                await query.answer("❌ خطا در تغییر وضعیت مقصد.", show_alert=True)
         except Exception as e:
-            await query.edit_message_text("❌ مشکلی پیش آمد، دوباره تلاش کنید.")
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
             logger.error(f"button_callback error: {e}")
+
+    elif data.startswith("delete_"):
+        try:
+            dest_id = int(data.split("_")[1])
+            user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
+            success = await api_client.delete_destination(user_id, "telegram", dest_id)
+            if success:
+                await query.edit_message_text(
+                    text=query.message.text + "\n\n❌ این مقصد با موفقیت حذف شد."
+                )
+            else:
+                await query.answer("❌ خطا در حذف مقصد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback delete error: {e}")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
