@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6 pt-4 max-w-md mx-auto text-right">
+  <div class="space-y-6 pt-4 px-4 max-w-md mx-auto text-right">
     <!-- تب‌های شیک پروفایل -->
     <div class="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
       <button
@@ -70,9 +70,20 @@
             @click="handleSaveProfile"
             :loading="savingProfile"
             variant="primary"
-            class="w-full rounded-2xl py-3 font-extrabold shadow-md mt-2"
+            class="shadow-md mt-2"
           >
             ذخیره اطلاعات کاربری
+          </BaseButton>
+        </div>
+
+        <!-- دکمه خروج در انتهای صفحه -->
+        <div class="pt-4 border-t border-gray-150">
+          <BaseButton
+            variant="danger"
+            @click="handleLogout"
+            class="shadow"
+          >
+            🚪 خروج از حساب کاربری
           </BaseButton>
         </div>
       </div>
@@ -93,66 +104,10 @@
           @updated="loadProfile"
         />
 
-        <!-- بخش کد اتصال برای ربات‌ها -->
-        <div class="p-5 bg-white rounded-2xl shadow-sm border border-gray-100 space-y-4 text-right">
-          <h3 class="text-xs font-black text-gray-800 border-b border-gray-50 pb-2 mb-1 flex items-center justify-between">
-            <span>🔗 اتصال حساب کاربری به ربات</span>
-          </h3>
-          <p class="text-[11px] text-gray-400 leading-relaxed">
-            جهت اتصال امن حساب کاربری خود به ربات‌ها (بدون نیاز به اشتراک‌گذاری مخاطب)، توکن اتصال خود را دریافت نموده و آن را به پی‌وی ربات مربوطه بفرستید.
-          </p>
-          
-          <div class="flex flex-col gap-2">
-            <div class="flex gap-2">
-              <BaseButton
-                @click="generateConnectToken('telegram')"
-                :loading="loadingTgToken"
-                variant="outline"
-                size="sm"
-                class="flex-1 text-[10px]"
-              >
-                دریافت توکن تلگرام
-              </BaseButton>
-              <BaseButton
-                @click="generateConnectToken('bale')"
-                :loading="loadingBaleToken"
-                variant="outline"
-                size="sm"
-                class="flex-1 text-[10px]"
-              >
-                دریافت توکن بله
-              </BaseButton>
-            </div>
-            
-            <Transition name="fade">
-              <div v-if="connectionToken" class="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-2">
-                <div class="flex justify-between items-center text-[10px] text-gray-400">
-                  <span>توکن موقت شما (اعتبار ۱۰ دقیقه):</span>
-                  <button @click="copyToken" class="text-indigo-600 hover:underline font-bold">کپی کردن</button>
-                </div>
-                <span class="font-mono text-center font-bold text-gray-700 break-all select-all text-xs bg-white py-2 px-3 rounded-lg border border-gray-150">
-                  {{ connectionToken }}
-                </span>
-                <p class="text-[10px] text-amber-600 text-center">
-                  ⚠️ این توکن را کپی کرده و به پی‌وی ربات {{ tokenPlatform === 'telegram' ? 'تلگرام' : 'بله' }} بفرستید.
-                </p>
-              </div>
-            </Transition>
-          </div>
-        </div>
+
       </div>
     </Transition>
 
-    <!-- دکمه خروج در انتهای صفحه -->
-    <div class="pt-4 border-t border-gray-150">
-      <BaseButton
-        variant="danger"
-        @click="handleLogout"
-        class="w-full rounded-2xl py-3 font-extrabold shadow"
-      >
-        🚪 خروج از حساب کاربری
-      </BaseButton>
-    </div>
   </div>
 </template>
 
@@ -163,14 +118,14 @@ import { useAuth } from '../composables/useAuth'
 import PlatformConnect from '../components/profile/PlatformConnect.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseInput from '../components/ui/BaseInput.vue'
-import { fetchProfile, updateProfile, getConnectToken } from '../api'
+import { fetchProfile, updateProfile } from '../api'
 import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const { logout } = useAuth()
 const { showToast } = useToast()
 
-const activeTab = ref('connections')
+const activeTab = ref('account')
 
 const profile = ref({
   phone: '',
@@ -193,16 +148,28 @@ const profileImagePreview = ref('')
 const savingProfile = ref(false)
 
 const currentProfileImageUrl = computed(() => {
-  if (!profile.value.profile_image) return ''
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-  if (profile.value.profile_image.startsWith('http://') || profile.value.profile_image.startsWith('https://')) {
-    return profile.value.profile_image
+  let url = profile.value.profile_image
+  if (!url) return ''
+  const mediaIdx = url.indexOf('/media/')
+  if (mediaIdx !== -1) {
+    url = url.slice(mediaIdx)
   }
+  const staticIdx = url.indexOf('/static/')
+  if (staticIdx !== -1) {
+    url = url.slice(staticIdx)
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  if (url.startsWith('//')) {
+    url = url.slice(1)
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   if (apiBase === '/') {
-    return profile.value.profile_image
+    return url
   }
   const base = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase
-  const path = profile.value.profile_image.startsWith('/') ? profile.value.profile_image : '/' + profile.value.profile_image
+  const path = url.startsWith('/') ? url : '/' + url
   return `${base}${path}`
 })
 
@@ -259,33 +226,7 @@ const handleLogout = () => {
   router.push({ name: 'login' })
 }
 
-const loadingTgToken = ref(false)
-const loadingBaleToken = ref(false)
-const connectionToken = ref('')
-const tokenPlatform = ref('')
 
-const generateConnectToken = async (platform) => {
-  if (platform === 'telegram') loadingTgToken.value = true
-  else loadingBaleToken.value = true
-  
-  try {
-    const res = await getConnectToken(platform)
-    connectionToken.value = res.data.token
-    tokenPlatform.value = platform
-    showToast('توکن با موفقیت ایجاد شد', 'success')
-  } catch (err) {
-    showToast('خطا در دریافت توکن', 'error')
-  } finally {
-    loadingTgToken.value = false
-    loadingBaleToken.value = false
-  }
-}
-
-const copyToken = () => {
-  if (!connectionToken.value) return
-  navigator.clipboard.writeText(connectionToken.value)
-  showToast('توکن در کلیپ‌بورد کپی شد', 'success')
-}
 
 onMounted(() => {
   loadProfile()

@@ -2,6 +2,7 @@ import os
 import asyncio
 import httpx
 import logging
+from urllib.parse import urlparse, urlunparse
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -360,6 +361,29 @@ async def dynamic_bot_manager():
             
         await asyncio.sleep(20)
 
+def get_internal_media_url(media_url: str) -> str:
+    if not media_url:
+        return ""
+    try:
+        parsed = urlparse(media_url)
+        # Reconstruct url using the internal docker host and port for backend service
+        new_netloc = "backend:8000"
+        return urlunparse((parsed.scheme, new_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+    except Exception as e:
+        logger.error(f"Error parsing media url {media_url}: {e}")
+        return media_url
+
+async def download_file(http_client: httpx.AsyncClient, url: str) -> bytes | None:
+    try:
+        res = await http_client.get(url)
+        if res.status_code == 200:
+            return res.content
+        else:
+            logger.error(f"Failed to download file from {url}: status={res.status_code}")
+    except Exception as e:
+        logger.error(f"Exception downloading file from {url}: {e}")
+    return None
+
 # ---------- پردازشگر داینامیک صف یادداشت‌ها (Dynamic Note Publisher) ----------
 
 async def task_processor():
@@ -397,27 +421,75 @@ async def task_processor():
                         msg_id = message_id
                         
                         if action == "send":
-                            if media_type == "image" and media_url:
-                                url = f"{base_url}{bot_token}/sendPhoto"
-                                payload = {"chat_id": chat_id, "photo": media_url, "caption": text, "parse_mode": "Markdown"}
-                            elif media_type == "video" and media_url:
-                                url = f"{base_url}{bot_token}/sendVideo"
-                                payload = {"chat_id": chat_id, "video": media_url, "caption": text, "parse_mode": "Markdown"}
-                            elif media_type == "audio" and media_url:
-                                # بله و تلگرام متد ارسال موزیک/صدا دارند
-                                method = "sendAudio" if platform == "telegram" else "sendAudio"
-                                url = f"{base_url}{bot_token}/{method}"
-                                payload = {"chat_id": chat_id, "audio": media_url, "caption": text, "parse_mode": "Markdown"}
+                            if media_type in ("image", "video", "audio") and media_url:
+                                internal_url = get_internal_media_url(media_url)
+                                file_content = await download_file(http_client, internal_url)
+                                if file_content:
+                                    filename = media_url.split("/")[-1]
+                                    
+                                    # نگاشت صحیح نوع مدیا به فیلد مورد انتظار API تلگرام/بله
+                                    file_field_name = "photo" if media_type == "image" else media_type
+                                    
+                                    # تشخیص خودکار MIME type فایل ارسالی
+                                    import mimetypes
+                                    mime_type, _ = mimetypes.guess_type(filename)
+                                    if not mime_type:
+                                        if media_type == "image":
+                                            mime_type = "image/jpeg"
+                                        elif media_type == "video":
+                                            mime_type = "video/mp4"
+                                        elif media_type == "audio":
+                                            mime_type = "audio/mpeg"
+                                        else:
+                                            mime_type = "application/octet-stream"
+                                            
+                                    files = {file_field_name: (filename, file_content, mime_type)}
+                                    data = {"chat_id": chat_id, "parse_mode": "Markdown"}
+                                    if text:
+                                        data["caption"] = text
+                                    
+                                    if media_type == "image":
+                                        url = f"{base_url}{bot_token}/sendPhoto"
+                                    elif media_type == "video":
+                                        url = f"{base_url}{bot_token}/sendVideo"
+                                    elif media_type == "audio":
+                                        method = "sendAudio" if platform == "telegram" else "sendAudio"
+                                        url = f"{base_url}{bot_token}/{method}"
+                                    
+                                    res = await http_client.post(url, data=data, files=files)
+                                    if res.status_code == 200:
+                                        success = True
+                                        msg_id = str(res.json().get("result", {}).get("message_id", ""))
+                                    else:
+                                        logger.error(f"send media failed for task {tid}: {res.text}")
+                                        if res.status_code in (400, 403, 404):
+                                            logger.warning(f"Non-recoverable error for send media task {tid}. Completing to avoid queue blockage.")
+                                            success = True
+                                else:
+                                    # Fallback: if file couldn't be downloaded, send as text-only
+                                    logger.warning(f"Could not download media for task {tid}, falling back to text-only send")
+                                    url = f"{base_url}{bot_token}/sendMessage"
+                                    payload = {"chat_id": chat_id, "text": text or "[فایل یافت نشد]", "parse_mode": "Markdown"}
+                                    res = await http_client.post(url, json=payload)
+                                    if res.status_code == 200:
+                                        success = True
+                                        msg_id = str(res.json().get("result", {}).get("message_id", ""))
+                                    else:
+                                        logger.error(f"fallback send failed for task {tid}: {res.text}")
+                                        if res.status_code in (400, 403, 404):
+                                            success = True
                             else:
                                 url = f"{base_url}{bot_token}/sendMessage"
                                 payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
-
-                            res = await http_client.post(url, json=payload)
-                            if res.status_code == 200:
-                                success = True
-                                msg_id = str(res.json().get("result", {}).get("message_id", ""))
-                            else:
-                                logger.error(f"send failed for task {tid}: {res.text}")
+                                res = await http_client.post(url, json=payload)
+                                if res.status_code == 200:
+                                    success = True
+                                    msg_id = str(res.json().get("result", {}).get("message_id", ""))
+                                else:
+                                    logger.error(f"send failed for task {tid}: {res.text}")
+                                    if res.status_code in (400, 403, 404):
+                                        logger.warning(f"Non-recoverable error for send task {tid}. Completing to avoid queue blockage.")
+                                        success = True
                                 
                         elif action == "edit" and message_id:
                             if media_type != "text" and media_url:
@@ -433,6 +505,9 @@ async def task_processor():
                                 success = True
                             else:
                                 logger.error(f"edit failed for task {tid}: {res.text}")
+                                if res.status_code in (400, 403, 404):
+                                    logger.warning(f"Non-recoverable error for edit task {tid}. Completing to avoid queue blockage.")
+                                    success = True
                                 
                         elif action == "delete" and message_id:
                             url = f"{base_url}{bot_token}/deleteMessage"
@@ -443,6 +518,10 @@ async def task_processor():
                                 msg_id = None
                             else:
                                 logger.error(f"delete failed for task {tid}: {res.text}")
+                                if res.status_code in (400, 403, 404):
+                                    logger.warning(f"Non-recoverable error for delete task {tid}. Completing to avoid queue blockage.")
+                                    success = True
+                                    msg_id = None
 
                         if success:
                             await api_client.complete_task(tid, msg_id)

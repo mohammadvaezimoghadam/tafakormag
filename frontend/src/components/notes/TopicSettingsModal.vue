@@ -8,7 +8,7 @@
       <div class="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto animate-slide-up z-10 text-right">
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-black text-gray-800">⚙️ تنظیمات اتصال پیام‌رسان‌ها</h2>
+          <h2 class="text-base font-extrabold text-gray-800">⚙️ تنظیمات اتصال پیام‌رسان‌ها</h2>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-50 rounded-full transition-colors">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -19,7 +19,7 @@
         <div class="space-y-6">
           <!-- هدر توضیحات -->
           <div class="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-50 text-xs text-indigo-700 leading-relaxed">
-            💡 با فعال‌سازی همگام‌سازی، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.
+            💡 با فعال‌سازی بازنشر، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.
           </div>
 
           <!-- بخش تلگرام -->
@@ -27,7 +27,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2 space-x-reverse">
                 <span class="text-lg">🔹</span>
-                <span class="text-sm font-extrabold text-gray-800">همگام‌سازی با تلگرام</span>
+                <span class="text-sm font-extrabold text-gray-800">بازنشر در تلگرام</span>
               </div>
               <!-- سوییچ تلگرام -->
               <button
@@ -77,7 +77,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2 space-x-reverse">
                 <span class="text-lg">🟢</span>
-                <span class="text-sm font-extrabold text-gray-800">همگام‌سازی با بله</span>
+                <span class="text-sm font-extrabold text-gray-800">بازنشر در بله</span>
               </div>
               <!-- سوییچ بله -->
               <button
@@ -127,7 +127,7 @@
             @click="handleSave"
             variant="primary"
             :loading="saving"
-            class="w-full rounded-2xl py-3 font-extrabold shadow-lg"
+            class="shadow-lg"
           >
             ذخیره تنظیمات اتصالات
           </BaseButton>

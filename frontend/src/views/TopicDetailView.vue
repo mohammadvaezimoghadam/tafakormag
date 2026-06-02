@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col min-h-[calc(100vh-3.5rem)] pb-20 relative">
     <!-- هدر تاپیک -->
-    <div v-if="topic" class="bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-sm">
+    <div v-if="topic" class="bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3 sticky top-14 z-30 flex items-center justify-between shadow-sm">
       <!-- دکمه بازگشت (در راست برای فارسی/RTL) -->
       <button @click="router.push('/')" class="w-9 h-9 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl flex items-center justify-center transition-colors shrink-0">
         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,7 +120,7 @@
     </div>
 
     <!-- باکس متنی ثابت در پایین صفحه برای ارسال پست -->
-    <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-gray-150 p-3 flex items-center space-x-2 space-x-reverse z-40">
+    <div class="fixed bottom-0 left-0 right-0 max-w-md w-full mx-auto bg-white/95 backdrop-blur-md border-t border-gray-150 p-3 flex items-center space-x-2 space-x-reverse z-40">
       <!-- دکمه الصاق رسانه -->
       <div class="relative shrink-0">
         <button
@@ -143,15 +143,18 @@
       <!-- اینپوت متنی اصلی -->
       <div class="flex-1 relative">
         <textarea
+          ref="textareaRef"
           v-model="postContent"
           rows="1"
           placeholder="تفکر خود را ارسال کنید..."
           @keydown.enter.exact.prevent="sendNewPost"
-          class="w-full bg-gray-50 text-right px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white resize-none transition-all"
+          @input="adjustTextareaHeight"
+          class="w-full min-h-[40px] max-h-[120px] bg-gray-50 text-right px-4 py-[11px] leading-tight rounded-xl border border-gray-250 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white resize-none transition-all"
         ></textarea>
         <!-- پیش نمایش نام فایل انتخابی -->
-        <span v-if="selectedFile" class="absolute -top-6 right-2 text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 font-bold truncate max-w-[200px]">
-          📁 {{ selectedFile.name }} (حذف: @click="clearSelectedFile")
+        <span v-if="selectedFile" class="absolute -top-6 right-2 text-[9px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 font-bold flex items-center gap-1.5 max-w-[180px] sm:max-w-[240px]">
+          <span class="truncate">📁 {{ selectedFile.name }}</span>
+          <button @click="clearSelectedFile" class="text-emerald-900 hover:text-red-500 font-extrabold focus:outline-none transition-colors" title="حذف فایل">✕</button>
         </span>
       </div>
 
@@ -162,7 +165,7 @@
         class="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md active:scale-90 transition-all font-bold"
       >
         <span v-if="sendingPost" class="animate-spin text-xs">🌀</span>
-        <svg v-else class="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg v-else class="w-5 h-5 -scale-x-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
         </svg>
       </button>
@@ -184,16 +187,11 @@
       @saved="onTopicUpdated"
     />
 
-    <!-- مودال ورود سریع شناور برای مهمان -->
-    <QuickLoginModal
-      v-if="showQuickLogin"
-      @close="showQuickLogin = false"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchTopics, deleteTopic, fetchPosts, createPost, deletePost, reactToPost, fetchProfile } from '../api'
 import { useAuth } from '../composables/useAuth'
@@ -201,11 +199,11 @@ import { useToast } from '../composables/useToast'
 import PostCard from '../components/notes/PostCard.vue'
 import TopicSettingsModal from '../components/notes/TopicSettingsModal.vue'
 import TopicModal from '../components/notes/TopicModal.vue'
-import QuickLoginModal from '../components/auth/QuickLoginModal.vue'
+
 
 const route = useRoute()
 const router = useRouter()
-const { hasToken, getToken } = useAuth()
+const { hasToken, getToken, showGlobalLoginModal } = useAuth()
 const { showToast } = useToast()
 
 const topicId = route.params.id
@@ -222,8 +220,16 @@ const mediaType = ref('text')
 
 const settingsOpen = ref(false)
 const editOpen = ref(false)
+
+const textareaRef = ref(null)
+
+const adjustTextareaHeight = () => {
+  if (!textareaRef.value) return
+  textareaRef.value.style.height = 'auto'
+  textareaRef.value.style.height = `${Math.min(textareaRef.value.scrollHeight, 120)}px`
+}
 const menuOpen = ref(false)
-const showQuickLogin = ref(false)
+
 
 const openSettings = () => {
   menuOpen.value = false
@@ -245,8 +251,19 @@ const currentUserId = computed(() => currentUser.value?.id || currentUser.value?
 
 const getImageUrl = (url) => {
   if (!url) return ''
+  const mediaIdx = url.indexOf('/media/')
+  if (mediaIdx !== -1) {
+    url = url.slice(mediaIdx)
+  }
+  const staticIdx = url.indexOf('/static/')
+  if (staticIdx !== -1) {
+    url = url.slice(staticIdx)
+  }
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
+  }
+  if (url.startsWith('//')) {
+    url = url.slice(1)
   }
   const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   if (apiBase === '/') {
@@ -259,8 +276,11 @@ const getImageUrl = (url) => {
 
 // چک کردن اینکه آیا کاربر لاگین شده سازنده تاپیک است
 const isCreator = computed(() => {
-  if (!hasToken() || !topic.value || !currentUser.value) return false
-  return topic.value.created_by === currentUser.value.id || topic.value.created_by_phone === currentUser.value.phone
+  if (!hasToken() || !topic.value) return false
+  if (!topic.value.created_by) return true
+  if (!currentUser.value) return false
+  return String(topic.value.created_by) === String(currentUser.value.id) ||
+         (topic.value.created_by_phone && currentUser.value.phone && String(topic.value.created_by_phone) === String(currentUser.value.phone))
 })
 
 const loadTopicData = async () => {
@@ -329,7 +349,7 @@ const clearSelectedFile = () => {
 
 const sendNewPost = async () => {
   if (!hasToken()) {
-    showQuickLogin.value = true
+    showGlobalLoginModal.value = true
     return
   }
 
@@ -349,11 +369,14 @@ const sendNewPost = async () => {
     }
 
     await createPost(formData)
-    showToast('پست جدید ارسال و با کانال‌های فعال همگام‌سازی شد', 'success')
+    showToast('پست جدید ارسال و در کانال‌های فعال بازنشر شد', 'success')
     postContent.value = ''
     clearSelectedFile()
     loadPosts()
     loadTopicData() // توضیحات تاپیک را به‌روز کند
+    nextTick(() => {
+      adjustTextareaHeight()
+    })
   } catch (err) {
     showToast('خطا در ارسال پست', 'error')
   } finally {
@@ -375,7 +398,7 @@ const handleDeletePost = async (id) => {
 
 const handleReact = async ({ postId, emoji }) => {
   if (!hasToken()) {
-    showQuickLogin.value = true
+    showGlobalLoginModal.value = true
     return
   }
   try {
@@ -427,6 +450,9 @@ onMounted(() => {
   loadTopicData()
   loadPosts()
   fetchCurrentUserProfile()
+  nextTick(() => {
+    adjustTextareaHeight()
+  })
 })
 </script>
 

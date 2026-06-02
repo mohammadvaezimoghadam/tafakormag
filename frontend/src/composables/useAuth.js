@@ -1,4 +1,7 @@
+import { ref } from 'vue'
+
 const TOKEN_KEY = 'auth_token'
+const showGlobalLoginModal = ref(false)
 
 export function useAuth() {
   const getToken = () => localStorage.getItem(TOKEN_KEY)
@@ -9,7 +12,10 @@ export function useAuth() {
 
   const removeToken = () => localStorage.removeItem(TOKEN_KEY)
 
-  const login = (token) => setToken(token)
+  const login = (token) => {
+    setToken(token)
+    showGlobalLoginModal.value = false
+  }
 
   const logout = () => removeToken()
 
@@ -19,6 +25,7 @@ export function useAuth() {
     setToken,
     removeToken,
     login,
-    logout
+    logout,
+    showGlobalLoginModal
   }
 }

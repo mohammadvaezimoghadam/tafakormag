@@ -7,7 +7,7 @@
       <div class="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto animate-slide-up">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-800">{{ isEdit ? 'ویرایش یادداشت' : 'یادداشت جدید' }}</h2>
+          <h2 class="text-base font-extrabold text-gray-800">{{ isEdit ? 'ویرایش یادداشت' : 'یادداشت جدید' }}</h2>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 p-1">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

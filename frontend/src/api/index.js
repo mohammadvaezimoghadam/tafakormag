@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { toastState } from '../store/toastState'
+import router from '../router'
 
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
@@ -29,8 +30,13 @@ instance.interceptors.response.use(
 
     if (status === 401) {
       localStorage.removeItem('auth_token')
-      toastState.add({ message: 'لطفاً دوباره وارد شوید', type: 'error' })
-      window.location.href = '/login'
+      const requiresAuth = router.currentRoute.value?.meta?.requiresAuth
+      if (requiresAuth) {
+        toastState.add({ message: 'لطفاً دوباره وارد شوید', type: 'error' })
+        window.location.href = '/login'
+      } else {
+        window.location.reload()
+      }
     } else if (status === 400 && data?.error) {
       toastState.add({ message: data.error, type: 'error' })
     } else if (status === 404) {
@@ -50,29 +56,25 @@ export const requestOtp = (phone, forceSms = false) => instance.post('/api/auth/
 
 export const verifyOtp = (phone, otp) => instance.post('/api/auth/verify-otp/', { phone, otp })
 
+const getMultipartConfig = (data) => {
+  return data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {}
+}
+
 // --- Topics API ---
 export const fetchTopics = () => instance.get('/api/notes/topics/')
 
-export const createTopic = (data) => instance.post('/api/notes/topics/', data, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-})
+export const createTopic = (data) => instance.post('/api/notes/topics/', data, getMultipartConfig(data))
 
-export const updateTopic = (id, data) => instance.patch(`/api/notes/topics/${id}/`, data, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-})
+export const updateTopic = (id, data) => instance.patch(`/api/notes/topics/${id}/`, data, getMultipartConfig(data))
 
 export const deleteTopic = (id) => instance.delete(`/api/notes/topics/${id}/`)
 
 // --- Posts API ---
 export const fetchPosts = (topicId) => instance.get('/api/notes/', { params: { topic: topicId } })
 
-export const createPost = (data) => instance.post('/api/notes/', data, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-})
+export const createPost = (data) => instance.post('/api/notes/', data, getMultipartConfig(data))
 
-export const updatePost = (id, data) => instance.patch(`/api/notes/${id}/`, data, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-})
+export const updatePost = (id, data) => instance.patch(`/api/notes/${id}/`, data, getMultipartConfig(data))
 
 export const deletePost = (id) => instance.delete(`/api/notes/${id}/`)
 
@@ -87,6 +89,8 @@ export const createComment = (postId, content) => instance.post(`/api/notes/${po
 
 // --- Destinations API ---
 export const fetchDestinations = (platform) => instance.get('/api/auth/destinations/', { params: { platform } })
+export const createDestination = (data) => instance.post('/api/auth/destinations/', data)
+export const deleteUserDestination = (id) => instance.post('/api/auth/delete-user-destination/', { destination_id: id })
 
 // --- Profile & Bot APIs ---
 export const getConnectToken = (platform) => instance.get('/api/auth/connect-token/', { params: { platform } })
@@ -95,8 +99,6 @@ export const updateCustomBot = (platform, token) => instance.post('/api/auth/upd
 
 export const fetchProfile = () => instance.get('/api/auth/profile/')
 
-export const updateProfile = (data) => instance.patch('/api/auth/profile/', data, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-})
+export const updateProfile = (data) => instance.patch('/api/auth/profile/', data, getMultipartConfig(data))
 
 export default instance

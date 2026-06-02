@@ -107,7 +107,7 @@
             size="sm"
             class="flex-1"
           >
-            🔌 قطع اتصال ربات
+            🔌 قطع اتصال
           </BaseButton>
         </div>
       </div>

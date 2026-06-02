@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="px-4 py-4">
 
     <!-- سرچ‌بار برای فیلتر تاپیک‌ها -->
     <div class="relative mb-6">
@@ -103,6 +103,7 @@
 
     <!-- FAB دکمه شناور ایجاد تاپیک جدید -->
     <button
+      v-if="hasToken()"
       @click="handleCreateTopicClick"
       class="fixed bottom-24 right-6 w-14 h-14 bg-indigo-600 mb-2 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-90 active:rotate-90 hover:scale-105 transition-all duration-300 z-40 hover:bg-indigo-700"
     >
@@ -157,8 +158,19 @@ const filteredTopics = computed(() => {
 
 const getImageUrl = (url) => {
   if (!url) return ''
+  const mediaIdx = url.indexOf('/media/')
+  if (mediaIdx !== -1) {
+    url = url.slice(mediaIdx)
+  }
+  const staticIdx = url.indexOf('/static/')
+  if (staticIdx !== -1) {
+    url = url.slice(staticIdx)
+  }
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
+  }
+  if (url.startsWith('//')) {
+    url = url.slice(1)
   }
   const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   if (apiBase === '/') {

@@ -100,7 +100,7 @@ class BotTask(models.Model):
     text = models.TextField(blank=True)
     message_id = models.CharField(max_length=100, null=True, blank=True)
     note_id = models.BigIntegerField(null=True, blank=True) # برای سازگاری با کدهای قدیمی
-    post_id = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name='bot_tasks')
+    post_id = models.ForeignKey(Post, on_delete=models.SET_NULL, null=True, blank=True, related_name='bot_tasks')
     bot_token = models.CharField(max_length=255, null=True, blank=True)
     processed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

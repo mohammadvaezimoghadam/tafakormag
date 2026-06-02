@@ -2,29 +2,53 @@
   <div class="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 relative text-right flex flex-col space-y-4">
     <!-- هدر پست (اطلاعات نویسنده و دکمه حذف) -->
     <div class="flex items-center justify-between">
-      <!-- دکمه حذف (فقط برای سازنده پست) -->
-      <button
-        v-if="isAuthor"
-        @click="$emit('delete', post.id)"
-        class="text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-xl transition-colors shrink-0"
-        title="حذف پست"
-      >
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
-      <div v-else class="w-5"></div>
-
-      <!-- اطلاعات نویسنده -->
+      <!-- اطلاعات نویسنده (راست‌چین برای RTL) -->
       <div class="flex items-center space-x-3 space-x-reverse overflow-hidden">
-        <div class="text-right">
-          <span class="font-extrabold text-gray-800 text-xs block leading-none">{{ post.author_name }}</span>
+        <!-- تصویر پروفایل یا آواتار متنی -->
+        <img
+          v-if="post.author_avatar"
+          :src="getImageUrl(post.author_avatar)"
+          class="w-9 h-9 rounded-full object-cover border border-gray-150 shadow shrink-0"
+          alt="Author avatar"
+        />
+        <div
+          v-else
+          class="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow"
+        >
+          {{ post.author_name ? post.author_name.charAt(0) : 'U' }}
+        </div>
+
+        <div class="text-right overflow-hidden max-w-[120px] xs:max-w-[150px] sm:max-w-[180px]">
+          <span class="font-extrabold text-gray-800 text-xs block leading-none truncate" :title="post.author_name">{{ post.author_name }}</span>
           <span class="text-[10px] text-gray-400 block mt-1 leading-none">{{ formatTime(post.created_at) }}</span>
         </div>
-        <div class="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow">
-          {{ post.author_name.charAt(0) }}
-        </div>
       </div>
+
+      <!-- دکمه‌های ویرایش و حذف (چپ‌چین برای RTL) -->
+      <div v-if="isAuthor" class="flex items-center space-x-1 space-x-reverse shrink-0">
+        <!-- دکمه ویرایش -->
+        <button
+          @click="startEdit"
+          class="text-gray-300 hover:text-indigo-600 hover:bg-indigo-50/50 p-1.5 rounded-xl transition-colors"
+          title="ویرایش پست"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+
+        <!-- دکمه حذف -->
+        <button
+          @click="$emit('delete', post.id)"
+          class="text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-xl transition-colors"
+          title="حذف پست"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+      <div v-else class="w-5"></div>
     </div>
 
     <!-- بدنه پست (مدیا و متن) -->
@@ -45,8 +69,33 @@
         <audio :src="getImageUrl(post.media_file)" controls class="w-full h-10 outline-none text-indigo-600"></audio>
       </div>
 
-      <!-- متن پست با پشتیبانی از لاین برک و فرمت ساده -->
-      <div class="text-gray-700 text-sm leading-relaxed whitespace-pre-line text-right px-1" v-html="formatMarkdown(post.content)"></div>
+      <!-- نمایش متن یا ادیتور ویرایش -->
+      <div v-if="isEditing" class="space-y-2 mt-2">
+        <textarea
+          v-model="editContent"
+          rows="4"
+          class="w-full bg-gray-50 text-right px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white resize-none transition-all"
+          placeholder="ویرایش متن پست..."
+        ></textarea>
+        <div class="flex justify-end space-x-2 space-x-reverse">
+          <button
+            @click="saveEdit"
+            :disabled="savingEdit || !editContent.trim()"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold transition-all active:scale-95 flex items-center gap-1 shadow-sm"
+          >
+            <span v-if="savingEdit" class="animate-spin text-xs">🌀</span>
+            ذخیره تغییرات
+          </button>
+          <button
+            @click="cancelEdit"
+            :disabled="savingEdit"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-150 text-gray-600 rounded-xl text-[10px] font-extrabold transition-all active:scale-95"
+          >
+            انصراف
+          </button>
+        </div>
+      </div>
+      <div v-else class="text-gray-800 text-sm font-medium leading-relaxed whitespace-pre-line text-right px-1" v-html="formatMarkdown(post.content)"></div>
     </div>
 
     <!-- فوتر پست (بخش واکنش‌ها و نظرات) -->
@@ -64,16 +113,16 @@
       </button>
 
       <!-- واکنش‌ها -->
-      <div class="flex items-center space-x-1.5 space-x-reverse">
+      <div class="flex items-center flex-wrap gap-1 justify-end">
         <button
           v-for="emoji in reactionEmojis"
           :key="emoji"
           @click="$emit('react', { postId: post.id, emoji })"
           :class="post.user_reaction === emoji ? 'bg-indigo-100 text-indigo-800 scale-105 border-indigo-300 ring-2 ring-indigo-500/25' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-100'"
-          class="flex items-center space-x-1 space-x-reverse px-2.5 py-1.5 rounded-xl border text-xs font-black transition-all active:scale-90"
+          class="flex items-center space-x-1 space-x-reverse px-2 py-1 rounded-xl border text-[10px] xs:text-xs font-black transition-all active:scale-90"
         >
-          <span class="text-sm leading-none">{{ emoji }}</span>
-          <span v-if="post.reactions_summary[emoji]" class="text-[10px] leading-none">{{ post.reactions_summary[emoji] }}</span>
+          <span class="text-xs leading-none">{{ emoji }}</span>
+          <span v-if="post.reactions_summary[emoji]" class="text-[9px] leading-none">{{ post.reactions_summary[emoji] }}</span>
         </button>
       </div>
     </div>
@@ -137,22 +186,17 @@
       </div>
     </Teleport>
 
-    <!-- مودال ورود سریع شناور برای مهمان -->
-    <QuickLoginModal
-      v-if="showQuickLogin"
-      @close="showQuickLogin = false"
-    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { fetchComments, createComment } from '../../api'
+import { fetchComments, createComment, updatePost } from '../../api'
 import { useAuth } from '../../composables/useAuth'
 import { useToast } from '../../composables/useToast'
-import QuickLoginModal from '../auth/QuickLoginModal.vue'
 
-const showQuickLogin = ref(false)
+
+
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -161,7 +205,7 @@ const props = defineProps({
 
 const emit = defineEmits(['delete', 'react', 'refresh'])
 
-const { hasToken } = useAuth()
+const { hasToken, showGlobalLoginModal } = useAuth()
 const { showToast } = useToast()
 
 const reactionEmojis = ["👍", "👎", "❤️", "😂", "🎉"]
@@ -181,8 +225,19 @@ const isAuthor = computed(() => {
 
 const getImageUrl = (url) => {
   if (!url) return ''
+  const mediaIdx = url.indexOf('/media/')
+  if (mediaIdx !== -1) {
+    url = url.slice(mediaIdx)
+  }
+  const staticIdx = url.indexOf('/static/')
+  if (staticIdx !== -1) {
+    url = url.slice(staticIdx)
+  }
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url
+  }
+  if (url.startsWith('//')) {
+    url = url.slice(1)
   }
   const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   if (apiBase === '/') {
@@ -236,7 +291,7 @@ const loadComments = async () => {
 
 const submitComment = async () => {
   if (!hasToken()) {
-    showQuickLogin.value = true
+    showGlobalLoginModal.value = true
     return
   }
 
@@ -253,6 +308,35 @@ const submitComment = async () => {
     showToast('خطا در ارسال نظر', 'error')
   } finally {
     submittingComment.value = false
+  }
+}
+
+const isEditing = ref(false)
+const editContent = ref('')
+const savingEdit = ref(false)
+
+const startEdit = () => {
+  editContent.value = props.post.content
+  isEditing.value = true
+}
+
+const cancelEdit = () => {
+  isEditing.value = false
+  editContent.value = ''
+}
+
+const saveEdit = async () => {
+  if (!editContent.value.trim()) return
+  savingEdit.value = true
+  try {
+    await updatePost(props.post.id, { content: editContent.value.trim() })
+    showToast('پست با موفقیت ویرایش شد', 'success')
+    isEditing.value = false
+    emit('refresh')
+  } catch (err) {
+    showToast('خطا در ویرایش پست', 'error')
+  } finally {
+    savingEdit.value = false
   }
 }
 </script>

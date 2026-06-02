@@ -26,12 +26,12 @@ class TopicViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = self.get_object()
-        if instance.created_by != self.request.user and not self.request.user.is_superuser:
+        if instance.created_by and instance.created_by != self.request.user and not self.request.user.is_superuser:
             raise PermissionDenied("شما اجازه ویرایش این تاپیک را ندارید.")
         serializer.save()
 
     def perform_destroy(self, instance):
-        if instance.created_by != self.request.user and not self.request.user.is_superuser:
+        if instance.created_by and instance.created_by != self.request.user and not self.request.user.is_superuser:
             raise PermissionDenied("شما اجازه حذف این تاپیک را ندارید.")
         instance.delete()
 

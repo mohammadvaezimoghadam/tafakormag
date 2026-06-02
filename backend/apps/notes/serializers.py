@@ -48,6 +48,7 @@ class PostReactionSerializer(serializers.ModelSerializer):
 class PostSerializer(serializers.ModelSerializer):
     author_phone = serializers.SerializerMethodField(read_only=True)
     author_name = serializers.SerializerMethodField(read_only=True)
+    author_avatar = serializers.SerializerMethodField(read_only=True)
     reactions_summary = serializers.SerializerMethodField(read_only=True)
     user_reaction = serializers.SerializerMethodField(read_only=True)
     comments_count = serializers.SerializerMethodField(read_only=True)
@@ -55,7 +56,7 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
-            'id', 'topic', 'author', 'author_phone', 'author_name', 'content',
+            'id', 'topic', 'author', 'author_phone', 'author_name', 'author_avatar', 'content',
             'media_type', 'media_file', 'created_at', 'updated_at',
             'reactions_summary', 'user_reaction', 'comments_count',
             'telegram_message_ids', 'bale_message_ids'
@@ -69,6 +70,13 @@ class PostSerializer(serializers.ModelSerializer):
         if obj.author.first_name or obj.author.last_name:
             return f"{obj.author.first_name} {obj.author.last_name}".strip()
         return obj.author.phone
+
+    def get_author_avatar(self, obj):
+        request = self.context.get('request')
+        url = obj.author.profile_image.url if obj.author.profile_image else None
+        if url and request:
+            return request.build_absolute_uri(url)
+        return url
 
     def get_reactions_summary(self, obj):
         summary = {}

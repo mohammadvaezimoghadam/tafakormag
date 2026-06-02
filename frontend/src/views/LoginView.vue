@@ -3,7 +3,7 @@
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-indigo-700 mb-2">تفکر</h1>
-        <p class="text-gray-500">یادداشت‌های خود را همگام در تلگرام و بله منتشر کنید</p>
+        <p class="text-gray-500">یادداشت‌های خود را در تلگرام و بله بازنشر کنید</p>
       </div>
       <Transition name="fade" mode="out-in">
         <PhoneForm

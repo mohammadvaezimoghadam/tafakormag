@@ -10,7 +10,7 @@ from rest_framework.response import Response
 import requests
 from django.db.models import Q
 from otp.dispatcher import send_sms_otp, OTPDeliveryError
-from .models import User, BotConnectionToken
+from .models import User, BotConnectionToken, MessagingTarget
 from .serializers import (
     ConnectTokenResponseSerializer,
     RequestOTPSerializer,
@@ -206,9 +206,34 @@ class AuthViewSet(viewsets.GenericViewSet):
         return Response(UserSerializer(request.user).data)
 
     # ۷ - دریافت لیست مقاصد ارتباطی کاربر (برای مدیریت چک‌باکس‌های اتصالات در تاپیک)
-    @action(methods=['get'], detail=False, url_path='destinations',
+    @action(methods=['get', 'post'], detail=False, url_path='destinations',
             permission_classes=[permissions.IsAuthenticated])
     def destinations(self, request):
+        if request.method == 'POST':
+            platform = request.data.get('platform')
+            chat_id = str(request.data.get('chat_id', '')).strip()
+            label = request.data.get('label', '').strip()
+            
+            if platform not in ['telegram', 'bale'] or not chat_id or not label:
+                return Response({"error": "پلتفرم، شناسه چت و برچسب الزامی هستند."}, status=status.HTTP_400_BAD_REQUEST)
+                
+            try:
+                target, created = MessagingTarget.objects.update_or_create(
+                    user=request.user,
+                    platform=platform,
+                    chat_id=chat_id,
+                    defaults={'label': label, 'is_active': True}
+                )
+                return Response({
+                    "id": target.id,
+                    "platform": target.platform,
+                    "chat_id": target.chat_id,
+                    "label": target.label,
+                    "is_active": target.is_active
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({"error": f"خطا در ثبت مقصد دستی: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         platform = request.query_params.get('platform')
         queryset = MessagingTarget.objects.filter(user=request.user)
         if platform in ['telegram', 'bale']:
@@ -225,3 +250,16 @@ class AuthViewSet(viewsets.GenericViewSet):
             for t in queryset
         ]
         return Response(data)
+
+    @action(methods=['post'], detail=False, url_path='delete-user-destination',
+            permission_classes=[permissions.IsAuthenticated])
+    def delete_user_destination(self, request):
+        dest_id = request.data.get('destination_id')
+        if not dest_id:
+            return Response({"error": "شناسه مقصد الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            target = MessagingTarget.objects.get(pk=dest_id, user=request.user)
+            target.delete()
+            return Response({"success": True})
+        except MessagingTarget.DoesNotExist:
+            return Response({"error": "مقصد یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
