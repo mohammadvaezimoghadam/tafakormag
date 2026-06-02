@@ -12,7 +12,13 @@ const routes = [
     path: '/',
     name: 'home',
     component: () => import('../views/HomeView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/topic/:id',
+    name: 'topic',
+    component: () => import('../views/TopicDetailView.vue'),
+    meta: { requiresAuth: false, hideBottomNav: true }
   },
   {
     path: '/profile',
@@ -42,7 +48,6 @@ router.beforeEach((to, from) => {
     return { name: 'home' }
   }
 
-  // صریحاً اجازهٔ ادامه بده
   return true
 })
 

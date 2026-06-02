@@ -380,6 +380,8 @@ async def task_processor():
                     text = task["text"]
                     message_id = task.get("message_id")
                     bot_token = task.get("bot_token")
+                    media_type = task.get("media_type", "text")
+                    media_url = task.get("media_url")
                     
                     if not bot_token:
                         logger.warning(f"No custom bot token for task {tid}, skipping...")
@@ -395,8 +397,21 @@ async def task_processor():
                         msg_id = message_id
                         
                         if action == "send":
-                            url = f"{base_url}{bot_token}/sendMessage"
-                            payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+                            if media_type == "image" and media_url:
+                                url = f"{base_url}{bot_token}/sendPhoto"
+                                payload = {"chat_id": chat_id, "photo": media_url, "caption": text, "parse_mode": "Markdown"}
+                            elif media_type == "video" and media_url:
+                                url = f"{base_url}{bot_token}/sendVideo"
+                                payload = {"chat_id": chat_id, "video": media_url, "caption": text, "parse_mode": "Markdown"}
+                            elif media_type == "audio" and media_url:
+                                # بله و تلگرام متد ارسال موزیک/صدا دارند
+                                method = "sendAudio" if platform == "telegram" else "sendAudio"
+                                url = f"{base_url}{bot_token}/{method}"
+                                payload = {"chat_id": chat_id, "audio": media_url, "caption": text, "parse_mode": "Markdown"}
+                            else:
+                                url = f"{base_url}{bot_token}/sendMessage"
+                                payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+
                             res = await http_client.post(url, json=payload)
                             if res.status_code == 200:
                                 success = True
@@ -405,8 +420,14 @@ async def task_processor():
                                 logger.error(f"send failed for task {tid}: {res.text}")
                                 
                         elif action == "edit" and message_id:
-                            url = f"{base_url}{bot_token}/editMessageText"
-                            payload = {"chat_id": chat_id, "message_id": int(message_id), "text": text, "parse_mode": "Markdown"}
+                            if media_type != "text" and media_url:
+                                # ویرایش کپشن پیام‌های چندرسانه‌ای
+                                url = f"{base_url}{bot_token}/editMessageCaption"
+                                payload = {"chat_id": chat_id, "message_id": int(message_id), "caption": text, "parse_mode": "Markdown"}
+                            else:
+                                url = f"{base_url}{bot_token}/editMessageText"
+                                payload = {"chat_id": chat_id, "message_id": int(message_id), "text": text, "parse_mode": "Markdown"}
+
                             res = await http_client.post(url, json=payload)
                             if res.status_code == 200:
                                 success = True

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from apps.accounts.models import BotConnectionToken, User
 
 from .bot_permissions import IsBotService
-from .models import BotTask, Note
+from .models import BotTask, Post
 from .services import get_message_ids, set_message_ids
 
 
@@ -63,15 +63,28 @@ def fetch_tasks(request):
     data = []
     for t in tasks:
         bot_token = t.bot_token
-        if not bot_token and t.note_id:
+        media_type = "text"
+        media_url = None
+        
+        post = None
+        if t.post_id:
+            post = t.post_id
+        elif t.note_id:
             try:
-                note = Note.objects.select_related('user').get(pk=t.note_id)
-                if t.platform == "telegram":
-                    bot_token = note.user.telegram_bot_token
-                elif t.platform == "bale":
-                    bot_token = note.user.bale_bot_token
-            except Note.DoesNotExist:
+                post = Post.objects.select_related('author').get(pk=t.note_id)
+            except Post.DoesNotExist:
                 pass
+
+        if post:
+            if not bot_token:
+                if t.platform == "telegram":
+                    bot_token = post.author.telegram_bot_token
+                elif t.platform == "bale":
+                    bot_token = post.author.bale_bot_token
+            
+            media_type = post.media_type
+            if post.media_file:
+                media_url = request.build_absolute_uri(post.media_file.url)
 
         data.append({
             "id": t.id,
@@ -80,8 +93,10 @@ def fetch_tasks(request):
             "chat_id": t.chat_id,
             "text": t.text,
             "message_id": t.message_id or None,
-            "note_id": t.note_id,
+            "note_id": post.id if post else t.note_id,
             "bot_token": bot_token,
+            "media_type": media_type,
+            "media_url": media_url,
         })
     return Response(data)
 
@@ -102,21 +117,24 @@ def complete_task(request, task_id):
         task.message_id = str(request.data["message_id"])
     task.save()
 
-    if task.note_id and task.platform in ("telegram", "bale"):
+    post = None
+    if task.post_id:
+        post = task.post_id
+    elif task.note_id:
         try:
-            note = Note.objects.get(id=task.note_id)
-            if task.action == "send" and task.message_id:
-                msg_ids = get_message_ids(note, task.platform)
-                msg_ids[str(task.chat_id)] = str(task.message_id)
-                set_message_ids(note, task.platform, msg_ids)
-            elif task.action == "delete":
-                msg_ids = get_message_ids(note, task.platform)
-                if str(task.chat_id) in msg_ids:
-                    del msg_ids[str(task.chat_id)]
-                elif "default" in msg_ids:
-                    del msg_ids["default"]
-                set_message_ids(note, task.platform, msg_ids)
-        except Note.DoesNotExist:
+            post = Post.objects.get(id=task.note_id)
+        except Post.DoesNotExist:
             pass
+
+    if post and task.platform in ("telegram", "bale"):
+        if task.action == "send" and task.message_id:
+            msg_ids = get_message_ids(post, task.platform)
+            msg_ids[str(task.chat_id)] = str(task.message_id)
+            set_message_ids(post, task.platform, msg_ids)
+        elif task.action == "delete":
+            msg_ids = get_message_ids(post, task.platform)
+            if str(task.chat_id) in msg_ids:
+                del msg_ids[str(task.chat_id)]
+            set_message_ids(post, task.platform, msg_ids)
 
     return Response({"success": True})

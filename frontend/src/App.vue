@@ -6,12 +6,15 @@
     </template>
     
     <!-- محتوای صفحات -->
-    <main :class="showLayout ? 'pt-14 pb-20 px-4' : 'px-4'">
+    <main :class="[
+      showLayout ? 'pt-14 px-4' : 'px-4',
+      showBottomNav ? 'pb-20' : 'pb-0'
+    ]">
       <router-view />
     </main>
     
     <!-- نویگیشن بار پایین -->
-    <BottomNav v-if="showLayout" />
+    <BottomNav v-if="showBottomNav" />
     
     <BaseToast />
   </div>
@@ -27,5 +30,6 @@ import BottomNav from './components/layout/BottomNav.vue'
 
 const route = useRoute()
 const showLayout = computed(() => route.name !== 'login')
+const showBottomNav = computed(() => showLayout.value && !route.meta.hideBottomNav)
 const sidebarOpen = ref(false)
 </script>

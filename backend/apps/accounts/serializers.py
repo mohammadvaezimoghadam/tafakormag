@@ -14,12 +14,22 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            'id',
+            'phone', 
+            'first_name',
+            'last_name',
+            'profile_image',
+            'is_telegram_bot_connected', 'telegram_bot_username',
+            'is_bale_bot_connected', 'bale_bot_username',
+            'is_telegram_otp_connected', 'is_bale_otp_connected'
+        ]
+        read_only_fields = [
+            'id',
             'phone', 
             'is_telegram_bot_connected', 'telegram_bot_username',
             'is_bale_bot_connected', 'bale_bot_username',
             'is_telegram_otp_connected', 'is_bale_otp_connected'
         ]
-        read_only_fields = fields
 
     def get_is_telegram_bot_connected(self, obj):
         return bool(obj.telegram_bot_token)

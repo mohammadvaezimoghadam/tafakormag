@@ -29,6 +29,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
 
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    profile_image = models.FileField(upload_to='profile_images/', null=True, blank=True)
+
     telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
     bale_chat_id = models.CharField(max_length=100, null=True, blank=True)
 

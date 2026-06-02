@@ -1,37 +1,88 @@
 from rest_framework import serializers
-from .models import Note, Channel
+from .models import Topic, Post, PostReaction, PostComment
+from apps.accounts.models import MessagingTarget
 
 
-class ChannelSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Channel
-        fields = ['id', 'name', 'bio', 'image', 'telegram_chat_id', 'bale_chat_id', 'created_at']
-        read_only_fields = ['id', 'created_at']
-
-
-class NoteSerializer(serializers.ModelSerializer):
-    channel = serializers.PrimaryKeyRelatedField(queryset=Channel.objects.all(), allow_null=True, required=False)
-    is_sent_to_telegram = serializers.SerializerMethodField(read_only=True)
-    is_sent_to_bale = serializers.SerializerMethodField(read_only=True)
+class TopicSerializer(serializers.ModelSerializer):
+    created_by_phone = serializers.SerializerMethodField(read_only=True)
+    post_count = serializers.IntegerField(read_only=True, required=False)
 
     class Meta:
-        model = Note
+        model = Topic
         fields = [
-            'id',
-            'title',
-            'content',
-            'channel',
-            'created_at',
-            'updated_at',
-            'send_to_telegram',
-            'send_to_bale',
-            'is_sent_to_telegram',
-            'is_sent_to_bale',
+            'id', 'name', 'image', 'description', 'created_by', 'created_by_phone',
+            'created_at', 'telegram_bot_active', 'bale_bot_active',
+            'telegram_connections', 'bale_connections', 'post_count'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_by', 'created_at', 'post_count']
 
-    def get_is_sent_to_telegram(self, obj):
-        return bool(obj.telegram_message_id)
+    def get_created_by_phone(self, obj):
+        return obj.created_by.phone if obj.created_by else None
 
-    def get_is_sent_to_bale(self, obj):
-        return bool(obj.bale_message_id)
+
+class PostCommentSerializer(serializers.ModelSerializer):
+    user_phone = serializers.SerializerMethodField(read_only=True)
+    user_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = PostComment
+        fields = ['id', 'post', 'user', 'user_phone', 'user_name', 'content', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+    def get_user_phone(self, obj):
+        return obj.user.phone
+
+    def get_user_name(self, obj):
+        if obj.user.first_name or obj.user.last_name:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return obj.user.phone
+
+
+class PostReactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostReaction
+        fields = ['id', 'post', 'user', 'emoji', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+
+class PostSerializer(serializers.ModelSerializer):
+    author_phone = serializers.SerializerMethodField(read_only=True)
+    author_name = serializers.SerializerMethodField(read_only=True)
+    reactions_summary = serializers.SerializerMethodField(read_only=True)
+    user_reaction = serializers.SerializerMethodField(read_only=True)
+    comments_count = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = [
+            'id', 'topic', 'author', 'author_phone', 'author_name', 'content',
+            'media_type', 'media_file', 'created_at', 'updated_at',
+            'reactions_summary', 'user_reaction', 'comments_count',
+            'telegram_message_ids', 'bale_message_ids'
+        ]
+        read_only_fields = ['id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids']
+
+    def get_author_phone(self, obj):
+        return obj.author.phone
+
+    def get_author_name(self, obj):
+        if obj.author.first_name or obj.author.last_name:
+            return f"{obj.author.first_name} {obj.author.last_name}".strip()
+        return obj.author.phone
+
+    def get_reactions_summary(self, obj):
+        summary = {}
+        reactions = obj.reactions.all()
+        for r in reactions:
+            summary[r.emoji] = summary.get(r.emoji, 0) + 1
+        return summary
+
+    def get_user_reaction(self, obj):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            reaction = obj.reactions.filter(user=request.user).first()
+            return reaction.emoji if reaction else None
+        return None
+
+    def get_comments_count(self, obj):
+        return obj.comments.count()

@@ -194,8 +194,34 @@ class AuthViewSet(viewsets.GenericViewSet):
                 })
         return Response(data)
 
-    # ۶ - دریافت اطلاعات پروفایل جاری کاربر
-    @action(methods=['get'], detail=False, url_path='profile',
+    # ۶ - دریافت و ویرایش اطلاعات پروفایل جاری کاربر
+    @action(methods=['get', 'patch', 'put'], detail=False, url_path='profile',
             permission_classes=[permissions.IsAuthenticated])
     def profile(self, request):
+        if request.method in ['PATCH', 'PUT']:
+            serializer = UserSerializer(request.user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
         return Response(UserSerializer(request.user).data)
+
+    # ۷ - دریافت لیست مقاصد ارتباطی کاربر (برای مدیریت چک‌باکس‌های اتصالات در تاپیک)
+    @action(methods=['get'], detail=False, url_path='destinations',
+            permission_classes=[permissions.IsAuthenticated])
+    def destinations(self, request):
+        platform = request.query_params.get('platform')
+        queryset = MessagingTarget.objects.filter(user=request.user)
+        if platform in ['telegram', 'bale']:
+            queryset = queryset.filter(platform=platform)
+        
+        data = [
+            {
+                "id": t.id,
+                "platform": t.platform,
+                "chat_id": t.chat_id,
+                "label": t.label,
+                "is_active": t.is_active
+            }
+            for t in queryset
+        ]
+        return Response(data)

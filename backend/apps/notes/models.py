@@ -1,28 +1,86 @@
 from django.db import models
-from apps.accounts.models import User
+from apps.accounts.models import User, MessagingTarget
 
 
-
-class Channel(models.Model):
+class Topic(models.Model):
     name = models.CharField(max_length=255)
-    bio = models.TextField(blank=True, null=True)
-    image = models.URLField(blank=True, null=True)
-    telegram_chat_id = models.CharField(max_length=100, unique=True)
-    bale_chat_id = models.CharField(max_length=100, unique=True)
+    image = models.FileField(upload_to='topic_images/', null=True, blank=True)
+    description = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # تنظیمات اتصال ربات‌ها
+    telegram_bot_active = models.BooleanField(default=False)
+    bale_bot_active = models.BooleanField(default=False)
+
+    telegram_connections = models.ManyToManyField(
+        MessagingTarget,
+        related_name="telegram_topics",
+        blank=True
+    )
+    bale_connections = models.ManyToManyField(
+        MessagingTarget,
+        related_name="bale_topics",
+        blank=True
+    )
 
     def __str__(self):
         return self.name
+
+
+class Post(models.Model):
+    MEDIA_CHOICES = [
+        ("text", "text"),
+        ("image", "image"),
+        ("video", "video"),
+        ("audio", "audio"),
+    ]
+
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='posts')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    content = models.TextField()  # Markdown text
     
+    media_type = models.CharField(max_length=20, choices=MEDIA_CHOICES, default="text")
+    media_file = models.FileField(upload_to='post_media/', null=True, blank=True)
 
-    def delete(self, *args, **kwargs):
-        if self.notes.exists():
-            raise models.ProtectedError("این کانال یاداشت هایی دارد و نمیتوان آن را حذف کرد",self)
-        
-        super().delete(*args, **kwargs)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    # شناسه‌های پیام ارسال شده در پیام‌رسان‌ها (chat_id: message_id)
+    telegram_message_ids = models.JSONField(default=dict, blank=True)
+    bale_message_ids = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Post by {self.author.phone} in {self.topic.name} at {self.created_at}"
+
+
+class PostReaction(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    emoji = models.CharField(max_length=10)  # 👍, 👎, ❤️, 😂, 🎉
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+    def __str__(self):
+        return f"{self.user.phone} reacted {self.emoji} on Post {self.post.id}"
+
+
+class PostComment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.user.phone} on Post {self.post.id}"
 
 
 class BotTask(models.Model):
@@ -41,7 +99,8 @@ class BotTask(models.Model):
     chat_id = models.CharField(max_length=100)
     text = models.TextField(blank=True)
     message_id = models.CharField(max_length=100, null=True, blank=True)
-    note_id = models.BigIntegerField(null=True, blank=True)
+    note_id = models.BigIntegerField(null=True, blank=True) # برای سازگاری با کدهای قدیمی
+    post_id = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name='bot_tasks')
     bot_token = models.CharField(max_length=255, null=True, blank=True)
     processed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -54,27 +113,3 @@ class BotTask(models.Model):
 
     def __str__(self):
         return f"BotTask({self.action}, {self.platform}, processed={self.processed})"
-
-
-class Note(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notes')
-    channel = models.ForeignKey(Channel, on_delete=models.SET_NULL, null=True, blank=True, related_name='notes')
-    title = models.CharField(max_length=500, blank=True, null=True)
-    content = models.TextField()       # Markdown
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    # انتخاب‌های کاربر هنگام ذخیره (boolean)
-    send_to_telegram = models.BooleanField(default=False)
-    send_to_bale = models.BooleanField(default=False)
-
-    # شناسه‌های پیام اگر ارسال شده باشد
-    telegram_message_id = models.CharField(max_length=100, null=True, blank=True)
-    bale_message_id = models.CharField(max_length=100, null=True, blank=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-
-
-        

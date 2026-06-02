@@ -22,10 +22,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import PhoneForm from '../components/auth/PhoneForm.vue'
 import OtpForm from '../components/auth/OtpForm.vue'
 
+const route = useRoute()
 const step = ref('phone')
 const phone = ref('')
 const sentChannel = ref('sms')
@@ -35,6 +37,14 @@ const onOtpSent = (data) => {
   sentChannel.value = data.channel
   step.value = 'otp'
 }
+
+onMounted(() => {
+  if (route.query.phone) {
+    phone.value = route.query.phone
+    sentChannel.value = route.query.channel || 'sms'
+    step.value = 'otp'
+  }
+})
 </script>
 
 <style scoped>

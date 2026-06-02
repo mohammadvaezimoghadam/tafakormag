@@ -2,171 +2,137 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Optional
 
 from apps.accounts.models import MessagingTarget
+from .models import BotTask, Post
 
-from .models import BotTask, Note
-
-
-def get_chat_ids_for_platform(note: Note, platform: str) -> list[str]:
-    """تعیین لیست تمام chat_idهای فعال برای ارسال پیام: کانال یادداشت → مقاصد فعال → چت شخصی."""
-    if note.channel:
-        channel_chat_id = getattr(note.channel, f"{platform}_chat_id", None)
-        if channel_chat_id:
-            return [str(channel_chat_id)]
-
-    targets = MessagingTarget.objects.filter(
-        user=note.user,
-        platform=platform,
-        is_active=True,
-    )
-    if targets.exists():
-        return [str(t.chat_id) for t in targets]
-
-    personal = getattr(note.user, f"{platform}_chat_id", None)
-    return [str(personal)] if personal else []
+logger = logging.getLogger("notes.services")
 
 
-def get_message_ids(note: Note, platform: str) -> dict[str, str]:
+def get_message_ids(post: Post, platform: str) -> dict[str, str]:
     """دریافت شناسه‌های پیام به صورت دیکشنری {chat_id: message_id}"""
-    val = getattr(note, f"{platform}_message_id", None)
-    if not val:
-        return {}
-    try:
-        data = json.loads(val)
-        if isinstance(data, dict):
-            return {str(k): str(v) for k, v in data.items()}
-    except Exception:
-        pass
-    return {"default": str(val)}
+    if platform == "telegram":
+        return post.telegram_message_ids or {}
+    elif platform == "bale":
+        return post.bale_message_ids or {}
+    return {}
 
 
-def set_message_ids(note: Note, platform: str, message_ids: dict[str, str]):
+def set_message_ids(post: Post, platform: str, message_ids: dict[str, str]):
     """ذخیره شناسه‌های پیام"""
-    field = f"{platform}_message_id"
-    val = json.dumps(message_ids) if message_ids else None
-    setattr(note, field, val)
-    Note.objects.filter(id=note.id).update(**{field: val})
+    if platform == "telegram":
+        post.telegram_message_ids = message_ids
+        Post.objects.filter(id=post.id).update(telegram_message_ids=message_ids)
+    elif platform == "bale":
+        post.bale_message_ids = message_ids
+        Post.objects.filter(id=post.id).update(bale_message_ids=message_ids)
 
 
-def _note_markdown_text(note: Note) -> str:
-    """متن ارسالی به ربات؛ عنوان به‌صورت ساده تا کاراکترهای خاص Markdown خرابش نکند."""
-    if note.title:
-        return f"{note.title}\n\n{note.content}"
-    return note.content
+def _post_markdown_text(post: Post) -> str:
+    """متن ارسالی به ربات"""
+    return post.content
 
 
-def create_bot_tasks(note: Note, old_instance: Optional[Note] = None, *, is_delete: bool = False):
+def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_delete: bool = False):
     """
-    صف وظایف ربات را برای یادداشت می‌سازد.
+    صف وظایف ربات را برای پست ایجاد می‌کند.
     old_instance: وضعیت قبلی هنگام به‌روزرسانی؛ برای ایجاد تازه None است.
-    is_delete: True یعنی کاربر در حال حذف یادداشت است (فقط تسک حذف پیام).
+    is_delete: True یعنی کاربر در حال حذف پست است.
     """
     if is_delete:
         for platform in ("telegram", "bale"):
-            msg_ids = get_message_ids(note, platform)
-            bot_token = note.user.telegram_bot_token if platform == "telegram" else note.user.bale_bot_token
+            msg_ids = get_message_ids(post, platform)
+            bot_token = post.author.telegram_bot_token if platform == "telegram" else post.author.bale_bot_token
+            
             for chat_id, msg_id in msg_ids.items():
-                actual_chat_id = chat_id
-                if actual_chat_id == "default":
-                    ch_ids = get_chat_ids_for_platform(note, platform)
-                    actual_chat_id = ch_ids[0] if ch_ids else None
-                if msg_id and actual_chat_id:
+                if msg_id and chat_id:
                     BotTask.objects.create(
                         action="delete",
                         platform=platform,
-                        chat_id=str(actual_chat_id),
+                        chat_id=str(chat_id),
                         text="",
                         message_id=str(msg_id),
-                        note_id=note.id,
+                        note_id=post.id, # سازگاری با سیستم‌های قدیمی
+                        post_id=post,
                         bot_token=bot_token,
                     )
         return
 
+    # برای ایجاد یا ویرایش پست
     for platform in ("telegram", "bale"):
-        send_field = f"send_to_{platform}"
-        old_send = getattr(old_instance, send_field, False) if old_instance else False
-        new_send = getattr(note, send_field)
-        bot_token = note.user.telegram_bot_token if platform == "telegram" else note.user.bale_bot_token
-
-        if old_instance is None:
-            if new_send:
-                chat_ids = get_chat_ids_for_platform(note, platform)
-                for chat_id in chat_ids:
-                    BotTask.objects.create(
-                        action="send",
-                        platform=platform,
-                        chat_id=str(chat_id),
-                        text=_note_markdown_text(note),
-                        message_id=None,
-                        note_id=note.id,
-                        bot_token=bot_token,
-                    )
+        active_field = f"{platform}_bot_active"
+        is_bot_active = getattr(post.topic, active_field, False)
+        
+        bot_token = post.author.telegram_bot_token if platform == "telegram" else post.author.bale_bot_token
+        
+        # اگر ربات فعال نباشد یا توکن نداشته باشیم، کاری انجام نمی‌دهیم
+        if not is_bot_active or not bot_token:
             continue
 
-        if old_send and not new_send:
-            msg_ids = get_message_ids(old_instance, platform)
-            for chat_id, msg_id in msg_ids.items():
-                actual_chat_id = chat_id
-                if actual_chat_id == "default":
-                    ch_ids = get_chat_ids_for_platform(note, platform)
-                    actual_chat_id = ch_ids[0] if ch_ids else None
-                if msg_id and actual_chat_id:
-                    BotTask.objects.create(
-                        action="delete",
-                        platform=platform,
-                        chat_id=str(actual_chat_id),
-                        text="",
-                        message_id=str(msg_id),
-                        note_id=note.id,
-                        bot_token=bot_token,
-                    )
-        elif not old_send and new_send:
-            chat_ids = get_chat_ids_for_platform(note, platform)
+        # دریافت اهداف ارتباط متصل به این تاپیک
+        connections_field = f"{platform}_connections"
+        connections = getattr(post.topic, connections_field).filter(is_active=True)
+        chat_ids = [str(conn.chat_id) for conn in connections]
+
+        if old_instance is None:
+            # ۱. پست جدید: ارسال به تمام کانال‌های متصل
             for chat_id in chat_ids:
                 BotTask.objects.create(
                     action="send",
                     platform=platform,
                     chat_id=str(chat_id),
-                    text=_note_markdown_text(note),
+                    text=_post_markdown_text(post),
                     message_id=None,
-                    note_id=note.id,
+                    note_id=post.id,
+                    post_id=post,
                     bot_token=bot_token,
                 )
-        elif old_send and new_send:
+        else:
+            # ۲. ویرایش پست
             msg_ids = get_message_ids(old_instance, platform)
-            current_active_chat_ids = get_chat_ids_for_platform(note, platform)
-            content_changed = (old_instance.title != note.title or old_instance.content != note.content)
+            content_changed = (old_instance.content != post.content or 
+                               old_instance.media_type != post.media_type or 
+                               old_instance.media_file != post.media_file)
 
-            # ۱. ویرایش پیام‌های ارسالی قبلی
+            # الف) ویرایش در کانال‌هایی که قبلاً ارسال شده است
             for chat_id, msg_id in msg_ids.items():
-                actual_chat_id = chat_id
-                if actual_chat_id == "default":
-                    ch_ids = get_chat_ids_for_platform(note, platform)
-                    actual_chat_id = ch_ids[0] if ch_ids else None
-                if msg_id and actual_chat_id:
+                if msg_id and chat_id in chat_ids:
                     if content_changed:
                         BotTask.objects.create(
                             action="edit",
                             platform=platform,
-                            chat_id=str(actual_chat_id),
-                            text=_note_markdown_text(note),
+                            chat_id=str(chat_id),
+                            text=_post_markdown_text(post),
                             message_id=str(msg_id),
-                            note_id=note.id,
+                            note_id=post.id,
+                            post_id=post,
                             bot_token=bot_token,
                         )
+                elif msg_id and chat_id not in chat_ids:
+                    # اگر از لیست اتصالات حذف شده است، پیام قبلی را حذف کنیم
+                    BotTask.objects.create(
+                        action="delete",
+                        platform=platform,
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        note_id=post.id,
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
 
-            # ۲. ارسال به کانال‌های جدید فعال که قبلاً ارسال نشده بودند
-            for chat_id in current_active_chat_ids:
+            # ب) ارسال به کانال‌های جدیدی که به اتصالات اضافه شده‌اند ولی هنوز ارسال نشده بودند
+            for chat_id in chat_ids:
                 if chat_id not in msg_ids:
                     BotTask.objects.create(
                         action="send",
                         platform=platform,
                         chat_id=str(chat_id),
-                        text=_note_markdown_text(note),
+                        text=_post_markdown_text(post),
                         message_id=None,
-                        note_id=note.id,
+                        note_id=post.id,
+                        post_id=post,
                         bot_token=bot_token,
                     )
-

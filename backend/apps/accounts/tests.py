@@ -20,7 +20,7 @@ class AccountsServicesTestCase(TestCase):
     @patch("requests.post")
     def test_send_otp_sms_success(self, mock_post, mock_configured):
         mock_response = MagicMock()
-        mock_response.content = b"success"
+        mock_response.content = b'{"return":{"status":200,"message":"success"},"entries":[]}'
         mock_post.return_value = mock_response
 
         # نباید هیچ خطایی پرتاب شود
@@ -33,7 +33,7 @@ class AccountsServicesTestCase(TestCase):
     @override_settings(KAVENEGAR_API_KEY="test_key", KAVENEGAR_SENDER="test_sender")
     @patch("requests.post")
     def test_send_otp_sms_timeout_error(self, mock_post, mock_configured):
-        mock_post.side_effect = requests.exceptions.Timeout("Connection timed out")
+        mock_post.side_effect = Exception("Connection timed out")
 
         with self.assertRaises(SMSDeliveryError) as ctx:
             send_otp_sms("09123456789", "1234")
@@ -44,8 +44,8 @@ class AccountsServicesTestCase(TestCase):
 class AuthViewSetTestCase(TestCase):
     def setUp(self):
         cache.clear()
-        self.url_request_otp = reverse("user-request-otp")
-        self.url_verify_otp = reverse("user-verify-otp")
+        self.url_request_otp = reverse("auth-request-otp")
+        self.url_verify_otp = reverse("auth-verify-otp")
 
     @patch("apps.accounts.views.send_sms_otp")
     @override_settings(DEBUG=False)
