@@ -66,7 +66,7 @@ async def handle_relay(request: web.Request) -> web.StreamResponse:
     timeout = ClientTimeout(total=60.0) # Telegram calls can occasionally be slow
     try:
         async with ClientSession(timeout=timeout) as session:
-            async with session.post(GAS_URL, json=payload) as response:
+            async with session.post(GAS_URL, json=payload, ssl=False) as response:
                 if response.status != 200:
                     error_text = await response.text()
                     logger.error("Google Apps Script returned HTTP %s: %s", response.status, error_text)
@@ -114,7 +114,7 @@ def main():
     app.router.add_route("*", "/{tail:.*}", handle_relay)
 
     try:
-        web.run_app(app, host=PROXY_HOST, port=PROXY_PORT, access_log=None)
+        web.run_app(app, host=PROXY_HOST, port=PROXY_PORT, access_log=logger)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Proxy server stopped by shutdown signal.")
 

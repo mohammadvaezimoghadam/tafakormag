@@ -50,10 +50,10 @@ class AuthViewSet(viewsets.GenericViewSet):
             cache.set(cache_key, otp, timeout=120)
             sent_via_kavenegar = (channel == "sms")
         except OTPDeliveryError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+            # اگر ارسال پیامک با خطا مواجه شد، باز هم کد را در کش ذخیره کرده و به کانال بله سوئیچ می‌کنیم
+            cache.set(cache_key, otp, timeout=120)
+            channel = "bale"
+            sent_via_kavenegar = False
 
         return Response({
             "message": "کد تأیید ارسال شد.",
