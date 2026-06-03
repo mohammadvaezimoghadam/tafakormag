@@ -138,8 +138,9 @@ class AuthViewSet(viewsets.GenericViewSet):
         try:
             if platform == 'telegram':
                 # استفاده از TELEGRAM_API_URL برای عبور از پروکسی (در صورت اجرا روی سرور ایران)
+                # فرمت صحیح: /botTOKEN/getMe (بدون / بین bot و توکن)
                 telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
-                url = f"{telegram_base}/{token}/getMe"
+                url = f"{telegram_base}{token}/getMe"
             else:
                 url = f"https://tapi.bale.ai/bot{token}/getMe"
                 
