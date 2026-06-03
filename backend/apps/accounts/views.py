@@ -137,11 +137,13 @@ class AuthViewSet(viewsets.GenericViewSet):
         # اعتبارسنجی توکن از طریق متد getMe پیام‌رسان مربوطه
         try:
             if platform == 'telegram':
-                url = f"https://api.telegram.org/bot{token}/getMe"
+                # استفاده از TELEGRAM_API_URL برای عبور از پروکسی (در صورت اجرا روی سرور ایران)
+                telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
+                url = f"{telegram_base}/{token}/getMe"
             else:
                 url = f"https://tapi.bale.ai/bot{token}/getMe"
                 
-            res = requests.get(url, timeout=5)
+            res = requests.get(url, timeout=10)
             if res.status_code == 200:
                 bot_data = res.json().get('result', {})
                 username = f"@{bot_data.get('username')}"
