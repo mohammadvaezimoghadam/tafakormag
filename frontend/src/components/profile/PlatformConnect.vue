@@ -55,7 +55,7 @@
             class="flex-1"
             :disabled="!token.trim()"
           >
-            {{ isEditing ? 'ذخیره تغییرات' : 'ثبت و اتصال ربات' }}
+            {{ isEditing ? 'ذخیره تغییرات' : (hasFailed ? 'سعی مجدد' : 'ثبت و اتصال ربات') }}
           </BaseButton>
           
           <BaseButton
@@ -116,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import BaseButton from '../ui/BaseButton.vue'
 import { updateCustomBot } from '../../api'
 import { useToast } from '../../composables/useToast'
@@ -134,10 +134,19 @@ const token = ref('')
 const loading = ref(false)
 const disconnectLoading = ref(false)
 const isEditing = ref(false)
+const hasFailed = ref(false)
+
+watch(token, () => {
+  hasFailed.value = false
+})
 
 const handleSave = async () => {
   if (!token.value.trim()) return
   loading.value = true
+  hasFailed.value = false
+  if (props.platform === 'telegram') {
+    showToast('در حال بررسی و اتصال به ربات تلگرام... به دلیل چند مرحله‌ای بودن فرآیند لطفاً چند لحظه صبور باشید.', 'warning')
+  }
   try {
     const res = await updateCustomBot(props.platform, token.value.trim())
     if (res.data?.success) {
@@ -147,6 +156,7 @@ const handleSave = async () => {
       emit('updated')
     }
   } catch (err) {
+    hasFailed.value = true
     // خطا توسط اینترسپتور نمایش داده می‌شود
   } finally {
     loading.value = false

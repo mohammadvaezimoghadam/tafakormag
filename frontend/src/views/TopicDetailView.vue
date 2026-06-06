@@ -120,7 +120,7 @@
     </div>
 
     <!-- باکس متنی ثابت در پایین صفحه برای ارسال پست -->
-    <div class="fixed bottom-0 left-0 right-0 max-w-md w-full mx-auto bg-white/95 backdrop-blur-md border-t border-gray-150 p-3 flex items-center space-x-2 space-x-reverse z-40">
+    <div v-if="isCreator" class="fixed bottom-0 left-0 right-0 max-w-md w-full mx-auto bg-white/95 backdrop-blur-md border-t border-gray-150 p-3 flex items-center space-x-2 space-x-reverse z-40">
       <!-- دکمه الصاق رسانه -->
       <div class="relative shrink-0">
         <button
@@ -169,6 +169,11 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
         </svg>
       </button>
+    </div>
+
+    <!-- نوار وضعیت قفل بودن برای سایر کاربران -->
+    <div v-else class="fixed bottom-0 left-0 right-0 max-w-md w-full mx-auto bg-gray-50/95 backdrop-blur-md border-t border-gray-150 p-4 text-center z-40">
+      <span class="text-xs font-black text-gray-400">🔒 فقط سازنده تاپیک مجاز به ارسال پیام در آن است.</span>
     </div>
 
     <!-- تنظیمات اتصالات تاپیک -->

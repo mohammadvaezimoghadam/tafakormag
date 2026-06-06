@@ -144,7 +144,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             else:
                 url = f"https://tapi.bale.ai/bot{token}/getMe"
                 
-            res = requests.get(url, timeout=10)
+            res = requests.get(url, timeout=25)
             if res.status_code == 200:
                 bot_data = res.json().get('result', {})
                 username = f"@{bot_data.get('username')}"

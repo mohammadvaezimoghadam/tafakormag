@@ -52,6 +52,10 @@ class PostViewSet(viewsets.ModelViewSet):
         return [permissions.AllowAny()]
 
     def perform_create(self, serializer):
+        topic = serializer.validated_data.get('topic')
+        if topic and (topic.created_by != self.request.user) and not self.request.user.is_superuser:
+            raise PermissionDenied("فقط سازنده تاپیک مجاز به ارسال پیام در آن است.")
+
         post = serializer.save(author=self.request.user)
         
         # همگام‌سازی و ساخت تسک‌های ربات

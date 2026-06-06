@@ -332,6 +332,18 @@ async def dynamic_bot_manager():
     logger.info("Dynamic Bot Manager loop started")
     while True:
         try:
+            # پاکسازی تسک‌های خاتمه یافته قبلی
+            for bot_key, task in list(running_bots.items()):
+                if task.done():
+                    try:
+                        exc = task.exception()
+                        if exc:
+                            logger.error(f"Bot task {bot_key} failed: {exc}")
+                    except Exception:
+                        pass
+                    running_bots.pop(bot_key)
+                    logger.info(f"Removed inactive/failed bot task: {bot_key}")
+
             active_bots = await api_client.get_active_custom_bots()
             active_keys = set()
             
@@ -392,7 +404,7 @@ async def task_processor():
     به جای استفاده از کلاینت سراسری، با هر توکن شخصی کاربر به طور آنی ارسال می‌کند.
     """
     logger.info("Dynamic Task Processor started")
-    async with httpx.AsyncClient(timeout=10.0) as http_client:
+    async with httpx.AsyncClient(timeout=25.0) as http_client:
         while True:
             try:
                 tasks = await api_client.fetch_tasks()
