@@ -25,7 +25,7 @@
       </div>
 
       <!-- دکمه‌های ویرایش و حذف (چپ‌چین برای RTL) -->
-      <div v-if="isAuthor" class="flex items-center space-x-1 space-x-reverse shrink-0">
+      <div v-if="isAuthor && !isEditing" class="flex items-center space-x-1 space-x-reverse shrink-0">
         <!-- دکمه ویرایش -->
         <button
           @click="startEdit"
@@ -71,12 +71,25 @@
 
       <!-- نمایش متن یا ادیتور ویرایش -->
       <div v-if="isEditing" class="space-y-2 mt-2">
-        <textarea
-          v-model="editContent"
-          rows="4"
-          class="w-full bg-gray-50 text-right px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white resize-none transition-all"
-          placeholder="ویرایش متن پست..."
-        ></textarea>
+        <div class="relative">
+          <!-- دکمه بهبود با هوش مصنوعی (شناور) -->
+          <button
+            v-if="showAiButton"
+            @click="showAiToast"
+            type="button"
+            class="absolute -top-9 left-1 z-10 flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-full text-[10px] font-extrabold shadow-md hover:scale-105 active:scale-95 transition-all animate-fade-in cursor-pointer"
+          >
+            <span class="text-[12px] animate-pulse">⭐</span>
+            <span>بهبود با هوش مصنوعی</span>
+            <span class="bg-black/20 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">به زودی</span>
+          </button>
+          <textarea
+            v-model="editContent"
+            rows="4"
+            class="w-full bg-gray-50 text-right px-4 py-2.5 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white resize-none transition-all"
+            placeholder="ویرایش متن پست..."
+          ></textarea>
+        </div>
         <div class="flex justify-end space-x-2 space-x-reverse">
           <button
             @click="saveEdit"
@@ -315,6 +328,18 @@ const isEditing = ref(false)
 const editContent = ref('')
 const savingEdit = ref(false)
 
+const showAiButton = computed(() => {
+  if (!editContent.value) return false
+  const lines = editContent.value.split('\n')
+  if (lines.length > 3) return true
+  if (editContent.value.length > 150) return true
+  return false
+})
+
+const showAiToast = () => {
+  showToast('این قابلیت (بهبود متن با هوش مصنوعی) در حال توسعه است و به زودی اضافه می‌شود.', 'info')
+}
+
 const startEdit = () => {
   editContent.value = props.post.content
   isEditing.value = true
@@ -368,6 +393,21 @@ const saveEdit = async () => {
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

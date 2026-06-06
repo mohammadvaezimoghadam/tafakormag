@@ -162,7 +162,7 @@ def main():
     # پیام‌های عمومی دیگر را با درخواست شماره ریپلای کن
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, start))
 
-    app.run_polling()
+    app.run_polling(poll_interval=2.0)
 
 if __name__ == "__main__":
     main()

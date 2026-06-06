@@ -8,7 +8,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 
 import requests
+import logging
 from django.db.models import Q
+
+logger = logging.getLogger(__name__)
 from otp.dispatcher import send_sms_otp, OTPDeliveryError
 from .models import User, BotConnectionToken, MessagingTarget
 from .serializers import (
@@ -119,6 +122,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     def update_custom_bot(self, request):
         platform = request.data.get('platform')
         token = request.data.get('token', '').strip()
+        force = request.data.get('force', False)
         
         if platform not in ['telegram', 'bale']:
             return Response({"error": "پلتفرم نامعتبر."}, status=status.HTTP_400_BAD_REQUEST)
@@ -128,9 +132,11 @@ class AuthViewSet(viewsets.GenericViewSet):
             if platform == 'telegram':
                 request.user.telegram_bot_token = None
                 request.user.telegram_bot_username = None
+                request.user.telegram_bot_disconnect_reason = None
             else:
                 request.user.bale_bot_token = None
                 request.user.bale_bot_username = None
+                request.user.bale_bot_disconnect_reason = None
             request.user.save()
             return Response({"success": True, "message": "ربات با موفقیت حذف شد."})
 
@@ -150,11 +156,62 @@ class AuthViewSet(viewsets.GenericViewSet):
                 username = f"@{bot_data.get('username')}"
                 
                 if platform == 'telegram':
+                    others = User.objects.filter(telegram_bot_token=token).exclude(pk=request.user.pk)
+                    if others.exists() and not force:
+                        return Response({
+                            "error": "این ربات در حال حاضر به حساب کاربری دیگری متصل است. آیا مایلید مالکیت آن را به این حساب انتقال دهید؟",
+                            "code": "claimed_by_another_user",
+                            "other_phone": others.first().phone
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+                    for other_user in others:
+                        if other_user.telegram_chat_id:
+                            telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
+                            notify_url = f"{telegram_base}{token}/sendMessage"
+                            msg_text = (
+                                "⚠️ <b>اتصال ربات اختصاصی شما قطع شد!</b>\n\n"
+                                f"توکن این ربات به حساب کاربری دیگری با شماره تلفن <code>{request.user.phone}</code> اختصاص یافت. "
+                                "کانال‌ها و گروه‌های ثبت شده شما حفظ شده‌اند اما برای ارسال‌های بعدی باید ربات جدیدی ثبت کنید."
+                            )
+                            try:
+                                requests.post(notify_url, json={"chat_id": other_user.telegram_chat_id, "text": msg_text, "parse_mode": "HTML"}, timeout=10)
+                            except Exception as e:
+                                logger.error(f"Failed to send telegram disconnect notice: {e}")
+                        other_user.telegram_bot_token = None
+                        other_user.telegram_bot_username = None
+                        other_user.telegram_bot_disconnect_reason = 'claimed_by_another_user'
+                        other_user.save()
                     request.user.telegram_bot_token = token
                     request.user.telegram_bot_username = username
+                    request.user.telegram_bot_disconnect_reason = None
                 else:
+                    others = User.objects.filter(bale_bot_token=token).exclude(pk=request.user.pk)
+                    if others.exists() and not force:
+                        return Response({
+                            "error": "این ربات در حال حاضر به حساب کاربری دیگری متصل است. آیا مایلید مالکیت آن را به این حساب انتقال دهید؟",
+                            "code": "claimed_by_another_user",
+                            "other_phone": others.first().phone
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+                    for other_user in others:
+                        if other_user.bale_chat_id:
+                            notify_url = f"https://tapi.bale.ai/bot{token}/sendMessage"
+                            msg_text = (
+                                "⚠️ <b>اتصال ربات اختصاصی شما قطع شد!</b>\n\n"
+                                f"توکن این ربات به حساب کاربری دیگری با شماره تلفن <code>{request.user.phone}</code> اختصاص یافت. "
+                                "کانال‌ها و گروه‌های ثبت شده شما حفظ شده‌اند اما برای ارسال‌های بعدی باید ربات جدیدی ثبت کنید."
+                            )
+                            try:
+                                requests.post(notify_url, json={"chat_id": other_user.bale_chat_id, "text": msg_text, "parse_mode": "HTML"}, timeout=10)
+                            except Exception as e:
+                                logger.error(f"Failed to send bale disconnect notice: {e}")
+                        other_user.bale_bot_token = None
+                        other_user.bale_bot_username = None
+                        other_user.bale_bot_disconnect_reason = 'claimed_by_another_user'
+                        other_user.save()
                     request.user.bale_bot_token = token
                     request.user.bale_bot_username = username
+                    request.user.bale_bot_disconnect_reason = None
                 
                 request.user.save()
                 return Response({

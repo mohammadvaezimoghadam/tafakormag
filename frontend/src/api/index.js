@@ -38,7 +38,9 @@ instance.interceptors.response.use(
         window.location.reload()
       }
     } else if (status === 400 && data?.error) {
-      toastState.add({ message: data.error, type: 'error' })
+      if (data?.code !== 'claimed_by_another_user') {
+        toastState.add({ message: data.error, type: 'error' })
+      }
     } else if (status === 404) {
       toastState.add({ message: 'یافت نشد', type: 'error' })
     } else if (status >= 500) {
@@ -95,7 +97,7 @@ export const deleteUserDestination = (id) => instance.post('/api/auth/delete-use
 // --- Profile & Bot APIs ---
 export const getConnectToken = (platform) => instance.get('/api/auth/connect-token/', { params: { platform } })
 
-export const updateCustomBot = (platform, token) => instance.post('/api/auth/update-custom-bot/', { platform, token })
+export const updateCustomBot = (platform, token, force = false) => instance.post('/api/auth/update-custom-bot/', { platform, token, force })
 
 export const fetchProfile = () => instance.get('/api/auth/profile/')
 

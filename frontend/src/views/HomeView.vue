@@ -16,6 +16,31 @@
       </span>
     </div>
 
+    <!-- دسته‌بندی تاپیک‌ها به صورت دو چیپس کنار هم (فقط در حالت لاگین) -->
+    <div v-if="hasToken() && !loading && currentUser" class="flex justify-center items-center gap-3 mb-6">
+      <button
+        @click="filterTab = 'others'"
+        :class="filterTab === 'others' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105 border-indigo-600' : 'bg-white text-gray-500 border-gray-150 hover:text-gray-700 hover:bg-gray-50'"
+        class="flex-1 max-w-[160px] py-2.5 px-4 rounded-2xl border text-xs font-black transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
+      >
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <span>تاپیک‌های دیگران</span>
+      </button>
+
+      <button
+        @click="filterTab = 'mine'"
+        :class="filterTab === 'mine' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105 border-indigo-600' : 'bg-white text-gray-500 border-gray-150 hover:text-gray-700 hover:bg-gray-50'"
+        class="flex-1 max-w-[160px] py-2.5 px-4 rounded-2xl border text-xs font-black transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
+      >
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+        <span>تاپیک‌های من</span>
+      </button>
+    </div>
+
     <!-- انیمیشن لودینگ یا لودینگ‌های استخوان‌بندی‌شده -->
     <Transition name="fade" mode="out-in">
       <div v-if="loading" class="space-y-4">
@@ -124,7 +149,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchTopics } from '../api'
+import { fetchTopics, fetchProfile } from '../api'
 import { useAuth } from '../composables/useAuth'
 import { useToast } from '../composables/useToast'
 import TopicModal from '../components/notes/TopicModal.vue'
@@ -137,6 +162,8 @@ const topics = ref([])
 const loading = ref(true)
 const searchQuery = ref('')
 const modalOpen = ref(false)
+const currentUser = ref(null)
+const filterTab = ref('others')
 
 const loadTopics = async () => {
   loading.value = true
@@ -151,9 +178,19 @@ const loadTopics = async () => {
 }
 
 const filteredTopics = computed(() => {
-  if (!searchQuery.value.trim()) return topics.value
+  let list = topics.value
+
+  if (hasToken() && currentUser.value) {
+    if (filterTab.value === 'mine') {
+      list = list.filter(t => t.created_by === currentUser.value.id)
+    } else if (filterTab.value === 'others') {
+      list = list.filter(t => t.created_by !== currentUser.value.id)
+    }
+  }
+
+  if (!searchQuery.value.trim()) return list
   const query = searchQuery.value.toLowerCase()
-  return topics.value.filter(t => t.name.toLowerCase().includes(query) || (t.description && t.description.toLowerCase().includes(query)))
+  return list.filter(t => t.name.toLowerCase().includes(query) || (t.description && t.description.toLowerCase().includes(query)))
 })
 
 const getImageUrl = (url) => {
@@ -199,8 +236,16 @@ const onTopicSaved = () => {
   loadTopics()
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadTopics()
+  if (hasToken()) {
+    try {
+      const res = await fetchProfile()
+      currentUser.value = res.data
+    } catch (err) {
+      // خطا توسط اینترسپتور مدیریت می‌شود
+    }
+  }
 })
 </script>
 

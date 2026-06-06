@@ -19,6 +19,13 @@
         {{ botUsername || 'متصل' }}
       </span>
       <span
+        v-else-if="!connected && disconnectReason === 'claimed_by_another_user' && !showRegisterForm"
+        class="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold rounded-full flex items-center gap-1.5 animate-fade-in"
+      >
+        <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+        غیرفعال
+      </span>
+      <span
         v-else-if="!connected"
         class="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold rounded-full flex items-center gap-1.5"
       >
@@ -28,13 +35,13 @@
     </div>
 
     <!-- راهنمای ساخت ربات اختصاصی -->
-    <p class="text-sm text-gray-500 leading-relaxed" v-if="!connected || isEditing">
+    <p class="text-sm text-gray-500 leading-relaxed" v-if="(!connected || isEditing) && (disconnectReason !== 'claimed_by_another_user' || showRegisterForm)">
       برای انتشار خودکار یادداشت‌ها، ابتدا در BotFather پیام‌رسان {{ platform === 'telegram' ? 'تلگرام' : 'بله' }} یک ربات اختصاصی بسازید و توکن API آن را در کادر زیر وارد کنید.
     </p>
 
     <!-- لایه فرم اتصال یا ویرایش توکن -->
     <Transition name="fade" mode="out-in">
-      <div v-if="!connected || isEditing" class="space-y-3" :key="'form'">
+      <div v-if="(!connected && (disconnectReason !== 'claimed_by_another_user' || showRegisterForm)) || isEditing" class="space-y-3" :key="'form'">
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-semibold text-gray-500">توکن API ربات اختصاصی:</label>
           <input
@@ -48,7 +55,7 @@
         
         <div class="flex items-center gap-2">
           <BaseButton
-            @click="handleSave"
+            @click="() => handleSave(false)"
             :loading="loading"
             variant="primary"
             size="sm"
@@ -59,13 +66,52 @@
           </BaseButton>
           
           <BaseButton
-            v-if="isEditing"
+            v-if="isEditing || showRegisterForm"
             @click="cancelEdit"
             variant="outline"
             size="sm"
             :disabled="loading"
           >
             انصراف
+          </BaseButton>
+        </div>
+      </div>
+
+      <!-- لایه نمایش وضعیت قطع اتصال به دلیل تصاحب (Claimed) -->
+      <div v-else-if="!connected && disconnectReason === 'claimed_by_another_user' && !showRegisterForm" class="space-y-4" :key="'claimed'">
+        <div class="p-4 bg-rose-50 border border-rose-200 text-rose-950 rounded-2xl text-xs flex flex-col gap-2 leading-relaxed animate-fade-in">
+          <div class="flex items-center gap-1.5 font-extrabold text-rose-800 text-sm">
+            <span>⚠️</span>
+            <span>قطع اتصال ربات اختصاصی</span>
+          </div>
+          <p class="font-medium text-rose-700">
+            توکن این ربات اخیراً در یک حساب کاربری دیگر ثبت شده است و به همین دلیل ارتباط آن با این حساب کاربری قطع شد.
+          </p>
+          <p class="text-[10px] text-rose-500">
+            * مقاصد ثبت شده شما (کانال‌ها و گروه‌ها) حفظ شده‌اند اما تا زمان اتصال ربات جدید، یادداشتی ارسال نخواهد شد.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- دکمه ثبت توکن جدید -->
+          <BaseButton
+            @click="showRegisterForm = true"
+            variant="primary"
+            size="sm"
+            class="flex-1 shadow-sm font-bold"
+          >
+            ➕ ثبت توکن جدید
+          </BaseButton>
+
+          <!-- دکمه پاکسازی اطلاعات -->
+          <BaseButton
+            @click="handleClearBot"
+            :loading="disconnectLoading"
+            variant="danger"
+            size="sm"
+            class="flex-1 shadow-sm font-bold"
+          >
+            🧹 پاکسازی توکن
           </BaseButton>
         </div>
       </div>
@@ -124,7 +170,8 @@ import { useToast } from '../../composables/useToast'
 const props = defineProps({
   platform: { type: String, required: true },
   connected: { type: Boolean, default: false },
-  botUsername: { type: String, default: '' }
+  botUsername: { type: String, default: '' },
+  disconnectReason: { type: String, default: null }
 })
 
 const emit = defineEmits(['updated'])
@@ -135,29 +182,38 @@ const loading = ref(false)
 const disconnectLoading = ref(false)
 const isEditing = ref(false)
 const hasFailed = ref(false)
+const showRegisterForm = ref(false)
 
 watch(token, () => {
   hasFailed.value = false
 })
 
-const handleSave = async () => {
+const handleSave = async (force = false) => {
   if (!token.value.trim()) return
   loading.value = true
   hasFailed.value = false
-  if (props.platform === 'telegram') {
+  if (props.platform === 'telegram' && !force) {
     showToast('در حال بررسی و اتصال به ربات تلگرام... به دلیل چند مرحله‌ای بودن فرآیند لطفاً چند لحظه صبور باشید.', 'warning')
   }
   try {
-    const res = await updateCustomBot(props.platform, token.value.trim())
+    const res = await updateCustomBot(props.platform, token.value.trim(), force)
     if (res.data?.success) {
       showToast(res.data.message || 'ربات اختصاصی با موفقیت متصل شد.', 'success')
       token.value = ''
       isEditing.value = false
+      showRegisterForm.value = false
       emit('updated')
     }
   } catch (err) {
     hasFailed.value = true
-    // خطا توسط اینترسپتور نمایش داده می‌شود
+    const errorData = err.response?.data
+    if (errorData?.code === 'claimed_by_another_user') {
+      const otherPhone = errorData.other_phone || 'دیگری'
+      const msg = `این ربات در حال حاضر به حساب کاربری با شماره تلفن ${otherPhone} متصل است. آیا مطمئن هستید که می‌خواهید مالکیت آن را به این حساب انتقال دهید؟`
+      if (window.confirm(msg)) {
+        await handleSave(true)
+      }
+    }
   } finally {
     loading.value = false
   }
@@ -171,6 +227,25 @@ const handleDisconnect = async () => {
     if (res.data?.success) {
       showToast('ربات اختصاصی با موفقیت قطع اتصال شد.', 'success')
       isEditing.value = false
+      showRegisterForm.value = false
+      emit('updated')
+    }
+  } catch (err) {
+    // خطا توسط اینترسپتور مدیریت می‌شود
+  } finally {
+    disconnectLoading.value = false
+  }
+}
+
+const handleClearBot = async () => {
+  if (!window.confirm('آیا از پاکسازی اطلاعات ربات قبلی اطمینان دارید؟')) return
+  disconnectLoading.value = true
+  try {
+    const res = await updateCustomBot(props.platform, '')
+    if (res.data?.success) {
+      showToast('اطلاعات ربات با موفقیت پاکسازی شد.', 'success')
+      showRegisterForm.value = false
+      isEditing.value = false
       emit('updated')
     }
   } catch (err) {
@@ -183,6 +258,7 @@ const handleDisconnect = async () => {
 const cancelEdit = () => {
   token.value = ''
   isEditing.value = false
+  showRegisterForm.value = false
 }
 </script>
 

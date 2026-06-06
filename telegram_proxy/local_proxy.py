@@ -20,6 +20,12 @@ GAS_URL = os.getenv("GAS_URL", "")
 RELAY_TOKEN = os.getenv("RELAY_TOKEN", "")
 PROXY_PORT = int(os.getenv("PROXY_PORT", "8080"))
 PROXY_HOST = os.getenv("PROXY_HOST", "0.0.0.0")
+USE_PROXY_RELAY = os.getenv("USE_PROXY_RELAY", "false").lower() == "true"
+
+# Check if proxy relay is enabled
+if not USE_PROXY_RELAY:
+    logger.info("USE_PROXY_RELAY is set to false/disabled. Proxy container will now exit cleanly.")
+    sys.exit(0)
 
 # Validation
 if not GAS_URL:

@@ -56,13 +56,10 @@ class AuthViewSetTestCase(TestCase):
 
         response = self.client.post(self.url_request_otp, {"phone": "09123456789"})
 
-        # بررسی اینکه کد ۵۰۳ بازگردانده شده است
-        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(
-            response.data["error"],
-            "ارسال پیامک با خطا مواجه شد. لطفاً چند لحظه بعد دوباره تلاش کنید."
-        )
-        self.assertIsNone(cache.get("otp_09123456789"))
+        # بررسی اینکه کد ۲۰۰ بازگردانده شده و کانال به bale تغییر یافته است
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["channel"], "bale")
+        self.assertIsNotNone(cache.get("otp_09123456789"))
 
     @patch("apps.accounts.views.send_sms_otp", return_value="sms")
     @override_settings(DEBUG=False)

@@ -142,6 +142,17 @@
 
       <!-- اینپوت متنی اصلی -->
       <div class="flex-1 relative">
+        <!-- دکمه بهبود با هوش مصنوعی (شناور) -->
+        <button
+          v-if="showAiButton"
+          @click="showAiToast"
+          type="button"
+          class="absolute -top-9 left-1 z-10 flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-full text-[10px] font-extrabold shadow-md hover:scale-105 active:scale-95 transition-all animate-fade-in cursor-pointer"
+        >
+          <span class="text-[12px] animate-pulse">⭐</span>
+          <span>بهبود با هوش مصنوعی</span>
+          <span class="bg-black/20 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">به زودی</span>
+        </button>
         <textarea
           ref="textareaRef"
           v-model="postContent"
@@ -218,6 +229,18 @@ const posts = ref([])
 const loadingPosts = ref(true)
 const sendingPost = ref(false)
 const postContent = ref('')
+
+const showAiButton = computed(() => {
+  if (!postContent.value) return false
+  const lines = postContent.value.split('\n')
+  if (lines.length > 3) return true
+  if (postContent.value.length > 150) return true
+  return false
+})
+
+const showAiToast = () => {
+  showToast('این قابلیت (بهبود متن با هوش مصنوعی) در حال توسعه است و به زودی اضافه می‌شود.', 'info')
+}
 
 const mediaInput = ref(null)
 const selectedFile = ref(null)
@@ -472,5 +495,20 @@ onMounted(() => {
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.1);
   border-radius: 99px;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

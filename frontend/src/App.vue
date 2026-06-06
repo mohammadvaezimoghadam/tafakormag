@@ -23,17 +23,28 @@
       v-if="showGlobalLoginModal"
       @close="showGlobalLoginModal = false"
     />
+
+    <!-- مودال آخرین تغییرات (چنج‌لاگ) -->
+    <ChangelogModal
+      v-if="showChangelogModal"
+      :title="changelogData.title"
+      :description="changelogData.description"
+      :updates="changelogData.updates"
+      @close="handleCloseChangelog"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import SidebarDrawer from './components/layout/SidebarDrawer.vue'
 import BaseToast from './components/ui/BaseToast.vue'
 import BottomNav from './components/layout/BottomNav.vue'
 import QuickLoginModal from './components/auth/QuickLoginModal.vue'
+import ChangelogModal from './components/ui/ChangelogModal.vue'
+import changelogData from '../changelog-display.json'
 import { useAuth } from './composables/useAuth'
 
 const route = useRoute()
@@ -42,4 +53,18 @@ const showBottomNav = computed(() => showLayout.value && !route.meta.hideBottomN
 const sidebarOpen = ref(false)
 
 const { showGlobalLoginModal } = useAuth()
+
+const showChangelogModal = ref(false)
+
+onMounted(() => {
+  const seenVersion = localStorage.getItem('seen_changelog_version')
+  if (seenVersion !== changelogData.version) {
+    showChangelogModal.value = true
+  }
+})
+
+const handleCloseChangelog = () => {
+  localStorage.setItem('seen_changelog_version', changelogData.version)
+  showChangelogModal.value = false
+}
 </script>

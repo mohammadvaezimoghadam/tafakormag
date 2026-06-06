@@ -19,15 +19,15 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'profile_image',
-            'is_telegram_bot_connected', 'telegram_bot_username',
-            'is_bale_bot_connected', 'bale_bot_username',
+            'is_telegram_bot_connected', 'telegram_bot_username', 'telegram_bot_disconnect_reason',
+            'is_bale_bot_connected', 'bale_bot_username', 'bale_bot_disconnect_reason',
             'is_telegram_otp_connected', 'is_bale_otp_connected'
         ]
         read_only_fields = [
             'id',
             'phone', 
-            'is_telegram_bot_connected', 'telegram_bot_username',
-            'is_bale_bot_connected', 'bale_bot_username',
+            'is_telegram_bot_connected', 'telegram_bot_username', 'telegram_bot_disconnect_reason',
+            'is_bale_bot_connected', 'bale_bot_username', 'bale_bot_disconnect_reason',
             'is_telegram_otp_connected', 'is_bale_otp_connected'
         ]
 

@@ -38,8 +38,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     telegram_bot_token = models.CharField(max_length=255, null=True, blank=True)
     telegram_bot_username = models.CharField(max_length=255, null=True, blank=True)
+    telegram_bot_disconnect_reason = models.CharField(max_length=255, null=True, blank=True)
     bale_bot_token = models.CharField(max_length=255, null=True, blank=True)
     bale_bot_username = models.CharField(max_length=255, null=True, blank=True)
+    bale_bot_disconnect_reason = models.CharField(max_length=255, null=True, blank=True)
 
     objects = UserManager()
     USERNAME_FIELD = 'phone'

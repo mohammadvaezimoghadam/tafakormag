@@ -2,6 +2,8 @@ import os
 import asyncio
 import httpx
 import logging
+import html
+import re
 from urllib.parse import urlparse, urlunparse
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -18,6 +20,22 @@ from telegram.error import TelegramError
 
 from api_client import APIClient
 from logger_config import setup_logger
+
+def format_text_for_telegram(text: str) -> str:
+    if not text:
+        return ""
+    # 1. Escape HTML special characters
+    escaped = html.escape(text)
+    
+    # 2. Convert standard markdown sequences to HTML:
+    # inline code: `code` -> <code>code</code>
+    escaped = re.sub(r'`([^`\n]+)`', r'<code>\1</code>', escaped)
+    # bold: **bold** -> <b>bold</b>
+    escaped = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', escaped)
+    # italic: *italic* -> <i>italic</i>
+    escaped = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', escaped)
+    
+    return escaped
 
 # تنظیم لاگر
 logger = setup_logger("bot_runner", "runner.log")
@@ -41,40 +59,50 @@ def get_custom_main_keyboard():
 
 async def custom_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = context.bot_data.get("phone", "نامشخص")
+    chat_id = update.effective_chat.id
+    platform = context.bot_data.get("platform")
+    
+    if platform and phone != "نامشخص" and update.effective_chat.type == "private":
+        try:
+            await api_client.register_phone_chat(platform, phone, chat_id)
+            logger.info(f"Automatically registered chat_id {chat_id} for owner {phone} ({platform}) via custom_start")
+        except Exception as e:
+            logger.error(f"Failed to auto-register owner chat_id: {e}")
+
     await update.message.reply_text(
-        f"🧠 *به ربات اختصاصی تفکر خوش آمدید!*\n\n"
-        f"این ربات به صورت اختصاصی به حساب تفکر شما با شماره `{phone}` متصل است.\n\n"
-        "💡 *راه‌های اتصال مقصد جدید (گروه یا کانال):*\n\n"
-        "1️⃣ **روش اول (سریع‌ترین):** ربات را به عنوان مدیر (Admin) به کانال یا گروه خود اضافه کنید و دستور `/connect` را داخل آن بفرستید.\n\n"
-        "2️⃣ **روش دوم (دستی):** شناسه عددی (Chat ID) گروه یا کانال خود را مستقیماً در این چت ارسال کنید. (مثلاً: `-100123456789`).\n\n"
+        f"🧠 <b>به ربات اختصاصی تفکر خوش آمدید!</b>\n\n"
+        f"این ربات به صورت اختصاصی به حساب تفکر شما با شماره <code>{format_text_for_telegram(phone)}</code> متصل است.\n\n"
+        "💡 <b>راه‌های اتصال مقصد جدید (گروه یا کانال):</b>\n\n"
+        "1️⃣ <b>روش اول (سریع‌ترین):</b> ربات را به عنوان مدیر (Admin) به کانال یا گروه خود اضافه کنید و دستور <code>/connect</code> را داخل آن بفرستید.\n\n"
+        "2️⃣ <b>روش دوم (دستی):</b> شناسه عددی (Chat ID) گروه یا کانال خود را مستقیماً در این چت ارسال کنید. (مثلاً: <code>-100123456789</code>).\n\n"
         "🔹 برای مشاهده و مدیریت لیست مقاصد متصل، از دکمه زیر صفحه استفاده کنید:",
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=get_custom_main_keyboard()
     )
 
 async def custom_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = context.bot_data.get("phone", "نامشخص")
     await update.message.reply_text(
-        f"🔌 *وضعیت اتصال به تفکر:*\n\n"
-        f"این ربات اختصاصی با موفقیت به حساب تفکر با شماره `{phone}` متصل است و آماده انتشار یادداشت‌های شما می‌باشد.",
-        parse_mode="Markdown",
+        f"🔌 <b>وضعیت اتصال به تفکر:</b>\n\n"
+        f"این ربات اختصاصی با موفقیت به حساب تفکر با شماره <code>{format_text_for_telegram(phone)}</code> متصل است و آماده انتشار یادداشت‌های شما می‌باشد.",
+        parse_mode="HTML",
         reply_markup=get_custom_main_keyboard()
     )
 
 async def custom_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📖 *راهنمای اتصال مقاصد انتشار*\n\n"
+        "📖 <b>راهنمای اتصال مقاصد انتشار</b>\n\n"
         "برای اینکه یادداشت‌های شما در کانال یا گروه منتشر شوند، باید آن‌ها را متصل کنید:\n\n"
-        "🔹 **نحوه اتصال خودکار کانال/گروه:**\n"
+        "🔹 <b>نحوه اتصال خودکار کانال/گروه:</b>\n"
         "۱. ربات را به گروه یا کانال خود دعوت کنید.\n"
         "۲. ربات را مدیر (Admin) با دسترسی ارسال پیام کنید.\n"
-        "۳. دستور `/connect` یا `/register` را در کانال یا گروه ارسال کنید.\n"
+        "۳. دستور <code>/connect</code> یا <code>/register</code> را در کانال یا گروه ارسال کنید.\n"
         "۴. ربات به طور خودکار آن را ثبت و پیام تایید ارسال می‌کند.\n\n"
-        "🔹 **نحوه اتصال با شناسه چت (مستقیم):**\n"
-        "اگر شناسه عددی چت خود را دارید (معمولاً شناسه کانال‌ها با `-100` شروع می‌شود)، آن را مستقیماً به همین چت ارسال کنید تا ثبت شود.\n\n"
-        "🔹 **مدیریت مقاصد:**\n"
+        "🔹 <b>نحوه اتصال با شناسه چت (مستقیم):</b>\n"
+        "اگر شناسه عددی چت خود را دارید (معمولاً شناسه کانال‌ها با <code>-100</code> شروع می‌شود)، آن را مستقیماً به همین چت ارسال کنید تا ثبت شود.\n\n"
+        "🔹 <b>مدیریت مقاصد:</b>\n"
         "از دکمه «📋 لیست مقاصد (کانال‌ها/گروه‌ها)» برای مشاهده، حذف و پیش‌فرض کردن استفاده کنید.",
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=get_custom_main_keyboard()
     )
 
@@ -104,12 +132,12 @@ async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=int(my_chat_member.from_user.id),
                 text=(
-                    f"✅ *ثبت خودکار مقصد موفقیت‌آمیز بود!*\n\n"
-                    f"📢 نام مقصد: `{label}`\n"
-                    f"🆔 شناسه: `{chat_id}`\n\n"
-                    f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (`{phone}`) اضافه شد."
+                    f"✅ <b>ثبت خودکار مقصد موفقیت‌آمیز بود!</b>\n\n"
+                    f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
+                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                    f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (<code>{format_text_for_telegram(phone)}</code>) اضافه شد."
                 ),
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
         except Exception as e:
             logger.error(f"Auto-registration failed: {e}")
@@ -129,7 +157,10 @@ async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_T
         )
         return
 
-    await update.effective_message.reply_text("📋 *لیست مقاصد متصل شده به تفکر:*")
+    await update.effective_message.reply_text(
+        "📋 <b>لیست مقاصد متصل شده به تفکر:</b>",
+        parse_mode="HTML"
+    )
     
     for dest in destinations:
         dest_id = dest["id"]
@@ -140,9 +171,9 @@ async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_T
         status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
         
         text = (
-            f"📢 *نام:* {label}\n"
-            f"🆔 *شناسه:* `{chat_id}`\n"
-            f"📊 *وضعیت:* {status_text}"
+            f"📢 <b>نام:</b> {format_text_for_telegram(label)}\n"
+            f"🆔 <b>شناسه:</b> <code>{chat_id}</code>\n"
+            f"📊 <b>وضعیت:</b> {status_text}"
         )
         
         # ساخت دکمه‌های شیشه‌ای (Inline Keyboard)
@@ -157,7 +188,7 @@ async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_T
         await context.bot.send_message(
             chat_id=chat.id,
             text=text,
-            parse_mode="Markdown",
+            parse_mode="HTML",
             reply_markup=reply_markup
         )
 
@@ -233,11 +264,11 @@ async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAU
         try:
             await api_client.register_destination(user_id, platform, chat_id, label)
             await message.reply_text(
-                f"✅ *ثبت مقصد موفقیت‌آمیز بود!*\n\n"
-                f"📢 نام مقصد: `{label}`\n"
-                f"🆔 شناسه: `{chat_id}`\n\n"
-                f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (`{phone}`) اضافه شد.",
-                parse_mode="Markdown"
+                f"✅ <b>ثبت مقصد موفقیت‌آمیز بود!</b>\n\n"
+                f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
+                f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (<code>{format_text_for_telegram(phone)}</code>) اضافه شد.",
+                parse_mode="HTML"
             )
         except Exception as e:
             await message.reply_text(f"⚠️ ثبت مقصد انجام نشد یا قبلاً ثبت شده است.\nشناسه چت: `{chat_id}`\nجزئیات: {e}")
@@ -245,6 +276,12 @@ async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAU
 
     # ۲. مدیریت چت خصوصی ربات
     if chat.type == "private":
+        if platform and phone != "نامشخص":
+            try:
+                await api_client.register_phone_chat(platform, phone, chat.id)
+            except Exception as e:
+                logger.error(f"Failed to auto-register owner chat_id in handle_any_message_or_post: {e}")
+
         # الف) منوی نمایش مقاصد
         if text in ("📋 لیست مقاصد (کانال‌ها/گروه‌ها)", "/destinations", "/list"):
             await send_destinations_list(update, context)
@@ -270,11 +307,11 @@ async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAU
                 label = chat_obj.title or chat_obj.username or f"Chat {chat_id}"
                 await api_client.register_destination(user_id, platform, chat_id, label)
                 await message.reply_text(
-                    f"✅ *ثبت مقصد با موفقیت انجام شد!*\n\n"
-                    f"📢 نام مقصد: `{label}`\n"
-                    f"🆔 شناسه: `{chat_id}`\n\n"
+                    f"✅ <b>ثبت مقصد با موفقیت انجام شد!</b>\n\n"
+                    f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
+                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
                     f"این چت به مقاصد انتشار حساب شما اضافه شد.",
-                    parse_mode="Markdown"
+                    parse_mode="HTML"
                 )
             except Exception as e:
                 await message.reply_text(
@@ -318,7 +355,8 @@ async def run_single_bot(bot_key: str, token: str, platform: str, user_id: int, 
     try:
         async with app:
             await app.start()
-            await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+            poll_interval = 2.0 if platform == "bale" else 0.0
+            await app.updater.start_polling(allowed_updates=Update.ALL_TYPES, poll_interval=poll_interval)
             await asyncio.Event().wait()
     except Exception as e:
         logger.error(f"Error running bot {bot_key}: {e}")
@@ -332,7 +370,30 @@ async def dynamic_bot_manager():
     logger.info("Dynamic Bot Manager loop started")
     while True:
         try:
-            # پاکسازی تسک‌های خاتمه یافته قبلی
+            # 1. دریافت بات‌های فعال
+            active_bots = await api_client.get_active_custom_bots()
+            active_keys = set()
+            for bot in active_bots:
+                uid = bot["user_id"]
+                platform = bot["platform"]
+                bot_key = f"{platform}_{uid}"
+                active_keys.add(bot_key)
+
+            # 2. متوقف کردن و شات‌دان تسک‌های ربات‌هایی که دیگر فعال نیستند
+            tasks_to_await = []
+            for bot_key in list(running_bots.keys()):
+                if bot_key not in active_keys:
+                    logger.info(f"Bot {bot_key} is no longer active, terminating task...")
+                    task = running_bots.pop(bot_key)
+                    task.cancel()
+                    tasks_to_await.append(task)
+            
+            if tasks_to_await:
+                # صبر می‌کنیم تا کاملاً متوقف شوند تا پورت/اتصالات آزاد شوند
+                await asyncio.gather(*tasks_to_await, return_exceptions=True)
+                logger.info("All inactive bot tasks terminated successfully.")
+
+            # 3. پاکسازی تسک‌های خاتمه یافته قبلی (که ممکن است کرش کرده باشند)
             for bot_key, task in list(running_bots.items()):
                 if task.done():
                     try:
@@ -344,29 +405,19 @@ async def dynamic_bot_manager():
                     running_bots.pop(bot_key)
                     logger.info(f"Removed inactive/failed bot task: {bot_key}")
 
-            active_bots = await api_client.get_active_custom_bots()
-            active_keys = set()
-            
+            # 4. راه‌اندازی ربات‌های فعال جدید
             for bot in active_bots:
                 uid = bot["user_id"]
                 platform = bot["platform"]
                 token = bot["token"].strip()
                 phone = bot["phone"]
                 bot_key = f"{platform}_{uid}"
-                active_keys.add(bot_key)
                 
                 # اگر ربات در حال اجرا نیست، آن را استارت بزن
                 if bot_key not in running_bots:
                     logger.info(f"New active bot detected: {bot_key}, launching...")
                     task = asyncio.create_task(run_single_bot(bot_key, token, platform, uid, phone))
                     running_bots[bot_key] = task
-            
-            # اگر رباتی دیگر در لیست فعال نیست، آن را متوقف کن
-            for bot_key in list(running_bots.keys()):
-                if bot_key not in active_keys:
-                    logger.info(f"Bot {bot_key} is no longer active, terminating task...")
-                    task = running_bots.pop(bot_key)
-                    task.cancel()
                     
         except Exception as e:
             logger.error(f"Error in dynamic_bot_manager: {e}")
@@ -398,6 +449,40 @@ async def download_file(http_client: httpx.AsyncClient, url: str) -> bytes | Non
 
 # ---------- پردازشگر داینامیک صف یادداشت‌ها (Dynamic Note Publisher) ----------
 
+async def post_with_retry(http_client, url, json_payload=None, data=None, files=None, max_retries=3, initial_delay=2.0):
+    """
+    متد کمکی برای ارسال درخواست‌های HTTP با قابلیت تلاش مجدد خودکار در صورت قطعی شبکه یا خطای سرور واسط.
+    """
+    delay = initial_delay
+    for attempt in range(max_retries):
+        try:
+            if json_payload is not None:
+                res = await http_client.post(url, json=json_payload)
+            else:
+                res = await http_client.post(url, data=data, files=files)
+            
+            # در صورتی که خطای سمت سرور (مثلا کد ۵۰۲ یا ۵۰۴ پروکسی گوگل) رخ دهد، تلاش مجدد می‌کنیم
+            if res.status_code >= 500:
+                logger.warning(
+                    f"Relay proxy returned server error {res.status_code}. "
+                    f"Attempt {attempt + 1}/{max_retries}. Retrying in {delay}s..."
+                )
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(delay)
+                    delay *= 1.5
+                    continue
+            return res
+        except (httpx.HTTPError, asyncio.TimeoutError) as e:
+            logger.warning(
+                f"HTTP network error occurred: {e}. "
+                f"Attempt {attempt + 1}/{max_retries}. Retrying in {delay}s..."
+            )
+            if attempt < max_retries - 1:
+                await asyncio.sleep(delay)
+                delay *= 1.5
+                continue
+            raise
+
 async def task_processor():
     """
     پردازشگر صف یادداشت‌ها.
@@ -422,12 +507,12 @@ async def task_processor():
                     if not bot_token:
                         logger.warning(f"No custom bot token for task {tid}, skipping...")
                         continue
-
+ 
                     # ساخت URL برای متد API مناسب بر اساس پلتفرم
                     base_url = TELEGRAM_API_URL if platform == "telegram" else BALE_API_URL
                     if base_url.endswith("/"):
                         base_url = base_url[:-1]
-
+ 
                     try:
                         success = False
                         msg_id = message_id
@@ -456,9 +541,9 @@ async def task_processor():
                                             mime_type = "application/octet-stream"
                                             
                                     files = {file_field_name: (filename, file_content, mime_type)}
-                                    data = {"chat_id": chat_id, "parse_mode": "Markdown"}
+                                    data = {"chat_id": chat_id, "parse_mode": "HTML"}
                                     if text:
-                                        data["caption"] = text
+                                        data["caption"] = format_text_for_telegram(text)
                                     
                                     if media_type == "image":
                                         url = f"{base_url}{bot_token}/sendPhoto"
@@ -468,7 +553,7 @@ async def task_processor():
                                         method = "sendAudio" if platform == "telegram" else "sendAudio"
                                         url = f"{base_url}{bot_token}/{method}"
                                     
-                                    res = await http_client.post(url, data=data, files=files)
+                                    res = await post_with_retry(http_client, url, data=data, files=files)
                                     if res.status_code == 200:
                                         success = True
                                         msg_id = str(res.json().get("result", {}).get("message_id", ""))
@@ -481,8 +566,8 @@ async def task_processor():
                                     # Fallback: if file couldn't be downloaded, send as text-only
                                     logger.warning(f"Could not download media for task {tid}, falling back to text-only send")
                                     url = f"{base_url}{bot_token}/sendMessage"
-                                    payload = {"chat_id": chat_id, "text": text or "[فایل یافت نشد]", "parse_mode": "Markdown"}
-                                    res = await http_client.post(url, json=payload)
+                                    payload = {"chat_id": chat_id, "text": format_text_for_telegram(text or "[فایل یافت نشد]"), "parse_mode": "HTML"}
+                                    res = await post_with_retry(http_client, url, json_payload=payload)
                                     if res.status_code == 200:
                                         success = True
                                         msg_id = str(res.json().get("result", {}).get("message_id", ""))
@@ -492,8 +577,8 @@ async def task_processor():
                                             success = True
                             else:
                                 url = f"{base_url}{bot_token}/sendMessage"
-                                payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
-                                res = await http_client.post(url, json=payload)
+                                payload = {"chat_id": chat_id, "text": format_text_for_telegram(text), "parse_mode": "HTML"}
+                                res = await post_with_retry(http_client, url, json_payload=payload)
                                 if res.status_code == 200:
                                     success = True
                                     msg_id = str(res.json().get("result", {}).get("message_id", ""))
@@ -507,12 +592,12 @@ async def task_processor():
                             if media_type != "text" and media_url:
                                 # ویرایش کپشن پیام‌های چندرسانه‌ای
                                 url = f"{base_url}{bot_token}/editMessageCaption"
-                                payload = {"chat_id": chat_id, "message_id": int(message_id), "caption": text, "parse_mode": "Markdown"}
+                                payload = {"chat_id": chat_id, "message_id": int(message_id), "caption": format_text_for_telegram(text), "parse_mode": "HTML"}
                             else:
                                 url = f"{base_url}{bot_token}/editMessageText"
-                                payload = {"chat_id": chat_id, "message_id": int(message_id), "text": text, "parse_mode": "Markdown"}
-
-                            res = await http_client.post(url, json=payload)
+                                payload = {"chat_id": chat_id, "message_id": int(message_id), "text": format_text_for_telegram(text), "parse_mode": "HTML"}
+ 
+                            res = await post_with_retry(http_client, url, json_payload=payload)
                             if res.status_code == 200:
                                 success = True
                             else:
@@ -524,7 +609,7 @@ async def task_processor():
                         elif action == "delete" and message_id:
                             url = f"{base_url}{bot_token}/deleteMessage"
                             payload = {"chat_id": chat_id, "message_id": int(message_id)}
-                            res = await http_client.post(url, json=payload)
+                            res = await post_with_retry(http_client, url, json_payload=payload)
                             if res.status_code == 200:
                                 success = True
                                 msg_id = None
@@ -534,14 +619,14 @@ async def task_processor():
                                     logger.warning(f"Non-recoverable error for delete task {tid}. Completing to avoid queue blockage.")
                                     success = True
                                     msg_id = None
-
+ 
                         if success:
                             await api_client.complete_task(tid, msg_id)
                             logger.info(f"Successfully processed {action} task {tid} for user's bot")
                             
                     except Exception as e:
                         logger.error(f"HTTP call failed for task {tid}: {e}")
-
+ 
             except Exception as e:
                 logger.error(f"Error in task_processor loop: {e}")
                 

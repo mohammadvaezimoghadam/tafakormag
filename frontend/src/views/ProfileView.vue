@@ -94,6 +94,7 @@
           platform="telegram"
           :connected="profile.is_telegram_bot_connected"
           :bot-username="profile.telegram_bot_username"
+          :disconnect-reason="profile.telegram_bot_disconnect_reason"
           @updated="loadProfile"
         />
 
@@ -101,6 +102,7 @@
           platform="bale"
           :connected="profile.is_bale_bot_connected"
           :bot-username="profile.bale_bot_username"
+          :disconnect-reason="profile.bale_bot_disconnect_reason"
           @updated="loadProfile"
         />
 
@@ -134,8 +136,10 @@ const profile = ref({
   profile_image: null,
   is_telegram_bot_connected: false,
   telegram_bot_username: '',
+  telegram_bot_disconnect_reason: null,
   is_bale_bot_connected: false,
   bale_bot_username: '',
+  bale_bot_disconnect_reason: null,
 })
 
 const profileForm = reactive({
