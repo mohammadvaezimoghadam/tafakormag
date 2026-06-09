@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: tafakor_postgres_test
+    environment:
+      POSTGRES_DB: tafakor_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    # Ephemeral setup: no persistent volumes mounted
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 20s
+    networks:
+      - tafakor_test_net
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: tafakor_backend_test
+    entrypoint: []
+    # Uses gunicorn just like the dev/prod compose file
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py createcachetable && gunicorn note_platform.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=test-secret-key-12345
+      - ALLOWED_HOSTS=*
+      - DB_NAME=tafakor_test
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - DB_HOST=postgres-test
+      - DB_PORT=5432
+      - BOT_API_KEY=test-bot-api-key
+      - TELEGRAM_API_URL=https://api.telegram.org/bot
+      - TELEGRAM_BOT_TOKEN=test-telegram-token
+      - BALE_BOT_TOKEN=test-bale-token
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    healthcheck:
+      # Checks if the django app is listening on port 8000 using in-container python
+      test: ["CMD-SHELL", "python -c 'import socket; s = socket.socket(); s.connect((\"127.0.0.1\", 8000))'"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 60s
+    networks:
+      - tafakor_test_net
+
+  vue-frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_BASE_URL=/
+        - VITE_BALE_OTP_BOT_URL=https://ble.ir/tafakor_otp_bot
+    container_name: tafakor_vue_frontend_test
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ > /dev/null || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 30s
+    networks:
+      - tafakor_test_net
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: ./tests/Dockerfile
+    container_name: tafakor_test_runner
+    environment:
+      - PYTHONPATH=/app/backend:/app
+      - DJANGO_SETTINGS_MODULE=note_platform.settings
+      - DB_NAME=tafakor_test
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - DB_HOST=postgres-test
+      - DB_PORT=5432
+      - BOT_API_KEY=test-bot-api-key
+      - SECRET_KEY=test-secret-key-12345
+      - BACKEND_URL=http://backend:8000
+      - FRONTEND_URL=http://vue-frontend:80
+    volumes:
+      - .:/app
+    depends_on:
+      backend:
+        condition: service_healthy
+      vue-frontend:
+        condition: service_healthy
+    networks:
+      - tafakor_test_net
+
+networks:
+  tafakor_test_net:
+    driver: bridge
