@@ -4,6 +4,7 @@ import httpx
 import logging
 import html
 import re
+import time
 from urllib.parse import urlparse, urlunparse
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -47,6 +48,7 @@ BALE_API_URL = "https://tapi.bale.ai/bot"
 # لیست کلاینت‌های در حال اجرای ربات‌های شخصی کاربران
 # ساختار: { "platform_user_id": (task, app_instance) }
 running_bots = {}
+rate_limit_delays = {}
 
 # ---------- Handlers ربات‌های اختصاصی کاربران ----------
 
@@ -495,6 +497,14 @@ async def task_processor():
                 tasks = await api_client.fetch_tasks()
                 for task in tasks:
                     tid = task["id"]
+                    # Check if this task is currently rate-limited
+                    if tid in rate_limit_delays:
+                        if time.time() < rate_limit_delays[tid]:
+                            logger.info(f"Task {tid} is currently rate limited (HTTP 429). Skipping.")
+                            continue
+                        else:
+                            del rate_limit_delays[tid]
+
                     action = task["action"]
                     platform = task["platform"]
                     chat_id = task["chat_id"]
@@ -516,6 +526,7 @@ async def task_processor():
                     try:
                         success = False
                         msg_id = message_id
+                        res = None
                         
                         if action == "send":
                             if media_type in ("image", "video", "audio") and media_url:
@@ -620,6 +631,15 @@ async def task_processor():
                                     success = True
                                     msg_id = None
  
+                        if not success and res is not None and res.status_code == 429:
+                            retry_after = 5.0
+                            try:
+                                retry_after = float(res.headers.get("Retry-After", 5.0))
+                            except (ValueError, TypeError):
+                                pass
+                            logger.warning(f"Rate limit HTTP 429 hit for task {tid}. Delaying task for {retry_after}s.")
+                            rate_limit_delays[tid] = time.time() + retry_after
+
                         if success:
                             await api_client.complete_task(tid, msg_id)
                             logger.info(f"Successfully processed {action} task {tid} for user's bot")

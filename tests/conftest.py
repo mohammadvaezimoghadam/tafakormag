@@ -4,6 +4,13 @@ import django
 
 # Initialize Django environment variables and configurations
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "note_platform.settings")
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
+# Monkeypatch Django to prevent it from renaming the database (prepending 'test_') 
+# when running Django TestCase instances, ensuring it shares the DB with the backend container.
+from django.db.backends.base.creation import BaseDatabaseCreation
+BaseDatabaseCreation._get_test_db_name = lambda self: self.connection.settings_dict['NAME']
+
 django.setup()
 
 @pytest.fixture(scope="session")

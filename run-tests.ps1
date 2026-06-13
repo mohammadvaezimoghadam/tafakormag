@@ -66,6 +66,10 @@ try {
     } else {
         Write-Host ""
         Write-Host "FAILURE: Tests failed with exit code $testsExitCode. Check tests/results/junit.xml and tests/artifacts/ for failure screenshots." -ForegroundColor Red
+        Write-Host "`n=== BACKEND CONTAINER LOGS ===" -ForegroundColor Yellow
+        docker compose -f docker-compose.test.yml logs backend
+        Write-Host "`n=== FRONTEND CONTAINER LOGS ===" -ForegroundColor Yellow
+        docker compose -f docker-compose.test.yml logs vue-frontend
     }
 
     exit $testsExitCode

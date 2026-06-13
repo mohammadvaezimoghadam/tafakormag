@@ -21,6 +21,8 @@ class TestBotAPIIntegration:
     @pytest.fixture(autouse=True)
     def setup_client(self):
         self.client = APIClient()
+        from django.conf import settings
+        self.client.credentials(HTTP_X_BOT_API_KEY=settings.BOT_API_KEY)
 
     def test_register_phone_chat_creates_user_and_sets_chat_id(self):
         """
@@ -111,8 +113,10 @@ class TestBotAPIIntegration:
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         # Mock the external getMe request made by Django views.py
+        from django.conf import settings
         bot_token = "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-        mock_url = f"https://api.telegram.org/bot{bot_token}/getMe"
+        telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
+        mock_url = f"{telegram_base}{bot_token}/getMe"
         
         responses.add(
             responses.GET,
