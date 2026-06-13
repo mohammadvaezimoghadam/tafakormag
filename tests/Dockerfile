@@ -13,9 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt || \
      pip install --no-cache-dir -r requirements.txt --index-url https://pypi.devneeds.ir/simple/)
 
 # Install test framework dependencies
-RUN pip install --no-cache-dir pytest pytest-django pytest-playwright pytest-asyncio playwright==1.40.0 responses httpx tzdata aiohttp || \
+RUN pip install --no-cache-dir pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp || \
     (echo "Primary PyPI registry unreachable. Falling back to devneeds mirror for test packages..." && \
-     pip install --no-cache-dir pytest pytest-django pytest-playwright pytest-asyncio playwright==1.40.0 responses httpx tzdata aiohttp --index-url https://pypi.devneeds.ir/simple/)
+     pip install --no-cache-dir pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp --index-url https://pypi.devneeds.ir/simple/)
 
 # Playwright browsers are already pre-installed in this image. 
 # We just verify and install system dependencies if needed, or ensure they are present.
