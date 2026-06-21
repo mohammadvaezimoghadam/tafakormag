@@ -421,7 +421,7 @@ const handleSaveTopicConnections = async (data: {
     await topicStore.saveTopicConnections(selectedTopic.value.id, data)
     triggerToast('تنظیمات اتصالات تاپیک با موفقیت به روز رسانی شد.')
   } catch (err) {
-    //
+    throw err
   }
 }
 
@@ -637,6 +637,7 @@ const toggleTheme = useToggle(isDark)
                   platform="telegram"
                   :initialStatus="telegramBotStatus"
                   :initialToken="telegramBotToken"
+                  :botUsername="userProfile?.telegram_bot_username"
                   @connect="handleTelegramConnect"
                   @disconnect="handleTelegramDisconnect"
                   @update:status="(st) => telegramBotStatus = st"
@@ -645,6 +646,7 @@ const toggleTheme = useToggle(isDark)
                   platform="bale"
                   :initialStatus="baleBotStatus"
                   :initialToken="baleBotToken"
+                  :botUsername="userProfile?.bale_bot_username"
                   @connect="handleBaleConnect"
                   @disconnect="handleBaleDisconnect"
                   @update:status="(st) => baleBotStatus = st"
@@ -677,7 +679,7 @@ const toggleTheme = useToggle(isDark)
 
                 <!-- Light/Dark Mode Switcher -->
                 <div
-                  @click="toggleTheme()"
+                  @click="isDark = !isDark"
                   class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none text-right relative active:scale-[0.995] group gap-3.5"
                   dir="rtl"
                 >
@@ -700,7 +702,7 @@ const toggleTheme = useToggle(isDark)
 
                   <!-- Left side: Switch toggle -->
                   <div class="flex items-center gap-2 shrink-0" @click.stop>
-                    <Switch :checked="isDark" @update:checked="toggleTheme" />
+                    <Switch v-model:checked="isDark" />
                   </div>
                 </div>
 

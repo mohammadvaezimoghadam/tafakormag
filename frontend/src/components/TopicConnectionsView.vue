@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import PlatformHeader from './PlatformHeader.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -28,6 +28,12 @@ const props = defineProps<{
   }
   telegramConnected: boolean
   baleConnected: boolean
+  onSave?: (data: { 
+    telegram_bot_active: boolean
+    bale_bot_active: boolean
+    telegram_connections: number[]
+    bale_connections: number[] 
+  }) => Promise<any> | any
 }>()
 
 const emit = defineEmits<{
@@ -92,19 +98,17 @@ const loadBaleDestinations = async () => {
   }
 }
 
-const toggleTelegram = (active: boolean) => {
-  telegramActive.value = active
-  if (active && tgDestinations.value.length === 0) {
+watch(telegramActive, (active) => {
+  if (active) {
     loadTgDestinations()
   }
-}
+})
 
-const toggleBale = (active: boolean) => {
-  baleActive.value = active
-  if (active && baleDestinations.value.length === 0) {
+watch(baleActive, (active) => {
+  if (active) {
     loadBaleDestinations()
   }
-}
+})
 
 const toggleTgChannel = (destId: number) => {
   const index = selectedTgConnections.value.indexOf(destId)
@@ -134,7 +138,12 @@ const handleSave = async () => {
       bale_connections: selectedBaleConnections.value
     }
     
-    emit('save', payload)
+    if (props.onSave) {
+      await props.onSave(payload)
+    } else {
+      emit('save', payload)
+    }
+    
     saveSuccess.value = true
     
     setTimeout(() => {
@@ -187,7 +196,7 @@ onMounted(() => {
               ارسال پیام‌های جدید این تاپیک به کانال‌ها و گروه‌های تلگرام
             </span>
           </div>
-          <Switch :checked="telegramActive" @update:checked="toggleTelegram" />
+          <Switch v-model:checked="telegramActive" />
         </div>
 
         <transition name="expand-fade">
@@ -239,7 +248,7 @@ onMounted(() => {
                     <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
                   </div>
                 </div>
-                <Checkbox :checked="selectedTgConnections.includes(ch.id)" @update:checked="toggleTgChannel(ch.id)" class="shrink-0" />
+                <Checkbox :checked="selectedTgConnections.includes(ch.id)" @update:checked="toggleTgChannel(ch.id)" @click.stop class="shrink-0" />
               </div>
             </div>
           </div>
@@ -258,7 +267,7 @@ onMounted(() => {
               ارسال پیام‌های جدید این تاپیک به کانال‌ها و گروه‌های بله
             </span>
           </div>
-          <Switch :checked="baleActive" @update:checked="toggleBale" />
+          <Switch v-model:checked="baleActive" />
         </div>
 
         <transition name="expand-fade">
@@ -310,7 +319,7 @@ onMounted(() => {
                     <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
                   </div>
                 </div>
-                <Checkbox :checked="selectedBaleConnections.includes(ch.id)" @update:checked="toggleBaleChannel(ch.id)" class="shrink-0" />
+                <Checkbox :checked="selectedBaleConnections.includes(ch.id)" @update:checked="toggleBaleChannel(ch.id)" @click.stop class="shrink-0" />
               </div>
             </div>
           </div>

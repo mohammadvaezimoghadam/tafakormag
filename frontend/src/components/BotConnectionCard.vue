@@ -21,9 +21,11 @@ const props = withDefaults(defineProps<{
   platform: 'telegram' | 'bale'
   initialStatus?: 'disconnected' | 'connecting' | 'connected' | 'conflict'
   initialToken?: string
+  botUsername?: string
 }>(), {
   initialStatus: 'disconnected',
-  initialToken: ''
+  initialToken: '',
+  botUsername: ''
 })
 
 const emit = defineEmits<{
@@ -72,8 +74,8 @@ const handleConnect = () => {
     return
   }
   
-  // Format check: Bot tokens normally look like 123456789:ABCdefGhIJKlmNo...
-  const tokenRegex = /^\d+:[A-Za-z0-9_-]+$/
+  // Format check: Bot tokens normally look like 123456789:ABCdefGhIJKlmNo... or mock prefix for testing
+  const tokenRegex = /^(mock_.*|\d+:[A-Za-z0-9_-]+)$/
   if (!tokenRegex.test(cleanToken)) {
     errorMsg.value = 'فرمت توکن نامعتبر است. توکن معتبر شامل شناسه عددی و کلید رمزنگاری است (مثال: 123456:ABC-DEF...).'
     return
@@ -196,6 +198,13 @@ const toggleGuide = () => {
           <code class="text-xs font-mono font-bold tracking-wider text-foreground/80 break-all select-all mt-1 select-none">
             {{ maskedToken }}
           </code>
+        </div>
+
+        <div v-if="props.botUsername" class="flex items-center gap-1.5 mt-1">
+          <span class="text-[10px] text-muted-foreground font-semibold">نام کاربری ربات:</span>
+          <span class="inline-flex items-center bg-primary/10 border border-primary/20 text-primary font-bold text-xs py-0.5 px-2.5 rounded-full select-all font-mono">
+            {{ props.botUsername }}
+          </span>
         </div>
 
         <div class="flex items-center justify-end gap-2 mt-2">

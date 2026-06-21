@@ -92,8 +92,8 @@ const localReactions = ref<PostReaction[]>([...props.reactions])
 // Synchronize props changes
 watch(() => props.liked, (newVal) => { isLiked.value = newVal })
 watch(() => props.likesCount, (newVal) => { localLikesCount.value = newVal })
-watch(() => props.comments, (newVal) => { localComments.value = [...newVal] })
-watch(() => props.reactions, (newVal) => { localReactions.value = [...newVal] })
+watch(() => props.comments, (newVal) => { localComments.value = [...newVal] }, { deep: true })
+watch(() => props.reactions, (newVal) => { localReactions.value = [...newVal] }, { deep: true })
 
 // PostContextMenu State and Logic
 import PostContextMenu from './PostContextMenu.vue'

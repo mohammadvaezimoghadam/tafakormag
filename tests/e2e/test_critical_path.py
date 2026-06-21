@@ -89,28 +89,23 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
     topic_name = "موضوع تستی E2E"
     topic_desc = "این یک موضوع تستی ایجاد شده توسط تست E2E Playwright است."
     
-    name_input = page.locator('input[placeholder="نام تاپیک خود را بنویسید..."]')
+    name_input = page.locator('input#topic-title')
     expect(name_input).to_be_visible(timeout=5000)
     name_input.fill(topic_name)
     print(f"[E2E] Filled topic name: {topic_name}")
     
-    desc_textarea = page.locator('textarea[placeholder="توضیح کوتاهی درباره موضوع این تاپیک بنویسید..."]')
-    desc_textarea.fill(topic_desc)
+    desc_input = page.locator('input#topic-desc')
+    expect(desc_input).to_be_visible(timeout=5000)
+    desc_input.fill(topic_desc)
     print(f"[E2E] Filled topic description: {topic_desc}")
     
     # Click "ایجاد تاپیک" to submit the form
-    submit_topic_button = page.locator('form button[type="submit"]')
+    submit_topic_button = page.locator('button:has-text("ایجاد تاپیک")')
     submit_topic_button.click()
     print("[E2E] Clicked 'ایجاد تاپیک' submit button")
 
     # 8. Click the newly created Topic card and wait for navigation
-    # First, switch to 'تاپیک‌های من' tab since by default it shows other users' topics
-    mine_tab = page.locator('button:has-text("تاپیک‌های من")')
-    expect(mine_tab).to_be_visible(timeout=5000)
-    mine_tab.click()
-    print("[E2E] Clicked 'تاپیک‌های من' tab")
-
-    topic_card = page.locator(f'h3:has-text("{topic_name}")').first
+    topic_card = page.locator(f'span:has-text("{topic_name}")').first
     expect(topic_card).to_be_visible(timeout=5000)
     topic_card.click()
     print(f"[E2E] Clicked topic card: {topic_name}")
@@ -122,23 +117,23 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
 
     # 9. Type a post and submit it
     post_text = "این اولین پست تستی من در این تاپیک است! #تفکر"
-    post_input = page.locator('textarea[placeholder="تفکر خود را ارسال کنید..."]')
+    post_input = page.locator('textarea[placeholder="یادداشت خود را بنویسید..."]')
     expect(post_input).to_be_visible(timeout=5000)
     post_input.fill(post_text)
     print(f"[E2E] Filled post content: {post_text}")
     
-    # Click the send button (parent of svg.-scale-x-100)
-    send_button = page.locator('button:has(svg.-scale-x-100)')
+    # Click the send button
+    send_button = page.locator('button[title="ارسال پیام"]')
     send_button.click()
     print("[E2E] Clicked send post button")
 
     # 10. Open comments drawer, type a comment, click send, and assert comment count updates
-    comment_button = page.locator('button:has-text("نظر")').first
+    comment_button = page.locator('button:has(svg.lucide-message-circle)').first
     expect(comment_button).to_be_visible(timeout=5000)
     
-    # Let's get initial comment count (should be 0)
+    # Let's get initial comment count (should be ۰)
     initial_text = comment_button.text_content()
-    assert "0 نظر" in initial_text
+    assert "۰" in initial_text
     print(f"[E2E] Initial comment button text: {initial_text}")
     
     # Open comments drawer
@@ -146,48 +141,53 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
     print("[E2E] Clicked comment button to open drawer")
     
     # Type a comment
-    comment_input = page.locator('input[placeholder="نظر خود را بنویسید..."]')
+    comment_input = page.locator('input[placeholder="دیدگاه خود را بنویسید..."]')
     expect(comment_input).to_be_visible(timeout=5000)
     comment_text = "این یک نظر تستی است."
     comment_input.fill(comment_text)
     print(f"[E2E] Filled comment text: {comment_text}")
     
-    # Click comments submit button (w-9 h-9 next to comment input, containing svg.rotate-180)
-    comment_submit = page.locator('button:has(svg.rotate-180)')
+    # Click comments submit button (inside comments input container)
+    comment_submit = page.locator('div:has(> input[placeholder="دیدگاه خود را بنویسید..."]) > button')
     comment_submit.click()
     print("[E2E] Clicked comment send button")
     
-    # Wait for comment count to update to "1 نظر"
-    expect(comment_button).to_have_text("1 نظر", timeout=5000)
+    # Wait for comment count to update to "۱"
+    expect(comment_button).to_contain_text("۱", timeout=5000)
     print(f"[E2E] Verified comment count updated: {comment_button.text_content()}")
 
-    # 11. Click the "👍" emoji reaction and assert count increments
-    reaction_button = page.locator('button:has-text("👍")').first
-    expect(reaction_button).to_be_visible(timeout=5000)
+    # 11. Add 👍 reaction using context menu
+    # Click three-dots button to open context menu
+    page.locator('button.size-7').first.click()
+    print("[E2E] Opened context menu for reaction")
     
-    # Read reaction count
-    initial_reaction_text = reaction_button.text_content()
-    print(f"[E2E] Initial reaction button text: {initial_reaction_text}")
+    # Click the 👍 emoji in the reactions bar
+    reaction_option = page.locator('div.fixed.inset-0 button:has-text("👍")')
+    expect(reaction_option).to_be_visible(timeout=5000)
+    reaction_option.click()
+    print("[E2E] Clicked 👍 reaction emoji")
     
-    reaction_button.click()
-    print("[E2E] Clicked 👍 emoji reaction button")
-    
-    # Assert count increments to "👍1"
-    expect(reaction_button).to_have_text("👍1", timeout=5000)
-    print(f"[E2E] Verified reaction count updated: {reaction_button.text_content()}")
+    # Verify reaction badge appeared on the post card and has text "👍۱"
+    reaction_badge = page.locator('div.px-5.pb-3 button:has-text("👍")').first
+    expect(reaction_badge).to_be_visible(timeout=5000)
+    expect(reaction_badge).to_have_text("👍۱", timeout=5000)
+    print(f"[E2E] Verified reaction count updated: {reaction_badge.text_content()}")
 
-    # 12. Delete the post by clicking the trash button and confirming the dialog
-    delete_button = page.locator('button[title="حذف پست"]').first
-    expect(delete_button).to_be_visible(timeout=5000)
+    # 12. Delete the post by opening the context menu and clicking delete
+    page.locator('button.size-7').first.click()
+    print("[E2E] Opened context menu for deletion")
+    
+    delete_option = page.locator('button:has-text("حذف پست")').first
+    expect(delete_option).to_be_visible(timeout=5000)
     
     # Register alert dialog accept handler
     page.once("dialog", lambda dialog: dialog.accept())
     
-    delete_button.click()
-    print("[E2E] Clicked delete post button and accepted confirm dialog")
+    delete_option.click()
+    print("[E2E] Clicked delete post option and accepted confirm dialog")
     
     # Wait for the post to disappear
-    expect(delete_button).not_to_be_visible(timeout=5000)
+    expect(page.locator(f'p:has-text("{post_text}")')).not_to_be_visible(timeout=5000)
     print("[E2E] Verified post was successfully deleted!")
 
 
@@ -248,17 +248,17 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
     print("[E2E] Clicked on connections tab.")
 
     # 4. Fill in mock Telegram bot token
-    token_input = page.locator('input[placeholder="مثال: 123456:ABC-DEF1234ghIkl-zyx"]').first
+    token_input = page.locator('input#bot-token-input').first
     expect(token_input).to_be_visible(timeout=5000)
     mock_token = "mock_token_for_e2e_test"
     token_input.fill(mock_token)
     print(f"[E2E] Entered mock token: {mock_token}")
 
-    # 5. Click "ثبت و اتصال ربات"
-    submit_bot_btn = page.locator('button:has-text("ثبت و اتصال ربات")').first
+    # 5. Click "بررسی و اتصال"
+    submit_bot_btn = page.locator('button:has-text("بررسی و اتصال")').first
     expect(submit_bot_btn).to_be_visible(timeout=5000)
     submit_bot_btn.click()
-    print("[E2E] Clicked 'ثبت و اتصال ربات' button.")
+    print("[E2E] Clicked 'بررسی و اتصال' button.")
 
     # 6. Verify that it connects successfully and shows the bot username badge
     expected_username = f"@{mock_token}_bot"

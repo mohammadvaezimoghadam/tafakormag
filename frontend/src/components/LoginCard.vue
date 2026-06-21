@@ -38,13 +38,7 @@ const step = ref<'phone' | 'otp' | 'success'>('phone')
 const isLoading = ref(false)
 const localError = ref('')
 
-const digits = ref(['', '', '', ''])
-const inputRefs = ref<HTMLInputElement[]>([])
 
-// Synchronize digits with otp.value
-watch(digits, (newVal) => {
-  otp.value = newVal.join('')
-}, { deep: true })
 
 // Synchronize state prop changes with internal flow
 watch(() => props.state, (newVal) => {
@@ -90,10 +84,6 @@ const handleSubmitPhone = async () => {
     await userStore.requestOtp(phone.value)
     step.value = 'otp'
     emit('stateChange', 'otp')
-    // Focus first slot
-    setTimeout(() => {
-      inputRefs.value[0]?.focus()
-    }, 150)
   } catch (err: any) {
     localError.value = err.response?.data?.error || 'خطا در ارسال کد تایید. لطفاً بعداً تلاش کنید.'
   } finally {
@@ -117,72 +107,18 @@ const handleSubmitOtp = async () => {
     emit('stateChange', 'success')
   } catch (err: any) {
     localError.value = err.response?.data?.error || 'کد تایید وارد شده معتبر نیست.'
-    digits.value = ['', '', '', '']
-    setTimeout(() => {
-      inputRefs.value[0]?.focus()
-    }, 50)
+    otp.value = ''
   } finally {
     isLoading.value = false
   }
 }
 
-const handleOtpInput = (e: Event, index: number) => {
-  localError.value = ''
-  const val = (e.target as HTMLInputElement).value
-  const cleanVal = val.replace(/\D/g, '')
-  const lastChar = cleanVal.slice(-1)
-  
-  digits.value[index] = lastChar
-  ;(e.target as HTMLInputElement).value = lastChar
 
-  if (lastChar) {
-    if (index < 3) {
-      setTimeout(() => {
-        inputRefs.value[index + 1]?.focus()
-        inputRefs.value[index + 1]?.select()
-      }, 0)
-    } else {
-      setTimeout(() => {
-        handleSubmitOtp()
-      }, 50)
-    }
-  }
-}
-
-const handleOtpKeydown = (e: KeyboardEvent, index: number) => {
-  if (e.key === 'Backspace') {
-    localError.value = ''
-    if (!digits.value[index] && index > 0) {
-      digits.value[index - 1] = ''
-      setTimeout(() => {
-        inputRefs.value[index - 1]?.focus()
-        inputRefs.value[index - 1]?.select()
-      }, 0)
-    }
-  }
-}
-
-const handleOtpPaste = (e: ClipboardEvent) => {
-  localError.value = ''
-  const pasteData = e.clipboardData?.getData('text') || ''
-  const cleanPaste = pasteData.replace(/\D/g, '').slice(0, 4)
-  if (cleanPaste.length === 4) {
-    for (let i = 0; i < 4; i++) {
-      digits.value[i] = cleanPaste[i] || ''
-    }
-    setTimeout(() => {
-      inputRefs.value[3]?.focus()
-      handleSubmitOtp()
-    }, 50)
-  }
-  e.preventDefault()
-}
 
 // Resetting the flow
 const handleReset = () => {
   phone.value = ''
   otp.value = ''
-  digits.value = ['', '', '', '']
   step.value = 'phone'
   localError.value = ''
   isLoading.value = false
@@ -273,23 +209,15 @@ const handleReset = () => {
 
         <div class="flex flex-col items-center gap-3">
           <Label class="text-xs text-muted-foreground font-semibold text-center">کد تایید ۴ رقمی:</Label>
-          <div dir="ltr" class="flex justify-center gap-3.5 w-full" style="direction: ltr;">
-            <input
-              v-for="(digit, index) in digits"
-              :key="index"
-              :ref="el => { if (el) inputRefs[index] = el as HTMLInputElement }"
-              :value="digits[index]"
-              type="text"
-              inputmode="numeric"
-              maxlength="1"
-              :disabled="isLoading"
-              class="w-12 h-12 text-center text-xl font-bold bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-inner font-sans"
-              :class="localError ? 'border-destructive bg-destructive/5 text-destructive focus:ring-destructive focus:border-destructive' : ''"
-              @input="handleOtpInput($event, index)"
-              @keydown="handleOtpKeydown($event, index)"
-              @paste="handleOtpPaste"
-              @focus="($event.target as HTMLInputElement).select()"
-            />
+          <div dir="ltr" class="flex justify-center w-full">
+            <InputOTP v-model="otp" :maxlength="4" :disabled="isLoading" @complete="handleSubmitOtp">
+              <InputOTPGroup>
+                <InputOTPSlot :index="0" />
+                <InputOTPSlot :index="1" />
+                <InputOTPSlot :index="2" />
+                <InputOTPSlot :index="3" />
+              </InputOTPGroup>
+            </InputOTP>
           </div>
         </div>
 

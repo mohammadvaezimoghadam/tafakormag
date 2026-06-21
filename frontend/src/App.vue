@@ -39,15 +39,7 @@ const toastMsg = computed(() => toastStore.toastMsg)
         </router-view>
       </main>
 
-      <!-- Floating Dark Mode Toggle (Bottom Left Corner) -->
-      <button 
-        @click="toggleDark()" 
-        class="fixed bottom-6 left-6 z-50 size-10 rounded-full border border-border/80 bg-background/80 backdrop-blur-xs flex items-center justify-center hover:bg-muted/80 hover:scale-105 active:scale-95 transition-all shadow-md outline-none cursor-pointer"
-        title="تغییر تم"
-      >
-        <SunIcon v-if="isDark" class="size-5 text-amber-500" />
-        <MoonIcon v-else class="size-5 text-primary" />
-      </button>
+
 
       <!-- Dynamic Premium Toast Notification (Global) -->
       <transition name="toast-slide">

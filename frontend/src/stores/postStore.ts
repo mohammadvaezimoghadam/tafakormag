@@ -180,18 +180,21 @@ export const usePostStore = defineStore('post', () => {
             existing.reacted = false
             if (existing.count === 0) {
               post.reactions = post.reactions?.filter(r => r.emoji !== emoji)
+            } else {
+              post.reactions = [...(post.reactions || [])]
             }
           } else {
             existing.count++
             existing.reacted = true
+            post.reactions = [...(post.reactions || [])]
           }
         } else {
           if (!post.reactions) post.reactions = []
-          post.reactions.push({
+          post.reactions = [...post.reactions, {
             emoji,
             count: 1,
             reacted: true
-          })
+          }]
         }
       }
     } catch (err) {
@@ -227,7 +230,7 @@ export const usePostStore = defineStore('post', () => {
       const post = posts.value.find(p => p.id === postId)
       if (post) {
         if (!post.comments) post.comments = []
-        post.comments.push(newComment)
+        post.comments = [...post.comments, newComment]
       }
       return newComment
     } catch (err) {

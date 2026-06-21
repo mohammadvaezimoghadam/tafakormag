@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
@@ -53,6 +54,10 @@ const activeTab = ref<'components' | 'tokens'>('components')
 // State for showcase interactive items
 const inputVal = ref('')
 const checkboxVal = ref(false)
+const checkboxInteractive = ref(false)
+const checkboxIndeterminate = ref<'indeterminate' | boolean>('indeterminate')
+const switchVal = ref(false)
+const switchSmVal = ref(false)
 const otpVal = ref('')
 const selectVal = ref('')
 const dateVal = ref<any>(today(getLocalTimeZone()))
@@ -383,60 +388,159 @@ const baseIcons = [
           </div>
         </div>
 
-        <!-- Checkbox & OTP Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6">
-          <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">انتخاب‌ها و کدهای تایید (Selection & OTP)</h2>
-            <p class="text-[11px] text-muted-foreground">تعامل با چک‌باکس و فیلد دریافت کد OTP.</p>
+        <!-- Checkbox & Switch Panel -->
+        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 lg:col-span-2">
+          <div class="flex flex-col gap-1 text-right">
+            <h2 class="text-sm font-extrabold text-foreground">چک‌باکس و سوئیچ (Checkbox & Switch)</h2>
+            <p class="text-[11px] text-muted-foreground">نمایش جامع انواع حالت‌ها، سایزها و استاتوس‌های کامپوننت‌های پایه Checkbox و Switch.</p>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            <div class="flex flex-col gap-3">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">چک‌باکس با برچسب:</h3>
-              <div class="flex items-center gap-2.5 p-3 bg-background/50 border border-border/40 rounded-lg">
-                <Checkbox id="terms" v-model:checked="checkboxVal" />
-                <div class="flex flex-col gap-0.5 leading-none">
-                  <Label for="terms" class="cursor-pointer">پذیرش شرایط و قوانین</Label>
-                  <p class="text-[10px] text-muted-foreground font-medium">پذیرش خط‌مشی محرمانگی</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-border/40 pt-6 text-right">
+            <!-- Checkbox Section -->
+            <div class="flex flex-col gap-5 text-right">
+              <h3 class="text-xs font-bold text-foreground border-b border-border/40 pb-2 text-right">چک‌باکس‌ها (Checkbox)</h3>
+              
+              <!-- Interactive Example -->
+              <div class="flex flex-col gap-2 bg-background/40 p-4 rounded-xl border border-border/40 text-right">
+                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">نمونه تعاملی:</span>
+                <div class="flex items-center gap-2.5">
+                  <Checkbox id="checkbox-inter" v-model:checked="checkboxInteractive" />
+                  <Label for="checkbox-inter" class="cursor-pointer text-xs">تغییر وضعیت چک‌باکس تعاملی</Label>
+                </div>
+                <div class="text-[10px] text-muted-foreground mt-1">
+                  وضعیت فعلی: <span :class="checkboxInteractive ? 'text-primary font-bold' : 'text-muted-foreground'">{{ checkboxInteractive ? 'تیک‌خورده (Checked)' : 'بدون تیک (Unchecked)' }}</span>
                 </div>
               </div>
-              <p class="text-[10px] text-muted-foreground">
-                وضعیت: 
-                <span v-if="checkboxVal" class="text-green-600 dark:text-green-400 font-bold flex items-center gap-0.5">
-                  <CheckCircle2Icon class="size-3.5" /> پذیرفته شده
-                </span>
-                <span v-else class="text-destructive font-bold">پذیرفته نشده</span>
-              </p>
+
+              <!-- All States Group -->
+              <div class="flex flex-col gap-3">
+                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">انواع وضعیت‌ها (States):</span>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <!-- Checked -->
+                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20">
+                    <Checkbox id="cb-checked" :checked="true" />
+                    <Label for="cb-checked" class="text-xs text-foreground/80">تیک‌خورده (Checked)</Label>
+                  </div>
+
+                  <!-- Unchecked -->
+                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20">
+                    <Checkbox id="cb-unchecked" :checked="false" />
+                    <Label for="cb-unchecked" class="text-xs text-foreground/80">بدون تیک (Unchecked)</Label>
+                  </div>
+
+                  <!-- Indeterminate -->
+                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20">
+                    <Checkbox id="cb-indet" v-model:checked="checkboxIndeterminate" />
+                    <Label for="cb-indet" class="text-xs text-foreground/80">بینابینی (Indeterminate)</Label>
+                  </div>
+
+                  <!-- Invalid / Error -->
+                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-destructive/30">
+                    <Checkbox id="cb-invalid" aria-invalid="true" :checked="false" />
+                    <Label for="cb-invalid" class="text-xs text-destructive">حالت خطا (Invalid)</Label>
+                  </div>
+
+                  <!-- Disabled Unchecked -->
+                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
+                    <Checkbox id="cb-dis-un" :disabled="true" :checked="false" />
+                    <Label for="cb-dis-un" class="text-xs text-muted-foreground">غیرفعال خاموش</Label>
+                  </div>
+
+                  <!-- Disabled Checked -->
+                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
+                    <Checkbox id="cb-dis-ch" :disabled="true" :checked="true" />
+                    <Label for="cb-dis-ch" class="text-xs text-muted-foreground">غیرفعال روشن</Label>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="flex flex-col gap-3">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">کد تایید پیامکی (OTP):</h3>
-              <div dir="ltr" class="flex justify-end">
-                <InputOTP v-model="otpVal" :maxlength="4">
-                  <InputOTPGroup>
-                    <InputOTPSlot :index="0" />
-                    <InputOTPSlot :index="1" />
-                    <InputOTPSlot :index="2" />
-                    <InputOTPSlot :index="3" />
-                  </InputOTPGroup>
-                </InputOTP>
+            <!-- Switch Section -->
+            <div class="flex flex-col gap-5 text-right animate-in fade-in-50">
+              <h3 class="text-xs font-bold text-foreground border-b border-border/40 pb-2 text-right">سوئیچ‌ها (Switch)</h3>
+              
+              <!-- Interactive Example -->
+              <div class="flex flex-col gap-2 bg-background/40 p-4 rounded-xl border border-border/40 text-right">
+                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">نمونه تعاملی:</span>
+                <div class="flex items-center justify-between">
+                  <Label for="switch-inter" class="cursor-pointer text-xs">تغییر وضعیت سوئیچ تعاملی</Label>
+                  <Switch id="switch-inter" v-model:checked="switchVal" />
+                </div>
+                <div class="text-[10px] text-muted-foreground mt-1">
+                  وضعیت فعلی: <span :class="switchVal ? 'text-primary font-bold' : 'text-muted-foreground'">{{ switchVal ? 'روشن (On)' : 'خاموش (Off)' }}</span>
+                </div>
               </div>
-              <p class="text-[10px] text-muted-foreground text-right">کد تایید ۴ رقمی پیامک شده. <span class="bg-muted px-1 rounded font-mono">{{ otpVal }}</span></p>
+
+              <!-- Sizes & States -->
+              <div class="flex flex-col gap-4">
+                <!-- Sizes -->
+                <div class="flex flex-col gap-2 text-right">
+                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">اندازه‌ها (Sizes):</span>
+                  <div class="flex items-center gap-6 p-2.5 bg-background/20 rounded-lg border border-border/20">
+                    <div class="flex items-center gap-2">
+                      <Switch id="switch-sz-def" :checked="true" size="default" />
+                      <Label for="switch-sz-def" class="text-xs text-foreground/80">پیش‌فرض (Default)</Label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Switch id="switch-sz-sm" :checked="true" size="sm" />
+                      <Label for="switch-sz-sm" class="text-xs text-foreground/80">کوچک (Small)</Label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- States -->
+                <div class="flex flex-col gap-2 text-right">
+                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">وضعیت‌ها (States):</span>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-right">
+                    <!-- Switch Checked -->
+                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20">
+                      <Label class="text-xs text-foreground/80">روشن (On)</Label>
+                      <Switch :checked="true" />
+                    </div>
+
+                    <!-- Switch Unchecked -->
+                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20">
+                      <Label class="text-xs text-foreground/80">خاموش (Off)</Label>
+                      <Switch :checked="false" />
+                    </div>
+
+                    <!-- Switch Invalid -->
+                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-destructive/30">
+                      <Label class="text-xs text-destructive">خطا (Invalid)</Label>
+                      <Switch :checked="false" aria-invalid="true" />
+                    </div>
+
+                    <!-- Switch Disabled Off -->
+                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
+                      <Label class="text-xs text-muted-foreground">غیرفعال خاموش</Label>
+                      <Switch :checked="false" :disabled="true" />
+                    </div>
+
+                    <!-- Switch Disabled On -->
+                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
+                      <Label class="text-xs text-muted-foreground">غیرفعال روشن</Label>
+                      <Switch :checked="true" :disabled="true" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
 
-        <!-- Popover & Calendar Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6">
-          <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">تقویم و پاپ‌اور (Calendar & Popover)</h2>
-            <p class="text-[11px] text-muted-foreground">نمونه نمایش پاپ‌اور حاوی تقویم برای انتخاب تاریخ.</p>
+        <!-- Popover, Calendar & OTP Panel -->
+        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 lg:col-span-2">
+          <div class="flex flex-col gap-1 text-right">
+            <h2 class="text-sm font-extrabold text-foreground">تقویم، پاپ‌اور و کد تایید (Calendar, Popover & OTP)</h2>
+            <p class="text-[11px] text-muted-foreground">نمونه نمایش پاپ‌اور، تقویم انتخابی و دریافت کد پیامکی.</p>
           </div>
 
-          <div class="flex flex-col gap-4">
-            <div class="flex flex-col items-start gap-2.5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-border/40 pt-6 text-right">
+            <!-- Calendar & Popover -->
+            <div class="flex flex-col items-start gap-2.5 text-right">
               <Label>انتخاب تاریخ قرار ملاقات:</Label>
-              
               <Popover>
                 <PopoverTrigger as-child>
                   <Button variant="outline" class="w-[240px] justify-start text-right font-normal">
@@ -448,8 +552,24 @@ const baseIcons = [
                   <Calendar v-model="dateVal" initial-focus />
                 </PopoverContent>
               </Popover>
+              <p class="text-[10px] text-muted-foreground">تقویم مورد استفاده منطبق بر کتابخانه هسته reka-ui با پشتیبانی از استایل‌دهی تیره/روشن است.</p>
             </div>
-            <p class="text-[10px] text-muted-foreground">تقویم مورد استفاده منطبق بر کتابخانه هسته reka-ui با پشتیبانی از استایل‌دهی تیره/روشن است.</p>
+
+            <!-- OTP Code -->
+            <div class="flex flex-col gap-3 text-right">
+              <Label class="font-bold text-xs text-right">کد تایید پیامکی (OTP):</Label>
+              <div dir="ltr" class="flex justify-end">
+                <InputOTP v-model="otpVal" :maxlength="4">
+                  <InputOTPGroup>
+                    <InputOTPSlot :index="0" />
+                    <InputOTPSlot :index="1" />
+                    <InputOTPSlot :index="2" />
+                    <InputOTPSlot :index="3" />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <p class="text-[10px] text-muted-foreground text-right" dir="rtl">کد تایید ۴ رقمی پیامک شده. مقدار فعلی: <span class="bg-muted px-1 rounded font-mono">{{ otpVal }}</span></p>
+            </div>
           </div>
         </div>
 
