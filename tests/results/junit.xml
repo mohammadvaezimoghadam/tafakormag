@@ -1,1 +1,138 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="48" time="50.093" timestamp="2026-06-13T23:00:30.277103+00:00" hostname="a8c38941d43e"><testcase classname="backend.apps.accounts.tests.AccountsServicesTestCase" name="test_send_otp_sms_success" time="1.127" /><testcase classname="backend.apps.accounts.tests.AccountsServicesTestCase" name="test_send_otp_sms_timeout_error" time="0.018" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_request_otp_debug_mode_without_kavenegar" time="0.608" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_request_otp_sms_delivery_error_handling" time="0.012" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_request_otp_success_with_kavenegar" time="0.011" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_verify_otp_expired" time="0.010" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_verify_otp_success" time="0.024" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_verify_otp_wrong_code" time="0.011" /><testcase classname="backend.apps.accounts.tests.OTPDispatcherTestCase" name="test_send_sms_otp_failure_raises_delivery_error" time="0.019" /><testcase classname="backend.apps.accounts.tests.OTPDispatcherTestCase" name="test_send_sms_otp_kavenegar_fallback" time="0.008" /><testcase classname="backend.apps.accounts.tests.RegisterPhoneChatTestCase" name="test_register_phone_chat_phone_normalization" time="0.039" /><testcase classname="backend.apps.accounts.tests.RegisterPhoneChatTestCase" name="test_register_phone_chat_success" time="0.013" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_bot_task_creation_and_string_representation" time="0.051" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_comment_creation_and_ordering" time="0.017" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_creation_and_string_representation" time="0.011" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_ordering" time="0.014" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_reaction_creation_and_unique_constraint" time="0.012" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_topic_creation_and_string_representation" time="0.017" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_register_phone_chat_creates_user_and_sets_chat_id" time="0.291" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_verify_link_associates_token_and_sets_chat_id" time="0.245" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_register_destination_creates_messaging_target" time="0.543" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_update_custom_bot_mocks_external_telegram_call" time="0.796" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_create_topic_success" time="1.378" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_create_topic_unauthenticated_fails" time="0.892" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_update_topic_only_by_creator" time="0.943" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_delete_topic_only_by_creator" time="0.926" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_create_post_only_by_topic_creator" time="0.928" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_creation_triggers_bot_tasks" time="1.292" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_edit_triggers_edit_bot_task" time="1.347" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_delete_triggers_delete_bot_task" time="1.459" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_comment_creation" time="0.917" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_reaction" time="0.921" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_topic_create_with_image" time="0.928" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_create_with_media" time="0.951" /><testcase classname="tests.e2e.test_critical_path" name="test_critical_path_login_flow[chromium]" time="6.970" /><testcase classname="tests.e2e.test_critical_path" name="test_custom_bot_registration[chromium]" time="3.429" /><testcase classname="tests.integration.test_bot_handlers" name="test_start_handler_linked_user" time="0.314" /><testcase classname="tests.integration.test_bot_handlers" name="test_start_handler_unlinked_user" time="0.337" /><testcase classname="tests.integration.test_bot_handlers" name="test_help_command" time="0.826" /><testcase classname="tests.integration.test_bot_handlers" name="test_register_chat_in_private_chat" time="0.703" /><testcase classname="tests.integration.test_bot_handlers" name="test_register_chat_success" time="0.568" /><testcase classname="tests.integration.test_bot_handlers" name="test_handle_token_success" time="0.281" /><testcase classname="tests.integration.test_bot_runner" name="test_format_text_for_telegram" time="0.277" /><testcase classname="tests.integration.test_bot_runner" name="test_task_processor_success" time="0.345" /><testcase classname="tests.integration.test_bot_runner" name="test_dynamic_bot_manager_runs_bots" time="0.764" /><testcase classname="tests.integration.test_bot_runner" name="test_task_processor_rate_limit_429" time="0.865" /><testcase classname="tests.integration.test_telegram_proxy" name="test_proxy_relay_success" time="0.694" /><testcase classname="tests.integration.test_telegram_proxy" name="test_proxy_relay_gas_error" time="0.335" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="48" time="99.965" timestamp="2026-06-21T10:29:44.101515+00:00" hostname="804adfca5f47"><testcase classname="backend.apps.accounts.tests.AccountsServicesTestCase" name="test_send_otp_sms_success" time="1.195" /><testcase classname="backend.apps.accounts.tests.AccountsServicesTestCase" name="test_send_otp_sms_timeout_error" time="0.215" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_request_otp_debug_mode_without_kavenegar" time="0.703" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_request_otp_sms_delivery_error_handling" time="0.015" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_request_otp_success_with_kavenegar" time="0.018" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_verify_otp_expired" time="0.015" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_verify_otp_success" time="0.036" /><testcase classname="backend.apps.accounts.tests.AuthViewSetTestCase" name="test_verify_otp_wrong_code" time="0.021" /><testcase classname="backend.apps.accounts.tests.OTPDispatcherTestCase" name="test_send_sms_otp_failure_raises_delivery_error" time="0.028" /><testcase classname="backend.apps.accounts.tests.OTPDispatcherTestCase" name="test_send_sms_otp_kavenegar_fallback" time="0.014" /><testcase classname="backend.apps.accounts.tests.RegisterPhoneChatTestCase" name="test_register_phone_chat_phone_normalization" time="0.041" /><testcase classname="backend.apps.accounts.tests.RegisterPhoneChatTestCase" name="test_register_phone_chat_success" time="0.019" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_bot_task_creation_and_string_representation" time="0.057" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_comment_creation_and_ordering" time="0.022" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_creation_and_string_representation" time="0.019" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_ordering" time="0.026" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_post_reaction_creation_and_unique_constraint" time="0.041" /><testcase classname="backend.apps.notes.tests.NotesModelTests" name="test_topic_creation_and_string_representation" time="0.060" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_register_phone_chat_creates_user_and_sets_chat_id" time="0.403" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_verify_link_associates_token_and_sets_chat_id" time="0.686" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_register_destination_creates_messaging_target" time="0.937" /><testcase classname="tests.integration.test_bot_api.TestBotAPIIntegration" name="test_update_custom_bot_mocks_external_telegram_call" time="0.680" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_create_topic_success" time="2.308" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_create_topic_unauthenticated_fails" time="1.883" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_update_topic_only_by_creator" time="2.011" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_delete_topic_only_by_creator" time="9.867" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_create_post_only_by_topic_creator" time="5.001" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_creation_triggers_bot_tasks" time="2.009" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_edit_triggers_edit_bot_task" time="2.231" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_delete_triggers_delete_bot_task" time="1.810" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_comment_creation" time="1.817" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_reaction" time="1.906" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_topic_create_with_image" time="1.728" /><testcase classname="tests.integration.test_notes_api.TestNotesAPIIntegration" name="test_post_create_with_media" time="1.877" /><testcase classname="tests.e2e.test_critical_path" name="test_critical_path_login_flow[chromium]" time="14.950"><failure message="AssertionError: Locator expected to be visible&#10;Actual value: None &#10;Call log:&#10;LocatorAssertions.to_be_visible with timeout 5000ms&#10;  - waiting for locator(&quot;input[placeholder=\&quot;نام تاپیک خود را بنویسید...\&quot;]&quot;)">page = &lt;Page url='http://vue-frontend/'&gt;
+frontend_url = 'http://vue-frontend:80'
+
+    @pytest.mark.django_db(transaction=True)
+    def test_critical_path_login_flow(page: Page, frontend_url: str):
+        """
+        E2E test that validates the user registration/login flow on the Vue frontend.
+        Bypasses OTP verification by reading the generated code directly from
+        the database-backed cache table.
+        """
+    
+        # 1. Open Vue frontend login page.
+        login_url = f"{frontend_url.rstrip('/')}/login"
+        print(f"\n[E2E] Navigating to: {login_url}")
+        page.goto(login_url)
+    
+        # Wait for page to load
+        page.wait_for_url("**/login")
+        assert "/login" in page.url
+        print(f"[E2E] Arrived at login page: {page.url}")
+    
+        # Close Changelog modal if it appears
+        try:
+            page.locator('button:has-text("متوجه شدم")').click(timeout=3000)
+            print("[E2E] Closed Changelog modal")
+        except Exception:
+            print("[E2E] Changelog modal was not shown or already closed")
+    
+        # 2. Fill the phone form
+        phone_number = "09123456789"
+        phone_input = page.locator('input[type="tel"]')
+        expect(phone_input).to_be_visible(timeout=5000)
+    
+        phone_input.fill(phone_number)
+        print(f"[E2E] Entered phone number: {phone_number}")
+    
+        # Submit the phone number to trigger OTP generation
+        submit_button = page.locator('button[type="submit"]')
+        submit_button.click()
+        print("[E2E] Clicked 'Send OTP' button")
+    
+        # 3. Retrieve the generated OTP from the shared PostgreSQL database cache
+        print("[E2E] Waiting for OTP to be generated and saved to database cache...")
+        otp_code = None
+    
+        # Poll cache for up to 3 seconds (30 iterations of 100ms)
+        for _ in range(30):
+            otp_code = cache.get(f"otp_{phone_number}")
+            if otp_code:
+                break
+            time.sleep(0.1)
+    
+        assert otp_code is not None, f"OTP for {phone_number} was not found in the shared cache database!"
+        print(f"[E2E] Retrieved OTP from shared cache: {otp_code}")
+    
+        # 4. Enter the 4-digit OTP code into the digit inputs
+        # Wait for the OTP digit inputs to render on the page
+        otp_inputs = page.locator('input[inputmode="numeric"]')
+        expect(otp_inputs.first).to_be_visible(timeout=5000)
+    
+        # Confirm there are 4 inputs
+        assert otp_inputs.count() == 4, f"Expected 4 OTP input boxes, found {otp_inputs.count()}"
+    
+        # Fill each digit input
+        for i, digit in enumerate(str(otp_code)):
+            otp_inputs.nth(i).fill(digit)
+            print(f"[E2E] Entered digit {i+1}: {digit}")
+    
+        # 5. Verify successful authentication and redirection to the root route
+        print("[E2E] Waiting for redirect back to Home page...")
+        # On login, the page sets localStorage token and does window.location.href = '/'
+        # So we wait for the URL to change to the root path
+        expected_url = frontend_url.replace(":80", "").rstrip('/')
+        page.wait_for_url(f"{expected_url}/")
+    
+        # Assert final URL is the root home view
+        assert page.url.rstrip('/') == expected_url
+        print(f"[E2E] Login successful! Current browser URL is: {page.url}")
+    
+        # 6. Click the FAB (+) button to open the Topic creation modal
+        fab_button = page.locator('button.fixed.bottom-24.right-6')
+        expect(fab_button).to_be_visible(timeout=5000)
+        fab_button.click()
+        print("[E2E] Clicked FAB (+) button")
+    
+        # 7. Fill out Topic Name and Short Description
+        topic_name = "موضوع تستی E2E"
+        topic_desc = "این یک موضوع تستی ایجاد شده توسط تست E2E Playwright است."
+    
+        name_input = page.locator('input[placeholder="نام تاپیک خود را بنویسید..."]')
+&gt;       expect(name_input).to_be_visible(timeout=5000)
+E       AssertionError: Locator expected to be visible
+E       Actual value: None 
+E       Call log:
+E       LocatorAssertions.to_be_visible with timeout 5000ms
+E         - waiting for locator("input[placeholder=\"نام تاپیک خود را بنویسید...\"]")
+
+tests/e2e/test_critical_path.py:93: AssertionError</failure></testcase><testcase classname="tests.e2e.test_critical_path" name="test_custom_bot_registration[chromium]" time="7.789"><failure message="AssertionError: OTP not found&#10;assert None is not None">page = &lt;Page url='http://vue-frontend/login'&gt;
+frontend_url = 'http://vue-frontend:80'
+
+    @pytest.mark.django_db(transaction=True)
+    def test_custom_bot_registration(page: Page, frontend_url: str):
+        """
+        E2E test that verifies the custom bot registration workflow in the user's profile connections tab.
+        """
+        # 1. Login
+        login_url = f"{frontend_url.rstrip('/')}/login"
+        print(f"\n[E2E] Navigating to login for custom bot test: {login_url}")
+        page.goto(login_url)
+        page.wait_for_url("**/login")
+    
+        # Close Changelog modal if it appears
+        try:
+            page.locator('button:has-text("متوجه شدم")').click(timeout=2000)
+        except Exception:
+            pass
+    
+        phone_number = "09999999999"
+        phone_input = page.locator('input[type="tel"]')
+        expect(phone_input).to_be_visible(timeout=5000)
+        phone_input.fill(phone_number)
+    
+        submit_button = page.locator('button[type="submit"]')
+        submit_button.click()
+    
+        # Retrieve OTP
+        otp_code = None
+        for _ in range(30):
+            otp_code = cache.get(f"otp_{phone_number}")
+            if otp_code:
+                break
+            time.sleep(0.1)
+    
+&gt;       assert otp_code is not None, "OTP not found"
+E       AssertionError: OTP not found
+E       assert None is not None
+
+tests/e2e/test_critical_path.py:227: AssertionError</failure></testcase><testcase classname="tests.integration.test_bot_handlers" name="test_start_handler_linked_user" time="0.491" /><testcase classname="tests.integration.test_bot_handlers" name="test_start_handler_unlinked_user" time="1.254" /><testcase classname="tests.integration.test_bot_handlers" name="test_help_command" time="0.632" /><testcase classname="tests.integration.test_bot_handlers" name="test_register_chat_in_private_chat" time="0.556" /><testcase classname="tests.integration.test_bot_handlers" name="test_register_chat_success" time="0.782" /><testcase classname="tests.integration.test_bot_handlers" name="test_handle_token_success" time="0.638" /><testcase classname="tests.integration.test_bot_runner" name="test_format_text_for_telegram" time="0.538" /><testcase classname="tests.integration.test_bot_runner" name="test_task_processor_success" time="0.590" /><testcase classname="tests.integration.test_bot_runner" name="test_dynamic_bot_manager_runs_bots" time="0.497" /><testcase classname="tests.integration.test_bot_runner" name="test_task_processor_rate_limit_429" time="0.932" /><testcase classname="tests.integration.test_telegram_proxy" name="test_proxy_relay_success" time="2.347" /><testcase classname="tests.integration.test_telegram_proxy" name="test_proxy_relay_gas_error" time="2.286" /></testsuite></testsuites>

@@ -1,4 +1,0 @@
-nicegui>=1.4.0
-httpx>=0.24.0
-python-dotenv>=1.0.0
-markdown>=3.4.0

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-code-review": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/frontend-code-review/SKILL.md",
+      "computedHash": "2fae460028ba2ac4c9aeb567a187e0afe5ebeedbd0faa3b741e5b3ce664b603e"
+    },
+    "shadcn-vue": {
+      "source": "unovue/shadcn-vue",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn-vue/SKILL.md",
+      "computedHash": "7037ba3c62e72d5324dbe0bfebe21d4fb8cb7aba5a2200dce96a797e948dc368"
+    }
+  }
+}

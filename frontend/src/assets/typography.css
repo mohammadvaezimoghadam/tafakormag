@@ -1,0 +1,133 @@
+@layer base {
+  /* ۱. تنظیمات فونت پایه و رنگ متن اصلی صفحه */
+  body {
+    @apply text-foreground font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-variation-settings: "dots" 3;
+    letter-spacing: -0.015em;
+    word-spacing: 0.02em;
+    line-height: 1.7;
+  }
+
+  /* ۲. تیتر اصلی صفحه (H1) */
+  h1 {
+    @apply scroll-m-20 text-4xl font-extrabold tracking-tight text-balance lg:text-5xl;
+    /* برای زبان انگلیسی فشردهسازی حروف خوب است، اما برای فارسی لغو میشود */
+    &:lang(fa), &:lang(ar) {
+      letter-spacing: -0.02em;
+      word-spacing: 0.01em;
+      line-height: 1.3;
+    }
+  }
+
+  /* ۳. تیتر بخشهای اصلی (H2) */
+  h2 {
+    @apply scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0 mt-10;
+    &:lang(fa), &:lang(ar) {
+      letter-spacing: -0.02em;
+      word-spacing: 0.01em;
+      line-height: 1.4;
+    }
+  }
+
+  /* ۴. تیترهای زیربخش (H3) */
+  h3 {
+    @apply scroll-m-20 text-2xl font-semibold tracking-tight mt-8;
+    &:lang(fa), &:lang(ar) {
+      letter-spacing: -0.02em;
+      word-spacing: 0.01em;
+      line-height: 1.4;
+    }
+  }
+
+  /* ۵. عناوین کوچک یا داخل کارتها (H4) */
+  h4 {
+    @apply scroll-m-20 text-xl font-semibold tracking-tight mt-6;
+    &:lang(fa), &:lang(ar) {
+      letter-spacing: -0.02em;
+      word-spacing: 0.01em;
+      line-height: 1.4;
+    }
+  }
+
+  /* ۶. متن بدنه و پاراگرافها (P) */
+  p {
+    @apply leading-7 text-foreground/90;
+    /* ایجاد فاصله خودکار بین پاراگرافها، به جز پاراگراف اول */
+    &:not(:first-child) {
+      @apply mt-6;
+    }
+  }
+
+  /* ۷. نقلقولها (Blockquote) */
+  blockquote {
+    @apply mt-6 border-l-2 pl-6 italic text-muted-foreground;
+    /* سازگاری با حالت راستچین (RTL) برای متون فارسی */
+    &:dir(rtl), &:lang(fa), &:lang(ar) {
+      @apply border-l-0 border-r-2 pl-0 pr-6 not-italic;
+    }
+  }
+
+  /* ۸. جدولهای داخل متون طولانی */
+  table {
+    @apply my-6 w-full overflow-y-auto;
+    
+    tr {
+      @apply m-0 border-t p-0 even:bg-muted;
+    }
+
+    th {
+      @apply border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right;
+      &:dir(rtl) {
+        @apply text-right;
+      }
+    }
+
+    td {
+      @apply border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right;
+      &:dir(rtl) {
+        @apply text-right;
+      }
+    }
+  }
+
+  /* ۹. لیستهای نشانهدار (Unordered Lists) */
+  ul {
+    @apply my-6 ml-6 list-disc [&>li]:mt-2;
+    &:dir(rtl), &:lang(fa) {
+      @apply ml-0 mr-6;
+    }
+  }
+
+  /* ۱۰. لیستهای عددی (Ordered Lists) */
+  ol {
+    @apply my-6 ml-6 list-decimal [&>li]:mt-2;
+    &:dir(rtl), &:lang(fa) {
+      @apply ml-0 mr-6;
+    }
+  }
+
+  /* ۱۱. کدهای درونخطی (Inline Code) */
+  code {
+    @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-foreground;
+  }
+}
+
+/* ۱۲. کلاسهای کمکی اختصاصی (Custom Utilities) برای موارد خاص */
+@layer utilities {
+  .text-lead {
+    @apply text-xl text-muted-foreground leading-relaxed;
+  }
+  
+  .text-large {
+    @apply text-lg font-semibold text-foreground;
+  }
+  
+  .text-small {
+    @apply text-sm font-medium leading-none;
+  }
+  
+  .text-muted-custom {
+    @apply text-sm text-muted-foreground;
+  }
+}

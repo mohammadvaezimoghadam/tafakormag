@@ -1,0 +1,818 @@
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useDark, useToggle } from '@vueuse/core'
+
+import PlatformHeader from '@/components/PlatformHeader.vue'
+import PlatformNavigation from '@/components/PlatformNavigation.vue'
+import PostCard from '@/components/PostCard.vue'
+import TopicCard from '@/components/TopicCard.vue'
+import ProfileCard from '@/components/ProfileCard.vue'
+import ProfileOptionCard from '@/components/ProfileOptionCard.vue'
+import CreateTopicModal from '@/components/CreateTopicModal.vue'
+import EditProfileModal from '@/components/EditProfileModal.vue'
+import BotConnectionCard from '@/components/BotConnectionCard.vue'
+import TopicEditView from '@/components/TopicEditView.vue'
+import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
+import TopicMessageInput from '@/components/TopicMessageInput.vue'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { SparklesIcon, CheckCircle2Icon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon } from '@lucide/vue'
+
+import { useBotStore } from '@/stores/botStore'
+import { useUserStore } from '@/stores/userStore'
+import { useTopicStore } from '@/stores/topicStore'
+import { usePostStore } from '@/stores/postStore'
+import { useToastStore } from '@/stores/toastStore'
+
+// Tab state ('home' | 'profile')
+const currentTab = ref<'home' | 'profile'>('home')
+
+// Subview connection state
+const showConnections = ref(false)
+
+// Active topic subview ('feed' | 'edit' | 'connections')
+const activeTopicSubView = ref<'feed' | 'edit' | 'connections'>('feed')
+
+// Initialize Pinia stores
+const botStore = useBotStore()
+const userStore = useUserStore()
+const topicStore = useTopicStore()
+const postStore = usePostStore()
+const toastStore = useToastStore()
+
+const { telegramBotStatus, telegramBotToken, baleBotStatus, baleBotToken } = storeToRefs(botStore)
+const { userProfile } = storeToRefs(userStore)
+const { topics, selectedTopic } = storeToRefs(topicStore)
+const { posts } = storeToRefs(postStore)
+
+const router = useRouter()
+const route = useRoute()
+
+// Sync router to tab/topic state
+const syncRouteToState = () => {
+  if (route.path === '/profile') {
+    currentTab.value = 'profile'
+    selectedTopic.value = null
+  } else if (route.path.startsWith('/topic/')) {
+    currentTab.value = 'home'
+    const topicId = Number(route.params.id)
+    if (!isNaN(topicId)) {
+      const found = topics.value.find(t => t.id === topicId)
+      if (found) {
+        selectedTopic.value = found
+      } else {
+        selectedTopic.value = { id: topicId, title: 'در حال بارگذاری...' } as any
+      }
+    }
+  } else {
+    currentTab.value = 'home'
+    selectedTopic.value = null
+  }
+}
+
+// Watchers to sync state to route
+watch(() => route.path, () => {
+  syncRouteToState()
+})
+
+watch(currentTab, (newTab) => {
+  if (newTab === 'profile') {
+    if (route.path !== '/profile') {
+      router.push('/profile')
+    }
+  } else {
+    if (route.path !== '/' && !route.path.startsWith('/topic/')) {
+      router.push('/')
+    }
+  }
+})
+
+watch(selectedTopic, async (newTopic) => {
+  if (newTopic) {
+    const targetPath = `/topic/${newTopic.id}`
+    if (route.path !== targetPath) {
+      router.push(targetPath)
+    }
+    try {
+      await postStore.loadPosts(newTopic.id)
+    } catch (err) {
+      //
+    }
+  } else {
+    if (route.path.startsWith('/topic/')) {
+      router.push('/')
+    }
+  }
+})
+
+watch(() => topics.value, () => {
+  if (route.path.startsWith('/topic/')) {
+    const topicId = Number(route.params.id)
+    if (!isNaN(topicId)) {
+      const found = topics.value.find(t => t.id === topicId)
+      if (found) {
+        selectedTopic.value = found
+      }
+    }
+  }
+}, { deep: true })
+
+// Fetch data on mount
+onMounted(async () => {
+  try {
+    await userStore.loadProfile()
+    await topicStore.loadTopics()
+    syncRouteToState()
+  } catch (err) {
+    console.error('Error on FeedView mount:', err)
+  }
+})
+
+// Header computed states for platform and connections view
+const headerIsInnerPage = computed(() => {
+  if (currentTab.value === 'home') {
+    return selectedTopic.value !== null
+  } else {
+    return showConnections.value
+  }
+})
+
+const headerInnerTitle = computed(() => {
+  if (currentTab.value === 'home') {
+    return selectedTopic.value?.title || ''
+  } else {
+    return 'مدیریت اتصال‌ها'
+  }
+})
+
+const headerTitle = computed(() => {
+  if (currentTab.value === 'profile') {
+    return 'پروفایل'
+  }
+  return 'تفکر'
+})
+
+const handleHeaderBack = () => {
+  if (currentTab.value === 'home') {
+    if (activeTopicSubView.value !== 'feed') {
+      activeTopicSubView.value = 'feed'
+    } else {
+      selectedTopic.value = null
+    }
+  } else {
+    showConnections.value = false
+  }
+}
+
+const handleTelegramConnect = async (token: string) => {
+  try {
+    await botStore.connectTelegram(token, () => {
+      triggerToast('ربات تلگرام با موفقیت متصل شد.')
+    })
+  } catch (err) {
+    //
+  }
+}
+
+const handleTelegramDisconnect = async () => {
+  try {
+    await botStore.disconnectTelegram(() => {
+      triggerToast('اتصال ربات تلگرام قطع شد.')
+    })
+  } catch (err) {
+    //
+  }
+}
+
+const handleBaleConnect = async (token: string) => {
+  try {
+    await botStore.connectBale(token, () => {
+      triggerToast('ربات بله با موفقیت متصل شد.')
+    })
+  } catch (err) {
+    //
+  }
+}
+
+const handleBaleDisconnect = async () => {
+  try {
+    await botStore.disconnectBale(() => {
+      triggerToast('اتصال ربات بله قطع شد.')
+    })
+  } catch (err) {
+    //
+  }
+}
+
+const activeConnectionsCount = computed(() => {
+  let count = 0
+  if (telegramBotStatus.value === 'connected') count++
+  if (baleBotStatus.value === 'connected') count++
+  return count
+})
+
+const connectionsBadgeText = computed(() => {
+  const count = activeConnectionsCount.value
+  if (count === 0) return 'بدون اتصال'
+  return `${count} فعال`
+})
+
+const connectionsBadgeVariant = computed(() => {
+  return activeConnectionsCount.value > 0 ? 'secondary' : 'default'
+})
+
+// Search query binding
+const searchQuery = ref('')
+
+// Create Topic Modal State
+const isCreateModalOpen = ref(false)
+const isEditProfileOpen = ref(false)
+
+const dataURLtoFile = (dataurl: string, filename: string) => {
+  const arr = dataurl.split(',')
+  const mimeMatch = arr[0] ? arr[0].match(/:(.*?);/) : null
+  const mime = mimeMatch && mimeMatch[1] ? mimeMatch[1] : 'image/png'
+  const base64Data = arr[1] || ''
+  const bstr = atob(base64Data)
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new File([u8arr], filename, { type: mime })
+}
+
+const handleCreateTopic = async (newTopic: { title: string; description: string; image?: string }) => {
+  let imageFile: File | undefined = undefined
+  if (newTopic.image && newTopic.image.startsWith('data:')) {
+    imageFile = dataURLtoFile(newTopic.image, 'topic_image.png')
+  }
+  
+  try {
+    await topicStore.addTopic({
+      title: newTopic.title,
+      description: newTopic.description,
+      image: imageFile
+    })
+    isCreateModalOpen.value = false
+    triggerToast(`تاپیک «${newTopic.title}» با موفقیت ایجاد شد.`)
+  } catch (err) {
+    //
+  }
+}
+
+// Toast Notification state
+const triggerToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+  toastStore.triggerToast(message, type)
+}
+
+const toastMsg = computed(() => toastStore.toastMsg)
+const isToastActive = computed(() => toastStore.isToastActive)
+
+const handleProfileEdit = () => {
+  isEditProfileOpen.value = true
+}
+
+const handleProfileSave = async (data: { first_name: string; last_name: string; avatarFile?: File }) => {
+  const formData = new FormData()
+  formData.append('first_name', data.first_name)
+  formData.append('last_name', data.last_name)
+  if (data.avatarFile) {
+    formData.append('profile_image', data.avatarFile)
+  }
+  
+  try {
+    await userStore.updateProfile(formData)
+    isEditProfileOpen.value = false
+    triggerToast('اطلاعات کاربری با موفقیت به‌روزرسانی شد.', 'success')
+  } catch (err) {
+    //
+  }
+}
+
+const handleLogout = () => {
+  triggerToast('در حال خروج از سیستم...')
+  setTimeout(() => {
+    selectedTopic.value = null
+    currentTab.value = 'home'
+    userStore.logout()
+    router.push('/')
+  }, 1000)
+}
+
+// Filtering computed logic based on search
+const filteredTopics = computed(() => {
+  if (!searchQuery.value.trim()) return topics.value
+  const q = searchQuery.value.toLowerCase().trim()
+  return topics.value.filter(t => 
+    t.title.toLowerCase().includes(q) || 
+    t.description.toLowerCase().includes(q)
+  )
+})
+
+const filteredCurrentTopicPosts = computed(() => {
+  return posts.value.filter(p => {
+    if (!searchQuery.value.trim()) return true
+    const q = searchQuery.value.toLowerCase().trim()
+    return (p.content && p.content.toLowerCase().includes(q)) || 
+           p.author.name.toLowerCase().includes(q)
+  })
+})
+
+const handlePostLike = async (postId: string | number, isLiked: boolean) => {
+  try {
+    await postStore.likePost(postId, isLiked)
+  } catch (err) {
+    //
+  }
+}
+
+const handlePostShare = (postId: string | number) => {
+  const shareUrl = `${window.location.origin}/topic/${selectedTopic.value?.id}`
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    triggerToast(`لینک تاپیک در حافظه موقت کپی شد.`);
+  }).catch(() => {
+    triggerToast(`لینک پست شماره ${postId} در حافظه موقت کپی شد.`);
+  })
+}
+
+const handleAddComment = async (postId: string | number, comment: any) => {
+  // Comments are submitted directly through the store from PostCard watcher,
+  // but we keep this handler to display the toast message.
+  triggerToast('دیدگاه شما با موفقیت ثبت شد.');
+}
+
+const handlePostReact = async (postId: string | number, emoji: string) => {
+  try {
+    await postStore.reactToPost(postId, emoji)
+  } catch (err) {
+    //
+  }
+}
+
+const handlePostDelete = async (postId: string | number) => {
+  if (window.confirm('پست حذف شود؟ (با حذف این پست، پیام‌های مرتبط در پیام‌رسان‌ها نیز حذف خواهند شد)')) {
+    try {
+      await postStore.deletePost(postId)
+      triggerToast('پست با موفقیت حذف شد.')
+    } catch (err) {
+      //
+    }
+  }
+}
+
+const handleSelectTopic = async (topic: any) => {
+  selectedTopic.value = topic
+  activeTopicSubView.value = 'feed'
+  try {
+    await postStore.loadPosts(topic.id)
+  } catch (err) {
+    //
+  }
+}
+
+const handleEditTopic = () => {
+  if (!selectedTopic.value) return
+  activeTopicSubView.value = 'edit'
+}
+
+const handleDeleteTopic = async () => {
+  if (!selectedTopic.value) return
+  const title = selectedTopic.value.title
+  if (window.confirm(`آیا مطمئن هستید که می‌خواهید تاپیک «${title}» را به همراه تمام پیام‌های آن حذف کنید؟`)) {
+    try {
+      await topicStore.deleteTopic(selectedTopic.value.id)
+      triggerToast(`تاپیک «${title}» با موفقیت حذف شد.`)
+    } catch (err) {
+      //
+    }
+  }
+}
+
+const handleTopicConnections = () => {
+  if (!selectedTopic.value) return
+  activeTopicSubView.value = 'connections'
+}
+
+const handleSaveTopicEdit = async (updatedTopic: { title: string; description: string; image: string }) => {
+  if (!selectedTopic.value) return
+  try {
+    await topicStore.updateTopic(selectedTopic.value.id, {
+      title: updatedTopic.title,
+      description: updatedTopic.description
+    })
+    activeTopicSubView.value = 'feed'
+    triggerToast('مشخصات تاپیک با موفقیت ویرایش شد.')
+  } catch (err) {
+    //
+  }
+}
+
+const handleSaveTopicConnections = async (data: { 
+  telegram_bot_active: boolean
+  bale_bot_active: boolean
+  telegram_connections: number[]
+  bale_connections: number[] 
+}) => {
+  if (!selectedTopic.value) return
+  try {
+    await topicStore.saveTopicConnections(selectedTopic.value.id, data)
+    triggerToast('تنظیمات اتصالات تاپیک با موفقیت به روز رسانی شد.')
+  } catch (err) {
+    //
+  }
+}
+
+const handleGoToConnections = () => {
+  activeTopicSubView.value = 'feed'
+  selectedTopic.value = null
+  currentTab.value = 'profile'
+  showConnections.value = true
+}
+
+// Topic Message Input / Attachments flow
+const postAttachments = ref<any[]>([])
+const hiddenFileInput = ref<HTMLInputElement | null>(null)
+const selectedAttachmentFile = ref<File | null>(null)
+
+const isTopicCreator = computed(() => {
+  if (!selectedTopic.value || !userProfile.value) return false
+  if (!selectedTopic.value.created_by) return true
+  return String(selectedTopic.value.created_by) === String(userProfile.value.id) ||
+         (selectedTopic.value.created_by_phone && userProfile.value.phone && 
+          String(selectedTopic.value.created_by_phone) === String(userProfile.value.phone))
+})
+
+const triggerFileSelect = () => {
+  hiddenFileInput.value?.click()
+}
+
+const handleFileInputChange = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  selectedAttachmentFile.value = file
+  
+  let fileType: 'image' | 'video' | 'audio' | 'file' = 'file'
+  if (file.type.startsWith('image/')) fileType = 'image'
+  else if (file.type.startsWith('video/')) fileType = 'video'
+  else if (file.type.startsWith('audio/')) fileType = 'audio'
+
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+  const previewUrl = fileType === 'image' ? URL.createObjectURL(file) : ''
+
+  postAttachments.value = [{
+    id: 'attach_1',
+    name: file.name,
+    type: fileType,
+    url: previewUrl,
+    size: sizeMB,
+    status: 'completed',
+    progress: 100
+  }]
+}
+
+const removePostAttachment = () => {
+  postAttachments.value = []
+  selectedAttachmentFile.value = null
+  if (hiddenFileInput.value) hiddenFileInput.value.value = ''
+}
+
+const handleSendPost = async (message: { text: string }) => {
+  if (!selectedTopic.value) return
+  
+  const formData = new FormData()
+  formData.append('topic', String(selectedTopic.value.id))
+  formData.append('content', message.text)
+  
+  let mediaType = 'text'
+  if (selectedAttachmentFile.value) {
+    const file = selectedAttachmentFile.value
+    if (file.type.startsWith('image/')) mediaType = 'image'
+    else if (file.type.startsWith('video/')) mediaType = 'video'
+    else if (file.type.startsWith('audio/')) mediaType = 'audio'
+    
+    formData.append('media_file', file)
+  }
+  formData.append('media_type', mediaType)
+
+  try {
+    await postStore.createPost(formData)
+    triggerToast('پست جدید ارسال و در کانال‌های فعال بازنشر شد', 'success')
+    removePostAttachment()
+  } catch (err) {
+    //
+  }
+}
+
+// Dark/Light theme manager via VueUse for global synchronization
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: '',
+})
+const toggleTheme = useToggle(isDark)
+</script>
+
+<template>
+  <div class="w-full max-w-[500px] flex flex-col gap-5 pb-24 text-right mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" dir="rtl">
+    
+    <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
+    <div 
+      v-if="currentTab === 'profile' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      class="sticky top-0 z-40 bg-background/85 dark:bg-background/80 backdrop-blur-md pt-4 pb-2.5"
+    >
+      <PlatformHeader 
+        :is-inner-page="headerIsInnerPage" 
+        :inner-title="headerInnerTitle" 
+        :title="headerTitle" 
+        :loading="telegramBotStatus === 'connecting' || baleBotStatus === 'connecting'"
+        :show-options-button="currentTab === 'home' && selectedTopic !== null"
+        :show-search-button="currentTab === 'home' && selectedTopic === null"
+        v-model:search-query="searchQuery"
+        @back="handleHeaderBack"
+        @edit-topic="handleEditTopic"
+        @delete-topic="handleDeleteTopic"
+        @topic-connections="handleTopicConnections"
+      />
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="w-full flex-1">
+      <transition name="fade-slide" mode="out-in">
+        <!-- TAB 1: HOME (TOPIC LIST & DETAILS & SUBVIEWS) -->
+        <div v-if="currentTab === 'home'" key="home" class="flex flex-col gap-5 w-full">
+          
+          <transition name="fade-slide" mode="out-in">
+            <!-- List View: Search and vertical TopicCards -->
+            <div v-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full">
+              <!-- Grouped TopicCards Container (Borderless list grouped inside a single glass card wrapper) -->
+              <div class="flex flex-col gap-1 w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-2.5 shadow-xs">
+                <TopicCard 
+                  v-for="topic in filteredTopics" 
+                  :key="topic.id"
+                  v-bind="topic"
+                  @click="handleSelectTopic(topic)"
+                />
+                
+                <div v-if="filteredTopics.length === 0" class="text-center py-12 text-xs text-muted-foreground font-medium">
+                  هیچ تاپیکی مطابق با جستجوی شما یافت نشد.
+                </div>
+              </div>
+            </div>
+
+            <!-- Detail View: Topic Posts Feed -->
+            <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4 w-full pb-20">
+              <!-- Posts belonging to this topic -->
+              <PostCard 
+                v-for="post in filteredCurrentTopicPosts" 
+                :key="post.id"
+                v-bind="post"
+                @like="handlePostLike"
+                @share="handlePostShare"
+                @add-comment="handleAddComment"
+                @react="handlePostReact"
+                @delete="handlePostDelete"
+              />
+              
+              <div v-if="filteredCurrentTopicPosts.length === 0" class="text-center py-12 bg-card/20 rounded-xl border border-border/60 text-xs text-muted-foreground font-medium">
+                هیچ پست یا مطلبی در این تاپیک ثبت نشده است.
+              </div>
+
+              <!-- Message Input component at the bottom of the feed -->
+              <div class="fixed bottom-0 inset-x-0 bg-background/85 dark:bg-background/80 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] mx-auto w-full">
+                <TopicMessageInput 
+                  :disabled="!isTopicCreator"
+                  placeholder="یادداشت خود را بنویسید..."
+                  @send="handleSendPost"
+                  @attach="triggerFileSelect"
+                  :initialAttachments="postAttachments"
+                  @removeAttachment="removePostAttachment"
+                />
+                <input 
+                  type="file" 
+                  ref="hiddenFileInput" 
+                  @change="handleFileInputChange" 
+                  accept="image/*,video/*,audio/*" 
+                  class="hidden" 
+                />
+              </div>
+            </div>
+
+            <!-- Topic Edit View -->
+            <div v-else-if="activeTopicSubView === 'edit'" key="edit" class="w-full">
+              <TopicEditView 
+                :topic="selectedTopic"
+                @back="activeTopicSubView = 'feed'"
+                @save="handleSaveTopicEdit"
+              />
+            </div>
+
+            <!-- Topic Connections View -->
+            <div v-else-if="activeTopicSubView === 'connections'" key="connections" class="w-full">
+              <TopicConnectionsView 
+                :topic="selectedTopic"
+                :telegram-connected="telegramBotStatus === 'connected'"
+                :bale-connected="baleBotStatus === 'connected'"
+                @back="activeTopicSubView = 'feed'"
+                @goToConnections="handleGoToConnections"
+                @save="handleSaveTopicConnections"
+              />
+            </div>
+          </transition>
+
+        </div>
+
+        <!-- TAB 2: PROFILE EDIT -->
+        <div v-else key="profile" class="w-full flex flex-col gap-4.5">
+          
+          <transition name="fade-slide" mode="out-in">
+            <!-- Subview: Connections -->
+            <div v-if="showConnections" key="connections-list" class="flex flex-col gap-4.5">
+              <!-- Connection Cards list -->
+              <div class="flex flex-col gap-4.5">
+                <BotConnectionCard 
+                  platform="telegram"
+                  :initialStatus="telegramBotStatus"
+                  :initialToken="telegramBotToken"
+                  @connect="handleTelegramConnect"
+                  @disconnect="handleTelegramDisconnect"
+                  @update:status="(st) => telegramBotStatus = st"
+                />
+                <BotConnectionCard 
+                  platform="bale"
+                  :initialStatus="baleBotStatus"
+                  :initialToken="baleBotToken"
+                  @connect="handleBaleConnect"
+                  @disconnect="handleBaleDisconnect"
+                  @update:status="(st) => baleBotStatus = st"
+                />
+              </div>
+            </div>
+
+            <!-- Main Profile Menu -->
+            <div v-else key="profile-main" class="flex flex-col gap-4.5">
+              <!-- Profile Card -->
+              <ProfileCard 
+                v-if="userProfile"
+                v-bind="userProfile"
+                :topics-count="topics.length"
+                :posts-count="posts.length"
+                :connections-count="activeConnectionsCount"
+                @edit="handleProfileEdit"
+              />
+
+              <!-- Options -->
+              <div class="flex flex-col gap-3">
+                <ProfileOptionCard 
+                  title="🔌 اتصالات پیام‌رسان"
+                  description="مدیریت حساب‌های متصل و سرویس‌های خارجی"
+                  :icon="LinkIcon"
+                  :badge-text="connectionsBadgeText"
+                  :badge-variant="connectionsBadgeVariant"
+                  @click="showConnections = true"
+                />
+
+                <!-- Light/Dark Mode Switcher -->
+                <div
+                  @click="toggleTheme()"
+                  class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none text-right relative active:scale-[0.995] group gap-3.5"
+                  dir="rtl"
+                >
+                  <!-- Right side: Icon Container -->
+                  <div class="size-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary shrink-0 transition-transform duration-200 group-hover:scale-102">
+                    <transition name="icon-pop" mode="out-in">
+                      <component :is="isDark ? MoonIcon : SunIcon" class="size-5 shrink-0" :key="isDark ? 'moon' : 'sun'" />
+                    </transition>
+                  </div>
+
+                  <!-- Middle: Title & Description -->
+                  <div class="flex-1 flex flex-col text-right gap-1 min-w-0">
+                    <span class="text-xs font-bold text-foreground truncate leading-none">
+                      حالت تاریک
+                    </span>
+                    <span class="text-[10px] text-muted-foreground truncate leading-relaxed">
+                      تغییر تم رنگی برنامه به حالت شب یا روز
+                    </span>
+                  </div>
+
+                  <!-- Left side: Switch toggle -->
+                  <div class="flex items-center gap-2 shrink-0" @click.stop>
+                    <Switch :checked="isDark" @update:checked="toggleTheme" />
+                  </div>
+                </div>
+
+                <ProfileOptionCard 
+                  title="خروج از حساب کاربری"
+                  description="خروج امن از سیستم و بازگشت به صفحه ورود"
+                  :icon="LogOutIcon"
+                  badge-variant="destructive"
+                  @click="handleLogout"
+                />
+              </div>
+            </div>
+          </transition>
+
+        </div>
+      </transition>
+    </div>
+
+    <!-- Bottom Navigation tabs -->
+    <div v-if="selectedTopic === null" class="fixed bottom-6 inset-x-0 flex justify-center z-45 pointer-events-none px-6">
+      <div class="pointer-events-auto">
+        <PlatformNavigation v-model="currentTab" />
+      </div>
+    </div>
+
+    <!-- Floating Plus Button to Create Topic (Bottom Right Corner - Raised above floating tab bar, aligned inside page grid) -->
+    <Button 
+      v-if="currentTab === 'home' && selectedTopic === null"
+      @click="isCreateModalOpen = true"
+      class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
+      title="ایجاد تاپیک جدید"
+    >
+      <PlusIcon class="size-6" />
+    </Button>
+
+    <!-- Create Topic Modal -->
+    <CreateTopicModal 
+      :is-open="isCreateModalOpen" 
+      @close="isCreateModalOpen = false" 
+      @create="handleCreateTopic"
+    />
+
+    <!-- Edit Profile Modal -->
+    <EditProfileModal
+      :is-open="isEditProfileOpen"
+      :userProfile="userProfile"
+      @close="isEditProfileOpen = false"
+      @save="handleProfileSave"
+    />
+
+    <!-- Dynamic Premium Toast Notification -->
+    <transition name="toast-slide">
+      <div 
+        v-if="isToastActive" 
+        class="fixed top-6 inset-x-0 flex justify-center z-50 px-6 pointer-events-none"
+      >
+        <div class="bg-primary text-primary-foreground text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg border border-primary/20 flex items-center gap-2 pointer-events-auto">
+          <CheckCircle2Icon class="size-4 text-primary-foreground" />
+          <span>{{ toastMsg }}</span>
+        </div>
+      </div>
+    </transition>
+
+  </div>
+</template>
+
+<style scoped>
+/* Toast Animation */
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-slide-enter-from {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+.toast-slide-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+
+/* Minimal Fade & Slide transition */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Icon Pop Transition */
+.icon-pop-enter-active,
+.icon-pop-leave-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.icon-pop-enter-from {
+  transform: scale(0.6) rotate(-90deg);
+  opacity: 0;
+}
+
+.icon-pop-leave-to {
+  transform: scale(0.6) rotate(90deg);
+  opacity: 0;
+}
+</style>

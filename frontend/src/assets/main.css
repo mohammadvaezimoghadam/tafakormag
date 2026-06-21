@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'IRANYekanX';
+  src: url('/fonts/IRANYekanXVF.woff2') format('woff2-variations'),
+    url('/fonts/IRANYekanXVF.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import './base.css';
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn-vue/tailwind.css";
+@import "./typography.css";
+@import "./spacing-radius.css";
+
+@custom-variant dark (&:is(.dark *));
+
+#app {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  font-weight: normal;
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: block;
+  }
+
+  #app {
+    padding: 0;
+  }
+}
+
+@theme inline {
+  --font-sans: 'IRANYekanX', system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: oklch(0.985 0.012 120);
+  --foreground: oklch(0.153 0.006 107.1);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.153 0.006 107.1);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.153 0.006 107.1);
+  --primary: oklch(0.228 0.013 107.4);
+  --primary-foreground: oklch(0.988 0.003 106.5);
+  --secondary: oklch(0.966 0.005 106.5);
+  --secondary-foreground: oklch(0.228 0.013 107.4);
+  --muted: oklch(0.966 0.005 106.5);
+  --muted-foreground: oklch(0.58 0.031 107.3);
+  --accent: oklch(0.966 0.005 106.5);
+  --accent-foreground: oklch(0.228 0.013 107.4);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.93 0.007 106.5);
+  --input: oklch(0.93 0.007 106.5);
+  --ring: oklch(0.737 0.021 106.9);
+  --chart-1: oklch(0.88 0.011 106.6);
+  --chart-2: oklch(0.58 0.031 107.3);
+  --chart-3: oklch(0.466 0.025 107.3);
+  --chart-4: oklch(0.394 0.023 107.4);
+  --chart-5: oklch(0.286 0.016 107.4);
+  --radius: 1rem;
+  --sidebar: oklch(0.988 0.003 106.5);
+  --sidebar-foreground: oklch(0.153 0.006 107.1);
+  --sidebar-primary: oklch(0.228 0.013 107.4);
+  --sidebar-primary-foreground: oklch(0.988 0.003 106.5);
+  --sidebar-accent: oklch(0.966 0.005 106.5);
+  --sidebar-accent-foreground: oklch(0.228 0.013 107.4);
+  --sidebar-border: oklch(0.93 0.007 106.5);
+  --sidebar-ring: oklch(0.737 0.021 106.9);
+}
+
+.dark {
+  --background: oklch(0.153 0.006 107.1);
+  --foreground: oklch(0.988 0.003 106.5);
+  --card: oklch(0.228 0.013 107.4);
+  --card-foreground: oklch(0.988 0.003 106.5);
+  --popover: oklch(0.228 0.013 107.4);
+  --popover-foreground: oklch(0.988 0.003 106.5);
+  --primary: oklch(0.93 0.007 106.5);
+  --primary-foreground: oklch(0.228 0.013 107.4);
+  --secondary: oklch(0.286 0.016 107.4);
+  --secondary-foreground: oklch(0.988 0.003 106.5);
+  --muted: oklch(0.286 0.016 107.4);
+  --muted-foreground: oklch(0.737 0.021 106.9);
+  --accent: oklch(0.286 0.016 107.4);
+  --accent-foreground: oklch(0.988 0.003 106.5);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.58 0.031 107.3);
+  --chart-1: oklch(0.88 0.011 106.6);
+  --chart-2: oklch(0.58 0.031 107.3);
+  --chart-3: oklch(0.466 0.025 107.3);
+  --chart-4: oklch(0.394 0.023 107.4);
+  --chart-5: oklch(0.286 0.016 107.4);
+  --sidebar: oklch(0.228 0.013 107.4);
+  --sidebar-foreground: oklch(0.988 0.003 106.5);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.988 0.003 106.5);
+  --sidebar-accent: oklch(0.286 0.016 107.4);
+  --sidebar-accent-foreground: oklch(0.988 0.003 106.5);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.58 0.031 107.3);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    font-variation-settings: "dots" 3;
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+  }
+
+  /* Smooth theme transitions for typical components */
+  .bg-background,
+  .bg-card,
+  .bg-muted,
+  .border-border,
+  .border,
+  .text-foreground,
+  .text-muted-foreground,
+  .text-primary,
+  .bg-primary {
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  /* تنظیمات کلاس‌های وزن فونت متغیر ایران یکان ایکس همراه با اتصال نقطه‌ها */
+  .font-thin { font-variation-settings: "wght" 100, "dots" 3; font-weight: 100; }
+  .font-light { font-variation-settings: "wght" 300, "dots" 3; font-weight: 300; }
+  .font-normal { font-variation-settings: "wght" 400, "dots" 3; font-weight: 400; }
+  .font-medium { font-variation-settings: "wght" 500, "dots" 3; font-weight: 500; }
+  .font-semibold { font-variation-settings: "wght" 600, "dots" 3; font-weight: 600; }
+  .font-bold { font-variation-settings: "wght" 700, "dots" 3; font-weight: 700; }
+  .font-extrabold { font-variation-settings: "wght" 800, "dots" 3; font-weight: 800; }
+  .font-black { font-variation-settings: "wght" 900, "dots" 3; font-weight: 900; }
+
+  /* نگاشت ضخامت هدینگ‌های بومی همراه با اتصال نقطه‌ها */
+  h1 { font-variation-settings: "wght" 800, "dots" 3; font-weight: 800; }
+  h2, h3, h4 { font-variation-settings: "wght" 600, "dots" 3; font-weight: 600; }
+}
