@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { Button } from '@/components/ui/button'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import Input from '@/components/ui/input/Input.vue'
 import { 
   PaperclipIcon, 
   SendIcon, 
   MicIcon, 
-  SmileIcon, 
   XIcon, 
+  Trash2Icon,
+  CheckIcon,
   FileTextIcon, 
   ImageIcon, 
   VideoIcon, 
@@ -48,45 +49,53 @@ const emit = defineEmits<{
 // Local state
 const text = ref(props.initialText)
 const attachments = ref<Attachment[]>([...props.initialAttachments])
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const isRecording = ref(false)
+const recordingSeconds = ref(0)
+let timerInterval: any = null
 
 // Sync from props
 watch(() => props.initialText, (newVal) => {
   text.value = newVal
-  nextTick(adjustHeight)
 })
 
 watch(() => props.initialAttachments, (newVal) => {
   attachments.value = [...newVal]
 }, { deep: true })
 
-// Auto-resizing textarea logic
-const adjustHeight = () => {
-  const el = textareaRef.value
-  if (!el) return
-  el.style.height = 'auto'
-  // Auto-clamp height between 40px and 160px
-  const nextHeight = Math.min(el.scrollHeight, 160)
-  el.style.height = `${Math.max(nextHeight, 40)}px`
-}
-
-onMounted(() => {
-  adjustHeight()
+onUnmounted(() => {
+  stopTimer()
 })
 
-// Dynamic action state
+// Timer actions for voice recording
+const startTimer = () => {
+  recordingSeconds.value = 0
+  timerInterval = setInterval(() => {
+    recordingSeconds.value++
+  }, 1000)
+}
+
+const stopTimer = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+}
+
+const formattedTime = computed(() => {
+  const mins = Math.floor(recordingSeconds.value / 60)
+  const secs = recordingSeconds.value % 60
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+})
+
+// Dynamic action states
 const hasContent = computed(() => {
   return text.value.trim().length > 0 || attachments.value.length > 0
 })
 
+// Actions
 const handleSend = () => {
   if (props.disabled) return
-  if (!hasContent.value) {
-    // If empty, click triggers record voice simulation
-    handleRecordVoice()
-    return
-  }
+  if (!hasContent.value) return
 
   // Filter out attachments that are still uploading
   const completedAttachments = attachments.value.filter(a => a.status !== 'uploading')
@@ -99,38 +108,70 @@ const handleSend = () => {
   // Clear inputs
   text.value = ''
   attachments.value = []
-  nextTick(adjustHeight)
 }
 
-const handleRecordVoice = () => {
+// Start Voice Recording
+const startRecording = () => {
   if (props.disabled) return
-  isRecording.value = !isRecording.value
+  isRecording.value = true
+  startTimer()
   emit('recordVoice')
 }
 
-const handleRemoveAttachment = (id: string | number) => {
-  attachments.value = attachments.value.filter(a => a.id !== id)
-  emit('removeAttachment', id)
+// Cancel / Discard Voice Recording
+const cancelRecording = () => {
+  isRecording.value = false
+  stopTimer()
+  recordingSeconds.value = 0
+}
+
+// Stop and Send Voice Recording
+const completeRecording = () => {
+  if (props.disabled) return
+  const durationStr = formattedTime.value
+  isRecording.value = false
+  stopTimer()
+
+  // Generate a mock audio attachment to represent the voice recording
+  const voiceAttachment: Attachment = {
+    id: `voice_${Date.now()}`,
+    name: `صدا_ضبط_شده_${durationStr.replace(':', '_')}.ogg`,
+    type: 'audio',
+    size: durationStr,
+    status: 'completed',
+    progress: 100
+  }
+
+  // Send the recording immediately
+  emit('send', {
+    text: '',
+    attachments: [voiceAttachment]
+  })
 }
 
 const handleAttachClick = () => {
   if (props.disabled) return
   emit('attach')
 }
+
+const handleRemoveAttachment = (id: string | number) => {
+  attachments.value = attachments.value.filter(a => a.id !== id)
+  emit('removeAttachment', id)
+}
 </script>
 
 <template>
   <div 
-    class="w-full flex flex-col gap-2 relative transition-all duration-300"
+    class="w-full flex flex-col relative transition-all duration-350"
     dir="rtl"
   >
     <!-- Muted/Disabled overlay message -->
     <div 
       v-if="props.disabled" 
-      class="absolute inset-0 bg-background/50 backdrop-blur-3xs rounded-xl z-20 flex items-center justify-center border border-border/40"
+      class="absolute inset-0 bg-background/60 backdrop-blur-3xs rounded-2xl z-20 flex items-center justify-center border border-border/40"
     >
-      <div class="bg-card/90 border border-border/80 rounded-lg px-4 py-2.5 flex items-center gap-2 shadow-sm">
-        <AlertCircleIcon class="size-4 text-muted-foreground" />
+      <div class="bg-card/95 border border-border/80 rounded-xl px-4 py-2 flex items-center gap-2 shadow-xs">
+        <AlertCircleIcon class="size-4 text-muted-foreground animate-pulse" />
         <span class="text-[11px] font-bold text-muted-foreground">شما اجازه ارسال پیام در این تاپیک را ندارید.</span>
       </div>
     </div>
@@ -139,17 +180,17 @@ const handleAttachClick = () => {
     <transition name="attachments-slide">
       <div 
         v-if="attachments.length > 0" 
-        class="w-full bg-card/45 backdrop-blur-md border border-border/40 rounded-xl p-3 flex gap-3 overflow-x-auto scrollbar-none z-10 text-right"
+        class="w-full bg-card/40 backdrop-blur-md border border-border/40 rounded-2xl p-3 flex gap-3 overflow-x-auto scrollbar-none z-10 text-right mb-2"
       >
         <div 
           v-for="file in attachments" 
           :key="file.id"
-          class="size-16 rounded-lg border border-border/60 bg-background/40 relative overflow-hidden flex flex-col items-center justify-center shrink-0 group hover:border-primary/20 transition-colors"
+          class="size-16 rounded-xl border border-border/50 bg-background/40 relative overflow-hidden flex flex-col items-center justify-center shrink-0 group hover:border-primary/20 transition-all duration-200"
         >
           <!-- Delete button (Top Right) -->
           <button 
             @click="handleRemoveAttachment(file.id)"
-            class="absolute top-1 right-1 z-15 size-4.5 rounded-full bg-black/45 hover:bg-black/65 flex items-center justify-center text-white cursor-pointer transition-colors shadow-sm outline-none"
+            class="absolute top-1.5 right-1.5 z-15 size-5 p-0 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white cursor-pointer transition-colors shadow-xs outline-none"
             title="حذف پیوست"
           >
             <XIcon class="size-2.5" />
@@ -172,83 +213,127 @@ const handleAttachClick = () => {
           <template v-else-if="file.type === 'video'">
             <div class="size-full bg-slate-900 flex items-center justify-center relative">
               <VideoIcon class="size-5 text-white/70" />
-              <PlayIcon class="size-2.5 text-white absolute bottom-1 left-1" />
+              <PlayIcon class="size-2.5 text-white absolute bottom-1.5 left-1.5" />
             </div>
           </template>
 
           <template v-else-if="file.type === 'audio'">
-            <div class="size-full flex flex-col items-center justify-center gap-1 p-1 bg-violet-500/10">
+            <div class="size-full flex flex-col items-center justify-center gap-1 p-1.5 bg-violet-500/10">
               <MusicIcon class="size-5 text-violet-500" />
-              <span class="text-[7.5px] truncate max-w-full font-mono text-muted-foreground leading-none">{{ file.size || 'صدا' }}</span>
+              <span class="text-[8.5px] truncate max-w-full font-mono text-muted-foreground leading-none">{{ file.size || 'صدا' }}</span>
             </div>
           </template>
 
           <template v-else>
-            <div class="size-full flex flex-col items-center justify-center gap-1 p-1 bg-sky-500/10">
+            <div class="size-full flex flex-col items-center justify-center gap-1 p-1.5 bg-sky-500/10">
               <FileTextIcon class="size-5 text-sky-500" />
-              <span class="text-[7.5px] truncate max-w-full font-bold text-muted-foreground leading-none">{{ file.size || 'فایل' }}</span>
+              <span class="text-[8.5px] truncate max-w-full font-bold text-muted-foreground leading-none">{{ file.size || 'فایل' }}</span>
             </div>
           </template>
           
           <!-- Hover filename tooltip/indicator -->
-          <div class="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 px-1 truncate text-[7.5px] text-white/90 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div class="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 px-1.5 truncate text-[7.5px] text-white/90 text-center opacity-0 group-hover:opacity-100 transition-opacity">
             {{ file.name }}
           </div>
         </div>
       </div>
     </transition>
 
-    <!-- Main Message Input Container -->
-    <div class="w-full bg-card/45 backdrop-blur-md border border-border/40 rounded-xl p-2 pr-3 flex items-end gap-2 shadow-xs min-h-[48px]">
+    <!-- Main Message Input Row (RTL) -->
+    <div class="w-full flex items-center gap-1" dir="rtl">
       
-      <!-- Attachment Button (Right) -->
-      <button 
-        @click="handleAttachClick"
-        :disabled="props.disabled"
-        class="size-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer shrink-0 outline-none active:scale-95"
-        title="افزودن فایل پیوست"
-      >
-        <PaperclipIcon class="size-5.5" />
-      </button>
+      <!-- Right Element: Attach File Button / Cancel Recording Button -->
+      <transition name="button-pop" mode="out-in">
+        <!-- Cancel Recording Button -->
+        <button 
+          v-if="isRecording"
+          key="cancel-record"
+          @click="cancelRecording"
+          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95"
+          title="لغو ضبط"
+        >
+          <Trash2Icon class="size-5" />
+        </button>
 
-      <!-- Auto-resizing Text Input Area -->
-      <textarea
-        ref="textareaRef"
-        v-model="text"
-        :disabled="props.disabled"
-        :placeholder="props.placeholder"
-        rows="1"
-        class="flex-1 bg-transparent border-none outline-none resize-none text-xs font-semibold leading-relaxed py-2 h-[40px] max-h-[160px] text-foreground focus:outline-none focus:ring-0 focus:border-none focus-visible:ring-0 focus-visible:outline-none placeholder:text-muted-foreground/60 scrollbar-thin shadow-none"
-        @input="adjustHeight"
-        @keydown.enter.exact.prevent="handleSend"
-      />
+        <!-- Normal Attach Button -->
+        <button 
+          v-else
+          key="attach-file"
+          @click="handleAttachClick"
+          :disabled="props.disabled"
+          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-muted/40 text-muted-foreground border border-border/20 hover:text-foreground hover:bg-muted/70 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          title="افزودن فایل پیوست"
+        >
+          <PaperclipIcon class="size-5" />
+        </button>
+      </transition>
 
-      <!-- Emoji Picker Button (Left Middle) -->
-      <button 
-        :disabled="props.disabled"
-        class="size-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer shrink-0 outline-none active:scale-95"
-        title="اموجی"
-      >
-        <SmileIcon class="size-5.5" />
-      </button>
+      <!-- Center Element: Text Input / Recording Info Display -->
+      <div class="flex-1 min-w-0">
+        <transition name="fade" mode="out-in">
+          <!-- Voice Recording Display -->
+          <div 
+            v-if="isRecording"
+            key="recording-status"
+            class="w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold h-10 px-4 rounded-2xl flex items-center justify-between transition-all duration-200 select-none"
+          >
+            <div class="flex items-center gap-2">
+              <span class="size-2 bg-destructive rounded-full animate-pulse" />
+              <span class="text-[11px] font-bold text-destructive/80">در حال ضبط صدا...</span>
+            </div>
+            <span class="font-mono text-xs font-bold text-destructive/90">{{ formattedTime }}</span>
+          </div>
 
-      <!-- Send/Record Button (Left) -->
-      <button 
-        @click="handleSend"
-        :disabled="props.disabled"
-        :class="[
-          'size-9 rounded-lg flex items-center justify-center transition-all shrink-0 outline-none cursor-pointer',
-          hasContent 
-            ? 'bg-primary text-primary-foreground shadow-xs scale-100 active:scale-95' 
-            : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-95'
-        ]"
-        :title="hasContent ? 'ارسال پیام' : 'ضبط صدا'"
-      >
-        <transition name="icon-swap" mode="out-in">
-          <SendIcon v-if="hasContent" class="size-5.5" />
-          <MicIcon v-else :class="['size-5.5', isRecording ? 'text-destructive animate-pulse' : '']" />
+          <!-- Normal Shadcn Input -->
+          <Input
+            v-else
+            key="text-input"
+            v-model="text"
+            :disabled="props.disabled"
+            :placeholder="props.placeholder"
+            class="bg-muted/40 border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold h-10 px-4 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all shadow-none"
+            @keydown.enter.exact.prevent="handleSend"
+          />
         </transition>
-      </button>
+      </div>
+
+      <!-- Left Element: Send Button / Record Voice Button -->
+      <transition name="button-pop" mode="out-in">
+        <!-- Stop/Send Recording Button -->
+        <button 
+          v-if="isRecording"
+          key="stop-record"
+          @click="completeRecording"
+          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95"
+          title="ارسال صدا"
+        >
+          <CheckIcon class="size-5.5" />
+        </button>
+
+        <!-- Send message button -->
+        <button 
+          v-else-if="hasContent"
+          key="send-msg"
+          @click="handleSend"
+          :disabled="props.disabled"
+          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          title="ارسال پیام"
+        >
+          <SendIcon class="size-4.5 -rotate-45 relative translate-x-[2px] -translate-y-[1px]" />
+        </button>
+
+        <!-- Record Voice Button -->
+        <button 
+          v-else
+          key="record-voice"
+          @click="startRecording"
+          :disabled="props.disabled"
+          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-muted/40 text-muted-foreground border border-border/20 hover:text-foreground hover:bg-muted/70 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          title="ضبط صدا"
+        >
+          <MicIcon class="size-5" />
+        </button>
+      </transition>
 
     </div>
   </div>
@@ -267,22 +352,32 @@ const handleAttachClick = () => {
   max-height: 0;
   opacity: 0;
   padding: 0 !important;
-  margin-bottom: -8px;
+  margin-bottom: 0px;
   transform: translateY(8px);
 }
 
-/* Icon Swap transition */
-.icon-swap-enter-active,
-.icon-swap-leave-active {
-  transition: all 0.15s ease;
+/* Button Pop animation for swapping */
+.button-pop-enter-active,
+.button-pop-leave-active {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.icon-swap-enter-from {
+.button-pop-enter-from {
   opacity: 0;
-  transform: scale(0.8) rotate(-15deg);
+  transform: scale(0.7);
 }
-.icon-swap-leave-to {
+.button-pop-leave-to {
   opacity: 0;
-  transform: scale(0.8) rotate(15deg);
+  transform: scale(0.7);
+}
+
+/* Fade animation for input transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* Scrollbar styling */
