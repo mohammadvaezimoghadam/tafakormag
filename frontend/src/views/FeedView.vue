@@ -18,7 +18,7 @@ import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { SparklesIcon, CheckCircle2Icon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon } from '@lucide/vue'
+import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon } from '@lucide/vue'
 
 import { useBotStore } from '@/stores/botStore'
 import { useUserStore } from '@/stores/userStore'
@@ -79,6 +79,11 @@ watch(() => route.path, () => {
 
 watch(currentTab, (newTab) => {
   if (newTab === 'profile') {
+    if (!userStore.isAuthenticated) {
+      userStore.isLoginModalOpen = true
+      currentTab.value = 'home'
+      return
+    }
     if (route.path !== '/profile') {
       router.push('/profile')
     }
@@ -268,8 +273,17 @@ const triggerToast = (message: string, type: 'success' | 'error' | 'info' | 'war
   toastStore.triggerToast(message, type)
 }
 
-const toastMsg = computed(() => toastStore.toastMsg)
-const isToastActive = computed(() => toastStore.isToastActive)
+const isAuthenticated = computed(() => userStore.isAuthenticated)
+
+const handleCreateTopicClick = () => {
+  if (!isAuthenticated.value) {
+    userStore.isLoginModalOpen = true
+  } else {
+    isCreateModalOpen.value = true
+  }
+}
+
+
 
 const handleProfileEdit = () => {
   isEditProfileOpen.value = true
@@ -396,12 +410,13 @@ const handleTopicConnections = () => {
   activeTopicSubView.value = 'connections'
 }
 
-const handleSaveTopicEdit = async (updatedTopic: { title: string; description: string; image: string }) => {
+const handleSaveTopicEdit = async (updatedTopic: { title: string; description: string; image: string | File }) => {
   if (!selectedTopic.value) return
   try {
     await topicStore.updateTopic(selectedTopic.value.id, {
       title: updatedTopic.title,
-      description: updatedTopic.description
+      description: updatedTopic.description,
+      image: updatedTopic.image
     })
     activeTopicSubView.value = 'feed'
     triggerToast('مشخصات تاپیک با موفقیت ویرایش شد.')
@@ -522,14 +537,14 @@ const toggleTheme = useToggle(isDark)
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
     <div 
       v-if="currentTab === 'profile' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
-      class="sticky top-0 z-40 bg-background/85 dark:bg-background/80 backdrop-blur-md pt-4 pb-2.5"
+      class="sticky top-0 z-40 bg-background/60 dark:bg-background/50 backdrop-blur-md pt-4 pb-2.5"
     >
       <PlatformHeader 
         :is-inner-page="headerIsInnerPage" 
         :inner-title="headerInnerTitle" 
         :title="headerTitle" 
-        :loading="telegramBotStatus === 'connecting' || baleBotStatus === 'connecting'"
-        :show-options-button="currentTab === 'home' && selectedTopic !== null"
+        :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
+        :show-options-button="!!(currentTab === 'home' && selectedTopic !== null && isTopicCreator)"
         :show-search-button="currentTab === 'home' && selectedTopic === null"
         v-model:search-query="searchQuery"
         @back="handleHeaderBack"
@@ -582,7 +597,7 @@ const toggleTheme = useToggle(isDark)
               </div>
 
               <!-- Message Input component at the bottom of the feed -->
-              <div class="fixed bottom-0 inset-x-0 bg-background/85 dark:bg-background/80 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] mx-auto w-full">
+              <div class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] w-full">
                 <TopicMessageInput 
                   :disabled="!isTopicCreator"
                   placeholder="یادداشت خود را بنویسید..."
@@ -640,7 +655,6 @@ const toggleTheme = useToggle(isDark)
                   :botUsername="userProfile?.telegram_bot_username"
                   @connect="handleTelegramConnect"
                   @disconnect="handleTelegramDisconnect"
-                  @update:status="(st) => telegramBotStatus = st"
                 />
                 <BotConnectionCard 
                   platform="bale"
@@ -649,7 +663,6 @@ const toggleTheme = useToggle(isDark)
                   :botUsername="userProfile?.bale_bot_username"
                   @connect="handleBaleConnect"
                   @disconnect="handleBaleDisconnect"
-                  @update:status="(st) => baleBotStatus = st"
                 />
               </div>
             </div>
@@ -731,7 +744,7 @@ const toggleTheme = useToggle(isDark)
     <!-- Floating Plus Button to Create Topic (Bottom Right Corner - Raised above floating tab bar, aligned inside page grid) -->
     <Button 
       v-if="currentTab === 'home' && selectedTopic === null"
-      @click="isCreateModalOpen = true"
+      @click="handleCreateTopicClick"
       class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
       title="ایجاد تاپیک جدید"
     >
@@ -753,38 +766,10 @@ const toggleTheme = useToggle(isDark)
       @save="handleProfileSave"
     />
 
-    <!-- Dynamic Premium Toast Notification -->
-    <transition name="toast-slide">
-      <div 
-        v-if="isToastActive" 
-        class="fixed top-6 inset-x-0 flex justify-center z-50 px-6 pointer-events-none"
-      >
-        <div class="bg-primary text-primary-foreground text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg border border-primary/20 flex items-center gap-2 pointer-events-auto">
-          <CheckCircle2Icon class="size-4 text-primary-foreground" />
-          <span>{{ toastMsg }}</span>
-        </div>
-      </div>
-    </transition>
-
   </div>
 </template>
 
 <style scoped>
-/* Toast Animation */
-.toast-slide-enter-active,
-.toast-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.toast-slide-enter-from {
-  transform: translateY(-20px);
-  opacity: 0;
-}
-
-.toast-slide-leave-to {
-  transform: translateY(-10px);
-  opacity: 0;
-}
 
 /* Minimal Fade & Slide transition */
 .fade-slide-enter-active,

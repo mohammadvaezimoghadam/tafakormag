@@ -8,7 +8,8 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     filters,
-    ContextTypes
+    ContextTypes,
+    ChatMemberHandler
 )
 from telegram.error import TelegramError
 
@@ -135,6 +136,171 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning(f"Registration failed: {e}")
 
 
+async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ثبت خودکار مقصد بدون نیاز به دستور (Zero-Command Connection) برای ربات عمومی بله"""
+    my_chat_member = update.my_chat_member
+    if not my_chat_member:
+        return
+
+    chat = my_chat_member.chat
+    chat_id = str(chat.id)
+    new_status = my_chat_member.new_chat_member.status
+
+    # اگر ربات از کانال/گروه لفت داد یا کیک شد
+    if new_status in ("left", "kicked"):
+        try:
+            res = await api_client.unregister_chat("bale", chat_id)
+            if res and res.get("success"):
+                notifications = res.get("notifications", [])
+                for notif in notifications:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=notif["chat_id"],
+                            text=(
+                                f"⚠️ <b>قطع اتصال مقصد انتشار بله</b>\n\n"
+                                f"ربات تفکر از مقصد «{notif['label']}» (با شناسه <code>{notif['chat_id_removed']}</code>) خارج شد.\n"
+                                f"این مقصد با موفقیت از سیستم تفکر شما حذف گردید."
+                            ),
+                            parse_mode="HTML"
+                        )
+                    except Exception as notify_err:
+                        logger.error(f"Error sending unregister notification to {notif['chat_id']}: {notify_err}")
+                logger.info(f"Unregistered bale chat {chat_id} due to bot status: {new_status}")
+        except Exception as e:
+            logger.error(f"Failed to unregister bale chat {chat_id}: {e}")
+        return
+
+    from_user = my_chat_member.from_user
+
+    if not from_user:
+        return
+
+    # ادمین شدن ربات در گروه یا کانال
+    if new_status in ("administrator", "creator"):
+        try:
+            # دریافت شناسه کاربر در تفکر
+            user_id = await api_client.get_user_id_by_chat("bale", from_user.id)
+            if not user_id:
+                # اگر کاربر ثبت نام نکرده بود
+                await context.bot.send_message(
+                    chat_id=from_user.id,
+                    text=(
+                        f"⚠️ شما ربات تفکر را به عنوان مدیر به گروه/کانال «{chat.title}» اضافه کردید، "
+                        f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                        f"لطفاً ابتدا با زدن دکمه «📱 ثبت شماره موبایل» یا ارسال توکن در این چت خصوصی، حساب خود را متصل کنید."
+                    )
+                )
+                return
+
+            label = chat.title or f"Chat {chat_id}"
+            await api_client.register_destination(user_id, "bale", chat_id, label)
+
+            # ارسال پیام موفقیت به صورت خصوصی به کاربر
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"✅ <b>اتصال خودکار مقصد موفقیت‌آمیز بود!</b>\n\n"
+                    f"📢 نام مقصد: <code>{label}</code>\n"
+                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                    f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما متصل شد و نیازی به ارسال کامند نیست."
+                ),
+                parse_mode="HTML"
+            )
+            logger.info(f"Auto-connected chat {chat_id} ({label}) for user {user_id} via my_chat_member")
+        except Exception as e:
+            if "already registered" in str(e).lower() or "400" in str(e):
+                logger.info(f"Chat {chat_id} is already registered for user Bale chat {from_user.id}")
+            elif "404" in str(e) or "not found" in str(e).lower():
+                try:
+                    await context.bot.send_message(
+                        chat_id=from_user.id,
+                        text=(
+                            f"⚠️ شما ربات تفکر را به عنوان مدیر به گروه/کانال «{chat.title}» اضافه کردید، "
+                            f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                            f"لطفاً ابتدا با زدن دکمه «📱 ثبت شماره موبایل» یا ارسال توکن در این چت خصوصی، حساب خود را متصل کنید."
+                        )
+                    )
+                except Exception as msg_err:
+                    logger.warning(f"Could not send private notification to user: {msg_err}")
+            else:
+                logger.error(f"Auto-registration in bale on_my_chat_member failed: {e}")
+
+async def on_new_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """هندلر کمکی برای عضویت ربات عمومی بله در گروه‌ها به عنوان عضو عادی یا مدیر"""
+    message = update.message
+    if not message or not message.new_chat_members:
+        return
+
+    chat = message.chat
+    chat_id = str(chat.id)
+    from_user = message.from_user
+
+    if not from_user:
+        return
+
+    # بررسی اینکه آیا خود ربات به گروه اضافه شده است
+    bot_added = any(member.id == context.bot.id for member in message.new_chat_members)
+    if not bot_added:
+        return
+
+    logger.info(f"Bot added to Bale group {chat_id} ({chat.title}) via new_chat_members")
+    try:
+        # بررسی وضعیت ادمین بودن ربات
+        chat_member = await context.bot.get_chat_member(chat_id=chat.id, user_id=context.bot.id)
+        is_admin = chat_member.status in ("administrator", "creator")
+
+        user_id = await api_client.get_user_id_by_chat("bale", from_user.id)
+        if not user_id:
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"⚠️ شما ربات تفکر را به گروه «{chat.title}» اضافه کردید، "
+                    f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                    f"لطفاً ابتدا حساب خود را در این چت خصوصی متصل کنید تا مقصد به طور خودکار ثبت شود."
+                )
+            )
+            return
+
+        if is_admin:
+            label = chat.title or f"Chat {chat_id}"
+            await api_client.register_destination(user_id, "bale", chat_id, label)
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"✅ <b>اتصال خودکار گروه موفقیت‌آمیز بود!</b>\n\n"
+                    f"📢 نام گروه: <code>{label}</code>\n"
+                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                    f"این گروه با موفقیت به مقاصد شما متصل شد."
+                ),
+                parse_mode="HTML"
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"💡 شما ربات تفکر را به گروه «{chat.title}» اضافه کردید.\n\n"
+                    f"برای فعال‌سازی کامل و ارسال خودکار یادداشت‌ها، لطفاً ربات را در این گروه **مدیر (Admin)** کنید."
+                )
+            )
+    except Exception as e:
+        if "already registered" in str(e).lower() or "400" in str(e):
+            logger.info(f"Chat {chat_id} is already registered")
+        elif "404" in str(e) or "not found" in str(e).lower():
+            try:
+                await context.bot.send_message(
+                    chat_id=from_user.id,
+                    text=(
+                        f"⚠️ شما ربات تفکر را به گروه «{chat.title}» اضافه کردید، "
+                        f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                        f"لطفاً ابتدا حساب خود را در این چت خصوصی متصل کنید تا مقصد به طور خودکار ثبت شود."
+                    )
+                )
+            except Exception as msg_err:
+                logger.warning(f"Could not send private notification: {msg_err}")
+        else:
+            logger.error(f"Auto-registration in bale on_new_chat_members failed: {e}")
+
+
 async def destinations_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """نمایش لیست مقاصد متصل با قابلیت فعال/غیرفعال‌سازی و حذف کامل"""
     chat_id = update.effective_chat.id
@@ -154,32 +320,19 @@ async def destinations_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📋 *لیست مقاصد متصل شده به تفکر:*")
 
         for dest in destinations:
-            dest_id = dest["id"]
             label = dest.get("label", "بدون نام")
             chat_num_id = dest["chat_id"]
-            is_active = dest.get("is_active", True)
-
-            status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
 
             text = (
                 f"📢 *نام:* {label}\n"
-                f"🆔 *شناسه:* `{chat_num_id}`\n"
-                f"📊 *وضعیت:* {status_text}"
+                f"🆔 *شناسه:* `{chat_num_id}`\n\n"
+                f"💡 *راهنمای لغو اتصال:* برای قطع اتصال این مقصد، کافیست ربات تفکر را از این گروه/کانال ریمو (حذف) کنید. سیستم تفکر به صورت خودکار اتصال را قطع و از لیست حذف خواهد کرد."
             )
 
-            buttons = []
-            if is_active:
-                buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
-            else:
-                buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
-            buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
-
-            reply_markup = InlineKeyboardMarkup([buttons])
             await context.bot.send_message(
                 chat_id=chat_id,
                 text=text,
-                parse_mode="Markdown",
-                reply_markup=reply_markup
+                parse_mode="Markdown"
             )
     except Exception as e:
         await update.message.reply_text(
@@ -251,6 +404,36 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
             logger.error(f"button_callback delete error: {e}")
+
+    elif data.startswith("retry_"):
+        try:
+            task_id = int(data.split("_")[1])
+            success = await api_client.retry_task(task_id)
+            if success:
+                await query.answer("🔄 یادداشت مجدداً در صف انتشار قرار گرفت.", show_alert=True)
+            else:
+                await query.answer("❌ خطا در تلاش مجدد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback retry error: {e}")
+
+    elif data.startswith("view_"):
+        try:
+            task_id = int(data.split("_")[1])
+            task_details = await api_client.get_task_details(task_id)
+            if task_details and task_details.get("text"):
+                note_text = task_details.get("text")
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"📋 <b>متن یادداشت:</b>\n\n{note_text}",
+                    parse_mode="HTML"
+                )
+                await query.answer("📋 متن یادداشت ارسال شد.")
+            else:
+                await query.answer("❌ متن یادداشت یافت نشد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback view error: {e}")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -440,6 +623,10 @@ async def run():
         .read_timeout(30)
         .build()
     )
+
+    # Auto-connection handlers
+    app.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_new_chat_members))
 
     # Command handlers
     app.add_handler(CommandHandler("start", start))

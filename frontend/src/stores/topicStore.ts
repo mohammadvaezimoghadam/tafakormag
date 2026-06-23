@@ -141,6 +141,9 @@ export const useTopicStore = defineStore('topic', () => {
           name: updatedTopic.title,
           description: updatedTopic.description
         }
+        if (updatedTopic.image === '') {
+          payload.image = null
+        }
       }
       
       const res = await api.updateTopic(id, payload)

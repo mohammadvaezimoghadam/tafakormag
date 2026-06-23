@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { useToastStore } from '@/stores/toastStore'
 
 const props = defineProps<{
   isOpen: boolean
@@ -28,12 +29,13 @@ const emit = defineEmits<{
   (e: 'save', data: { first_name: string; last_name: string; avatarFile?: File }): void
 }>()
 
+const toastStore = useToastStore()
+
 const firstName = ref('')
 const lastName = ref('')
 const avatarPreview = ref('')
 const selectedFile = ref<File | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const errorMsg = ref('')
 
 // Initialize fields when userProfile is loaded
 watch(() => props.userProfile, (newVal) => {
@@ -53,10 +55,9 @@ const handleFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) {
     if (file.size > 2 * 1024 * 1024) {
-      errorMsg.value = 'حجم تصویر باید کمتر از ۲ مگابایت باشد.'
+      toastStore.triggerToast('حجم تصویر باید کمتر از ۲ مگابایت باشد.', 'error')
       return
     }
-    errorMsg.value = ''
     selectedFile.value = file
     const reader = new FileReader()
     reader.onload = (event) => {
@@ -67,7 +68,15 @@ const handleFileChange = (e: Event) => {
 }
 
 const handleSubmit = () => {
-  errorMsg.value = ''
+  if (!firstName.value.trim()) {
+    toastStore.triggerToast('لطفا نام خود را وارد کنید.', 'error')
+    return
+  }
+  if (!lastName.value.trim()) {
+    toastStore.triggerToast('لطفا نام خانوادگی خود را وارد کنید.', 'error')
+    return
+  }
+
   emit('save', {
     first_name: firstName.value.trim(),
     last_name: lastName.value.trim(),
@@ -80,7 +89,6 @@ const handleCancel = () => {
   lastName.value = props.userProfile?.last_name || ''
   avatarPreview.value = props.userProfile?.avatar || ''
   selectedFile.value = null
-  errorMsg.value = ''
   emit('close')
 }
 
@@ -112,11 +120,6 @@ const nameLetter = computed(() => {
 
       <!-- Body Form -->
       <div class="p-5 flex flex-col gap-4">
-        <!-- Error banner -->
-        <div v-if="errorMsg" class="p-2.5 bg-destructive/10 border border-destructive/20 rounded-lg text-[10.5px] font-semibold text-destructive">
-          {{ errorMsg }}
-        </div>
-
         <!-- Avatar Uploader -->
         <div class="flex flex-col items-center gap-2">
           <Label class="text-[10px] text-muted-foreground font-semibold align-self-start">تصویر پروفایل شما:</Label>

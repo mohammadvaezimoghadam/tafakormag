@@ -86,6 +86,10 @@ def fetch_tasks(request):
             if post.media_file:
                 media_url = request.build_absolute_uri(post.media_file.url)
 
+        owner_chat_id = None
+        if post and post.author:
+            owner_chat_id = post.author.telegram_chat_id if t.platform == "telegram" else post.author.bale_chat_id
+
         data.append({
             "id": t.id,
             "action": t.action,
@@ -97,14 +101,15 @@ def fetch_tasks(request):
             "bot_token": bot_token,
             "media_type": media_type,
             "media_url": media_url,
+            "owner_chat_id": owner_chat_id
         })
     return Response(data)
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @authentication_classes([])
 @permission_classes([IsBotService])
-def complete_task(request, task_id):
+def task_detail_view(request, task_id):
     task = BotTask.objects.filter(id=task_id).first()
     if task is None:
         return Response(
@@ -112,29 +117,87 @@ def complete_task(request, task_id):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    task.processed = True
-    if "message_id" in request.data and request.data.get("message_id") not in (None, ""):
-        task.message_id = str(request.data["message_id"])
+    if request.method == "GET":
+        bot_token = task.bot_token
+        media_type = "text"
+        media_url = None
+        owner_chat_id = None
+        
+        post = None
+        if task.post_id:
+            post = task.post_id
+        elif task.note_id:
+            try:
+                post = Post.objects.select_related('author').get(pk=task.note_id)
+            except Post.DoesNotExist:
+                pass
+
+        if post:
+            if not bot_token:
+                if task.platform == "telegram":
+                    bot_token = post.author.telegram_bot_token
+                elif task.platform == "bale":
+                    bot_token = post.author.bale_bot_token
+            
+            media_type = post.media_type
+            if post.media_file:
+                media_url = request.build_absolute_uri(post.media_file.url)
+                
+            owner_chat_id = post.author.telegram_chat_id if task.platform == "telegram" else post.author.bale_chat_id
+
+        return Response({
+            "id": task.id,
+            "action": task.action,
+            "platform": task.platform,
+            "chat_id": task.chat_id,
+            "text": task.text,
+            "message_id": task.message_id or None,
+            "note_id": post.id if post else task.note_id,
+            "bot_token": bot_token,
+            "media_type": media_type,
+            "media_url": media_url,
+            "owner_chat_id": owner_chat_id
+        })
+
+    elif request.method == "POST":
+        task.processed = True
+        if "message_id" in request.data and request.data.get("message_id") not in (None, ""):
+            task.message_id = str(request.data["message_id"])
+        task.save()
+
+        post = None
+        if task.post_id:
+            post = task.post_id
+        elif task.note_id:
+            try:
+                post = Post.objects.get(id=task.note_id)
+            except Post.DoesNotExist:
+                pass
+
+        if post and task.platform in ("telegram", "bale"):
+            if task.action == "send" and task.message_id:
+                msg_ids = get_message_ids(post, task.platform)
+                msg_ids[str(task.chat_id)] = str(task.message_id)
+                set_message_ids(post, task.platform, msg_ids)
+            elif task.action == "delete":
+                msg_ids = get_message_ids(post, task.platform)
+                if str(task.chat_id) in msg_ids:
+                    del msg_ids[str(task.chat_id)]
+                set_message_ids(post, task.platform, msg_ids)
+
+        return Response({"success": True})
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([IsBotService])
+def retry_task(request, task_id):
+    task = BotTask.objects.filter(id=task_id).first()
+    if task is None:
+        return Response(
+            {"error": "Task not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    task.processed = False
     task.save()
-
-    post = None
-    if task.post_id:
-        post = task.post_id
-    elif task.note_id:
-        try:
-            post = Post.objects.get(id=task.note_id)
-        except Post.DoesNotExist:
-            pass
-
-    if post and task.platform in ("telegram", "bale"):
-        if task.action == "send" and task.message_id:
-            msg_ids = get_message_ids(post, task.platform)
-            msg_ids[str(task.chat_id)] = str(task.message_id)
-            set_message_ids(post, task.platform, msg_ids)
-        elif task.action == "delete":
-            msg_ids = get_message_ids(post, task.platform)
-            if str(task.chat_id) in msg_ids:
-                del msg_ids[str(task.chat_id)]
-            set_message_ids(post, task.platform, msg_ids)
-
     return Response({"success": True})

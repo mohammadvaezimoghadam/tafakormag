@@ -3,11 +3,20 @@ import { computed } from 'vue'
 import { ConfigProvider } from 'reka-ui'
 import { useDark, useToggle } from '@vueuse/core'
 import { 
-  SunIcon, 
-  MoonIcon,
-  CheckCircle2Icon
+  CheckCircle2Icon,
+  AlertCircleIcon,
+  AlertTriangleIcon,
+  InfoIcon
 } from '@lucide/vue'
 import { useToastStore } from '@/stores/toastStore'
+import { useUserStore } from '@/stores/userStore'
+import ChangelogModal from '@/components/ChangelogModal.vue'
+import LoginCard from '@/components/LoginCard.vue'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+} from '@/components/ui/dialog'
 
 // Dark/Light theme manager via VueUse
 const isDark = useDark({
@@ -19,8 +28,48 @@ const isDark = useDark({
 const toggleDark = useToggle(isDark)
 
 const toastStore = useToastStore()
+const userStore = useUserStore()
+
 const isToastActive = computed(() => toastStore.isToastActive)
 const toastMsg = computed(() => toastStore.toastMsg)
+
+const toastConfig = computed(() => {
+  switch (toastStore.toastType) {
+    case 'success':
+      return {
+        bgClass: 'bg-background/95 border-border shadow-lg text-foreground',
+        iconClass: 'text-emerald-500',
+        icon: CheckCircle2Icon
+      }
+    case 'error':
+      return {
+        bgClass: 'bg-background/95 border-destructive/40 shadow-lg text-destructive',
+        iconClass: 'text-destructive',
+        icon: AlertCircleIcon
+      }
+    case 'warning':
+      return {
+        bgClass: 'bg-background/95 border-amber-500/30 shadow-lg text-foreground',
+        iconClass: 'text-amber-500',
+        icon: AlertTriangleIcon
+      }
+    case 'info':
+    default:
+      return {
+        bgClass: 'bg-background/95 border-border shadow-lg text-foreground',
+        iconClass: 'text-blue-500',
+        icon: InfoIcon
+      }
+  }
+})
+
+const handleLoginStateChange = (state: string) => {
+  if (state === 'success') {
+    userStore.isLoginModalOpen = false
+    userStore.loadProfile()
+    toastStore.triggerToast('ورود با موفقیت انجام شد.', 'success')
+  }
+}
 </script>
 
 <template>
@@ -39,20 +88,35 @@ const toastMsg = computed(() => toastStore.toastMsg)
         </router-view>
       </main>
 
-
-
       <!-- Dynamic Premium Toast Notification (Global) -->
       <transition name="toast-slide">
         <div 
           v-if="isToastActive" 
-          class="fixed top-6 inset-x-0 flex justify-center z-50 px-6 pointer-events-none"
+          class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-4 w-full max-w-[500px] pointer-events-none"
         >
-          <div class="bg-primary text-primary-foreground text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg border border-primary/20 flex items-center gap-2 pointer-events-auto">
-            <CheckCircle2Icon class="size-4 text-primary-foreground" />
-            <span>{{ toastMsg }}</span>
+          <div :class="['w-full text-xs font-semibold px-4 py-3 rounded-2xl border flex items-center gap-3 pointer-events-auto transition-all duration-300 shadow-md', toastConfig.bgClass]">
+            <component :is="toastConfig.icon" :class="['size-4.5 shrink-0', toastConfig.iconClass]" />
+            <span class="whitespace-nowrap overflow-hidden text-ellipsis">{{ toastMsg }}</span>
           </div>
         </div>
       </transition>
+
+      <!-- Changelog Modal (Global) -->
+      <ChangelogModal />
+
+      <!-- Login Dialog Modal (Global) -->
+      <Dialog :open="userStore.isLoginModalOpen" @update:open="(val) => userStore.isLoginModalOpen = val">
+        <DialogContent 
+          :show-close-button="true" 
+          class="max-w-[380px] p-0 overflow-hidden flex flex-col text-right rounded-3xl" 
+          dir="rtl"
+          @pointer-down-outside="(e) => e.preventDefault()"
+          @escape-key-down="(e) => e.preventDefault()"
+        >
+          <DialogDescription class="sr-only">ورود به حساب کاربری تفکر</DialogDescription>
+          <LoginCard @stateChange="handleLoginStateChange" />
+        </DialogContent>
+      </Dialog>
 
     </div>
   </ConfigProvider>
@@ -73,16 +137,16 @@ const toastMsg = computed(() => toastStore.toastMsg)
 /* Toast Animation */
 .toast-slide-enter-active,
 .toast-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .toast-slide-enter-from {
-  transform: translateY(-20px);
   opacity: 0;
+  transform: translate(-50%, -12px);
 }
 
 .toast-slide-leave-to {
-  transform: translateY(-10px);
   opacity: 0;
+  transform: translate(-50%, -8px);
 }
 </style>

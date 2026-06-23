@@ -249,3 +249,75 @@ def toggle_active_destination(request):
     target.is_active = not target.is_active
     target.save()
     return Response({"success": True, "is_active": target.is_active})
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([IsBotService])
+def unregister_chat(request):
+    platform = request.data.get("platform")
+    chat_id = request.data.get("chat_id")
+
+    if not _valid_platform(platform) or not chat_id:
+        return Response(
+            {"error": "platform and chat_id are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    targets = MessagingTarget.objects.filter(
+        platform=platform,
+        chat_id=str(chat_id),
+    )
+
+    notifications = []
+    for t in targets:
+        user = t.user
+        chat_to_notify = user.telegram_chat_id if platform == "telegram" else user.bale_chat_id
+        if chat_to_notify:
+            notifications.append({
+                "chat_id": chat_to_notify,
+                "label": t.label,
+                "chat_id_removed": t.chat_id
+            })
+
+    targets.delete()
+
+    return Response({
+        "success": True,
+        "notifications": notifications
+    })
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([IsBotService])
+def report_bot_disconnect(request):
+    user_id = request.data.get("user_id")
+    platform = request.data.get("platform")
+    reason = request.data.get("reason", "unknown")
+
+    if not user_id or not _valid_platform(platform):
+        return Response(
+            {"error": "user_id and platform are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if platform == "telegram":
+        user.telegram_bot_token = None
+        user.telegram_bot_username = None
+        user.telegram_bot_disconnect_reason = reason
+    else:
+        user.bale_bot_token = None
+        user.bale_bot_username = None
+        user.bale_bot_disconnect_reason = reason
+    user.save()
+
+    return Response({"success": True})

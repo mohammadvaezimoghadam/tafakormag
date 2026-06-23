@@ -38,7 +38,7 @@ class Post(models.Model):
 
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='posts')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
-    content = models.TextField()  # Markdown text
+    content = models.TextField(blank=True, default="")  # Markdown text
     
     media_type = models.CharField(max_length=20, choices=MEDIA_CHOICES, default="text")
     media_file = models.FileField(upload_to='post_media/', null=True, blank=True)

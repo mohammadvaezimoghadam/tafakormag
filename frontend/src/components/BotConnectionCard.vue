@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { validateCustomBot } from '../api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent
+} from '@/components/ui/collapsible'
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription
+} from '@/components/ui/alert'
 import { 
   SendIcon, 
   Trash2Icon, 
@@ -41,13 +52,72 @@ const token = ref(props.initialToken)
 const showGuide = ref(false)
 const errorMsg = ref('')
 
+const isValidating = ref(false)
+const validationError = ref('')
+const botInfo = ref<{
+  name: string
+  username: string
+  avatar: string | null
+} | null>(null)
+
 // Sync states with props
 watch(() => props.initialStatus, (newVal) => {
   status.value = newVal
+  if (newVal === 'connected') {
+    botInfo.value = null
+    validationError.value = ''
+    isValidating.value = false
+  }
 })
 
 watch(() => props.initialToken, (newVal) => {
   token.value = newVal
+})
+
+let debounceTimer: any = null
+
+watch(token, (newVal) => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  
+  const cleanToken = newVal.trim()
+  if (!cleanToken) {
+    isValidating.value = false
+    validationError.value = ''
+    botInfo.value = null
+    return
+  }
+
+  // Format check
+  const tokenRegex = /^(mock_.*|\d+:[A-Za-z0-9_-]+)$/
+  if (!tokenRegex.test(cleanToken)) {
+    botInfo.value = null
+    validationError.value = 'فرمت توکن نامعتبر است.'
+    return
+  }
+
+  validationError.value = ''
+  isValidating.value = true
+  debounceTimer = setTimeout(async () => {
+    try {
+      const response = await validateCustomBot(props.platform, cleanToken)
+      if (response.data && response.data.valid) {
+        botInfo.value = {
+          name: response.data.name || 'ربات اختصاصی',
+          username: response.data.username || '',
+          avatar: response.data.avatar || null
+        }
+        validationError.value = ''
+      } else {
+        botInfo.value = null
+        validationError.value = response.data?.error || 'توکن نامعتبر است.'
+      }
+    } catch (err: any) {
+      botInfo.value = null
+      validationError.value = err.response?.data?.error || 'خطا در اعتبارسنجی توکن.'
+    } finally {
+      isValidating.value = false
+    }
+  }, 600)
 })
 
 const platformName = computed(() => props.platform === 'telegram' ? 'تلگرام' : 'بله')
@@ -74,7 +144,7 @@ const handleConnect = () => {
     return
   }
   
-  // Format check: Bot tokens normally look like 123456789:ABCdefGhIJKlmNo... or mock prefix for testing
+  // Format check
   const tokenRegex = /^(mock_.*|\d+:[A-Za-z0-9_-]+)$/
   if (!tokenRegex.test(cleanToken)) {
     errorMsg.value = 'فرمت توکن نامعتبر است. توکن معتبر شامل شناسه عددی و کلید رمزنگاری است (مثال: 123456:ABC-DEF...).'
@@ -90,12 +160,18 @@ const handleDisconnect = () => {
   status.value = 'disconnected'
   token.value = ''
   errorMsg.value = ''
+  botInfo.value = null
+  validationError.value = ''
+  isValidating.value = false
   emit('update:status', 'disconnected')
   emit('disconnect')
 }
 
 const handleEdit = () => {
   status.value = 'disconnected'
+  botInfo.value = null
+  validationError.value = ''
+  isValidating.value = false
   emit('update:status', 'disconnected')
   emit('edit', token.value)
 }
@@ -231,69 +307,125 @@ const toggleGuide = () => {
 
       <!-- Connecting, Disconnected or Conflict State View -->
       <div v-else class="flex flex-col gap-4">
-        <div class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-1.5 text-right">
           <Label for="bot-token-input" class="text-[10.5px] text-muted-foreground font-extrabold">توکن ربات {{ platformName }}:</Label>
-          <Input 
-            id="bot-token-input" 
-            type="text" 
-            v-model="token" 
-            :disabled="isConnecting"
-            placeholder="مثال: 123456789:ABCdefGh..." 
-            class="h-10 text-xs font-mono font-bold focus-visible:ring-primary/20 bg-background/25 border-border/60"
-            @keyup.enter="handleConnect"
-          />
+          <div class="relative">
+            <Input 
+              id="bot-token-input" 
+              type="text" 
+              v-model="token" 
+              :disabled="isConnecting"
+              placeholder="مثال: 123456789:ABCdefGh..." 
+              class="h-10 text-xs font-mono font-bold focus-visible:ring-primary/20 bg-background/25 border-border/60 pl-10 text-left"
+              dir="ltr"
+              @keyup.enter="handleConnect"
+            />
+            <!-- Validation loading indicator inside input -->
+            <div v-if="isValidating" class="absolute left-3 top-1/2 -translate-y-1/2">
+              <RefreshCwIcon class="size-4 animate-spin text-muted-foreground" />
+            </div>
+            <!-- Validation checkmark inside input -->
+            <div v-else-if="botInfo" class="absolute left-3 top-1/2 -translate-y-1/2">
+              <CheckCircle2Icon class="size-4 text-emerald-500" />
+            </div>
+            <!-- Validation error mark inside input -->
+            <div v-else-if="validationError" class="absolute left-3 top-1/2 -translate-y-1/2">
+              <XCircleIcon class="size-4 text-destructive" />
+            </div>
+          </div>
+          <transition name="alert-slide">
+            <span v-if="validationError" class="text-[10px] text-destructive font-bold mt-1 block">
+              {{ validationError }}
+            </span>
+          </transition>
         </div>
+
+        <!-- Preview Section -->
+        <transition name="alert-slide">
+          <div v-if="botInfo" class="flex items-center gap-3 p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-right">
+            <!-- Bot Avatar -->
+            <img 
+              v-if="botInfo.avatar" 
+              :src="botInfo.avatar" 
+              alt="Bot Avatar" 
+              class="size-11 rounded-full object-cover border border-emerald-500/20"
+            />
+            <div 
+              v-else 
+              class="size-11 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-650 dark:text-emerald-400 font-black text-sm"
+            >
+              {{ botInfo.name.substring(0, 2) }}
+            </div>
+            
+            <div class="flex-1 flex flex-col gap-0.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-extrabold text-foreground">{{ botInfo.name }}</span>
+                <Badge variant="secondary" class="bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-none text-[8.5px] py-0.5 px-2 font-extrabold rounded-full">تایید شده</Badge>
+              </div>
+              <span class="text-[10px] text-muted-foreground font-mono" dir="ltr">{{ botInfo.username }}</span>
+            </div>
+          </div>
+        </transition>
 
         <!-- Action Buttons -->
         <div class="flex items-center justify-between gap-3">
           <!-- Guide Trigger Link -->
-          <button 
-            @click="toggleGuide"
-            class="flex items-center gap-1 text-[10px] font-extrabold text-primary/80 hover:text-primary transition-colors cursor-pointer outline-none select-none border border-transparent"
-          >
-            <HelpCircleIcon class="size-3.5" />
-            <span>نیاز به راهنمایی دارید؟</span>
-            <ChevronDownIcon v-if="!showGuide" class="size-3" />
-            <ChevronUpIcon v-else class="size-3" />
-          </button>
+          <CollapsibleTrigger as-child>
+            <button 
+              class="flex items-center gap-1 text-[10px] font-extrabold text-primary/80 hover:text-primary transition-colors cursor-pointer outline-none select-none border border-transparent"
+            >
+              <HelpCircleIcon class="size-3.5" />
+              <span>نیاز به راهنمایی دارید؟</span>
+              <ChevronDownIcon v-if="!showGuide" class="size-3" />
+              <ChevronUpIcon v-else class="size-3" />
+            </button>
+          </CollapsibleTrigger>
 
           <Button 
             size="sm" 
             @click="handleConnect" 
-            :disabled="isConnecting"
+            :disabled="isConnecting || isValidating || !!validationError"
             class="h-9.5 text-xs font-bold px-4 cursor-pointer"
           >
             <RefreshCwIcon v-if="isConnecting" class="animate-spin" data-icon="inline-start" />
             <SendIcon v-else data-icon="inline-start" />
-            <span>{{ isConnecting ? 'در حال اتصال...' : (isConflict ? 'اتصال مجدد' : 'بررسی و اتصال') }}</span>
+            <span>{{ isConnecting ? 'در حال اتصال...' : (isConflict ? 'اتصال مجدد' : 'ذخیره و اتصال') }}</span>
           </Button>
         </div>
 
-        <!-- Interactive Help Guide (Collapsible) -->
-        <transition name="guide-slide">
-          <div 
-            v-if="showGuide" 
-            class="bg-muted/40 border border-border/40 rounded-2xl p-4 text-[10.5px] text-muted-foreground leading-relaxed flex flex-col gap-2.5 text-right"
-          >
-            <h4 class="font-extrabold text-foreground text-[11px] border-r-2 border-primary pr-1.5 leading-none mb-1">
-              مراحل دریافت توکن در {{ platformName }}
-            </h4>
-            
-            <ol v-if="props.platform === 'telegram'" class="list-decimal list-inside flex flex-col gap-1.5 pr-1 font-semibold">
-              <li>به ربات رسمی <a href="https://t.me/BotFather" target="_blank" class="text-sky-500 hover:underline font-bold">@BotFather</a> در تلگرام پیام دهید.</li>
-              <li>دستور <code class="bg-muted px-1 py-0.5 rounded font-mono font-black text-foreground">/newbot</code> را تایپ و ارسال کنید.</li>
-              <li>یک نام کاربری مناسب برای ربات خود تعیین کنید (باید با کلمه bot تمام شود).</li>
-              <li>توکن ارسالی از طرف BotFather (به شکل <code class="bg-muted px-1.5 py-0.5 rounded font-mono text-[9.5px]">123456:ABC...</code>) را کپی کرده و در کادر بالا وارد کنید.</li>
-            </ol>
-            
-            <ol v-else class="list-decimal list-inside flex flex-col gap-1.5 pr-1 font-semibold">
-              <li>به ربات رسمی <code class="bg-muted px-1 py-0.5 rounded font-mono font-black text-foreground">@BotFather</code> در پیام‌رسان بله پیام دهید.</li>
-              <li>با استفاده از دکمه‌ها یا دستورات، درخواست ساخت ربات جدید را ارسال کنید.</li>
-              <li>نام و شناسه ربات خود را انتخاب و ثبت نمایید.</li>
-              <li>توکن رمزنگاری ارائه شده را کپی کرده و در فیلد بالا جایگذاری نمایید.</li>
-            </ol>
-          </div>
-        </transition>
+        <!-- Interactive Help Guide (Collapsible via Shadcn-Vue) -->
+        <Collapsible v-model:open="showGuide" class="w-full">
+          <transition name="guide-slide">
+            <CollapsibleContent v-if="showGuide" class="w-full overflow-hidden">
+              <Alert class="bg-muted/40 border border-border/40 rounded-2xl p-4 text-[10.5px] text-muted-foreground leading-relaxed flex flex-col gap-2.5 text-right w-full">
+                <AlertTitle class="font-extrabold text-foreground text-[11px] border-r-2 border-primary pr-1.5 leading-none mb-1">
+                  مراحل دریافت توکن در {{ platformName }}
+                </AlertTitle>
+                <AlertDescription class="mt-1 w-full">
+                  <ol v-if="props.platform === 'telegram'" class="list-decimal list-inside flex flex-col gap-1.5 pr-1 font-semibold text-muted-foreground">
+                    <li>به ربات رسمی <a href="https://t.me/BotFather" target="_blank" class="text-sky-500 hover:underline font-bold">@BotFather</a> در تلگرام پیام دهید.</li>
+                    <li>دستور <code class="bg-muted px-1 py-0.5 rounded font-mono font-black text-foreground">/newbot</code> را تایپ و ارسال کنید.</li>
+                    <li>یک نام کاربری مناسب برای ربات خود تعیین کنید (باید با کلمه bot تمام شود).</li>
+                    <li>توکن ارسالی از طرف BotFather (به شکل <code class="bg-muted px-1.5 py-0.5 rounded font-mono text-[9.5px]">123456:ABC...</code>) را کپی کرده و در کادر بالا وارد کنید.</li>
+                    <li class="mt-1.5 text-amber-500 font-extrabold border-t border-border/40 pt-1.5 list-none text-right" dir="rtl">
+                      💡 <b>اتصال مقاصد از قبل عضو شده:</b> اگر ربات از قبل در کانال یا گروه شما عضو و مدیر بوده است، کافیست شناسه عددی (Chat ID) آن را در چت خصوصی همین ربات ارسال کنید تا متصل شود.
+                    </li>
+                  </ol>
+                  
+                  <ol v-else class="list-decimal list-inside flex flex-col gap-1.5 pr-1 font-semibold text-muted-foreground">
+                    <li>به ربات رسمی <code class="bg-muted px-1 py-0.5 rounded font-mono font-black text-foreground">@BotFather</code> در پیام‌رسان بله پیام دهید.</li>
+                    <li>با استفاده از دکمه‌ها یا دستورات، درخواست ساخت ربات جدید را ارسال کنید.</li>
+                    <li>نام و شناسه ربات خود را انتخاب و ثبت نمایید.</li>
+                    <li>توکن رمزنگاری ارائه شده را کپی کرده و در فیلد بالا جایگذاری نمایید.</li>
+                    <li class="mt-1.5 text-amber-500 font-extrabold border-t border-border/40 pt-1.5 list-none text-right" dir="rtl">
+                      💡 <b>اتصال مقاصد از قبل عضو شده:</b> اگر ربات از قبل در کانال یا گروه شما عضو و مدیر بوده است، کافیست شناسه عددی (Chat ID) آن را در چت خصوصی همین ربات ارسال کنید تا متصل شود.
+                    </li>
+                  </ol>
+                </AlertDescription>
+              </Alert>
+            </CollapsibleContent>
+          </transition>
+        </Collapsible>
       </div>
     </div>
   </div>

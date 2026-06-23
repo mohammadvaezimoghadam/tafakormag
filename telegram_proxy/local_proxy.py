@@ -115,7 +115,7 @@ def main():
     logger.info("GAS Endpoint URL: %s", GAS_URL)
     logger.info("Listening on: http://%s:%s", PROXY_HOST, PROXY_PORT)
 
-    app = web.Application()
+    app = web.Application(client_max_size=1024**2 * 100)
     # Route all requests to our handler
     app.router.add_route("*", "/{tail:.*}", handle_relay)
 

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,14 +13,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('@/views/FeedView.vue'),
-      meta: { requiresAuth: true }
+      component: () => import('@/views/FeedView.vue')
     },
     {
       path: '/topic/:id',
       name: 'topic',
-      component: () => import('@/views/FeedView.vue'),
-      meta: { requiresAuth: true }
+      component: () => import('@/views/FeedView.vue')
     },
     {
       path: '/profile',
@@ -38,7 +37,13 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('auth_token')
   
   if (to.meta.requiresAuth && !token) {
-    next({ name: 'login' })
+    const userStore = useUserStore()
+    userStore.isLoginModalOpen = true
+    if (!from.name) {
+      next({ name: 'home' })
+    } else {
+      next(false)
+    }
   } else if (to.meta.requiresGuest && token) {
     next({ name: 'home' })
   } else {

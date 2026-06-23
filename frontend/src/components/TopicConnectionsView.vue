@@ -232,24 +232,30 @@ onMounted(() => {
               <div v-else-if="tgDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30">
                 ⚠️ هیچ مقصد متصلی در تلگرام یافت نشد. ابتدا ربات خود را در تلگرام به گروه یا کانال عضو و مدیر کنید.
               </div>
-              <div 
-                v-else
-                v-for="ch in tgDestinations" 
-                :key="ch.id"
-                @click="toggleTgChannel(ch.id)"
-                class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-500 shrink-0">
-                    <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
+              <template v-else>
+                <div 
+                  v-for="ch in tgDestinations" 
+                  :key="ch.id"
+                  @click="toggleTgChannel(ch.id)"
+                  class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-500 shrink-0">
+                      <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
+                    </div>
+                    <div class="flex flex-col text-right">
+                      <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
+                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
+                    </div>
                   </div>
-                  <div class="flex flex-col text-right">
-                    <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
-                    <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
-                  </div>
+                  <Checkbox :checked="selectedTgConnections.includes(ch.id)" @update:checked="toggleTgChannel(ch.id)" @click.stop class="shrink-0" />
                 </div>
-                <Checkbox :checked="selectedTgConnections.includes(ch.id)" @update:checked="toggleTgChannel(ch.id)" @click.stop class="shrink-0" />
-              </div>
+                <!-- Disconnect Guide -->
+                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-right">
+                  <span class="text-[10px] font-bold text-muted-foreground block">💡 راهنمای حذف مقصد:</span>
+                  <span class="text-[9px] text-muted-foreground/80 mt-1 block">برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در تلگرام ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.</span>
+                </div>
+              </template>
             </div>
           </div>
         </transition>
@@ -303,24 +309,30 @@ onMounted(() => {
               <div v-else-if="baleDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30">
                 ⚠️ هیچ مقصد متصلی در بله یافت نشد. ابتدا ربات خود را در بله به گروه یا کانال عضو و مدیر کنید.
               </div>
-              <div 
-                v-else
-                v-for="ch in baleDestinations" 
-                :key="ch.id"
-                @click="toggleBaleChannel(ch.id)"
-                class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
-                    <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
+              <template v-else>
+                <div 
+                  v-for="ch in baleDestinations" 
+                  :key="ch.id"
+                  @click="toggleBaleChannel(ch.id)"
+                  class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                      <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
+                    </div>
+                    <div class="flex flex-col text-right">
+                      <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
+                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
+                    </div>
                   </div>
-                  <div class="flex flex-col text-right">
-                    <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
-                    <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
-                  </div>
+                  <Checkbox :checked="selectedBaleConnections.includes(ch.id)" @update:checked="toggleBaleChannel(ch.id)" @click.stop class="shrink-0" />
                 </div>
-                <Checkbox :checked="selectedBaleConnections.includes(ch.id)" @update:checked="toggleBaleChannel(ch.id)" @click.stop class="shrink-0" />
-              </div>
+                <!-- Disconnect Guide -->
+                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-right">
+                  <span class="text-[10px] font-bold text-muted-foreground block">💡 راهنمای حذف مقصد:</span>
+                  <span class="text-[9px] text-muted-foreground/80 mt-1 block">برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در بله ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.</span>
+                </div>
+              </template>
             </div>
           </div>
         </transition>

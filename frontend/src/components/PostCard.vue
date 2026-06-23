@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onBeforeUnmount } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount, computed } from 'vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ export interface PostAuthor {
   name: string
   avatarUrl?: string
   role?: string
+  phone?: string
 }
 
 export interface PostReaction {
@@ -88,6 +89,9 @@ const showComments = ref(false)
 const localComments = ref<Comment[]>([...props.comments])
 const newCommentText = ref('')
 const localReactions = ref<PostReaction[]>([...props.reactions])
+const touchX = ref(0)
+const touchY = ref(0)
+const isPressing = ref(false)
 
 // Synchronize props changes
 watch(() => props.liked, (newVal) => { isLiked.value = newVal })
@@ -98,11 +102,48 @@ watch(() => props.reactions, (newVal) => { localReactions.value = [...newVal] },
 // PostContextMenu State and Logic
 import PostContextMenu from './PostContextMenu.vue'
 import { usePostStore } from '@/stores/postStore'
+import { useUserStore } from '@/stores/userStore'
 
 const postStore = usePostStore()
+const userStore = useUserStore()
+
+const isPostOwner = computed(() => {
+  if (!userStore.isAuthenticated || !userStore.userProfile) return false
+  return props.author.phone === userStore.userProfile.phone
+})
+
 const cardRef = ref<HTMLElement | null>(null)
 const triggerRect = ref<DOMRect | null>(null)
 const isContextMenuOpen = ref(false)
+
+const isEditing = ref(false)
+const editedContent = ref(props.content || '')
+
+const handleEditStart = () => {
+  editedContent.value = props.content || ''
+  isEditing.value = true
+}
+
+const handleEditCancel = () => {
+  isEditing.value = false
+}
+
+const handleEditSave = async () => {
+  if (editedContent.value.trim() === props.content) {
+    isEditing.value = false
+    return
+  }
+  
+  const formData = new FormData()
+  formData.append('content', editedContent.value)
+  
+  try {
+    await postStore.updatePost(props.id, formData)
+    isEditing.value = false
+  } catch (err) {
+    // Error will be caught and shown by global interceptor toast
+  }
+}
 
 const isInteractiveElement = (target: HTMLElement) => {
   let el: HTMLElement | null = target
@@ -137,16 +178,21 @@ const startLongPress = (clientX: number, clientY: number) => {
   isLongPressTriggered = false
   startX = clientX
   startY = clientY
+  touchX.value = clientX
+  touchY.value = clientY
+  isPressing.value = true
   
   if (longPressTimer) clearTimeout(longPressTimer)
   
   longPressTimer = setTimeout(() => {
     isLongPressTriggered = true
+    isPressing.value = false
     openContextMenu()
-  }, 500)
+  }, 450)
 }
 
 const cancelLongPress = () => {
+  isPressing.value = false
   if (longPressTimer) {
     clearTimeout(longPressTimer)
     longPressTimer = null
@@ -196,6 +242,8 @@ const handleTouchMove = (e: TouchEvent) => {
 const handleContextMenu = (e: MouseEvent) => {
   if (isInteractiveElement(e.target as HTMLElement)) return
   e.preventDefault()
+  touchX.value = e.clientX
+  touchY.value = e.clientY
   openContextMenu()
 }
 
@@ -203,6 +251,7 @@ const openContextMenu = () => {
   if (!cardRef.value) return
   triggerRect.value = cardRef.value.getBoundingClientRect()
   isContextMenuOpen.value = true
+  isPressing.value = false
   
   if (navigator.vibrate) {
     navigator.vibrate(50)
@@ -211,6 +260,8 @@ const openContextMenu = () => {
 
 const handleThreeDotsClick = (e: MouseEvent) => {
   e.stopPropagation()
+  touchX.value = e.clientX
+  touchY.value = e.clientY
   openContextMenu()
 }
 
@@ -238,11 +289,18 @@ const handleReact = (postId: string | number, emoji: string) => {
 }
 
 const handleReactionClick = (emoji: string) => {
+  if (!userStore.isAuthenticated) {
+    userStore.isLoginModalOpen = true
+    return
+  }
   handleReact(props.id, emoji)
 }
 
-// Action handlers
 const toggleLike = () => {
+  if (!userStore.isAuthenticated) {
+    userStore.isLoginModalOpen = true
+    return
+  }
   isLiked.value = !isLiked.value
   if (isLiked.value) {
     localLikesCount.value++
@@ -263,6 +321,10 @@ watch(showComments, (newVal) => {
 })
 
 const submitComment = async () => {
+  if (!userStore.isAuthenticated) {
+    userStore.isLoginModalOpen = true
+    return
+  }
   if (!newCommentText.value.trim()) return
   try {
     await postStore.addComment(props.id, newCommentText.value.trim())
@@ -362,7 +424,10 @@ const formatTime = (timeInSeconds: number) => {
 <template>
   <div 
     ref="cardRef"
-    class="w-full bg-background/25 dark:bg-card/25 backdrop-blur-md border border-border rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-right select-none"
+    :class="[
+      'w-full bg-background/12 dark:bg-card/10 backdrop-blur-md border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-right select-none',
+      isPressing ? 'scale-[0.96] shadow-inner bg-background/5 dark:bg-card/5 border-border/30 brightness-95' : 'scale-100'
+    ]"
     dir="rtl"
     @mousedown="handleMouseDown"
     @mouseup="handleMouseUp"
@@ -410,9 +475,34 @@ const formatTime = (timeInSeconds: number) => {
 
     <!-- Card Body Content -->
     <div class="p-5 flex flex-col gap-4">
-      <!-- Post Text Content -->
+      <!-- Post Text Content / Edit Box -->
+      <div v-if="isEditing" class="flex flex-col gap-2 w-full text-right" dir="rtl">
+        <textarea
+          v-model="editedContent"
+          class="w-full min-h-[90px] p-3 text-xs font-semibold rounded-2xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/20 text-foreground resize-none"
+          placeholder="یادداشت خود را ویرایش کنید..."
+        />
+        <div class="flex items-center justify-end gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
+            @click="handleEditCancel"
+          >
+            انصراف
+          </Button>
+          <Button 
+            size="sm" 
+            class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
+            @click="handleEditSave"
+          >
+            ذخیره تغییرات
+          </Button>
+        </div>
+      </div>
+      
       <p 
-        v-if="content" 
+        v-else-if="content" 
         class="text-sm font-medium leading-relaxed text-foreground/90 whitespace-pre-line"
       >
         {{ content }}
@@ -644,15 +734,15 @@ const formatTime = (timeInSeconds: number) => {
             <Input 
               v-model="newCommentText"
               placeholder="دیدگاه خود را بنویسید..." 
-              class="pr-3 pl-10 py-1.5 h-8.5 text-xs font-semibold rounded-xl bg-background/50 border-transparent focus-visible:ring-primary/30"
+              class="pr-3 pl-10 py-1.5 h-8.5 text-xs font-semibold rounded-xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus-visible:ring-primary/30"
               @keydown.enter="submitComment"
             />
             <!-- Submit comment button inside input -->
             <button 
               @click="submitComment"
-              class="absolute left-1.5 size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 active:scale-95 transition-all cursor-pointer"
+              class="absolute left-1.5 z-10 pointer-events-auto size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 active:scale-95 transition-all cursor-pointer"
             >
-              <SendIcon class="size-3" />
+              <SendIcon class="size-4 scale-x-[-1] -rotate-45" />
             </button>
           </div>
         </div>
@@ -665,13 +755,15 @@ const formatTime = (timeInSeconds: number) => {
     <PostContextMenu
       :isOpen="isContextMenuOpen"
       :triggerRect="triggerRect"
+      :touchPos="{ x: touchX, y: touchY }"
       :postId="id"
       :postText="content"
+      :isOwner="isPostOwner"
       @close="isContextMenuOpen = false"
-      @edit="emit('edit', id)"
+      @edit="handleEditStart"
       @delete="emit('delete', id)"
       @pin="emit('pin', id)"
-      @react="handleReact"
+      @react="(postId, emoji) => handleReactionClick(emoji)"
       @copy="emit('copy', id)"
     />
   </Teleport>

@@ -67,6 +67,7 @@ async def custom_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if platform and phone != "نامشخص" and update.effective_chat.type == "private":
         try:
             await api_client.register_phone_chat(platform, phone, chat_id)
+            context.bot_data["owner_chat_id"] = chat_id
             logger.info(f"Automatically registered chat_id {chat_id} for owner {phone} ({platform}) via custom_start")
         except Exception as e:
             logger.error(f"Failed to auto-register owner chat_id: {e}")
@@ -74,10 +75,12 @@ async def custom_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"🧠 <b>به ربات اختصاصی تفکر خوش آمدید!</b>\n\n"
         f"این ربات به صورت اختصاصی به حساب تفکر شما با شماره <code>{format_text_for_telegram(phone)}</code> متصل است.\n\n"
-        "💡 <b>راه‌های اتصال مقصد جدید (گروه یا کانال):</b>\n\n"
-        "1️⃣ <b>روش اول (سریع‌ترین):</b> ربات را به عنوان مدیر (Admin) به کانال یا گروه خود اضافه کنید و دستور <code>/connect</code> را داخل آن بفرستید.\n\n"
-        "2️⃣ <b>روش دوم (دستی):</b> شناسه عددی (Chat ID) گروه یا کانال خود را مستقیماً در این چت ارسال کنید. (مثلاً: <code>-100123456789</code>).\n\n"
-        "🔹 برای مشاهده و مدیریت لیست مقاصد متصل، از دکمه زیر صفحه استفاده کنید:",
+        f"💡 <b>راه‌های اتصال مقصد جدید (گروه یا کانال):</b>\n\n"
+        f"1️⃣ <b>اتصال خودکار:</b> ربات را به عنوان مدیر (Admin) با دسترسی ارسال پیام به کانال یا گروه خود اضافه کنید تا بلافاصله به صورت خودکار متصل شود.\n\n"
+        f"2️⃣ <b>اتصال با شناسه (دستی):</b> شناسه عددی (Chat ID) گروه یا کانال خود را مستقیماً در این چت ارسال کنید. (مثلاً: <code>-100123456789</code>).\n\n"
+        f"💡 <b>نکته برای گروه‌های از قبل عضو شده:</b>\n"
+        f"اگر ربات از قبل در گروه یا کانال شما عضو بوده است، کافیست شناسه عددی آن را در همین چت خصوصی ارسال کنید تا متصل شود.\n\n"
+        f"🔹 برای مشاهده و مدیریت لیست مقاصد متصل، از دکمه زیر صفحه استفاده کنید:",
         parse_mode="HTML",
         reply_markup=get_custom_main_keyboard()
     )
@@ -98,12 +101,11 @@ async def custom_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔹 <b>نحوه اتصال خودکار کانال/گروه:</b>\n"
         "۱. ربات را به گروه یا کانال خود دعوت کنید.\n"
         "۲. ربات را مدیر (Admin) با دسترسی ارسال پیام کنید.\n"
-        "۳. دستور <code>/connect</code> یا <code>/register</code> را در کانال یا گروه ارسال کنید.\n"
-        "۴. ربات به طور خودکار آن را ثبت و پیام تایید ارسال می‌کند.\n\n"
+        "۳. ربات به طور خودکار آن را شناسایی، ثبت و پیام تایید برای شما ارسال می‌کند.\n\n"
         "🔹 <b>نحوه اتصال با شناسه چت (مستقیم):</b>\n"
         "اگر شناسه عددی چت خود را دارید (معمولاً شناسه کانال‌ها با <code>-100</code> شروع می‌شود)، آن را مستقیماً به همین چت ارسال کنید تا ثبت شود.\n\n"
         "🔹 <b>مدیریت مقاصد:</b>\n"
-        "از دکمه «📋 لیست مقاصد (کانال‌ها/گروه‌ها)» برای مشاهده، حذف و پیش‌فرض کردن استفاده کنید.",
+        "از دکمه «📋 لیست مقاصد (کانال‌ها/گروه‌ها)» برای مشاهده مقاصد متصل استفاده کنید.",
         parse_mode="HTML",
         reply_markup=get_custom_main_keyboard()
     )
@@ -118,31 +120,175 @@ async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(chat.id)
     new_status = my_chat_member.new_chat_member.status
     
+    # اگر ربات از کانال/گروه لفت داد یا کیک شد
+    if new_status in ("left", "kicked"):
+        user_id = context.bot_data.get("user_id")
+        platform = context.bot_data.get("platform")
+        owner_chat_id = context.bot_data.get("owner_chat_id")
+        try:
+            res = await api_client.unregister_chat(platform, chat_id)
+            if res and res.get("success"):
+                if "known_destinations" in context.bot_data:
+                    context.bot_data["known_destinations"].discard(chat_id)
+                notifications = res.get("notifications", [])
+                
+                # منطق پشتیبان در صورت خالی بودن اعلان‌ها از دیتابیس
+                if not notifications and owner_chat_id:
+                    notifications.append({
+                        "chat_id": owner_chat_id,
+                        "label": chat.title or "گروه/کانال",
+                        "chat_id_removed": chat_id
+                    })
+                
+                for notif in notifications:
+                    if not notif.get("chat_id"):
+                        continue
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(notif["chat_id"]),
+                            text=(
+                                f"⚠️ <b>قطع اتصال مقصد انتشار {'تلگرام' if platform == 'telegram' else 'بله'}</b>\n\n"
+                                f"ربات تفکر از مقصد «{format_text_for_telegram(notif['label'])}» (با شناسه <code>{notif['chat_id_removed']}</code>) خارج شد.\n"
+                                f"این مقصد با موفقیت از سیستم تفکر شما حذف گردید."
+                            ),
+                            parse_mode="HTML"
+                        )
+                    except Exception as notify_err:
+                        logger.error(f"Error sending custom bot unregister notification to {notif['chat_id']}: {notify_err}")
+                logger.info(f"Unregistered {platform} chat {chat_id} due to bot status: {new_status}")
+        except Exception as e:
+            logger.error(f"Failed to unregister {platform} chat {chat_id}: {e}")
+        return
+
     # در صورتی که ربات به عنوان ادمین یا عضو اضافه شده باشد
     if new_status in ("administrator", "member"):
         user_id = context.bot_data.get("user_id")
         platform = context.bot_data.get("platform")
         phone = context.bot_data.get("phone")
+        owner_chat_id = context.bot_data.get("owner_chat_id")
         label = chat.title or f"Chat {chat_id}"
         
         logger.info(f"Auto-registering chat {chat_id} ({label}) for user {user_id} ({platform})")
         try:
             # فراخوانی وب‌سرویس ثبت مقصد به صورت مستقیم
             await api_client.register_destination(user_id, platform, chat_id, label)
+            if "known_destinations" in context.bot_data:
+                context.bot_data["known_destinations"].add(chat_id)
             
-            # ارسال پیام خصوصی تایید به صاحب ربات
-            await context.bot.send_message(
-                chat_id=int(my_chat_member.from_user.id),
-                text=(
-                    f"✅ <b>ثبت خودکار مقصد موفقیت‌آمیز بود!</b>\n\n"
-                    f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
-                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
-                    f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (<code>{format_text_for_telegram(phone)}</code>) اضافه شد."
-                ),
-                parse_mode="HTML"
-            )
+            target_chat_id = owner_chat_id or (my_chat_member.from_user.id if my_chat_member.from_user else None)
+            if target_chat_id:
+                # ارسال پیام خصوصی تایید به صاحب ربات
+                await context.bot.send_message(
+                    chat_id=int(target_chat_id),
+                    text=(
+                        f"✅ <b>ثبت خودکار مقصد موفقیت‌آمیز بود!</b>\n\n"
+                        f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
+                        f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                        f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (<code>{format_text_for_telegram(phone)}</code>) اضافه شد."
+                    ),
+                    parse_mode="HTML"
+                )
         except Exception as e:
             logger.error(f"Auto-registration failed: {e}")
+
+async def on_new_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """هندلر کمکی برای عضویت ربات اختصاصی در گروه‌ها"""
+    message = update.message
+    if not message or not message.new_chat_members:
+        return
+
+    chat = message.chat
+    chat_id = str(chat.id)
+    
+    # بررسی اینکه آیا خود ربات به گروه اضافه شده است
+    bot_added = any(member.id == context.bot.id for member in message.new_chat_members)
+    if not bot_added:
+        return
+
+    user_id = context.bot_data.get("user_id")
+    platform = context.bot_data.get("platform")
+    phone = context.bot_data.get("phone")
+    owner_chat_id = context.bot_data.get("owner_chat_id")
+    
+    logger.info(f"Custom bot added to group {chat_id} ({chat.title}) for user {user_id}")
+    try:
+        if platform == "bale":
+            is_admin = True
+        else:
+            chat_member = await context.bot.get_chat_member(chat_id=chat.id, user_id=context.bot.id)
+            is_admin = chat_member.status in ("administrator", "creator")
+        
+        if is_admin:
+            label = chat.title or f"Chat {chat_id}"
+            await api_client.register_destination(user_id, platform, chat_id, label)
+            if "known_destinations" in context.bot_data:
+                context.bot_data["known_destinations"].add(chat_id)
+            
+            target_chat_id = owner_chat_id or (message.from_user.id if message.from_user else None)
+            if target_chat_id:
+                await context.bot.send_message(
+                    chat_id=int(target_chat_id),
+                    text=(
+                        f"✅ <b>اتصال خودکار گروه موفقیت‌آمیز بود!</b>\n\n"
+                        f"📢 نام گروه: <code>{format_text_for_telegram(label)}</code>\n"
+                        f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                        f"این گروه با موفقیت به مقاصد انتشار حساب تفکر شما متصل شد."
+                    ),
+                    parse_mode="HTML"
+                )
+        else:
+            target_chat_id = owner_chat_id or (message.from_user.id if message.from_user else None)
+            if target_chat_id:
+                await context.bot.send_message(
+                    chat_id=int(target_chat_id),
+                    text=(
+                        f"💡 شما ربات تفکر را به گروه «{format_text_for_telegram(chat.title)}» اضافه کردید.\n\n"
+                        f"برای فعال‌سازی کامل و ارسال خودکار یادداشت‌ها، لطفاً ربات را در این گروه **مدیر (Admin)** کنید تا اتصال برقرار شود."
+                    ),
+                    parse_mode="HTML"
+                )
+    except Exception as e:
+        logger.error(f"Auto-registration in on_new_chat_members failed: {e}")
+
+async def on_left_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """هندلر کمکی برای خروج/حذف ربات اختصاصی از گروه‌ها"""
+    message = update.message
+    if not message or not message.left_chat_member:
+        return
+
+    chat = message.chat
+    chat_id = str(chat.id)
+    
+    # بررسی اینکه آیا خود ربات خارج/حذف شده است
+    if message.left_chat_member.id != context.bot.id:
+        return
+
+    user_id = context.bot_data.get("user_id")
+    platform = context.bot_data.get("platform")
+    owner_chat_id = context.bot_data.get("owner_chat_id")
+    
+    logger.info(f"Custom bot left/removed from group {chat_id} ({chat.title}) for user {user_id}")
+    try:
+        res = await api_client.unregister_chat(platform, chat_id)
+        if res and res.get("success"):
+            if "known_destinations" in context.bot_data:
+                context.bot_data["known_destinations"].discard(chat_id)
+            target_chat_id = owner_chat_id or (message.from_user.id if message.from_user else None)
+            if target_chat_id:
+                try:
+                    await context.bot.send_message(
+                        chat_id=int(target_chat_id),
+                        text=(
+                            f"⚠️ <b>قطع اتصال مقصد انتشار {'تلگرام' if platform == 'telegram' else 'بله'}</b>\n\n"
+                            f"ربات تفکر از مقصد «{format_text_for_telegram(chat.title or 'گروه')}» (با شناسه <code>{chat_id}</code>) خارج شد.\n"
+                            f"این مقصد با موفقیت از سیستم تفکر شما حذف گردید."
+                        ),
+                        parse_mode="HTML"
+                    )
+                except Exception as notify_err:
+                    logger.error(f"Error sending custom bot unregister notification on left_chat_member: {notify_err}")
+    except Exception as e:
+        logger.error(f"Failed to unregister chat on left_chat_member: {e}")
 
 async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """نمایش لیست مقاصد متصل با قابلیت فعال/غیرفعال‌سازی و حذف کامل"""
@@ -152,7 +298,42 @@ async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_T
     
     destinations = await api_client.get_destinations(user_id, platform)
     
-    if not destinations:
+    valid_destinations = []
+    for dest in destinations:
+        chat_id = dest["chat_id"]
+        try:
+            if platform == "bale":
+                # Skip get_chat_member check for Bale to prevent permission_denied false negatives
+                valid_destinations.append(dest)
+            else:
+                await context.bot.get_chat_member(chat_id=int(chat_id), user_id=context.bot.id)
+                valid_destinations.append(dest)
+        except Exception as e:
+            # ربات از گروه/کانال خارج شده یا دسترسی ندارد
+            logger.info(f"Automatically unregistering unreachable destination {chat_id} for user {user_id} due to get_chat_member error: {e}")
+            try:
+                owner_chat_id = context.bot_data.get("owner_chat_id")
+                if owner_chat_id:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(owner_chat_id),
+                            text=(
+                                f"⚠️ <b>قطع اتصال مقصد انتشار {'تلگرام' if platform == 'telegram' else 'بله'}</b>\n\n"
+                                f"ربات تفکر از مقصد «{format_text_for_telegram(dest.get('label', 'گروه/کانال'))}» (با شناسه <code>{chat_id}</code>) خارج شد.\n"
+                                f"این مقصد با موفقیت از سیستم تفکر شما حذف گردید."
+                            ),
+                            parse_mode="HTML"
+                        )
+                    except Exception as notify_err:
+                        logger.error(f"Error sending kick message: {notify_err}")
+
+                await api_client.unregister_chat(platform, chat_id)
+                if "known_destinations" in context.bot_data:
+                    context.bot_data["known_destinations"].discard(chat_id)
+            except Exception as unreg_err:
+                logger.error(f"Failed to auto-unregister chat {chat_id} in list: {unreg_err}")
+
+    if not valid_destinations:
         await update.effective_message.reply_text(
             "📭 در حال حاضر هیچ گروه یا کانالی متصل نشده است.\n\n"
             "برای اضافه کردن مقصد جدید، دکمه «➕ راهنمای اتصال مقصد» را کلیک کنید یا شناسه چت را بفرستید."
@@ -164,35 +345,22 @@ async def send_destinations_list(update: Update, context: ContextTypes.DEFAULT_T
         parse_mode="HTML"
     )
     
-    for dest in destinations:
-        dest_id = dest["id"]
+    for dest in valid_destinations:
         label = dest["label"]
         chat_id = dest["chat_id"]
-        is_active = dest.get("is_active", True)
-        
-        status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
         
         text = (
             f"📢 <b>نام:</b> {format_text_for_telegram(label)}\n"
-            f"🆔 <b>شناسه:</b> <code>{chat_id}</code>\n"
-            f"📊 <b>وضعیت:</b> {status_text}"
+            f"🆔 <b>شناسه:</b> <code>{chat_id}</code>\n\n"
+            f"💡 <b>راهنمای لغو اتصال:</b> برای قطع اتصال این مقصد، کافیست ربات تفکر را از این گروه/کانال ریمو (حذف) کنید. سیستم تفکر به صورت خودکار اتصال را قطع و از لیست حذف خواهد کرد."
         )
         
-        # ساخت دکمه‌های شیشه‌ای (Inline Keyboard)
-        buttons = []
-        if is_active:
-            buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
-        else:
-            buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
-        buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
-        
-        reply_markup = InlineKeyboardMarkup([buttons])
         await context.bot.send_message(
             chat_id=chat.id,
             text=text,
-            parse_mode="HTML",
-            reply_markup=reply_markup
+            parse_mode="HTML"
         )
+
 
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -247,16 +415,117 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         else:
             await query.answer("❌ خطا در حذف مقصد.", show_alert=True)
 
+    elif data.startswith("retry_"):
+        try:
+            task_id = int(data.split("_")[1])
+            success = await api_client.retry_task(task_id)
+            if success:
+                await query.answer("🔄 یادداشت مجدداً در صف انتشار قرار گرفت.", show_alert=True)
+            else:
+                await query.answer("❌ خطا در تلاش مجدد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback retry error: {e}")
+
+    elif data.startswith("view_"):
+        try:
+            task_id = int(data.split("_")[1])
+            task_details = await api_client.get_task_details(task_id)
+            if task_details and task_details.get("text"):
+                note_text = task_details.get("text")
+                chat_id = query.message.chat_id if query.message else query.from_user.id
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"📋 <b>متن یادداشت:</b>\n\n{note_text}",
+                    parse_mode="HTML"
+                )
+                await query.answer("📋 متن یادداشت ارسال شد.")
+            else:
+                await query.answer("❌ متن یادداشت یافت نشد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback view error: {e}")
+
 async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     message = update.effective_message
-    if not chat or not message or not message.text:
+    if not chat or not message:
         return
 
-    text = message.text.strip()
     user_id = context.bot_data.get("user_id")
     platform = context.bot_data.get("platform")
     phone = context.bot_data.get("phone", "نامشخص")
+
+    # ۳. بررسی و اتصال خودکار پس از ارتقا به ادمین (مخصوصاً برای بله که رویداد تغییر وضعیت ادمین ندارد)
+    if chat.type in ("group", "supergroup", "channel"):
+        chat_id = str(chat.id)
+        if "known_destinations" not in context.bot_data:
+            try:
+                dests = await api_client.get_destinations(user_id, platform)
+                context.bot_data["known_destinations"] = {str(d["chat_id"]) for d in dests}
+            except Exception as load_err:
+                logger.error(f"Failed to load destinations in fallback check: {load_err}")
+                context.bot_data["known_destinations"] = set()
+        
+        known_dests = context.bot_data["known_destinations"]
+        if chat_id not in known_dests:
+            try:
+                if platform == "bale":
+                    is_admin = True
+                else:
+                    chat_member = await context.bot.get_chat_member(chat_id=chat.id, user_id=context.bot.id)
+                    is_admin = chat_member.status in ("administrator", "creator")
+                if is_admin:
+                    label = chat.title or f"Chat {chat_id}"
+                    await api_client.register_destination(user_id, platform, chat_id, label)
+                    known_dests.add(chat_id)
+                    logger.info(f"Auto-registered chat {chat_id} via fallback check for user {user_id}")
+                    
+                    owner_chat_id = context.bot_data.get("owner_chat_id")
+                    target_chat_id = owner_chat_id or (message.from_user.id if message.from_user else None)
+                    if target_chat_id:
+                        await context.bot.send_message(
+                            chat_id=int(target_chat_id),
+                            text=(
+                                f"✅ <b>ثبت خودکار مقصد موفقیت‌آمیز بود!</b>\n\n"
+                                f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
+                                f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                                f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما (<code>{format_text_for_telegram(phone)}</code>) اضافه شد."
+                            ),
+                            parse_mode="HTML"
+                        )
+            except Exception as auto_reg_err:
+                logger.warning(f"Auto-registration fallback check failed for chat {chat_id}: {auto_reg_err}")
+
+    # برای بقیه دستورات و پیام‌های خصوصی نیاز به متن پیام داریم
+    # اما اگر پیام از یک کانال/گروه فوروارد شده باشد، می‌توانیم آن را مستقیماً ثبت کنیم
+    if chat.type == "private" and message.forward_from_chat:
+        fwd_chat = message.forward_from_chat
+        if fwd_chat.type in ("channel", "group", "supergroup"):
+            fwd_chat_id = str(fwd_chat.id)
+            label = fwd_chat.title or fwd_chat.username or fwd_chat.first_name or fwd_chat_id
+            logger.info(f"Attempting registration via forwarded message for chat: {fwd_chat_id} ({label})")
+            try:
+                await api_client.register_destination(user_id, platform, fwd_chat_id, label)
+                await message.reply_text(
+                    f"✅ <b>ثبت مقصد با موفقیت انجام شد!</b>\n\n"
+                    f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
+                    f"🆔 شناسه: <code>{fwd_chat_id}</code>\n\n"
+                    f"این مقصد از طریق پیام فوروارد شده با موفقیت به مقاصد انتشار حساب شما اضافه شد.",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                await message.reply_text(
+                    f"❌ خطا در ثبت مقصد فوروارد شده.\n\n"
+                    f"مطمئن شوید ربات را در آن کانال/گروه عضو کرده و دسترسی مدیریت (Admin) به آن داده‌اید.\n\n"
+                    f"جزئیات خطا: {e}"
+                )
+            return
+
+    if not message.text:
+        return
+
+    text = message.text.strip()
 
     # ۱. اگر دستور ثبت در گروه یا کانال باشد
     if text.startswith(("/connect", "/register", "/start")) and chat.type in ("group", "supergroup", "channel"):
@@ -299,27 +568,30 @@ async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAU
             await custom_status(update, context)
             return
 
-        # د) وارد کردن شناسه عددی چت برای ثبت مستقیم
+        # د) وارد کردن شناسه عددی یا نام کاربری چت برای ثبت مستقیم
+        is_username = text.startswith('@') and len(text) > 1
         clean_text = text.lstrip('-')
-        if clean_text.isdigit():
+        if clean_text.isdigit() or is_username:
             chat_id = text
-            logger.info(f"Attempting manual chat registration for id: {chat_id}")
+            logger.info(f"Attempting manual chat registration for: {chat_id}")
             try:
-                chat_obj = await context.bot.get_chat(int(chat_id))
-                label = chat_obj.title or chat_obj.username or f"Chat {chat_id}"
-                await api_client.register_destination(user_id, platform, chat_id, label)
+                chat_obj = await context.bot.get_chat(chat_id if is_username else int(chat_id))
+                resolved_chat_id = str(chat_obj.id)
+                label = chat_obj.title or chat_obj.username or f"Chat {resolved_chat_id}"
+                await api_client.register_destination(user_id, platform, resolved_chat_id, label)
                 await message.reply_text(
                     f"✅ <b>ثبت مقصد با موفقیت انجام شد!</b>\n\n"
                     f"📢 نام مقصد: <code>{format_text_for_telegram(label)}</code>\n"
-                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                    f"🆔 شناسه: <code>{resolved_chat_id}</code>\n\n"
                     f"این چت به مقاصد انتشار حساب شما اضافه شد.",
                     parse_mode="HTML"
                 )
             except Exception as e:
+                target_str = "نام کاربری" if is_username else "شناسه"
                 await message.reply_text(
-                    f"❌ خطا در دسترسی به چت با شناسه {chat_id}.\n\n"
+                    f"❌ خطا در دسترسی به چت با {target_str} {chat_id}.\n\n"
                     f"مطمئن شوید:\n"
-                    f"۱. شناسه را درست وارد کرده‌اید (شناسه کانال‌ها معمولاً با -100 شروع می‌شود).\n"
+                    f"۱. {target_str} را درست وارد کرده‌اید (شناسه عددی کانال‌ها معمولاً با -100 شروع می‌شود).\n"
                     f"۲. ربات را در آن کانال/گروه عضو کرده و دسترسی مدیریت (Admin) به آن داده‌اید.\n\n"
                     f"جزئیات خطا: {e}"
                 )
@@ -328,11 +600,34 @@ async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAU
         # ه) پیام متنی متفرقه در چت خصوصی
         await custom_start(update, context)
 
+async def custom_bot_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    error = context.error
+    logger.error(f"Error in custom bot: {error}")
+    
+    from telegram.error import Conflict, Unauthorized
+    is_conflict = isinstance(error, Conflict) or "conflict" in str(error).lower()
+    is_unauthorized = isinstance(error, Unauthorized) or "unauthorized" in str(error).lower()
+    
+    if is_conflict or is_unauthorized:
+        user_id = context.bot_data.get("user_id")
+        platform = context.bot_data.get("platform")
+        reason = "conflict" if is_conflict else "unauthorized"
+        logger.warning(f"Disconnect condition ({reason}) detected for custom bot (user_id={user_id}, platform={platform}). Shutting down...")
+        if user_id and platform:
+            try:
+                await api_client.report_bot_disconnect(user_id, platform, reason)
+            except Exception as e:
+                logger.error(f"Failed to report bot disconnect to backend: {e}")
+        
+        if context.application and context.application.updater.running:
+            asyncio.create_task(context.application.updater.stop())
+            asyncio.create_task(context.application.stop())
+
 # ---------- مدیریت داینامیک کلاینت‌های ربات‌ها ----------
 
-async def run_single_bot(bot_key: str, token: str, platform: str, user_id: int, phone: str):
+async def run_single_bot(bot_key: str, token: str, platform: str, user_id: int, phone: str, owner_chat_id: int = None):
     """راه‌اندازی کلاینت مستقل ربات با کتابخانه python-telegram-bot"""
-    logger.info(f"Starting custom bot task for user {user_id} ({platform})")
+    logger.info(f"Starting custom bot task for user {user_id} ({platform}) with owner_chat_id={owner_chat_id}")
     
     builder = ApplicationBuilder().token(token)
     if platform == "telegram":
@@ -348,20 +643,55 @@ async def run_single_bot(bot_key: str, token: str, platform: str, user_id: int, 
     app.bot_data["user_id"] = user_id
     app.bot_data["phone"] = phone
     app.bot_data["platform"] = platform
+    app.bot_data["owner_chat_id"] = owner_chat_id
 
     # هندلرهای ربات اختصاصی
     app.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_new_chat_members))
+    app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, on_left_chat_member))
     app.add_handler(CallbackQueryHandler(handle_callback_query))
-    app.add_handler(MessageHandler(filters.TEXT | filters.ChatType.CHANNEL, handle_any_message_or_post))
+    app.add_handler(MessageHandler(filters.ALL, handle_any_message_or_post))
+    
+    app.add_error_handler(custom_bot_error_handler)
 
     try:
         async with app:
             await app.start()
+            
+            # ارسال پیام خوش‌آمدگویی استارت‌آپ به مالک ربات در صورت مشخص بودن شناسه چت
+            if owner_chat_id:
+                try:
+                    await app.bot.send_message(
+                        chat_id=int(owner_chat_id),
+                        text=(
+                            f"🧠 <b>ربات اختصاصی تفکر شما با موفقیت متصل شد!</b>\n\n"
+                            f"این ربات آماده مدیریت و ارسال یادداشت‌های شما می‌باشد.\n\n"
+                            f"💡 <b>راهنمای اتصال مقصد جدید:</b>\n"
+                            f"کافیست ربات را به کانال یا گروه خود اضافه کرده و آن را مدیر (Admin) با دسترسی ارسال پیام کنید تا اتصال به صورت کاملاً خودکار برقرار شود.\n\n"
+                            f"🔹 برای مشاهده لیست مقاصد خود از دکمه «📋 لیست مقاصد (کانال‌ها/گروه‌ها)» استفاده کنید."
+                        ),
+                        parse_mode="HTML",
+                        reply_markup=get_custom_main_keyboard()
+                    )
+                except Exception as startup_err:
+                    logger.warning(f"Could not send startup message to owner {owner_chat_id}: {startup_err}")
+
             poll_interval = 2.0 if platform == "bale" else 0.0
             await app.updater.start_polling(allowed_updates=Update.ALL_TYPES, poll_interval=poll_interval)
             await asyncio.Event().wait()
     except Exception as e:
-        logger.error(f"Error running bot {bot_key}: {e}")
+        from telegram.error import Conflict, Unauthorized
+        is_conflict = isinstance(e, Conflict) or "conflict" in str(e).lower()
+        is_unauthorized = isinstance(e, Unauthorized) or "unauthorized" in str(e).lower()
+        if is_conflict or is_unauthorized:
+            reason = "conflict" if is_conflict else "unauthorized"
+            logger.warning(f"Startup disconnect condition ({reason}) detected for bot {bot_key}: {e}")
+            try:
+                await api_client.report_bot_disconnect(user_id, platform, reason)
+            except Exception as report_err:
+                logger.error(f"Failed to report startup bot disconnect ({reason}) to backend: {report_err}")
+        else:
+            logger.error(f"Error running bot {bot_key}: {e}")
     finally:
         logger.info(f"Stopping bot {bot_key}")
         await app.updater.stop()
@@ -413,12 +743,13 @@ async def dynamic_bot_manager():
                 platform = bot["platform"]
                 token = bot["token"].strip()
                 phone = bot["phone"]
+                owner_chat_id = bot.get("owner_chat_id")
                 bot_key = f"{platform}_{uid}"
                 
                 # اگر ربات در حال اجرا نیست، آن را استارت بزن
                 if bot_key not in running_bots:
                     logger.info(f"New active bot detected: {bot_key}, launching...")
-                    task = asyncio.create_task(run_single_bot(bot_key, token, platform, uid, phone))
+                    task = asyncio.create_task(run_single_bot(bot_key, token, platform, uid, phone, owner_chat_id))
                     running_bots[bot_key] = task
                     
         except Exception as e:
@@ -484,6 +815,79 @@ async def post_with_retry(http_client, url, json_payload=None, data=None, files=
                 delay *= 1.5
                 continue
             raise
+
+async def handle_task_failure(http_client, base_url, bot_token, platform, task, status_code, response_text):
+    owner_chat_id = task.get("owner_chat_id")
+    if not owner_chat_id:
+        logger.warning(f"No owner_chat_id found for task {task['id']}. Cannot send failure alert.")
+        return
+
+    # تلاش برای استخراج نام چت مقصد از متد getChat پیام‌رسان
+    dest_title = task.get("chat_id")
+    try:
+        chat_url = f"{base_url}{bot_token}/getChat"
+        chat_res = await http_client.get(chat_url, params={"chat_id": task["chat_id"]})
+        if chat_res.status_code == 200:
+            chat_data = chat_res.json().get("result", {})
+            dest_title = chat_data.get("title") or chat_data.get("username") or chat_data.get("first_name") or task["chat_id"]
+    except Exception as e:
+        logger.error(f"Error fetching chat info in handle_task_failure: {e}")
+
+    # تعیین علت مناسب بر اساس کد خطا
+    reason = "خطای نامشخص"
+    should_unregister = False
+    if status_code == 403:
+        reason = "ربات از گروه/کانال حذف شده یا دسترسی ارسال پیام ندارد."
+        should_unregister = True
+    elif status_code == 400:
+        reason = "مشخصات مقصد نادرست است، متن پیام بیش از حد مجاز است، یا ربات دسترسی ادمین ندارد."
+    elif status_code == 404:
+        reason = "مقصد پیدا نشد یا حذف شده است."
+        should_unregister = True
+
+    if should_unregister:
+        try:
+            await api_client.unregister_chat(platform, task["chat_id"])
+            logger.info(f"Unregistered unreachable chat {task['chat_id']} due to status {status_code}")
+        except Exception as unreg_err:
+            logger.error(f"Failed to unregister chat {task['chat_id']} in failure handler: {unreg_err}")
+
+    action_type = "انتشار"
+    if task["action"] == "edit":
+        action_type = "ویرایش"
+    elif task["action"] == "delete":
+        action_type = "حذف"
+
+    alert_text = (
+        f"⚠️ <b>{action_type} یادداشت شما در «{format_text_for_telegram(str(dest_title))}» با خطا مواجه شد.</b>\n\n"
+        f"❌ <b>علت:</b> {reason}\n"
+        f"🆔 <b>شناسه مقصد:</b> <code>{task['chat_id']}</code>"
+    )
+
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "🔄 تلاش مجدد", "callback_data": f"retry_{task['id']}"},
+                {"text": "📋 مشاهده متن یادداشت", "callback_data": f"view_{task['id']}"}
+            ]
+        ]
+    }
+
+    try:
+        send_url = f"{base_url}{bot_token}/sendMessage"
+        payload = {
+            "chat_id": int(owner_chat_id),
+            "text": alert_text,
+            "parse_mode": "HTML",
+            "reply_markup": keyboard
+        }
+        send_res = await http_client.post(send_url, json=payload)
+        if send_res.status_code == 200:
+            logger.info(f"Sent failure alert to owner {owner_chat_id} for task {task['id']}")
+        else:
+            logger.error(f"Failed to send failure alert: status={send_res.status_code}, text={send_res.text}")
+    except Exception as e:
+        logger.error(f"Error sending task failure alert: {e}")
 
 async def task_processor():
     """
@@ -572,6 +976,7 @@ async def task_processor():
                                         logger.error(f"send media failed for task {tid}: {res.text}")
                                         if res.status_code in (400, 403, 404):
                                             logger.warning(f"Non-recoverable error for send media task {tid}. Completing to avoid queue blockage.")
+                                            await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                             success = True
                                 else:
                                     # Fallback: if file couldn't be downloaded, send as text-only
@@ -585,6 +990,7 @@ async def task_processor():
                                     else:
                                         logger.error(f"fallback send failed for task {tid}: {res.text}")
                                         if res.status_code in (400, 403, 404):
+                                            await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                             success = True
                             else:
                                 url = f"{base_url}{bot_token}/sendMessage"
@@ -597,6 +1003,7 @@ async def task_processor():
                                     logger.error(f"send failed for task {tid}: {res.text}")
                                     if res.status_code in (400, 403, 404):
                                         logger.warning(f"Non-recoverable error for send task {tid}. Completing to avoid queue blockage.")
+                                        await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                         success = True
                                 
                         elif action == "edit" and message_id:
@@ -615,6 +1022,7 @@ async def task_processor():
                                 logger.error(f"edit failed for task {tid}: {res.text}")
                                 if res.status_code in (400, 403, 404):
                                     logger.warning(f"Non-recoverable error for edit task {tid}. Completing to avoid queue blockage.")
+                                    await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                     success = True
                                 
                         elif action == "delete" and message_id:
@@ -628,6 +1036,7 @@ async def task_processor():
                                 logger.error(f"delete failed for task {tid}: {res.text}")
                                 if res.status_code in (400, 403, 404):
                                     logger.warning(f"Non-recoverable error for delete task {tid}. Completing to avoid queue blockage.")
+                                    await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                     success = True
                                     msg_id = None
  

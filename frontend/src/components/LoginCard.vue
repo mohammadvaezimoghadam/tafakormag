@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,9 +10,14 @@ import {
   ArrowRightIcon, 
   CheckCircle2Icon, 
   AlertTriangleIcon,
-  KeyRoundIcon
+  KeyRoundIcon,
+  ClockIcon,
+  RotateCcwIcon
 } from '@lucide/vue'
 import { useUserStore } from '@/stores/userStore'
+import { useToastStore } from '@/stores/toastStore'
+
+const toastStore = useToastStore()
 
 // Props to control state from the playground
 const props = withDefaults(defineProps<{
@@ -38,7 +43,69 @@ const step = ref<'phone' | 'otp' | 'success'>('phone')
 const isLoading = ref(false)
 const localError = ref('')
 
+// Countdown Timer logic
+const cooldown = ref(60)
+let timerId: any = null
 
+const startTimer = () => {
+  cooldown.value = 60
+  if (timerId) clearInterval(timerId)
+  timerId = setInterval(() => {
+    if (cooldown.value > 0) {
+      cooldown.value--
+    } else {
+      clearInterval(timerId)
+      timerId = null
+    }
+  }, 1000)
+}
+
+const formattedTime = computed(() => {
+  const minutes = Math.floor(cooldown.value / 60)
+  const seconds = cooldown.value % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+})
+
+const handleResendOtp = async () => {
+  if (cooldown.value > 0) return
+  isLoading.value = true
+  localError.value = ''
+  try {
+    await userStore.requestOtp(phone.value)
+    startTimer()
+    toastStore.triggerToast('کد تایید مجدداً ارسال شد.', 'success')
+  } catch (err: any) {
+    const errorText = err.response?.data?.error || 'خطا در ارسال مجدد کد تایید.'
+    localError.value = errorText
+    toastStore.triggerToast(errorText, 'error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleResetPhone = () => {
+  step.value = 'phone'
+  localError.value = ''
+  if (timerId) {
+    clearInterval(timerId)
+    timerId = null
+  }
+}
+
+// Reset state when the global login modal is opened/closed
+watch(() => userStore.isLoginModalOpen, (newVal) => {
+  if (newVal) {
+    phone.value = ''
+    otp.value = ''
+    step.value = 'phone'
+    localError.value = ''
+    isLoading.value = false
+    if (timerId) {
+      clearInterval(timerId)
+      timerId = null
+    }
+  }
+})
 
 // Synchronize state prop changes with internal flow
 watch(() => props.state, (newVal) => {
@@ -69,11 +136,11 @@ const validatePhone = (value: string) => {
 const handleSubmitPhone = async () => {
   localError.value = ''
   if (!phone.value) {
-    localError.value = 'لطفا شماره همراه خود را وارد کنید.'
+    toastStore.triggerToast('لطفا شماره همراه خود را وارد کنید.', 'error')
     return
   }
   if (!validatePhone(phone.value)) {
-    localError.value = 'فرمت شماره همراه نادرست است (مثال: ۰۹۱۲۳۴۵۶۷۸۹).'
+    toastStore.triggerToast('فرمت شماره همراه نادرست است (مثال: ۰۹۱۲۳۴۵۶۷۸۹).', 'error')
     return
   }
 
@@ -83,9 +150,12 @@ const handleSubmitPhone = async () => {
   try {
     await userStore.requestOtp(phone.value)
     step.value = 'otp'
+    startTimer()
     emit('stateChange', 'otp')
   } catch (err: any) {
-    localError.value = err.response?.data?.error || 'خطا در ارسال کد تایید. لطفاً بعداً تلاش کنید.'
+    const errorText = err.response?.data?.error || 'خطا در ارسال کد تایید. لطفاً بعداً تلاش کنید.'
+    localError.value = errorText
+    toastStore.triggerToast(errorText, 'error')
   } finally {
     isLoading.value = false
   }
@@ -95,7 +165,7 @@ const handleSubmitPhone = async () => {
 const handleSubmitOtp = async () => {
   localError.value = ''
   if (otp.value.length < 4) {
-    localError.value = 'لطفا کد تایید ۴ رقمی را به طور کامل وارد کنید.'
+    toastStore.triggerToast('لطفا کد تایید ۴ رقمی را به طور کامل وارد کنید.', 'error')
     return
   }
 
@@ -106,14 +176,14 @@ const handleSubmitOtp = async () => {
     await userStore.verifyOtp(phone.value, otp.value)
     emit('stateChange', 'success')
   } catch (err: any) {
-    localError.value = err.response?.data?.error || 'کد تایید وارد شده معتبر نیست.'
+    const errorText = err.response?.data?.error || 'کد تایید وارد شده معتبر نیست.'
+    localError.value = errorText
+    toastStore.triggerToast(errorText, 'error')
     otp.value = ''
   } finally {
     isLoading.value = false
   }
 }
-
-
 
 // Resetting the flow
 const handleReset = () => {
@@ -122,15 +192,23 @@ const handleReset = () => {
   step.value = 'phone'
   localError.value = ''
   isLoading.value = false
+  if (timerId) {
+    clearInterval(timerId)
+    timerId = null
+  }
   emit('stateChange', 'idle')
 }
+
+onUnmounted(() => {
+  if (timerId) clearInterval(timerId)
+})
 </script>
 
 <template>
-  <div class="w-full bg-card border border-border/80 rounded-lg shadow-sm overflow-hidden transition-all duration-300">
+  <div class="w-full bg-card rounded-3xl overflow-hidden transition-all duration-300">
     
     <!-- HEADER -->
-    <div class="p-6 bg-gradient-to-br from-secondary/40 to-secondary/10 border-b border-border/40 text-center flex flex-col items-center gap-2">
+    <div class="pt-8 pb-4 px-6 text-center flex flex-col items-center gap-3">
       <!-- Brand Logo / Icon -->
       <div class="size-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
         <SmartphoneIcon v-if="step === 'phone'" class="size-6 animate-pulse" />
@@ -155,13 +233,19 @@ const handleReset = () => {
     <!-- BODY & INTERACTIVE FLOW -->
     <div class="p-6">
       
+      <!-- Inline Error Alert -->
+      <transition name="alert-slide">
+        <div 
+          v-if="localError" 
+          class="flex items-start gap-2.5 p-3.5 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 text-[10.5px] font-bold text-right mb-4 shadow-xs"
+        >
+          <AlertTriangleIcon class="size-4 shrink-0 mt-0.5" />
+          <p class="leading-relaxed">{{ localError }}</p>
+        </div>
+      </transition>
+      
       <!-- STEP 1: PHONE FORM -->
       <div v-if="step === 'phone'" class="grid gap-4">
-        <!-- Error Alert -->
-        <div v-if="localError" class="flex items-start gap-2.5 p-3.5 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 text-xs text-right w-full">
-          <AlertTriangleIcon class="size-4 shrink-0 mt-0.5" />
-          <p class="leading-relaxed font-semibold">{{ localError }}</p>
-        </div>
 
         <div class="flex flex-col gap-1.5">
           <Label for="login-phone" class="text-xs text-muted-foreground font-semibold">شماره همراه:</Label>
@@ -201,11 +285,6 @@ const handleReset = () => {
 
       <!-- STEP 2: OTP VERIFICATION -->
       <div v-else-if="step === 'otp'" class="grid gap-4">
-        <!-- Error Alert -->
-        <div v-if="localError" class="flex items-start gap-2.5 p-3.5 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 text-xs text-right w-full">
-          <AlertTriangleIcon class="size-4 shrink-0 mt-0.5" />
-          <p class="leading-relaxed font-semibold">{{ localError }}</p>
-        </div>
 
         <div class="flex flex-col items-center gap-3">
           <Label class="text-xs text-muted-foreground font-semibold text-center">کد تایید ۴ رقمی:</Label>
@@ -218,6 +297,29 @@ const handleReset = () => {
                 <InputOTPSlot :index="3" />
               </InputOTPGroup>
             </InputOTP>
+          </div>
+
+          <!-- Beautiful Countdown Timer Badge or Resend Button -->
+          <div class="flex items-center justify-center min-h-[32px] mt-1 transition-all duration-300">
+            <transition name="timer-fade" mode="out-in">
+              <div 
+                v-if="cooldown > 0" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/5 text-primary border border-primary/15 rounded-full text-[10px] font-bold tracking-normal transition-all duration-300 shadow-xs"
+              >
+                <ClockIcon class="size-3.5 text-primary/70" style="animation: spin 6s linear infinite" />
+                <span>ارسال مجدد پس از {{ formattedTime }}</span>
+              </div>
+              <button 
+                v-else 
+                type="button"
+                @click="handleResendOtp" 
+                :disabled="isLoading"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:text-foreground border border-border/40 rounded-full text-[10px] font-bold transition-all duration-200 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcwIcon class="size-3 text-muted-foreground" />
+                <span>ارسال مجدد کد تایید</span>
+              </button>
+            </transition>
           </div>
         </div>
 
@@ -239,7 +341,7 @@ const handleReset = () => {
           </Button>
 
           <button 
-            @click="step = 'phone'; localError = ''" 
+            @click="handleResetPhone" 
             :disabled="isLoading" 
             class="text-[11px] text-primary hover:underline font-medium text-center py-2 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
           >
@@ -272,3 +374,25 @@ const handleReset = () => {
 
   </div>
 </template>
+
+<style scoped>
+.alert-slide-enter-active,
+.alert-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.alert-slide-enter-from,
+.alert-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.timer-fade-enter-active,
+.timer-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.timer-fade-enter-from,
+.timer-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+</style>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import Input from '@/components/ui/input/Input.vue'
 import { 
   PaperclipIcon, 
   SendIcon, 
@@ -53,6 +52,8 @@ const isRecording = ref(false)
 const recordingSeconds = ref(0)
 let timerInterval: any = null
 
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+
 // Sync from props
 watch(() => props.initialText, (newVal) => {
   text.value = newVal
@@ -92,6 +93,32 @@ const hasContent = computed(() => {
   return text.value.trim().length > 0 || attachments.value.length > 0
 })
 
+const hasAttachments = computed(() => {
+  return attachments.value.length > 0
+})
+
+// Auto-adjust height for textarea
+const adjustHeight = () => {
+  const el = textareaRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  const minHeight = hasAttachments.value ? 36 : 40
+  const newHeight = Math.min(Math.max(el.scrollHeight, minHeight), 140)
+  el.style.height = `${newHeight}px`
+}
+
+watch([text, hasAttachments], () => {
+  nextTick(() => {
+    adjustHeight()
+  })
+})
+
+onMounted(() => {
+  nextTick(() => {
+    adjustHeight()
+  })
+})
+
 // Actions
 const handleSend = () => {
   if (props.disabled) return
@@ -108,6 +135,10 @@ const handleSend = () => {
   // Clear inputs
   text.value = ''
   attachments.value = []
+
+  nextTick(() => {
+    adjustHeight()
+  })
 }
 
 // Start Voice Recording
@@ -158,39 +189,89 @@ const handleRemoveAttachment = (id: string | number) => {
   attachments.value = attachments.value.filter(a => a.id !== id)
   emit('removeAttachment', id)
 }
+
+// Dynamic classes based on attachment status
+const containerClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'w-full flex flex-col relative bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 rounded-3xl p-1.5 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-white focus-within:dark:bg-muted/25'
+  }
+  return 'w-full flex flex-col relative transition-all duration-300'
+})
+
+const textareaClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-right'
+  }
+  return 'bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-4 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-right'
+})
+
+const secondaryButtonClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
+  }
+  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-white dark:bg-muted/20 text-muted-foreground border border-border/40 dark:border-border/20 hover:text-foreground hover:bg-muted/10 dark:hover:bg-muted/70 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
+})
+
+const sendButtonClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
+  }
+  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
+})
+
+const recordingStatusClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/10 text-destructive text-xs font-semibold h-9 px-3 rounded-2xl flex items-center justify-between transition-all duration-200 select-none'
+  }
+  return 'w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold h-10 px-4 rounded-2xl flex items-center justify-between transition-all duration-200 select-none'
+})
+
+const cancelRecordingButtonClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
+  }
+  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
+})
+
+const stopRecordingButtonClasses = computed(() => {
+  if (hasAttachments.value) {
+    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
+  }
+  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
+})
 </script>
 
 <template>
   <div 
-    class="w-full flex flex-col relative transition-all duration-350"
+    :class="containerClasses"
     dir="rtl"
   >
     <!-- Muted/Disabled overlay message -->
     <div 
       v-if="props.disabled" 
-      class="absolute inset-0 bg-background/60 backdrop-blur-3xs rounded-2xl z-20 flex items-center justify-center border border-border/40"
+      class="absolute inset-0 bg-background/60 backdrop-blur-3xs rounded-3xl z-20 flex items-center justify-center border border-border/40"
     >
-      <div class="bg-card/95 border border-border/80 rounded-xl px-4 py-2 flex items-center gap-2 shadow-xs">
+      <div class="bg-card/95 border border-border/80 rounded-2xl px-4 py-2 flex items-center gap-2 shadow-xs">
         <AlertCircleIcon class="size-4 text-muted-foreground animate-pulse" />
         <span class="text-[11px] font-bold text-muted-foreground">شما اجازه ارسال پیام در این تاپیک را ندارید.</span>
       </div>
     </div>
 
-    <!-- Attachments Preview Bar (Above the main input box) -->
+    <!-- Attachments Preview Bar (Inside the container) -->
     <transition name="attachments-slide">
       <div 
         v-if="attachments.length > 0" 
-        class="w-full bg-card/40 backdrop-blur-md border border-border/40 rounded-2xl p-3 flex gap-3 overflow-x-auto scrollbar-none z-10 text-right mb-2"
+        class="w-full flex gap-3 overflow-x-auto scrollbar-none z-10 text-right pb-2.5 mb-1.5 border-b border-border/20 px-2"
       >
         <div 
           v-for="file in attachments" 
           :key="file.id"
-          class="size-16 rounded-xl border border-border/50 bg-background/40 relative overflow-hidden flex flex-col items-center justify-center shrink-0 group hover:border-primary/20 transition-all duration-200"
+          class="size-16 rounded-xl border border-border/50 bg-background/40 relative overflow-hidden flex flex-col items-center justify-center shrink-0 group hover:border-primary/30 hover:scale-105 hover:shadow-md transition-all duration-300"
         >
           <!-- Delete button (Top Right) -->
           <button 
             @click="handleRemoveAttachment(file.id)"
-            class="absolute top-1.5 right-1.5 z-15 size-5 p-0 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white cursor-pointer transition-colors shadow-xs outline-none"
+            class="absolute top-1.5 right-1.5 z-15 size-5 p-0 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white cursor-pointer transition-all duration-200 hover:rotate-90 hover:scale-110 shadow-xs outline-none"
             title="حذف پیوست"
           >
             <XIcon class="size-2.5" />
@@ -240,7 +321,7 @@ const handleRemoveAttachment = (id: string | number) => {
     </transition>
 
     <!-- Main Message Input Row (RTL) -->
-    <div class="w-full flex items-center gap-1" dir="rtl">
+    <div class="w-full flex items-end gap-1.5" dir="rtl">
       
       <!-- Right Element: Attach File Button / Cancel Recording Button -->
       <transition name="button-pop" mode="out-in">
@@ -249,10 +330,11 @@ const handleRemoveAttachment = (id: string | number) => {
           v-if="isRecording"
           key="cancel-record"
           @click="cancelRecording"
-          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95"
+          :class="cancelRecordingButtonClasses"
+          class="group"
           title="لغو ضبط"
         >
-          <Trash2Icon class="size-5" />
+          <Trash2Icon class="size-4.5 transition-transform duration-200 group-hover:scale-110 group-hover:text-destructive" />
         </button>
 
         <!-- Normal Attach Button -->
@@ -261,10 +343,11 @@ const handleRemoveAttachment = (id: string | number) => {
           key="attach-file"
           @click="handleAttachClick"
           :disabled="props.disabled"
-          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-muted/40 text-muted-foreground border border-border/20 hover:text-foreground hover:bg-muted/70 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          :class="secondaryButtonClasses"
+          class="group"
           title="افزودن فایل پیوست"
         >
-          <PaperclipIcon class="size-5" />
+          <PaperclipIcon class="size-4.5 transition-transform duration-200 group-hover:rotate-12 group-hover:scale-105" />
         </button>
       </transition>
 
@@ -275,23 +358,25 @@ const handleRemoveAttachment = (id: string | number) => {
           <div 
             v-if="isRecording"
             key="recording-status"
-            class="w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold h-10 px-4 rounded-2xl flex items-center justify-between transition-all duration-200 select-none"
+            :class="recordingStatusClasses"
           >
             <div class="flex items-center gap-2">
-              <span class="size-2 bg-destructive rounded-full animate-pulse" />
-              <span class="text-[11px] font-bold text-destructive/80">در حال ضبط صدا...</span>
+              <span class="size-1.5 bg-destructive rounded-full animate-pulse" />
+              <span class="text-[10px] font-bold text-destructive/80">در حال ضبط صدا...</span>
             </div>
-            <span class="font-mono text-xs font-bold text-destructive/90">{{ formattedTime }}</span>
+            <span class="font-mono text-[11px] font-bold text-destructive/90">{{ formattedTime }}</span>
           </div>
 
-          <!-- Normal Shadcn Input -->
-          <Input
+          <!-- Auto-growing Textarea -->
+          <textarea
             v-else
             key="text-input"
+            ref="textareaRef"
             v-model="text"
             :disabled="props.disabled"
             :placeholder="props.placeholder"
-            class="bg-muted/40 border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold h-10 px-4 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all shadow-none"
+            rows="1"
+            :class="textareaClasses"
             @keydown.enter.exact.prevent="handleSend"
           />
         </transition>
@@ -304,10 +389,11 @@ const handleRemoveAttachment = (id: string | number) => {
           v-if="isRecording"
           key="stop-record"
           @click="completeRecording"
-          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95"
+          :class="stopRecordingButtonClasses"
+          class="group"
           title="ارسال صدا"
         >
-          <CheckIcon class="size-5.5" />
+          <CheckIcon class="size-5 transition-transform duration-200 group-hover:scale-110" />
         </button>
 
         <!-- Send message button -->
@@ -316,10 +402,11 @@ const handleRemoveAttachment = (id: string | number) => {
           key="send-msg"
           @click="handleSend"
           :disabled="props.disabled"
-          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          :class="sendButtonClasses"
+          class="group"
           title="ارسال پیام"
         >
-          <SendIcon class="size-4.5 -rotate-45 relative translate-x-[2px] -translate-y-[1px]" />
+          <SendIcon class="size-4 scale-x-[-1] -rotate-45 transition-transform duration-200 group-hover:translate-x-[-2px] group-hover:translate-y-[1px] group-hover:scale-110" />
         </button>
 
         <!-- Record Voice Button -->
@@ -328,10 +415,11 @@ const handleRemoveAttachment = (id: string | number) => {
           key="record-voice"
           @click="startRecording"
           :disabled="props.disabled"
-          class="size-10 p-0 rounded-2xl flex items-center justify-center bg-muted/40 text-muted-foreground border border-border/20 hover:text-foreground hover:bg-muted/70 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+          :class="secondaryButtonClasses"
+          class="group"
           title="ضبط صدا"
         >
-          <MicIcon class="size-5" />
+          <MicIcon class="size-4.5 transition-transform duration-200 group-hover:scale-110" />
         </button>
       </transition>
 
@@ -343,17 +431,20 @@ const handleRemoveAttachment = (id: string | number) => {
 /* Trans-slide for attachments strip */
 .attachments-slide-enter-active,
 .attachments-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 100px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 120px;
   opacity: 1;
+  overflow-y: hidden;
 }
 .attachments-slide-enter-from,
 .attachments-slide-leave-to {
   max-height: 0;
   opacity: 0;
-  padding: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   margin-bottom: 0px;
-  transform: translateY(8px);
+  border-color: transparent;
+  transform: translateY(12px);
 }
 
 /* Button Pop animation for swapping */

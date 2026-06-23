@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useToastStore } from '../stores/toastStore'
+import { useUserStore } from '../stores/userStore'
 
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
@@ -23,30 +24,33 @@ instance.interceptors.response.use(
     const toastStore = useToastStore()
 
     if (!error.response) {
-      toastStore.triggerToast('قطع ارتباط با سرور', 'error')
+      toastStore.triggerToast('ارتباط با سرور برقرار نشد. لطفا اتصال اینترنت خود را بررسی کنید.', 'error')
       return Promise.reject(error)
     }
 
     const { status, data } = error.response
+    const skipToast = error.config?.url?.includes('validate-custom-bot')
 
     if (status === 401) {
-      localStorage.removeItem('auth_token')
+      const userStore = useUserStore()
+      userStore.logout()
+      userStore.isLoginModalOpen = true
       // Redirect to login if unauthenticated on auth page
       const path = window.location.pathname
       if (path !== '/' && path !== '/login') {
-        toastStore.triggerToast('لطفاً دوباره وارد شوید', 'error')
+        toastStore.triggerToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'error')
         window.location.href = '/'
       }
     } else if (status === 400 && data?.error) {
-      if (data?.code !== 'claimed_by_another_user') {
+      if (data?.code !== 'claimed_by_another_user' && !skipToast) {
         toastStore.triggerToast(data.error, 'error')
       }
-    } else if (status === 404) {
-      toastStore.triggerToast('یافت نشد', 'error')
-    } else if (status >= 500) {
-      toastStore.triggerToast('خطای سرور. لحظاتی دیگر تلاش کنید', 'error')
-    } else {
-      toastStore.triggerToast('خطایی رخ داد', 'error')
+    } else if (status === 404 && !skipToast) {
+      toastStore.triggerToast('منبع درخواستی یافت نشد.', 'error')
+    } else if (status >= 500 && !skipToast) {
+      toastStore.triggerToast('خطایی در سرور رخ داده است. لطفا چند لحظه دیگر تلاش کنید.', 'error')
+    } else if (!skipToast) {
+      toastStore.triggerToast('خطای نامشخصی رخ داد. لطفا مجددا تلاش کنید.', 'error')
     }
 
     return Promise.reject(error)
@@ -119,6 +123,9 @@ export const getConnectToken = (platform: 'telegram' | 'bale') =>
 
 export const updateCustomBot = (platform: 'telegram' | 'bale', token: string, force = false) => 
   instance.post('/api/auth/update-custom-bot/', { platform, token, force })
+
+export const validateCustomBot = (platform: 'telegram' | 'bale', token: string) => 
+  instance.post('/api/auth/validate-custom-bot/', { platform, token })
 
 export const fetchProfile = () => 
   instance.get('/api/auth/profile/')

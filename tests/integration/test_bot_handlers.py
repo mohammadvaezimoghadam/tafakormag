@@ -167,3 +167,41 @@ def test_handle_token_success(mock_api_client, mock_linked, mock_update_context)
     args, kwargs = context.bot.send_message.call_args
     assert args[0] == 123456
     assert "✅ *حساب شما با موفقیت به ربات متصل شد!*" in args[1]
+
+@patch("telegram_bot.api_client")
+def test_on_my_chat_member_left(mock_api_client, mock_update_context):
+    """Verify that when the bot is kicked or leaves, unregister_chat is called and user notified."""
+    update, context = mock_update_context
+    
+    # Mock my_chat_member
+    my_chat_member = MagicMock()
+    my_chat_member.chat.id = -999999
+    my_chat_member.new_chat_member.status = "left"
+    my_chat_member.from_user = None
+    update.my_chat_member = my_chat_member
+
+    # Mock API client response
+    mock_api_client.unregister_chat = AsyncMock(return_value={
+        "success": True,
+        "notifications": [
+            {
+                "chat_id": "123456",
+                "label": "Test Group",
+                "chat_id_removed": "-999999"
+            }
+        ]
+    })
+
+    from telegram_bot import on_my_chat_member
+    run_async(on_my_chat_member(update, context))
+
+    # Verify API client was called
+    mock_api_client.unregister_chat.assert_called_once_with("telegram", "-999999")
+    
+    # Verify user notification was sent
+    context.bot.send_message.assert_called_once()
+    kwargs = context.bot.send_message.call_args[1]
+    assert kwargs["chat_id"] == "123456"
+    assert "قطع اتصال مقصد انتشار تلگرام" in kwargs["text"]
+    assert "Test Group" in kwargs["text"]
+

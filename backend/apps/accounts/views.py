@@ -1,4 +1,5 @@
 import uuid
+import base64
 
 from django.conf import settings
 from django.core.cache import cache
@@ -129,6 +130,40 @@ class AuthViewSet(viewsets.GenericViewSet):
             
         if not token:
             # در صورتی که کاربر بخواهد توکن را حذف کند (قطع اتصال)
+            old_token = request.user.telegram_bot_token if platform == 'telegram' else request.user.bale_bot_token
+            chat_id = request.user.telegram_chat_id if platform == 'telegram' else request.user.bale_chat_id
+            
+            if old_token and chat_id:
+                try:
+                    if platform == 'telegram':
+                        telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
+                        send_url = f"{telegram_base}{old_token}/sendMessage"
+                    else:
+                        send_url = f"https://tapi.bale.ai/bot{old_token}/sendMessage"
+                    
+                    msg_text = (
+                        f"🔌 <b>قطع اتصال ربات اختصاصی تفکر</b>\n\n"
+                        f"اتصال ربات تفکر شما با موفقیت از سیستم تفکر قطع شد."
+                    )
+                    requests.post(send_url, json={
+                        "chat_id": int(chat_id),
+                        "text": msg_text,
+                        "parse_mode": "HTML"
+                    }, timeout=5)
+                except Exception as send_err:
+                    logger.error(f"Failed to send disconnect message to owner: {send_err}")
+
+            if old_token:
+                try:
+                    if platform == 'telegram':
+                        telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
+                        url = f"{telegram_base}{old_token}/setWebhook?url=https://yourdomain.com/dummy-deleted-webhook"
+                    else:
+                        url = f"https://tapi.bale.ai/bot{old_token}/setWebhook?url=https://yourdomain.com/dummy-deleted-webhook"
+                    requests.get(url, timeout=5)
+                except Exception as e:
+                    logger.error(f"Failed to set dummy webhook during bot disconnect: {e}")
+
             if platform == 'telegram':
                 request.user.telegram_bot_token = None
                 request.user.telegram_bot_username = None
@@ -231,6 +266,79 @@ class AuthViewSet(viewsets.GenericViewSet):
         except Exception:
             return Response({"error": "خطا در برقراری ارتباط با سرور پیام‌رسان."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # ۴.۵ - اعتبارسنجی آنی توکن ربات اختصاصی
+    @action(methods=['post'], detail=False, url_path='validate-custom-bot',
+            permission_classes=[permissions.IsAuthenticated])
+    def validate_custom_bot(self, request):
+        platform = request.data.get('platform')
+        token = request.data.get('token', '').strip()
+        
+        if platform not in ['telegram', 'bale'] or not token:
+            return Response({"error": "پلتفرم و توکن الزامی هستند."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            if token.startswith("mock_"):
+                return Response({
+                    "valid": True,
+                    "username": f"@{token}_bot",
+                    "name": f"Mock Bot ({platform})",
+                    "avatar": None
+                })
+
+            if platform == 'telegram':
+                telegram_base = settings.TELEGRAM_API_URL.rstrip('/')
+                url = f"{telegram_base}{token}/getMe"
+            else:
+                url = f"https://tapi.bale.ai/bot{token}/getMe"
+                
+            res = requests.get(url, timeout=15)
+            if res.status_code != 200:
+                return Response({"valid": False, "error": "توکن نامعتبر است یا مشکلی در اتصال وجود دارد."}, status=status.HTTP_400_BAD_REQUEST)
+                
+            bot_data = res.json().get('result', {})
+            bot_id = bot_data.get('id')
+            username = f"@{bot_data.get('username')}"
+            first_name = bot_data.get('first_name')
+            
+            avatar_base64 = None
+            
+            if platform == 'telegram' and bot_id:
+                try:
+                    photos_url = f"{telegram_base}{token}/getUserProfilePhotos"
+                    photos_res = requests.get(photos_url, params={"user_id": bot_id, "limit": 1}, timeout=5)
+                    if photos_res.status_code == 200:
+                        photos_data = photos_res.json().get('result', {})
+                        photos = photos_data.get('photos', [])
+                        if photos and len(photos) > 0 and len(photos[0]) > 0:
+                            smallest_photo = photos[0][0] # take smallest size
+                            file_id = smallest_photo.get('file_id')
+                            
+                            file_url = f"{telegram_base}{token}/getFile"
+                            file_res = requests.get(file_url, params={"file_id": file_id}, timeout=5)
+                            if file_res.status_code == 200:
+                                file_path = file_res.json().get('result', {}).get('file_path')
+                                if file_path:
+                                    if "api.telegram.org" in telegram_base:
+                                        download_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+                                    else:
+                                        download_url = telegram_base.replace("/bot", "/file/bot") + f"/{file_path}"
+                                    
+                                    img_res = requests.get(download_url, timeout=10)
+                                    if img_res.status_code == 200:
+                                        encoded_img = base64.b64encode(img_res.content).decode('utf-8')
+                                        avatar_base64 = f"data:image/jpeg;base64,{encoded_img}"
+                except Exception as photo_err:
+                    logger.warning(f"Failed to fetch bot profile photo: {photo_err}")
+                    
+            return Response({
+                "valid": True,
+                "username": username,
+                "name": first_name,
+                "avatar": avatar_base64
+            })
+        except Exception as e:
+            return Response({"valid": False, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     # ۵ - دریافت لیست ربات‌های اختصاصی فعال (برای ربات‌رانر)
     @action(methods=['get'], detail=False, url_path='active-tokens')
     def active_tokens(self, request):
@@ -250,14 +358,16 @@ class AuthViewSet(viewsets.GenericViewSet):
                     "user_id": u.id,
                     "phone": u.phone,
                     "platform": "telegram",
-                    "token": u.telegram_bot_token
+                    "token": u.telegram_bot_token,
+                    "owner_chat_id": u.telegram_chat_id
                 })
             if u.bale_bot_token:
                 data.append({
                     "user_id": u.id,
                     "phone": u.phone,
                     "platform": "bale",
-                    "token": u.bale_bot_token
+                    "token": u.bale_bot_token,
+                    "owner_chat_id": u.bale_chat_id
                 })
         return Response(data)
 

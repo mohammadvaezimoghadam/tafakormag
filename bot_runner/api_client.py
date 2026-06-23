@@ -182,5 +182,54 @@ class APIClient:
             logger.error(f"get_active_custom_bots failed: {e}")
             return []
 
+    async def get_task_details(self, task_id: int) -> dict:
+        url = f"{BACKEND_API_URL}/bot/tasks/{task_id}/"
+        try:
+            resp = await self.client.get(url)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"get_task_details failed: {e}")
+            return {}
+
+    async def retry_task(self, task_id: int) -> bool:
+        url = f"{BACKEND_API_URL}/bot/tasks/{task_id}/retry/"
+        try:
+            resp = await self.client.post(url)
+            resp.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"retry_task failed: {e}")
+            return False
+
+    async def unregister_chat(self, platform: str, chat_id: str) -> dict:
+        url = f"{BACKEND_API_URL}/bot/unregister-chat/"
+        payload = {
+            "platform": platform,
+            "chat_id": chat_id,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"unregister_chat failed: {e}")
+            return {}
+
+    async def report_bot_disconnect(self, user_id: int, platform: str, reason: str) -> bool:
+        url = f"{BACKEND_API_URL}/bot/report-bot-disconnect/"
+        payload = {
+            "user_id": user_id,
+            "platform": platform,
+            "reason": reason,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"report_bot_disconnect failed: {e}")
+            return False
+
     async def close(self):
         await self.client.aclose()

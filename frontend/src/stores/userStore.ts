@@ -25,6 +25,7 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('auth_token') || '')
   const userProfile = ref<UserProfile | null>(null)
   const loading = ref(false)
+  const isLoginModalOpen = ref(false)
 
   const isAuthenticated = computed(() => !!token.value)
 
@@ -150,6 +151,7 @@ export const useUserStore = defineStore('user', () => {
     userProfile,
     loading,
     isAuthenticated,
+    isLoginModalOpen,
     loadProfile,
     requestOtp,
     verifyOtp,

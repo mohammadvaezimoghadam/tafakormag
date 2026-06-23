@@ -149,3 +149,38 @@ class TestBotAPIIntegration:
         user.refresh_from_db()
         assert user.telegram_bot_token == bot_token
         assert user.telegram_bot_username == "@test_custom_bot"
+
+    def test_unregister_chat_deletes_messaging_target_and_returns_notifications(self):
+        """
+        Verify that hitting api/bot/unregister-chat/ deletes the matching
+        MessagingTarget records and returns notifications for the bot to dispatch.
+        """
+        user = User.objects.create_user(phone="09331112233")
+        user.telegram_chat_id = "111111"
+        user.save()
+        target = MessagingTarget.objects.create(
+
+            user=user,
+            platform="telegram",
+            chat_id="222222",
+            label="My Group to Delete",
+            is_active=True
+        )
+
+        payload = {
+            "platform": "telegram",
+            "chat_id": "222222"
+        }
+
+        response = self.client.post("/api/bot/unregister-chat/", payload, format="json")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["success"] is True
+        assert len(response.data["notifications"]) == 1
+        assert response.data["notifications"][0]["chat_id"] == "111111"
+        assert response.data["notifications"][0]["label"] == "My Group to Delete"
+        assert response.data["notifications"][0]["chat_id_removed"] == "222222"
+
+        # Verify database
+        assert not MessagingTarget.objects.filter(id=target.id).exists()
+

@@ -13,7 +13,11 @@ export const useBotStore = defineStore('bot', () => {
     if (telegramConnecting.value) return 'connecting'
     if (!userStore.userProfile) return 'disconnected'
     if (userStore.userProfile.is_telegram_bot_connected) return 'connected'
-    if (userStore.userProfile.telegram_bot_disconnect_reason === 'claimed_by_another_user') return 'conflict'
+    if (
+      userStore.userProfile.telegram_bot_disconnect_reason === 'claimed_by_another_user' ||
+      userStore.userProfile.telegram_bot_disconnect_reason === 'conflict'
+    )
+      return 'conflict'
     return 'disconnected'
   })
 
@@ -24,7 +28,11 @@ export const useBotStore = defineStore('bot', () => {
     if (baleConnecting.value) return 'connecting'
     if (!userStore.userProfile) return 'disconnected'
     if (userStore.userProfile.is_bale_bot_connected) return 'connected'
-    if (userStore.userProfile.bale_bot_disconnect_reason === 'claimed_by_another_user') return 'conflict'
+    if (
+      userStore.userProfile.bale_bot_disconnect_reason === 'claimed_by_another_user' ||
+      userStore.userProfile.bale_bot_disconnect_reason === 'conflict'
+    )
+      return 'conflict'
     return 'disconnected'
   })
 

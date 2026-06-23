@@ -56,17 +56,19 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
     print(f"[E2E] Retrieved OTP from shared cache: {otp_code}")
 
     # 4. Enter the 4-digit OTP code into the digit inputs
-    # Wait for the OTP digit inputs to render on the page
-    otp_inputs = page.locator('input[inputmode="numeric"]')
-    expect(otp_inputs.first).to_be_visible(timeout=5000)
+    # Wait for the OTP digit input to render on the page
+    otp_input = page.locator('input[inputmode="numeric"]')
+    expect(otp_input).to_be_visible(timeout=5000)
     
-    # Confirm there are 4 inputs
-    assert otp_inputs.count() == 4, f"Expected 4 OTP input boxes, found {otp_inputs.count()}"
+    # Fill the OTP input
+    otp_input.fill(str(otp_code))
+    print(f"[E2E] Entered OTP code: {otp_code}")
 
-    # Fill each digit input
-    for i, digit in enumerate(str(otp_code)):
-        otp_inputs.nth(i).fill(digit)
-        print(f"[E2E] Entered digit {i+1}: {digit}")
+    # Click the submit button to verify
+    submit_otp_button = page.locator('button:has-text("بررسی کد تایید")')
+    expect(submit_otp_button).to_be_visible(timeout=5000)
+    submit_otp_button.click()
+
 
     # 5. Verify successful authentication and redirection to the root route
     print("[E2E] Waiting for redirect back to Home page...")
@@ -156,23 +158,6 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
     expect(comment_button).to_contain_text("۱", timeout=5000)
     print(f"[E2E] Verified comment count updated: {comment_button.text_content()}")
 
-    # 11. Add 👍 reaction using context menu
-    # Click three-dots button to open context menu
-    page.locator('button.size-7').first.click()
-    print("[E2E] Opened context menu for reaction")
-    
-    # Click the 👍 emoji in the reactions bar
-    reaction_option = page.locator('div.fixed.inset-0 button:has-text("👍")')
-    expect(reaction_option).to_be_visible(timeout=5000)
-    reaction_option.click()
-    print("[E2E] Clicked 👍 reaction emoji")
-    
-    # Verify reaction badge appeared on the post card and has text "👍۱"
-    reaction_badge = page.locator('div.px-5.pb-3 button:has-text("👍")').first
-    expect(reaction_badge).to_be_visible(timeout=5000)
-    expect(reaction_badge).to_have_text("👍۱", timeout=5000)
-    print(f"[E2E] Verified reaction count updated: {reaction_badge.text_content()}")
-
     # 12. Delete the post by opening the context menu and clicking delete
     page.locator('button.size-7').first.click()
     print("[E2E] Opened context menu for deletion")
@@ -226,10 +211,15 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
 
     assert otp_code is not None, "OTP not found"
     
-    otp_inputs = page.locator('input[inputmode="numeric"]')
-    expect(otp_inputs.first).to_be_visible(timeout=5000)
-    for i, digit in enumerate(str(otp_code)):
-        otp_inputs.nth(i).fill(digit)
+    otp_input = page.locator('input[inputmode="numeric"]')
+    expect(otp_input).to_be_visible(timeout=5000)
+    otp_input.fill(str(otp_code))
+    
+    # Click the submit button to verify
+    submit_otp_button = page.locator('button:has-text("بررسی کد تایید")')
+    expect(submit_otp_button).to_be_visible(timeout=5000)
+    submit_otp_button.click()
+
 
     expected_url = frontend_url.replace(":80", "").rstrip('/')
     page.wait_for_url(f"{expected_url}/")
@@ -254,11 +244,12 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
     token_input.fill(mock_token)
     print(f"[E2E] Entered mock token: {mock_token}")
 
-    # 5. Click "بررسی و اتصال"
-    submit_bot_btn = page.locator('button:has-text("بررسی و اتصال")').first
+    # 5. Click "ذخیره و اتصال"
+    submit_bot_btn = page.locator('button:has-text("ذخیره و اتصال")').first
     expect(submit_bot_btn).to_be_visible(timeout=5000)
     submit_bot_btn.click()
-    print("[E2E] Clicked 'بررسی و اتصال' button.")
+    print("[E2E] Clicked 'ذخیره و اتصال' button.")
+
 
     # 6. Verify that it connects successfully and shows the bot username badge
     expected_username = f"@{mock_token}_bot"

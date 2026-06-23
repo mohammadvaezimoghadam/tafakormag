@@ -86,6 +86,7 @@ services:
     build: ./bot_runner
     container_name: tafakor_bot
     environment:
+      - PYTHONUNBUFFERED=1
       - BALE_BOT_TOKEN=${BALE_BOT_TOKEN}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_PROXY_URL=${TELEGRAM_PROXY_URL:-}

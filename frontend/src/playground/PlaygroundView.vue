@@ -334,6 +334,12 @@ const resetSimulatorTopicEdit = () => {
   logEvent('Topic: Simulator Data Reset', {})
 }
 
+const getImageUrl = (image: string | File | null | undefined): string => {
+  if (!image) return ''
+  if (typeof image === 'string') return image
+  return URL.createObjectURL(image)
+}
+
 // Platform Navigation simulation variables
 const simulatorActiveTab = ref<'home' | 'profile'>('home')
 
@@ -1859,7 +1865,7 @@ const resetPosts = () => {
                     @save="(data) => {
                       simulatorTopicData.title = data.title;
                       simulatorTopicData.description = data.description;
-                      simulatorTopicData.image = data.image;
+                      simulatorTopicData.image = getImageUrl(data.image);
                       logEvent('TopicEdit: Saved', data);
                     }"
                   />

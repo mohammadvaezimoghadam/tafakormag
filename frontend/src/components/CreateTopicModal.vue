@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { useToastStore } from '@/stores/toastStore'
 
 const props = defineProps<{
   isOpen: boolean
@@ -21,11 +22,12 @@ const emit = defineEmits<{
   (e: 'create', topic: { title: string; description: string; image?: string }): void
 }>()
 
+const toastStore = useToastStore()
+
 const title = ref('')
 const description = ref('')
 const avatarPreview = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const errorMsg = ref('')
 
 const handleTriggerUpload = () => {
   fileInputRef.value?.click()
@@ -35,10 +37,9 @@ const handleFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) {
     if (file.size > 2 * 1024 * 1024) {
-      errorMsg.value = 'حجم تصویر باید کمتر از ۲ مگابایت باشد.'
+      toastStore.triggerToast('حجم تصویر باید کمتر از ۲ مگابایت باشد.', 'error')
       return
     }
-    errorMsg.value = ''
     const reader = new FileReader()
     reader.onload = (event) => {
       avatarPreview.value = event.target?.result as string
@@ -48,13 +49,12 @@ const handleFileChange = (e: Event) => {
 }
 
 const handleSubmit = () => {
-  errorMsg.value = ''
   if (!title.value.trim()) {
-    errorMsg.value = 'لطفا نام تاپیک را وارد کنید.'
+    toastStore.triggerToast('لطفا نام تاپیک را وارد کنید.', 'error')
     return
   }
   if (!description.value.trim()) {
-    errorMsg.value = 'لطفا توضیحات تاپیک را وارد کنید.'
+    toastStore.triggerToast('لطفا توضیحات تاپیک را وارد کنید.', 'error')
     return
   }
 
@@ -74,7 +74,6 @@ const handleCancel = () => {
   title.value = ''
   description.value = ''
   avatarPreview.value = ''
-  errorMsg.value = ''
   emit('close')
 }
 
@@ -107,10 +106,7 @@ const nameLetter = computed(() => {
 
       <!-- Body Form -->
       <div class="p-5 flex flex-col gap-4">
-        <!-- Error banner -->
-        <div v-if="errorMsg" class="p-2.5 bg-destructive/10 border border-destructive/20 rounded-lg text-[10.5px] font-semibold text-destructive">
-          {{ errorMsg }}
-        </div>
+
 
         <!-- Avatar Uploader -->
         <div class="flex flex-col items-center gap-2">

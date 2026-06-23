@@ -14,6 +14,7 @@ export interface PostAuthor {
   name: string
   avatarUrl?: string
   role?: string
+  phone?: string
 }
 
 export interface PostReaction {
@@ -106,7 +107,8 @@ export const usePostStore = defineStore('post', () => {
       author: {
         name: p.author_name || 'کاربر',
         avatarUrl: getImageUrl(p.author_avatar),
-        role: p.author_phone === localStorage.getItem('user_phone') ? 'نویسنده' : 'عضو تاپیک'
+        role: p.author_phone === localStorage.getItem('user_phone') ? 'نویسنده' : 'عضو تاپیک',
+        phone: p.author_phone
       },
       type: p.media_type || 'text',
       content: p.content,
@@ -142,6 +144,27 @@ export const usePostStore = defineStore('post', () => {
       return newPost
     } catch (err) {
       console.error('Error creating post:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const updatePost = async (id: string | number, formData: FormData) => {
+    loading.value = true
+    try {
+      const res = await api.updatePost(id, formData)
+      const updated = mapPost(res.data)
+      const idx = posts.value.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        posts.value[idx] = {
+          ...posts.value[idx],
+          ...updated
+        }
+      }
+      return updated
+    } catch (err) {
+      console.error('Error updating post:', err)
       throw err
     } finally {
       loading.value = false
@@ -244,6 +267,7 @@ export const usePostStore = defineStore('post', () => {
     loading,
     loadPosts,
     createPost,
+    updatePost,
     deletePost,
     reactToPost,
     likePost,

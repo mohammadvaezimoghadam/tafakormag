@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { SaveIcon, RefreshCwIcon, CheckCircle2Icon } from '@lucide/vue'
+import { SaveIcon, RefreshCwIcon, CheckCircle2Icon, ImageIcon, UploadIcon, Trash2Icon } from '@lucide/vue'
 
 const props = defineProps<{
   topic: {
@@ -18,15 +18,36 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'back'): void
-  (e: 'save', updatedTopic: { title: string; description: string; image: string }): void
+  (e: 'save', updatedTopic: { title: string; description: string; image: string | File }): void
 }>()
 
 const title = ref(props.topic.title)
 const description = ref(props.topic.description)
-const image = ref(props.topic.image || '')
+
+// File upload state refs
+const imageFile = ref<File | null>(null)
+const imagePreview = ref(props.topic.image || '')
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const isSaving = ref(false)
 const saveSuccess = ref(false)
+
+const triggerImageSelect = () => {
+  fileInputRef.value?.click()
+}
+
+const handleImageFileChange = (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  imageFile.value = file
+  imagePreview.value = URL.createObjectURL(file)
+}
+
+const clearImage = () => {
+  imageFile.value = null
+  imagePreview.value = ''
+  if (fileInputRef.value) fileInputRef.value.value = ''
+}
 
 const handleSave = () => {
   if (!title.value.trim()) return
@@ -39,7 +60,7 @@ const handleSave = () => {
     emit('save', {
       title: title.value.trim(),
       description: description.value.trim(),
-      image: image.value.trim()
+      image: imageFile.value || imagePreview.value
     })
     
     setTimeout(() => {
@@ -83,17 +104,46 @@ const handleSave = () => {
       </div>
 
       <div class="flex flex-col gap-2">
-        <Label for="topic-image" class="text-xs font-bold text-foreground/80">آدرس تصویر تاپیک (اختیاری)</Label>
-        <Input 
-          id="topic-image" 
-          v-model="image" 
-          placeholder="https://example.com/image.jpg" 
-          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 h-10.5 text-left"
-          dir="ltr"
-        />
-        <p class="text-[9px] text-muted-foreground leading-normal">
-          یک لینک تصویر یا آدرس تصویر از اینترنت وارد کنید تا به عنوان آیکون تاپیک استفاده شود.
-        </p>
+        <Label class="text-xs font-bold text-foreground/80">تصویر تاپیک (اختیاری)</Label>
+        
+        <!-- Image Preview and Upload Controls -->
+        <div class="flex items-center gap-4 p-3 rounded-2xl bg-white/5 dark:bg-black/20 border border-border/60">
+          <div class="size-16 rounded-xl border border-border/80 bg-background/50 overflow-hidden flex items-center justify-center shrink-0">
+            <img v-if="imagePreview" :src="imagePreview" class="w-full h-full object-cover" alt="Topic preview" />
+            <ImageIcon v-else class="size-6 text-muted-foreground/60" />
+          </div>
+          <div class="flex flex-col gap-1.5 flex-1">
+            <span class="text-[10px] text-muted-foreground leading-normal">برای تاپیک خود یک لوگو یا کاور انتخاب کنید.</span>
+            <div class="flex gap-2">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                class="h-8.5 rounded-lg text-[10px] font-bold cursor-pointer"
+                @click="triggerImageSelect"
+              >
+                <UploadIcon class="size-3.5" data-icon="inline-start" />
+                آپلود عکس
+              </Button>
+              <Button 
+                v-if="imagePreview"
+                variant="ghost" 
+                size="sm" 
+                class="h-8.5 rounded-lg text-[10px] font-bold text-destructive hover:bg-destructive/10 cursor-pointer"
+                @click="clearImage"
+              >
+                <Trash2Icon class="size-3.5" data-icon="inline-start" />
+                حذف
+              </Button>
+            </div>
+            <input 
+              type="file" 
+              ref="fileInputRef" 
+              @change="handleImageFileChange" 
+              accept="image/*" 
+              class="hidden" 
+            />
+          </div>
+        </div>
       </div>
 
       <div class="h-[1px] bg-border/40 my-1" />
