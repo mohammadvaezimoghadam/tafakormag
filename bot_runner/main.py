@@ -499,8 +499,8 @@ async def handle_any_message_or_post(update: Update, context: ContextTypes.DEFAU
 
     # برای بقیه دستورات و پیام‌های خصوصی نیاز به متن پیام داریم
     # اما اگر پیام از یک کانال/گروه فوروارد شده باشد، می‌توانیم آن را مستقیماً ثبت کنیم
-    if chat.type == "private" and message.forward_from_chat:
-        fwd_chat = message.forward_from_chat
+    fwd_chat = getattr(message, "forward_from_chat", None)
+    if chat.type == "private" and fwd_chat:
         if fwd_chat.type in ("channel", "group", "supergroup"):
             fwd_chat_id = str(fwd_chat.id)
             label = fwd_chat.title or fwd_chat.username or fwd_chat.first_name or fwd_chat_id
@@ -604,9 +604,9 @@ async def custom_bot_error_handler(update: object, context: ContextTypes.DEFAULT
     error = context.error
     logger.error(f"Error in custom bot: {error}")
     
-    from telegram.error import Conflict, Unauthorized
+    from telegram.error import Conflict, InvalidToken
     is_conflict = isinstance(error, Conflict) or "conflict" in str(error).lower()
-    is_unauthorized = isinstance(error, Unauthorized) or "unauthorized" in str(error).lower()
+    is_unauthorized = isinstance(error, InvalidToken) or "unauthorized" in str(error).lower() or "invalid token" in str(error).lower()
     
     if is_conflict or is_unauthorized:
         user_id = context.bot_data.get("user_id")
@@ -680,9 +680,9 @@ async def run_single_bot(bot_key: str, token: str, platform: str, user_id: int, 
             await app.updater.start_polling(allowed_updates=Update.ALL_TYPES, poll_interval=poll_interval)
             await asyncio.Event().wait()
     except Exception as e:
-        from telegram.error import Conflict, Unauthorized
+        from telegram.error import Conflict, InvalidToken
         is_conflict = isinstance(e, Conflict) or "conflict" in str(e).lower()
-        is_unauthorized = isinstance(e, Unauthorized) or "unauthorized" in str(e).lower()
+        is_unauthorized = isinstance(e, InvalidToken) or "unauthorized" in str(e).lower() or "invalid token" in str(e).lower()
         if is_conflict or is_unauthorized:
             reason = "conflict" if is_conflict else "unauthorized"
             logger.warning(f"Startup disconnect condition ({reason}) detected for bot {bot_key}: {e}")
