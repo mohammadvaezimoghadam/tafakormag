@@ -9,6 +9,16 @@ from .serializers import TopicSerializer, PostSerializer, PostCommentSerializer
 from .services import create_bot_tasks
 
 
+def update_topic_description(topic):
+    latest_post = topic.posts.all().order_by('-created_at').first()
+    if latest_post:
+        snippet = latest_post.content[:150] + "..." if len(latest_post.content) > 150 else latest_post.content
+        topic.description = snippet
+    else:
+        topic.description = ""
+    topic.save()
+
+
 class TopicViewSet(viewsets.ModelViewSet):
     serializer_class = TopicSerializer
 
@@ -61,11 +71,8 @@ class PostViewSet(viewsets.ModelViewSet):
         # همگام‌سازی و ساخت تسک‌های ربات
         create_bot_tasks(post, old_instance=None)
         
-        # به‌روزرسانی دیسکریپشن تاپیک به عنوان خلاصه آخرین پست
-        topic = post.topic
-        snippet = post.content[:150] + "..." if len(post.content) > 150 else post.content
-        topic.description = snippet
-        topic.save()
+        # به‌روزرسانی خلاصه تاپیک
+        update_topic_description(post.topic)
 
     def perform_update(self, serializer):
         old_post = self.get_object()
@@ -75,18 +82,19 @@ class PostViewSet(viewsets.ModelViewSet):
         post = serializer.save()
         create_bot_tasks(post, old_instance=old_post)
 
-        # به‌روزرسانی خلاصه تاپیک در صورت نیاز
-        topic = post.topic
-        snippet = post.content[:150] + "..." if len(post.content) > 150 else post.content
-        topic.description = snippet
-        topic.save()
+        # به‌روزرسانی خلاصه تاپیک
+        update_topic_description(post.topic)
 
     def perform_destroy(self, instance):
         if instance.author != self.request.user and not self.request.user.is_superuser:
             raise PermissionDenied("شما اجازه حذف این پست را ندارید.")
         
+        topic = instance.topic
         create_bot_tasks(instance, is_delete=True)
         instance.delete()
+        
+        # به‌روزرسانی خلاصه تاپیک پس از حذف
+        update_topic_description(topic)
 
     @action(methods=['get'], detail=False, url_path='search')
     def search(self, request):

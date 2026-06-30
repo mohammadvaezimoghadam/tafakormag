@@ -381,6 +381,7 @@ const cancelLongPress = () => {
 }
 
 const handleMouseDown = (e: MouseEvent) => {
+  if (isEditing.value) return // Disable touch/press handling during edit mode
   if (e.button !== 0) return // Only left click
   if (isInteractiveElement(e.target as HTMLElement)) return
   startLongPress(e.clientX, e.clientY)
@@ -395,6 +396,7 @@ const handleMouseLeave = () => {
 }
 
 const handleTouchStart = (e: TouchEvent) => {
+  if (isEditing.value) return // Disable touch/press handling during edit mode
   if (isInteractiveElement(e.target as HTMLElement)) return
   const touch = e.touches[0]
   if (touch) {
@@ -663,6 +665,7 @@ const formatTime = (timeInSeconds: number) => {
           ref="textareaRef"
           v-model="editedContent"
           class="w-full min-h-[90px] p-3 text-xs font-semibold rounded-2xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/20 text-foreground resize-none overflow-y-hidden select-text"
+          style="-webkit-user-select: text !important; user-select: text !important;"
           placeholder="یادداشت خود را ویرایش کنید..."
           @input="adjustTextareaHeight"
           @contextmenu.prevent="handleEditTextareaContextMenu"
