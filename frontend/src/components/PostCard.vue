@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onBeforeUnmount, computed } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount, computed, nextTick } from 'vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,9 @@ import {
   VideoIcon,
   MusicIcon,
   ImageIcon,
-  UserIcon
+  UserIcon,
+  CopyIcon,
+  ClipboardIcon
 } from '@lucide/vue'
 
 // Interfaces
@@ -118,8 +120,187 @@ const isContextMenuOpen = ref(false)
 
 const isEditing = ref(false)
 const editedContent = ref(props.content || '')
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+
+const adjustTextareaHeight = () => {
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto'
+    textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`
+    console.log('[PostCard] Height adjusted. scrollHeight:', textareaRef.value.scrollHeight, 'new height:', textareaRef.value.style.height)
+  } else {
+    console.log('[PostCard] adjustTextareaHeight called but textareaRef is null!')
+  }
+}
+
+// Automatically adjust height when editing starts and textarea is rendered
+watch(isEditing, (newVal) => {
+  console.log('[PostCard] isEditing watcher:', newVal)
+  if (newVal) {
+    nextTick(() => {
+      adjustTextareaHeight()
+      setTimeout(adjustTextareaHeight, 30)
+      setTimeout(adjustTextareaHeight, 100)
+      setTimeout(adjustTextareaHeight, 250)
+    })
+  }
+})
+
+// Automatically adjust height whenever content changes (typing, pasting, initialization)
+watch(editedContent, () => {
+  console.log('[PostCard] editedContent watcher fired. New content length:', editedContent.value.length)
+  if (isEditing.value) {
+    nextTick(() => {
+      adjustTextareaHeight()
+    })
+  }
+})
+
+// Custom dropdown menu for copy/paste inside editing textarea
+const isEditTextareaContextMenuOpen = ref(false)
+const editTextareaDropdownTriggerRef = ref<HTMLElement | null>(null)
+
+const editTextareaMenuStyle = computed(() => {
+  const menuWidth = 224
+  const menuHeight = 80 // 2 menu items
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  if (editTextareaDropdownTriggerRef.value) {
+    const rect = editTextareaDropdownTriggerRef.value.getBoundingClientRect()
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    let top = 0
+    if (spaceBelow > menuHeight + 20) {
+      top = rect.bottom + 8
+    } else if (spaceAbove > menuHeight + 20) {
+      top = rect.top - menuHeight - 8
+    } else {
+      top = Math.max(16, rect.top + (rect.height - menuHeight) / 2)
+    }
+
+    let left = rect.left + (rect.width - menuWidth) / 2
+    left = Math.max(16, Math.min(viewportWidth - menuWidth - 16, left))
+
+    console.log('[PostCard] Dropdown positioned by button:', { top, left })
+    return {
+      top: `${top}px`,
+      left: `${left}px`,
+      position: 'fixed' as const
+    }
+  }
+
+  const x = touchX.value
+  const y = touchY.value
+
+  let left = x - menuWidth / 2
+  let top = y + 8
+
+  if (y + menuHeight + 24 > viewportHeight) {
+    top = y - menuHeight - 8
+  }
+
+  left = Math.max(16, Math.min(viewportWidth - menuWidth - 16, left))
+  top = Math.max(16, Math.min(viewportHeight - menuHeight - 16, top))
+
+  console.log('[PostCard] Dropdown positioned by touch/mouse coordinates:', { top, left, x, y })
+  return {
+    top: `${top}px`,
+    left: `${left}px`,
+    position: 'fixed' as const
+  }
+})
+
+const handleEditTextareaContextMenu = (e: MouseEvent) => {
+  console.log('[PostCard] handleEditTextareaContextMenu fired at:', e.clientX, e.clientY)
+  e.preventDefault()
+  touchX.value = e.clientX
+  touchY.value = e.clientY
+  editTextareaDropdownTriggerRef.value = null
+  isEditTextareaContextMenuOpen.value = true
+}
+
+const handleEditTextareaDropdownToggle = (e: MouseEvent) => {
+  e.stopPropagation()
+  const target = e.currentTarget as HTMLElement
+  console.log('[PostCard] handleEditTextareaDropdownToggle fired. Target:', target)
+  editTextareaDropdownTriggerRef.value = target
+  touchX.value = e.clientX
+  touchY.value = e.clientY
+  isEditTextareaContextMenuOpen.value = !isEditTextareaContextMenuOpen.value
+  console.log('[PostCard] isEditTextareaContextMenuOpen state:', isEditTextareaContextMenuOpen.value)
+}
+
+const handleEditTextareaCopy = async () => {
+  console.log('[PostCard] Copy requested. Content:', editedContent.value)
+  if (editedContent.value) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(editedContent.value)
+        console.log('[PostCard] Copied using clipboard API.')
+      } else {
+        // Fallback
+        const textArea = document.createElement("textarea")
+        textArea.value = editedContent.value
+        textArea.style.position = "fixed"
+        textArea.style.top = "0"
+        textArea.style.left = "0"
+        textArea.style.width = "2em"
+        textArea.style.height = "2em"
+        textArea.style.padding = "0"
+        textArea.style.border = "none"
+        textArea.style.outline = "none"
+        textArea.style.boxShadow = "none"
+        textArea.style.background = "transparent"
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        console.log('[PostCard] Copied using fallback execCommand.')
+      }
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+  isEditTextareaContextMenuOpen.value = false
+}
+
+const handleEditTextareaPaste = async () => {
+  console.log('[PostCard] Paste requested.')
+  try {
+    if (navigator.clipboard) {
+      const text = await navigator.clipboard.readText()
+      console.log('[PostCard] Paste content read from clipboard:', text)
+      if (text) {
+        if (textareaRef.value) {
+          const start = textareaRef.value.selectionStart
+          const end = textareaRef.value.selectionEnd
+          const val = editedContent.value
+          editedContent.value = val.substring(0, start) + text + val.substring(end)
+          
+          nextTick(() => {
+            if (textareaRef.value) {
+              textareaRef.value.focus()
+              textareaRef.value.selectionStart = textareaRef.value.selectionEnd = start + text.length
+              adjustTextareaHeight()
+            }
+          })
+        } else {
+          editedContent.value += text
+        }
+      }
+    } else {
+      console.warn('[PostCard] navigator.clipboard is undefined!')
+    }
+  } catch (err) {
+    console.error('Paste failed:', err)
+  }
+  isEditTextareaContextMenuOpen.value = false
+}
 
 const handleEditStart = () => {
+  console.log('[PostCard] handleEditStart. Content:', props.content)
   editedContent.value = props.content || ''
   isEditing.value = true
 }
@@ -240,6 +421,7 @@ const handleTouchMove = (e: TouchEvent) => {
 }
 
 const handleContextMenu = (e: MouseEvent) => {
+  if (isEditing.value) return
   if (isInteractiveElement(e.target as HTMLElement)) return
   e.preventDefault()
   touchX.value = e.clientX
@@ -435,7 +617,7 @@ const formatTime = (timeInSeconds: number) => {
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
     @touchmove="handleTouchMove"
-    @contextmenu.prevent="handleContextMenu"
+    @contextmenu="handleContextMenu"
   >
     <!-- Card Top Header -->
     <div class="px-5 py-4 flex items-center justify-between">
@@ -478,26 +660,42 @@ const formatTime = (timeInSeconds: number) => {
       <!-- Post Text Content / Edit Box -->
       <div v-if="isEditing" class="flex flex-col gap-2 w-full text-right" dir="rtl">
         <textarea
+          ref="textareaRef"
           v-model="editedContent"
-          class="w-full min-h-[90px] p-3 text-xs font-semibold rounded-2xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/20 text-foreground resize-none"
+          class="w-full min-h-[90px] p-3 text-xs font-semibold rounded-2xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/20 text-foreground resize-none overflow-y-hidden select-text"
           placeholder="یادداشت خود را ویرایش کنید..."
+          @input="adjustTextareaHeight"
+          @contextmenu.prevent="handleEditTextareaContextMenu"
         />
-        <div class="flex items-center justify-end gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
-            @click="handleEditCancel"
-          >
-            انصراف
-          </Button>
-          <Button 
-            size="sm" 
-            class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
-            @click="handleEditSave"
-          >
-            ذخیره تغییرات
-          </Button>
+        <div class="flex items-center justify-between w-full">
+          <div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              class="h-8 px-2 rounded-xl text-[10px] font-bold cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1"
+              @click="handleEditTextareaDropdownToggle"
+            >
+              <MoreVerticalIcon class="size-3.5" />
+              <span>عملیات متن</span>
+            </Button>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
+              @click="handleEditCancel"
+            >
+              انصراف
+            </Button>
+            <Button 
+              size="sm" 
+              class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
+              @click="handleEditSave"
+            >
+              ذخیره تغییرات
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -767,6 +965,47 @@ const formatTime = (timeInSeconds: number) => {
       @copy="emit('copy', id)"
     />
   </Teleport>
+
+  <!-- Teleported Edit Textarea Context Menu -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div 
+        v-if="isEditTextareaContextMenuOpen" 
+        class="fixed inset-0 z-50 bg-black/35 dark:bg-black/55 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
+        @click="isEditTextareaContextMenuOpen = false"
+        @contextmenu.prevent="isEditTextareaContextMenuOpen = false"
+      >
+        <div 
+          class="flex flex-col gap-2 pointer-events-auto select-none scale-up text-right w-56 animate-menu-pop"
+          :style="editTextareaMenuStyle"
+          @click.stop
+        >
+          <div 
+            class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-full"
+            dir="rtl"
+          >
+            <!-- Copy Text -->
+            <button 
+              @click="handleEditTextareaCopy" 
+              class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            >
+              <span>کپی کردن متن</span>
+              <CopyIcon class="size-3.5 text-muted-foreground" />
+            </button>
+            
+            <!-- Paste Text -->
+            <button 
+              @click="handleEditTextareaPaste" 
+              class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            >
+              <span>پیست کردن متن</span>
+              <ClipboardIcon class="size-3.5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -810,5 +1049,31 @@ input[type="range"]::-webkit-slider-thumb {
   height: 12px;
   width: 12px;
   border-radius: 50%;
+}
+
+/* Animations for Custom Context Menu */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes menuPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-menu-pop {
+  animation: menuPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 </style>

@@ -108,7 +108,7 @@ const handleLoginStateChange = (state: string) => {
       <Dialog :open="userStore.isLoginModalOpen" @update:open="(val) => userStore.isLoginModalOpen = val">
         <DialogContent 
           :show-close-button="true" 
-          class="max-w-[380px] p-0 overflow-hidden flex flex-col text-right rounded-3xl" 
+          class="max-w-[380px] p-0 overflow-hidden flex flex-col text-right rounded-3xl transition-all duration-300 focus-within:max-sm:top-[30%] focus-within:max-sm:-translate-y-[30%]" 
           dir="rtl"
           @pointer-down-outside="(e) => e.preventDefault()"
           @escape-key-down="(e) => e.preventDefault()"
