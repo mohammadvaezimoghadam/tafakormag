@@ -981,7 +981,7 @@ const formatTime = (timeInSeconds: number) => {
     <Transition name="fade">
       <div 
         v-if="isEditTextareaContextMenuOpen" 
-        class="fixed inset-0 z-50 bg-black/35 dark:bg-black/55 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
+        class="fixed inset-0 z-50 bg-transparent flex items-center justify-center pointer-events-auto"
         @click="isEditTextareaContextMenuOpen = false"
         @contextmenu.prevent="isEditTextareaContextMenuOpen = false"
       >
