@@ -388,10 +388,12 @@ const handleMouseDown = (e: MouseEvent) => {
 }
 
 const handleMouseUp = () => {
+  if (isEditing.value) return
   cancelLongPress()
 }
 
 const handleMouseLeave = () => {
+  if (isEditing.value) return
   cancelLongPress()
 }
 
@@ -405,6 +407,7 @@ const handleTouchStart = (e: TouchEvent) => {
 }
 
 const handleTouchEnd = (e: TouchEvent) => {
+  if (isEditing.value) return
   cancelLongPress()
   if (isLongPressTriggered) {
     e.preventDefault()
@@ -412,6 +415,7 @@ const handleTouchEnd = (e: TouchEvent) => {
 }
 
 const handleTouchMove = (e: TouchEvent) => {
+  if (isEditing.value) return
   const touch = e.touches[0]
   if (touch) {
     const diffX = Math.abs(touch.clientX - startX)
@@ -609,7 +613,8 @@ const formatTime = (timeInSeconds: number) => {
   <div 
     ref="cardRef"
     :class="[
-      'w-full bg-background/12 dark:bg-card/10 backdrop-blur-md border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-right select-none',
+      'w-full bg-background/12 dark:bg-card/10 backdrop-blur-md border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-right',
+      isEditing ? 'select-text' : 'select-none',
       isPressing ? 'scale-[0.96] shadow-inner bg-background/5 dark:bg-card/5 border-border/30 brightness-95' : 'scale-100'
     ]"
     dir="rtl"
@@ -669,6 +674,8 @@ const formatTime = (timeInSeconds: number) => {
           placeholder="یادداشت خود را ویرایش کنید..."
           @input="adjustTextareaHeight"
           @contextmenu.prevent="handleEditTextareaContextMenu"
+          @touchstart.stop="textareaRef?.focus()"
+          @click.stop="textareaRef?.focus()"
         />
         <div class="flex items-center justify-between w-full">
           <div>
