@@ -5,7 +5,13 @@ import App from './App.vue'
 import router from './router'
 
 const app = createApp(App)
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
 app.use(router)
+
+import { useLanguageStore } from '@/stores/languageStore'
+const languageStore = useLanguageStore()
+languageStore.init()
+
 app.mount('#app')
 

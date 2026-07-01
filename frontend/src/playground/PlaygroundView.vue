@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
+import { useLanguageStore } from '@/stores/languageStore'
+const languageStore = useLanguageStore()
 import UserProfileCard from '@/components/UserProfileCard.vue'
 import LoginCard from '@/components/LoginCard.vue'
 import PlatformHeader from '@/components/PlatformHeader.vue'
@@ -15,6 +17,14 @@ import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { 
@@ -25,6 +35,7 @@ import {
   PlayIcon,
   RefreshCwIcon,
   InfoIcon,
+  LanguagesIcon,
   TerminalIcon,
   CheckCircle2Icon,
   UserIcon,
@@ -42,7 +53,9 @@ import {
   PencilIcon,
   MessageCircleIcon,
   ChevronLeftIcon,
-  PlusIcon
+  PlusIcon,
+  CopyIcon,
+  CheckIcon
 } from '@lucide/vue'
 
 // Simulator configs
@@ -167,6 +180,43 @@ const availableStates = computed(() => {
   }
 })
 
+// Compute source file name for the current component
+const currentComponentFile = computed(() => {
+  switch (currentComponent.value) {
+    case 'profile': return 'UserProfileCard.vue'
+    case 'login': return 'LoginCard.vue'
+    case 'header': return 'PlatformHeader.vue'
+    case 'nav': return 'PlatformNavigation.vue'
+    case 'topic': return 'TopicCard.vue'
+    case 'search': return 'PlatformHeader.vue (Search Mode)'
+    case 'profile-option': return 'ProfileOptionCard.vue'
+    case 'profile-card-header': return 'ProfileCard.vue'
+    case 'post': return 'PostCard.vue'
+    case 'create-topic-modal': return 'CreateTopicModal.vue'
+    case 'bot-connection': return 'BotConnectionCard.vue'
+    case 'topic-input': return 'TopicMessageInput.vue'
+    case 'topic-edit': return 'TopicEditView.vue'
+    case 'topic-connections': return 'TopicConnectionsView.vue'
+    default: return ''
+  }
+})
+
+const isCopied = ref(false)
+
+const copyComponentFile = async () => {
+  if (!currentComponentFile.value) return
+  try {
+    await navigator.clipboard.writeText(currentComponentFile.value.split(' ')[0] || '') // Strip extra details if any
+    isCopied.value = true
+    setTimeout(() => {
+      isCopied.value = false
+    }, 1500)
+    logEvent('Playground: Copied component filename', { filename: currentComponentFile.value })
+  } catch (err) {
+    console.error('Failed to copy text:', err)
+  }
+}
+
 const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections') => {
   currentComponent.value = comp
   activeState.value = 'idle'
@@ -185,6 +235,12 @@ const initialUser: UserProfile = {
   name: 'شایان مهدوی',
   email: 'shayan@example.com',
   role: 'طراح رابط کاربری (UI/UX)',
+  status: 'active'
+}
+const enInitialUser: UserProfile = {
+  name: 'Shayan Mahdavi',
+  email: 'shayan@example.com',
+  role: 'UI/UX Designer',
   status: 'active'
 }
 const mockUser = reactive<UserProfile>({ ...initialUser })
@@ -231,10 +287,6 @@ const resetData = () => {
   simulatorSearchQuery.value = ''
   simulatorSearchExpanded.value = false
   simulatorSettingsBadge.value = ''
-  simulatorConnectionsBadge.value = '۳ فعال'
-  simulatorAiBadge.value = 'جدید'
-  simulatorProfileCardName.value = 'شایان مهدوی'
-  simulatorProfileCardPhone.value = '۰۹۱۲۳۴۵۶۷۸۹'
   simulatorProfileCardStatus.value = 'success'
   mockTopics.value = [
     { id: 1, title: 'گروه توسعه تفکر', description: 'شایان: طرح هدر پلتفرم را اصلاح کردم و انیمیشن بک به درستی کار می‌کند.', unreadCount: 5, time: '۱۲:۳۰', labels: ['فناوری', 'توسعه'], pinned: true },
@@ -267,11 +319,19 @@ const handleLoginStateChange = (newState: string) => {
 const simulatorIsInnerPage = ref(false)
 const simulatorInnerTitle = ref('پشتیبانی تفکر')
 
-const mockChats = [
+const faMockChats = [
   { id: 1, name: 'پشتیبانی تفکر', message: 'سلام! انیمیشن تفکیک دکمه...', time: '۱۲:۳۰', avatar: 'پ' },
   { id: 2, name: 'کانال اطلاعیه‌ها', message: 'نسخه جدید دشبورد منتشر شد.', time: '۱۰:۱۵', avatar: 'ا' },
   { id: 3, name: 'امیرحسین رضایی', message: 'طرح کارت لاگین رو بررسی کردی؟', time: 'دیروز', avatar: 'ا' }
 ]
+
+const enMockChats = [
+  { id: 1, name: 'Tafakor Support', message: 'Hello! The separation animation of...', time: '12:30', avatar: 'S' },
+  { id: 2, name: 'Announcements Channel', message: 'The new dashboard version is live.', time: '10:15', avatar: 'A' },
+  { id: 3, name: 'Amirhossein Rezaei', message: 'Did you check the login card layout?', time: 'Yesterday', avatar: 'A' }
+]
+
+const mockChats = reactive([...faMockChats])
 
 const enterChat = (chat: typeof mockChats[0]) => {
   simulatorInnerTitle.value = chat.name
@@ -348,11 +408,19 @@ const handleNavChange = (tab: 'home' | 'profile') => {
 }
 
 // Topic Card simulation state
-const mockTopics = ref([
+const faMockTopics = [
   { id: 1, title: 'گروه توسعه تفکر', description: 'شایان: طرح هدر پلتفرم را اصلاح کردم و انیمیشن بک به درستی کار می‌کند.', unreadCount: 5, time: '۱۲:۳۰', labels: ['فناوری', 'توسعه'], pinned: true },
   { id: 2, title: 'کانال عمومی اخبار پلتفرم', description: 'اطلاعیه: نسخه بتای آزمایشگاه تست شبیه‌سازها هم‌اکنون به صورت آزمایشی در دسترس قرار گرفت.', unreadCount: 12, time: '۱۰:۱۵', labels: ['اخبار', 'تفکر'], pinned: false },
   { id: 3, title: 'تیم طراحی رابط کاربری', description: 'امیر: لطفا آیکون‌ها و رنگ‌های شیشه‌ای را مجدداً هماهنگ کنید.', unreadCount: 0, time: 'دیروز', labels: ['طراحی', 'UI/UX'], pinned: false }
-])
+]
+
+const enMockTopics = [
+  { id: 1, title: 'Tafakor Dev Group', description: 'Shayan: I revised the header layout and the back animation works perfectly.', unreadCount: 5, time: '12:30', labels: ['Tech', 'Dev'], pinned: true },
+  { id: 2, title: 'Platform News Channel', description: 'Announcement: The beta version of simulator testing lab is now available for testing.', unreadCount: 12, time: '10:15', labels: ['News', 'Platform'], pinned: false },
+  { id: 3, title: 'UI/UX Design Team', description: 'Amir: Please coordinate the icons and glass colors once again.', unreadCount: 0, time: 'Yesterday', labels: ['Design', 'UI/UX'], pinned: false }
+]
+
+const mockTopics = ref([...faMockTopics])
 
 const handleTopicClick = (topicId: number) => {
   const topic = mockTopics.value.find(t => t.id === topicId)
@@ -396,16 +464,32 @@ const filteredTopics = computed(() => {
 
 // Profile menu options simulation variables
 const simulatorSettingsBadge = ref('')
-const simulatorConnectionsBadge = ref('۳ فعال')
-const simulatorAiBadge = ref('جدید')
+const simulatorConnectionsBadge = computed(() => languageStore.t('۳ فعال', '3 active'))
+const simulatorAiBadge = computed(() => languageStore.t('جدید', 'New'))
+const showLanguageDialog = ref(false)
+const selectedLang = ref<'fa' | 'en'>(languageStore.currentLanguage)
+
+watch(showLanguageDialog, (isOpen) => {
+  if (isOpen) {
+    selectedLang.value = languageStore.currentLanguage
+  }
+})
+
+const handleConfirmLanguage = () => {
+  languageStore.setLanguage(selectedLang.value)
+  showLanguageDialog.value = false
+}
 
 const handleProfileOptionClick = (option: string) => {
   logEvent('Profile Option Clicked', { option })
+  if (option === 'Language') {
+    showLanguageDialog.value = true
+  }
 }
 
 // ProfileCard simulation variables
-const simulatorProfileCardName = ref('شایان مهدوی')
-const simulatorProfileCardPhone = ref('۰۹۱۲۳۴۵۶۷۸۹')
+const simulatorProfileCardName = computed(() => languageStore.t('شایان مهدوی', 'Shayan Mahdavi'))
+const simulatorProfileCardPhone = computed(() => languageStore.t('۰۹۱۲۳۴۵۶۷۸۹', '09123456789'))
 const simulatorProfileCardStatus = ref<'success' | 'warning' | 'info' | 'muted'>('success')
 
 const handleProfileCardEdit = () => {
@@ -440,7 +524,7 @@ interface Post {
   reactions?: PostReaction[]
 }
 
-const initialPosts: Post[] = [
+const faInitialPosts: Post[] = [
   {
     id: 1,
     author: {
@@ -525,7 +609,111 @@ const initialPosts: Post[] = [
   }
 ]
 
-const mockPosts = ref([...initialPosts])
+const enInitialPosts: Post[] = [
+  {
+    id: 1,
+    author: {
+      name: 'Sara Ahmadi',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      role: 'Tafakor Product Manager'
+    },
+    type: 'text' as const,
+    content: 'Hello team! I have prepared the initial layout for the posts and glassmorphism components. Please write your feedback about the new structure in the comments section.',
+    timestamp: '14:32 - June 17, 2026',
+    likesCount: 12,
+    liked: true,
+    comments: [
+      { id: 101, authorName: 'Babak Rezaei', text: 'Looks very elegant and minimal, great job!', timestamp: '14:35' },
+      { id: 102, authorName: 'Nasim Moradi', text: 'Does the blur effect work well on moving backgrounds?', timestamp: '14:40' }
+    ],
+    reactions: [
+      { emoji: '👍', count: 4, reacted: true },
+      { emoji: '❤️', count: 2, reacted: false }
+    ]
+  },
+  {
+    id: 2,
+    author: {
+      name: 'Saman Fotouhi',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+      role: 'Lead UI/UX Designer'
+    },
+    type: 'image' as const,
+    content: 'The new background image I designed for the platform header. What do you think? The transparency of the cards on this image looks beautiful.',
+    mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+    timestamp: '12:15 - June 17, 2026',
+    likesCount: 28,
+    liked: false,
+    comments: [
+      { id: 201, authorName: 'Sara Ahmadi', text: 'The colors are amazing, it matches dark mode very well.', timestamp: '12:20' }
+    ],
+    reactions: [
+      { emoji: '🔥', count: 8, reacted: true },
+      { emoji: '💯', count: 3, reacted: false }
+    ]
+  },
+  {
+    id: 3,
+    author: {
+      name: 'Ali Karimi',
+      avatarUrl: '',
+      role: 'Frontend Developer'
+    },
+    type: 'video' as const,
+    content: 'Video testing the behavior of back button transition animations in mobile view. Be sure to check it.',
+    mediaUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    posterUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&auto=format&fit=crop&q=80',
+    timestamp: '10:05 - June 17, 2026',
+    likesCount: 9,
+    liked: false,
+    comments: [],
+    reactions: [
+      { emoji: '👀', count: 3, reacted: false }
+    ]
+  },
+  {
+    id: 4,
+    author: {
+      name: 'Pejman Moradi',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+      role: 'UX Designer'
+    },
+    type: 'audio' as const,
+    content: 'Voice note detailing the one-way messages scenario in topics and how comments are implemented on each post card.',
+    mediaUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    duration: '06:12',
+    timestamp: '09:30 - June 17, 2026',
+    likesCount: 15,
+    liked: true,
+    comments: [
+      { id: 401, authorName: 'Ali Karimi', text: 'The audio file was very clear. Thanks.', timestamp: '09:45' }
+    ],
+    reactions: [
+      { emoji: '👏', count: 5, reacted: false }
+    ]
+  }
+]
+
+const mockPosts = ref<Post[]>([])
+
+// Language and mock data watcher
+watch(() => languageStore.currentLanguage, (newLang) => {
+  if (newLang === 'en') {
+    Object.assign(mockUser, enInitialUser)
+    mockChats.splice(0, mockChats.length, ...enMockChats)
+    mockTopics.value = JSON.parse(JSON.stringify(enMockTopics))
+    mockPosts.value = JSON.parse(JSON.stringify(enInitialPosts))
+    simulatorInnerTitle.value = 'Tafakor Support'
+    simulatorInputText.value = 'This is a long test message for testing topic message input. You can toggle the modal by clicking the expand button at the top right.'
+  } else {
+    Object.assign(mockUser, initialUser)
+    mockChats.splice(0, mockChats.length, ...faMockChats)
+    mockTopics.value = JSON.parse(JSON.stringify(faMockTopics))
+    mockPosts.value = JSON.parse(JSON.stringify(faInitialPosts))
+    simulatorInnerTitle.value = 'پشتیبانی تفکر'
+    simulatorInputText.value = 'این یک متن تستی طولانی و چند سطری برای تست و بررسی کامپوننت ورودی پیام تاپیک است.\nشما می‌توانید با استفاده از دکمه بزرگ‌نمایی که در بالا سمت راست ظاهر می‌شود، این فیلد را به یک مودال تمام‌صفحه تبدیل کنید.\nاین مودال تا ۸۰ درصد صفحه را می‌گیرد تا بتوانید متن‌های طولانی را به راحتی ویرایش و مدیریت نمایید.\nاین متن دارای سطرها و کاراکترهای زیادی است و دکمه اکسپند را فعال می‌کند.'
+  }
+}, { immediate: true })
 
 const handlePostLike = (postId: number | string, liked: boolean) => {
   const post = mockPosts.value.find(p => p.id === postId)
@@ -573,6 +761,21 @@ const handlePostDelete = (postId: number | string) => {
   if (index !== -1) {
     mockPosts.value.splice(index, 1)
     logEvent('Post: Deleted', { postId })
+
+    // Update topic description with content of new first post, or fallback if empty
+    if (mockTopics.value.length > 0) {
+      const topicIndex = mockTopics.value.findIndex(t => t.id === 1)
+      if (topicIndex !== -1 && mockTopics.value[topicIndex]) {
+        if (mockPosts.value.length > 0 && mockPosts.value[0]) {
+          mockTopics.value[topicIndex]!.description = mockPosts.value[0]!.content || ''
+        } else {
+          mockTopics.value[topicIndex]!.description = languageStore.t(
+            'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
+            'Help request regarding the platform design system'
+          )
+        }
+      }
+    }
   }
 }
 
@@ -602,16 +805,30 @@ const simulateNewPost = () => {
   }
   mockPosts.value.unshift(newPost)
   logEvent('Post: Simulated New Post Received', newPost)
+
+  // Update topic description with content of new post
+  if (mockTopics.value.length > 0) {
+    const topicIndex = mockTopics.value.findIndex(t => t.id === 1)
+    if (topicIndex !== -1 && mockTopics.value[topicIndex]) {
+      mockTopics.value[topicIndex]!.description = newPost.content
+    }
+  }
 }
 
 const resetPosts = () => {
-  mockPosts.value = JSON.parse(JSON.stringify(initialPosts))
+  mockPosts.value = JSON.parse(
+    JSON.stringify(languageStore.isFa ? faInitialPosts : enInitialPosts)
+  )
   logEvent('Post: Feed Reset to Default', {})
 }
 </script>
 
 <template>
-  <div class="w-full flex justify-center text-right" dir="rtl">
+  <div 
+    class="w-full flex justify-center animate-in fade-in duration-300" 
+    :class="[languageStore.isFa ? 'text-right' : 'text-left']"
+    :dir="languageStore.dir"
+  >
     <div class="w-full max-w-6xl py-10 px-6 flex flex-col gap-10">
       
       <!-- Header -->
@@ -819,7 +1036,7 @@ const resetPosts = () => {
               >
                 <span class="flex items-center gap-2">
                   <MessageCircleIcon class="size-3.5 text-primary" />
-                  ورودی پیام تایپک (جدید)
+                  ورودی پیام تاپیک (جدید)
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'topic-input'" class="size-3.5 text-primary" />
               </button>
@@ -855,602 +1072,577 @@ const resetPosts = () => {
               </button>
             </div>
           </div>
-
-          <!-- Viewport width controls -->
-          <div class="flex flex-col gap-3">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">اندازه پنجره نمایشگر:</Label>
-            <div class="grid grid-cols-3 gap-1.5 bg-muted/60 p-1 rounded-lg border border-border/40">
-              <button 
-                @click="viewportWidth = '375px'"
-                :class="[
-                  'flex flex-col items-center justify-center py-2 rounded-md text-[10px] font-medium transition-colors outline-none cursor-pointer',
-                  viewportWidth === '375px' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
-                ]"
-              >
-                <SmartphoneIcon class="size-4 mb-1" />
-                موبایل
-              </button>
-              <button 
-                @click="viewportWidth = '768px'"
-                :class="[
-                  'flex flex-col items-center justify-center py-2 rounded-md text-[10px] font-medium transition-colors outline-none cursor-pointer',
-                  viewportWidth === '768px' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
-                ]"
-              >
-                <TabletIcon class="size-4 mb-1" />
-                تبلت
-              </button>
-              <button 
-                @click="viewportWidth = '100%'"
-                :class="[
-                  'flex flex-col items-center justify-center py-2 rounded-md text-[10px] font-medium transition-colors outline-none cursor-pointer',
-                  viewportWidth === '100%' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
-                ]"
-              >
-                <LaptopIcon class="size-4 mb-1" />
-                دسکتاپ
-              </button>
-            </div>
-          </div>
-
-          <!-- Viewport background controls for glassmorphism testing -->
-          <div class="flex flex-col gap-2.5">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">پس‌زمینه شبیه‌ساز (تست بلور):</Label>
-            <div class="grid grid-cols-2 gap-1.5">
-              <button 
-                @click="sandboxBg = 'default'; logEvent('Sandbox Background: Default', {})"
-                :class="[
-                  'px-2 py-1.5 rounded-lg text-[9.5px] font-semibold border text-center transition-all cursor-pointer outline-none',
-                  sandboxBg === 'default'
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold shadow-xs'
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                ساده (پیش‌فرض)
-              </button>
-              <button 
-                @click="sandboxBg = 'gradient'; logEvent('Sandbox Background: Colorful Gradient', {})"
-                :class="[
-                  'px-2 py-1.5 rounded-lg text-[9.5px] font-semibold border text-center transition-all cursor-pointer outline-none',
-                  sandboxBg === 'gradient'
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold shadow-xs'
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                گرادینت رنگی
-              </button>
-              <button 
-                @click="sandboxBg = 'grid'; logEvent('Sandbox Background: Figma Grid', {})"
-                :class="[
-                  'px-2 py-1.5 rounded-lg text-[9.5px] font-semibold border text-center transition-all cursor-pointer outline-none',
-                  sandboxBg === 'grid'
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold shadow-xs'
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                پترن شبکه‌ای (Grid)
-              </button>
-              <button 
-                @click="sandboxBg = 'image'; logEvent('Sandbox Background: Abstract Canvas', {})"
-                :class="[
-                  'px-2 py-1.5 rounded-lg text-[9.5px] font-semibold border text-center transition-all cursor-pointer outline-none',
-                  sandboxBg === 'image'
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold shadow-xs'
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                تصویر منظره
-              </button>
-            </div>
-          </div>
-
-          <!-- Component state controls -->
-          <div class="flex flex-col gap-2.5">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">وضعیت کامپوننت:</Label>
-            <div class="flex flex-col gap-1.5">
-              <button 
-                v-for="state in availableStates"
-                :key="state"
-                @click="activeState = state"
-                :class="[
-                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
-                  activeState === state 
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                <span>
-                  {{ 
-                    state === 'idle' ? 'حالت فعال (Idle)' :
-                    state === 'loading' ? 'بارگذاری (Loading)' :
-                    state === 'error' ? 'نمایش خطا (Error)' : 
-                    state === 'empty' ? 'کامپوننت خالی (Empty)' : 'ورود موفق (Success)' 
-                  }}
-                </span>
-                <span class="size-2 rounded-full" 
-                  :class="[
-                    state === 'idle' ? 'bg-green-500' :
-                    state === 'loading' ? 'bg-amber-500 animate-pulse' :
-                    state === 'error' ? 'bg-destructive' : 
-                    state === 'success' ? 'bg-emerald-500' : 'bg-muted-foreground'
-                  ]" 
-                />
-              </button>
-            </div>
-          </div>
-
-          <!-- Header Specific Controls -->
-          <div v-if="currentComponent === 'header'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">موقعیت صفحه فعال:</Label>
-            <div class="flex flex-col gap-1.5">
-              <button 
-                @click="simulatorIsInnerPage = false"
-                :class="[
-                  'w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
-                  !simulatorIsInnerPage 
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                <span>صفحه اصلی (تفکر)</span>
-                <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">Home</Badge>
-              </button>
-              <button 
-                @click="simulatorIsInnerPage = true"
-                :class="[
-                  'w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
-                  simulatorIsInnerPage 
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                <span>صفحه داخلی (بک فعال)</span>
-                <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">Inner</Badge>
-              </button>
-            </div>
-          </div>
-
-          <!-- Navigation Specific Controls -->
-          <div v-if="currentComponent === 'nav'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">شبیه‌سازی منوی فعال:</Label>
-            <div class="flex flex-col gap-1.5">
-              <button 
-                @click="simulatorActiveTab = 'home'; logEvent('Nav: Toggled via Sidebar', { tab: 'home' })"
-                :class="[
-                  'w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
-                  simulatorActiveTab === 'home' 
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                <span>صفحه خانه (خانه)</span>
-                <HomeIcon class="size-3.5 text-muted-foreground" />
-              </button>
-              <button 
-                @click="simulatorActiveTab = 'profile'; logEvent('Nav: Toggled via Sidebar', { tab: 'profile' })"
-                :class="[
-                  'w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
-                  simulatorActiveTab === 'profile' 
-                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
-                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
-                ]"
-              >
-                <span>صفحه پروفایل (کاربر)</span>
-                <UserIcon class="size-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Topic Specific Controls -->
-          <div v-if="currentComponent === 'topic'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">شبیه‌سازی پیام‌ها:</Label>
-            <div class="flex flex-col gap-1.5">
-              <Button 
-                size="sm" 
-                @click="addSimulatedMessage"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                شبیه‌سازی دریافت پیام جدید
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="mockTopics.forEach(t => t.unreadCount = 0); logEvent('Topic: All Marked as Read', {})"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                خوانده شدن همه کارت‌ها
-              </Button>
-            </div>
-          </div>
-
-          <!-- Search Specific Controls -->
-          <div v-if="currentComponent === 'search'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">شبیه‌سازی وضعیت جستجو:</Label>
-            <div class="flex flex-col gap-1.5">
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="simulatorSearchQuery = 'توسعه'; logEvent('Search: Force Query = توسعه', {})"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                جستجوی کلمه «توسعه»
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="simulatorSearchQuery = ''; logEvent('Search: Query Cleared via Sandbox', {})"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                پاک کردن متن جستجو
-              </Button>
-            </div>
-          </div>
-
-          <!-- Profile Option Specific Controls -->
-          <div v-if="currentComponent === 'profile-option'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">شبیه‌سازی نشان‌گر گزینه‌ها:</Label>
-            <div class="flex flex-col gap-1.5">
-              <button 
-                @click="simulatorSettingsBadge = simulatorSettingsBadge ? '' : 'بروزرسانی'"
-                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
-              >
-                <span>نشان‌گر تنظیمات (Settings)</span>
-                <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">
-                  {{ simulatorSettingsBadge || 'بدون نشان‌گر' }}
-                </Badge>
-              </button>
-              <button 
-                @click="simulatorConnectionsBadge = simulatorConnectionsBadge ? '' : '۳ فعال'"
-                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
-              >
-                <span>نشان‌گر اتصال‌ها (Connections)</span>
-                <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">
-                  {{ simulatorConnectionsBadge || 'بدون نشان‌گر' }}
-                </Badge>
-              </button>
-              <button 
-                @click="simulatorAiBadge = simulatorAiBadge ? '' : 'جدید'"
-                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
-              >
-                <span>نشان‌گر هوش مصنوعی (AI)</span>
-                <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">
-                  {{ simulatorAiBadge || 'بدون نشان‌گر' }}
-                </Badge>
-              </button>
-            </div>
-          </div>
-
-          <!-- Profile Card Specific Controls -->
-          <div v-if="currentComponent === 'profile-card-header'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">تنظیمات کارت پروفایل:</Label>
-            <div class="flex flex-col gap-3">
-              <div class="flex flex-col gap-1">
-                <Label class="text-[9.5px] text-muted-foreground">نام و نام خانوادگی:</Label>
-                <Input v-model="simulatorProfileCardName" class="h-8 text-xs font-semibold" placeholder="نام کاربر" />
-              </div>
-              <div class="flex flex-col gap-1">
-                <Label class="text-[9.5px] text-muted-foreground">وضعیت فعالیت:</Label>
-                <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
-                  <button 
-                    v-for="statusType in (['success', 'warning', 'info', 'muted'] as const)"
-                    :key="statusType"
-                    @click="simulatorProfileCardStatus = statusType"
-                    :class="[
-                      'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                      simulatorProfileCardStatus === statusType 
-                        ? 'bg-background text-foreground shadow-xs font-black' 
-                        : 'text-muted-foreground hover:text-foreground'
-                    ]"
-                  >
-                    {{ 
-                      statusType === 'success' ? 'فعال' :
-                      statusType === 'warning' ? 'مشغول' :
-                      statusType === 'info' ? 'غایب' : 'آفلاین'
-                    }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Post Specific Controls -->
-          <div v-if="currentComponent === 'post'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">شبیه‌سازی فید پست‌ها:</Label>
-            <div class="flex flex-col gap-1.5">
-              <Button 
-                size="sm" 
-                @click="simulateNewPost"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                شبیه‌سازی دریافت پست جدید
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="resetPosts"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                ریست کردن لیست پست‌ها
-              </Button>
-            </div>
-          </div>
-
-          <!-- Create Topic Modal Specific Controls -->
-          <div v-if="currentComponent === 'create-topic-modal'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">تنظیمات مودال ساخت تاپیک:</Label>
-            <div class="flex flex-col gap-1.5">
-              <Button 
-                size="sm" 
-                @click="simulatorIsModalOpen = true"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                باز کردن مودال
-              </Button>
-            </div>
-          </div>
-
-          <!-- Bot Connection Specific Controls -->
-          <div v-if="currentComponent === 'bot-connection'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">تنظیمات کارت اتصال بات:</Label>
-            
-            <!-- Platform Toggle -->
-            <div class="flex flex-col gap-1.5">
-              <Label class="text-[9.5px] text-muted-foreground">پلتفرم:</Label>
-              <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
-                <button 
-                  @click="simulatorBotPlatform = 'telegram'; logEvent('Bot: Platform set to Telegram', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    simulatorBotPlatform === 'telegram' 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  تلگرام
-                </button>
-                <button 
-                  @click="simulatorBotPlatform = 'bale'; logEvent('Bot: Platform set to Bale', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    simulatorBotPlatform === 'bale' 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  بله
-                </button>
-              </div>
-            </div>
-
-            <!-- Connection Status Selector -->
-            <div class="flex flex-col gap-1.5">
-              <Label class="text-[9.5px] text-muted-foreground">وضعیت اتصال:</Label>
-              <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
-                <button 
-                  v-for="st in (['disconnected', 'connecting', 'connected', 'conflict'] as const)"
-                  :key="st"
-                  @click="simulatorBotStatus = st; logEvent(`Bot: Status set to ${st}`, {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    simulatorBotStatus === st 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground/80 hover:text-foreground'
-                  ]"
-                >
-                  {{ 
-                    st === 'disconnected' ? 'غیرمتصل' :
-                    st === 'connecting' ? 'درحال اتصال' :
-                    st === 'connected' ? 'متصل' : 'تداخل'
-                  }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Simulated Event Actions -->
-            <div class="flex flex-col gap-1.5 mt-2">
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="simulatorBotStatus = 'conflict'; logEvent('Bot: Simulated sudden disconnection error (conflict)', {})"
-                class="w-full text-xs font-semibold text-amber-600 border-amber-550/20 hover:bg-amber-500/5 cursor-pointer"
-              >
-                شبیه‌سازی خطای تداخل
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="simulatorBotToken = '123456:conflict-token'; logEvent('Bot: Force set conflict token', {})"
-                class="w-full text-xs font-semibold cursor-pointer"
-              >
-                تنظیم توکن تداخل‌ساز
-              </Button>
-            </div>
-          </div>
-
-          <!-- Topic Edit Specific Controls -->
-          <div v-if="currentComponent === 'topic-edit'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">تنظیمات شبیه‌ساز ویرایش تاپیک:</Label>
-            <p class="text-[9.5px] text-muted-foreground leading-relaxed">
-              با استفاده از فرم روبرو می‌توانید عنوان، توضیحات و تصویر تاپیک شبیه‌سازی شده را ویرایش کرده و ذخیره کنید. دکمه زیر مقادیر را ریست می‌کند:
-            </p>
-            <Button 
-              size="sm" 
-              variant="outline"
-              @click="resetSimulatorTopicEdit"
-              class="w-full text-xs font-semibold cursor-pointer"
-            >
-              بازنشانی مقادیر اولیه تاپیک
-            </Button>
-          </div>
-
-          <!-- Topic Connections Specific Controls -->
-          <div v-if="currentComponent === 'topic-connections'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">تنظیمات شبیه‌ساز اتصالات:</Label>
-            
-            <div class="flex flex-col gap-1.5">
-              <Label class="text-[9.5px] text-muted-foreground">وضعیت اتصال ربات تلگرام:</Label>
-              <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
-                <button 
-                  @click="simulatorTelegramConnected = true; logEvent('Connections: Telegram Connected', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    simulatorTelegramConnected 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  متصل
-                </button>
-                <button 
-                  @click="simulatorTelegramConnected = false; logEvent('Connections: Telegram Disconnected', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    !simulatorTelegramConnected 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  قطع اتصال
-                </button>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <Label class="text-[9.5px] text-muted-foreground">وضعیت اتصال ربات بله:</Label>
-              <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
-                <button 
-                  @click="simulatorBaleConnected = true; logEvent('Connections: Bale Connected', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    simulatorBaleConnected 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  متصل
-                </button>
-                <button 
-                  @click="simulatorBaleConnected = false; logEvent('Connections: Bale Disconnected', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    !simulatorBaleConnected 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  قطع اتصال
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Topic Message Input Specific Controls -->
-          <div v-if="currentComponent === 'topic-input'" class="flex flex-col gap-3 border-t border-border/40 pt-4 mt-1">
-            <Label class="text-[11px] font-semibold text-muted-foreground block">تنظیمات ورودی پیام تایپک:</Label>
-            
-            <!-- Access/Disabled Toggle -->
-            <div class="flex flex-col gap-1.5">
-              <Label class="text-[9.5px] text-muted-foreground">سطح دسترسی نوشتن:</Label>
-              <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
-                <button 
-                  @click="simulatorInputDisabled = false; logEvent('Input: Writing enabled', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    !simulatorInputDisabled 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  مجاز
-                </button>
-                <button 
-                  @click="simulatorInputDisabled = true; logEvent('Input: Muted/Disabled', {})"
-                  :class="[
-                    'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
-                    simulatorInputDisabled 
-                      ? 'bg-background text-foreground shadow-xs font-black' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  ]"
-                >
-                  غیرمجاز (Mute)
-                </button>
-              </div>
-            </div>
-
-            <!-- Simulated Attachment Insertions -->
-            <div class="flex flex-col gap-1.5">
-              <Label class="text-[9.5px] text-muted-foreground">شبیه‌سازی آپلود پیوست:</Label>
-              <div class="grid grid-cols-2 gap-1.5">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  @click="simulateAddAttachment('image')"
-                  class="text-[10px] font-semibold py-1 h-7.5 cursor-pointer"
-                >
-                  افزودن تصویر
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  @click="simulateAddAttachment('video')"
-                  class="text-[10px] font-semibold py-1 h-7.5 cursor-pointer"
-                >
-                  افزودن ویدیو
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  @click="simulateAddAttachment('audio')"
-                  class="text-[10px] font-semibold py-1 h-7.5 cursor-pointer"
-                >
-                  افزودن صوت/صدا
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  @click="simulateAddAttachment('file')"
-                  class="text-[10px] font-semibold py-1 h-7.5 cursor-pointer"
-                >
-                  افزودن سند/فایل
-                </Button>
-              </div>
-            </div>
-
-            <!-- Quick Text templates -->
-            <div class="flex flex-col gap-1.5 mt-1">
-              <Label class="text-[9.5px] text-muted-foreground">پر کردن متن قالب:</Label>
-              <div class="flex flex-col gap-1">
-                <button 
-                  @click="simulatorInputText = 'این یک متن تستی طولانی برای بررسی تغییر ارتفاع فیلد متنی است. با نوشتن سطرهای بیشتر، ورودی پیام به صورت عمودی بزرگتر می‌شود.'; logEvent('Input: Filled template text', {})"
-                  class="w-full text-right px-2 py-1 text-[9px] font-semibold rounded border border-border/40 hover:bg-muted/40 transition-colors truncate cursor-pointer bg-background/20 text-foreground"
-                >
-                  قالب متن طولانی
-                </button>
-                <button 
-                  @click="simulatorInputText = ''; simulatorInputAttachments = []; logEvent('Input: Cleared everything', {})"
-                  class="w-full text-right px-2 py-1 text-[9px] font-semibold rounded border border-destructive/20 hover:bg-destructive/5 text-destructive transition-colors cursor-pointer bg-background/20"
-                >
-                  پاک کردن همه داده‌ها
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dev Note -->
-          <div class="p-3 bg-muted/40 border border-border/40 rounded-lg text-[10px] leading-relaxed text-muted-foreground flex gap-2">
-            <InfoIcon class="size-3.5 text-primary shrink-0 mt-0.5" />
-            <span>تغییر وضعیت یا تغییر ابعاد، رفتار کامپوننت را در یک محدوده عایق و ایزوله شبیه‌ساز شبیه‌سازی می‌کند.</span>
-          </div>
         </div>
 
         <!-- Main Testing Sandbox -->
         <div class="lg:col-span-3 flex flex-col gap-6">
           
+          <!-- Horizontal Settings Panel -->
+          <div class="w-full bg-card/30 border border-border/60 rounded-xl p-5 shadow-xs flex flex-col gap-5">
+            <div class="flex items-center justify-between border-b border-border/40 pb-3">
+              <h2 class="text-xs font-extrabold border-r-4 border-primary pr-2 leading-none text-foreground/90">تنظیمات و وضعیت شبیه‌ساز</h2>
+              <Badge variant="secondary" class="text-[9px] px-2 py-0.5 border border-border/50 text-muted-foreground font-mono">Simulator Controls</Badge>
+            </div>
+
+            <!-- Global Configurations (Horizontal Grid) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
+              <!-- Language Selection -->
+              <div class="flex flex-col gap-2">
+                <Label class="text-[10px] font-semibold text-muted-foreground block">زبان و جهت چیدمان:</Label>
+                <div class="grid grid-cols-2 gap-1 bg-muted/60 p-1 rounded-lg border border-border/40">
+                  <button 
+                    @click="languageStore.setLanguage('fa')"
+                    :class="[
+                      'flex flex-col items-center justify-center py-1.5 rounded-md text-[9px] font-medium transition-colors outline-none cursor-pointer',
+                      languageStore.isFa ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    فارسی (RTL)
+                  </button>
+                  <button 
+                    @click="languageStore.setLanguage('en')"
+                    :class="[
+                      'flex flex-col items-center justify-center py-1.5 rounded-md text-[9px] font-medium transition-colors outline-none cursor-pointer',
+                      languageStore.isEn ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    English (LTR)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Viewport Width Controls -->
+              <div class="flex flex-col gap-2">
+                <Label class="text-[10px] font-semibold text-muted-foreground block">اندازه پنجره نمایشگر:</Label>
+                <div class="grid grid-cols-3 gap-1 bg-muted/60 p-1 rounded-lg border border-border/40">
+                  <button 
+                    @click="viewportWidth = '375px'"
+                    :class="[
+                      'flex flex-col items-center justify-center py-1 rounded-md text-[9px] font-medium transition-colors outline-none cursor-pointer',
+                      viewportWidth === '375px' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    موبایل
+                  </button>
+                  <button 
+                    @click="viewportWidth = '768px'"
+                    :class="[
+                      'flex flex-col items-center justify-center py-1 rounded-md text-[9px] font-medium transition-colors outline-none cursor-pointer',
+                      viewportWidth === '768px' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    تبلت
+                  </button>
+                  <button 
+                    @click="viewportWidth = '100%'"
+                    :class="[
+                      'flex flex-col items-center justify-center py-1 rounded-md text-[9px] font-medium transition-colors outline-none cursor-pointer',
+                      viewportWidth === '100%' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    دسکتاپ
+                  </button>
+                </div>
+              </div>
+
+              <!-- Viewport Background Controls -->
+              <div class="flex flex-col gap-2">
+                <Label class="text-[10px] font-semibold text-muted-foreground block">پس‌زمینه شبیه‌ساز (تست بلور):</Label>
+                <div class="grid grid-cols-2 gap-1 bg-muted/60 p-1 rounded-lg border border-border/40">
+                  <button 
+                    @click="sandboxBg = 'default'; logEvent('Sandbox Background: Default', {})"
+                    :class="[
+                      'px-2 py-1 rounded-md text-[9px] font-semibold transition-all cursor-pointer outline-none border border-transparent',
+                      sandboxBg === 'default'
+                        ? 'bg-background text-primary font-bold shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    ساده
+                  </button>
+                  <button 
+                    @click="sandboxBg = 'gradient'; logEvent('Sandbox Background: Colorful Gradient', {})"
+                    :class="[
+                      'px-2 py-1 rounded-md text-[9px] font-semibold transition-all cursor-pointer outline-none border border-transparent',
+                      sandboxBg === 'gradient'
+                        ? 'bg-background text-primary font-bold shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    گرادینت
+                  </button>
+                  <button 
+                    @click="sandboxBg = 'grid'; logEvent('Sandbox Background: Figma Grid', {})"
+                    :class="[
+                      'px-2 py-1 rounded-md text-[9px] font-semibold transition-all cursor-pointer outline-none border border-transparent',
+                      sandboxBg === 'grid'
+                        ? 'bg-background text-primary font-bold shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    شبکه‌ای
+                  </button>
+                  <button 
+                    @click="sandboxBg = 'image'; logEvent('Sandbox Background: Abstract Canvas', {})"
+                    :class="[
+                      'px-2 py-1 rounded-md text-[9px] font-semibold transition-all cursor-pointer outline-none border border-transparent',
+                      sandboxBg === 'image'
+                        ? 'bg-background text-primary font-bold shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    تصویر
+                  </button>
+                </div>
+              </div>
+
+              <!-- Component Active State Controls -->
+              <div class="flex flex-col gap-2">
+                <Label class="text-[10px] font-semibold text-muted-foreground block">وضعیت کامپوننت:</Label>
+                <div class="grid grid-cols-2 gap-1 bg-muted/60 p-1 rounded-lg border border-border/40">
+                  <button 
+                    v-for="state in availableStates"
+                    :key="state"
+                    @click="activeState = state"
+                    :class="[
+                      'px-2 py-1 rounded-md text-[9px] font-semibold transition-all cursor-pointer outline-none flex items-center justify-center gap-1.5 border border-transparent',
+                      activeState === state 
+                        ? 'bg-background text-primary font-bold shadow-xs' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    ]"
+                  >
+                    <span>
+                      {{ 
+                        state === 'idle' ? 'فعال (Idle)' :
+                        state === 'loading' ? 'لودینگ' :
+                        state === 'error' ? 'خطا (Error)' : 
+                        state === 'empty' ? 'خالی' : 'موفق' 
+                      }}
+                    </span>
+                    <span class="size-1.5 rounded-full" 
+                      :class="[
+                        state === 'idle' ? 'bg-green-500' :
+                        state === 'loading' ? 'bg-amber-500 animate-pulse' :
+                        state === 'error' ? 'bg-destructive' : 
+                        state === 'success' ? 'bg-emerald-500' : 'bg-muted-foreground'
+                      ]" 
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Component-Specific Configurations Section -->
+            <div 
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections'"
+              class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
+            >
+              <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
+              
+              <!-- Header Specific Controls -->
+              <div v-if="currentComponent === 'header'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button 
+                  @click="simulatorIsInnerPage = false"
+                  :class="[
+                    'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                    !simulatorIsInnerPage 
+                      ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                      : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                  ]"
+                >
+                  <span>صفحه اصلی (تفکر)</span>
+                  <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">Home</Badge>
+                </button>
+                <button 
+                  @click="simulatorIsInnerPage = true"
+                  :class="[
+                    'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                    simulatorIsInnerPage 
+                      ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                      : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                  ]"
+                >
+                  <span>صفحه داخلی (بک فعال)</span>
+                  <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">Inner</Badge>
+                </button>
+              </div>
+
+              <!-- Navigation Specific Controls -->
+              <div v-if="currentComponent === 'nav'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button 
+                  @click="simulatorActiveTab = 'home'; logEvent('Nav: Toggled via Sidebar', { tab: 'home' })"
+                  :class="[
+                    'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                    simulatorActiveTab === 'home' 
+                      ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                      : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                  ]"
+                >
+                  <span>صفحه خانه (خانه)</span>
+                  <HomeIcon class="size-3.5 text-muted-foreground" />
+                </button>
+                <button 
+                  @click="simulatorActiveTab = 'profile'; logEvent('Nav: Toggled via Sidebar', { tab: 'profile' })"
+                  :class="[
+                    'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                    simulatorActiveTab === 'profile' 
+                      ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                      : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                  ]"
+                >
+                  <span>صفحه پروفایل (کاربر)</span>
+                  <UserIcon class="size-3.5 text-muted-foreground" />
+                </button>
+              </div>
+
+              <!-- Topic Specific Controls -->
+              <div v-if="currentComponent === 'topic'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button 
+                  size="sm" 
+                  @click="addSimulatedMessage"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  شبیه‌سازی دریافت پیام جدید
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  @click="mockTopics.forEach(t => t.unreadCount = 0); logEvent('Topic: All Marked as Read', {})"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  خوانده شدن همه کارت‌ها
+                </Button>
+              </div>
+
+              <!-- Search Specific Controls -->
+              <div v-if="currentComponent === 'search'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  @click="simulatorSearchQuery = 'توسعه'; logEvent('Search: Force Query = توسعه', {})"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  جستجوی کلمه «توسعه»
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  @click="simulatorSearchQuery = ''; logEvent('Search: Query Cleared via Sandbox', {})"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  پاک کردن متن جستجو
+                </Button>
+              </div>
+
+              <!-- Profile Option Specific Controls -->
+              <div v-if="currentComponent === 'profile-option'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button 
+                  @click="simulatorSettingsBadge = simulatorSettingsBadge ? '' : 'بروزرسانی'"
+                  class="w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
+                >
+                  <span>نشان‌گر تنظیمات (Settings)</span>
+                  <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">
+                    {{ simulatorSettingsBadge || 'بدون نشان‌گر' }}
+                  </Badge>
+                </button>
+                <button 
+                  @click="simulatorConnectionsBadge = simulatorConnectionsBadge ? '' : '۳ فعال'"
+                  class="w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
+                >
+                  <span>نشان‌گر اتصال‌ها (Connections)</span>
+                  <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">
+                    {{ simulatorConnectionsBadge || 'بدون نشان‌گر' }}
+                  </Badge>
+                </button>
+                <button 
+                  @click="simulatorAiBadge = simulatorAiBadge ? '' : 'جدید'"
+                  class="w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
+                >
+                  <span>نشان‌گر هوش مصنوعی (AI)</span>
+                  <Badge variant="secondary" class="text-[9px] px-1.5 h-4 text-muted-foreground">
+                    {{ simulatorAiBadge || 'بدون نشان‌گر' }}
+                  </Badge>
+                </button>
+              </div>
+
+              <!-- Profile Card Specific Controls -->
+              <div v-if="currentComponent === 'profile-card-header'" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">نام و نام خانوادگی:</Label>
+                  <Input v-model="simulatorProfileCardName" class="h-8.5 text-xs font-semibold" placeholder="نام کاربر" />
+                </div>
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">وضعیت فعالیت:</Label>
+                  <div class="grid grid-cols-4 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                    <button 
+                      v-for="statusType in (['success', 'warning', 'info', 'muted'] as const)"
+                      :key="statusType"
+                      @click="simulatorProfileCardStatus = statusType"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorProfileCardStatus === statusType 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      {{ 
+                        statusType === 'success' ? 'فعال' :
+                        statusType === 'warning' ? 'مشغول' :
+                        statusType === 'info' ? 'غایب' : 'آفلاین'
+                      }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Post Specific Controls -->
+              <div v-if="currentComponent === 'post'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button 
+                  size="sm" 
+                  @click="simulateNewPost"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  شبیه‌سازی دریافت پست جدید
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  @click="resetPosts"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  ریست کردن لیست پست‌ها
+                </Button>
+              </div>
+
+              <!-- Create Topic Modal Specific Controls -->
+              <div v-if="currentComponent === 'create-topic-modal'" class="grid grid-cols-1 gap-4">
+                <Button 
+                  size="sm" 
+                  @click="simulatorIsModalOpen = true"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  باز کردن مودال ساخت تاپیک
+                </Button>
+              </div>
+
+              <!-- Bot Connection Specific Controls -->
+              <div v-if="currentComponent === 'bot-connection'" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">پلتفرم:</Label>
+                  <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                    <button 
+                      @click="simulatorBotPlatform = 'telegram'; logEvent('Bot: Platform set to Telegram', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorBotPlatform === 'telegram' 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      تلگرام
+                    </button>
+                    <button 
+                      @click="simulatorBotPlatform = 'bale'; logEvent('Bot: Platform set to Bale', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorBotPlatform === 'bale' 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      بله
+                    </button>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">وضعیت اتصال:</Label>
+                  <div class="grid grid-cols-4 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                    <button 
+                      v-for="st in (['disconnected', 'connecting', 'connected', 'conflict'] as const)"
+                      :key="st"
+                      @click="simulatorBotStatus = st; logEvent(`Bot: Status set to ${st}`, {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorBotStatus === st 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      {{ 
+                        st === 'disconnected' ? 'قطع' :
+                        st === 'connecting' ? 'اتصال' :
+                        st === 'connected' ? 'وصل' : 'تداخل'
+                      }}
+                    </button>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    @click="simulatorBotStatus = 'conflict'; logEvent('Bot: Simulated sudden disconnection error (conflict)', {})"
+                    class="text-[9.5px] font-semibold text-amber-600 border-amber-550/20 hover:bg-amber-500/5 cursor-pointer h-9"
+                  >
+                    شبیه‌سازی تداخل
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    @click="simulatorBotToken = '123456:conflict-token'; logEvent('Bot: Force set conflict token', {})"
+                    class="text-[9.5px] font-semibold cursor-pointer h-9"
+                  >
+                    توکن تداخل‌ساز
+                  </Button>
+                </div>
+              </div>
+
+              <!-- Topic Edit Specific Controls -->
+              <div v-if="currentComponent === 'topic-edit'" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <p class="text-[9.5px] text-muted-foreground leading-relaxed text-start">
+                  با استفاده از فرم پیش‌نمایش می‌توانید عنوان، توضیحات و تصویر تاپیک را ویرایش و ذخیره کنید. دکمه مقابل مقادیر را ریست می‌کند:
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  @click="resetSimulatorTopicEdit"
+                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                >
+                  بازنشانی مقادیر اولیه تاپیک
+                </Button>
+              </div>
+
+              <!-- Topic Connections Specific Controls -->
+              <div v-if="currentComponent === 'topic-connections'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">وضعیت اتصال ربات تلگرام:</Label>
+                  <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                    <button 
+                      @click="simulatorTelegramConnected = true; logEvent('Connections: Telegram Connected', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorTelegramConnected 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      متصل
+                    </button>
+                    <button 
+                      @click="simulatorTelegramConnected = false; logEvent('Connections: Telegram Disconnected', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        !simulatorTelegramConnected 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      قطع اتصال
+                    </button>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">وضعیت اتصال ربات بله:</Label>
+                  <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                    <button 
+                      @click="simulatorBaleConnected = true; logEvent('Connections: Bale Connected', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorBaleConnected 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      متصل
+                    </button>
+                    <button 
+                      @click="simulatorBaleConnected = false; logEvent('Connections: Bale Disconnected', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        !simulatorBaleConnected 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      قطع اتصال
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Topic Message Input Specific Controls -->
+              <div v-if="currentComponent === 'topic-input'" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">سطح دسترسی نوشتن:</Label>
+                  <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                    <button 
+                      @click="simulatorInputDisabled = false; logEvent('Input: Writing enabled', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        !simulatorInputDisabled 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      مجاز
+                    </button>
+                    <button 
+                      @click="simulatorInputDisabled = true; logEvent('Input: Muted/Disabled', {})"
+                      :class="[
+                        'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                        simulatorInputDisabled 
+                          ? 'bg-background text-foreground shadow-xs font-black' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      غیرمجاز (Mute)
+                    </button>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 text-start md:col-span-2">
+                  <Label class="text-[9px] text-muted-foreground">شبیه‌سازی آپلود پیوست:</Label>
+                  <div class="grid grid-cols-4 gap-2">
+                    <Button size="sm" variant="outline" @click="simulateAddAttachment('image')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">تصویر</Button>
+                    <Button size="sm" variant="outline" @click="simulateAddAttachment('video')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">ویدیو</Button>
+                    <Button size="sm" variant="outline" @click="simulateAddAttachment('audio')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">صوت</Button>
+                    <Button size="sm" variant="outline" @click="simulateAddAttachment('file')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">سند/فایل</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Dev Note & Quick Template Buttons (Horizontal flex) -->
+            <div class="border-t border-border/45 pt-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+              <!-- Dev Note -->
+              <div class="flex gap-2 text-[9.5px] leading-relaxed text-muted-foreground text-start flex-1">
+                <InfoIcon class="size-3.5 text-primary shrink-0 mt-0.5" />
+                <span>تغییر وضعیت یا تغییر ابعاد، رفتار کامپوننت را در یک محدوده عایق و ایزوله شبیه‌ساز شبیه‌سازی می‌کند.</span>
+              </div>
+              
+              <!-- Quick Text templates (only if topic-input is selected) -->
+              <div v-if="currentComponent === 'topic-input'" class="flex gap-2 items-center justify-end shrink-0">
+                <Label class="text-[9px] text-muted-foreground font-semibold">قالب متن:</Label>
+                <button 
+                  @click="simulatorInputText = 'این یک متن تستی طولانی و چند سطری برای تست و بررسی کامپوننت ورودی پیام تاپیک است.\nشما می‌توانید با استفاده از دکمه بزرگ‌نمایی که در بالا سمت راست ظاهر می‌شود، این فیلد را به یک مودال تمام‌صفحه تبدیل کنید.\nاین مودال تا ۸۰ درصد صفحه را می‌گیرد تا بتوانید متن‌های طولانی را به راحتی ویرایش و مدیریت نمایید.\nاین متن دارای سطرها و کاراکترهای زیادی است و دکمه اکسپند را فعال می‌کند.'; logEvent('Input: Filled template text', {})"
+                  class="px-2.5 py-1 text-[9px] font-bold rounded-lg border border-border/40 hover:bg-muted/40 transition-colors truncate cursor-pointer bg-background/20 text-foreground"
+                >
+                  قالب متن طولانی
+                </button>
+                <button 
+                  @click="simulatorInputText = ''; simulatorInputAttachments = []; logEvent('Input: Cleared everything', {})"
+                  class="px-2.5 py-1 text-[9px] font-bold rounded-lg border border-destructive/20 hover:bg-destructive/5 text-destructive transition-colors cursor-pointer bg-background/20"
+                >
+                  پاک کردن
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <!-- Live Preview Sandbox -->
           <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col items-center">
             <div class="w-full flex justify-between items-center text-[10px] text-muted-foreground mb-4">
               <span class="font-mono">Width: {{ viewportWidth === '100%' ? 'Desktop (Auto)' : viewportWidth }}</span>
-              <span class="flex items-center gap-1">
+              <span class="flex items-center gap-2">
+                <span class="bg-primary/10 text-primary px-2 py-0.5 rounded font-mono font-bold select-all">{{ currentComponentFile }}</span>
                 <span class="size-1.5 rounded-full bg-emerald-500 animate-ping" />
                 پیش‌نمایش زنده کامپوننت
               </span>
@@ -1690,18 +1882,18 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'profile-option'"
                   class="w-full flex flex-col gap-4 bg-card/10 border border-border/40 rounded-xl p-4"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <div class="flex items-center justify-between border-b border-border/40 pb-3 mb-1 px-1">
-                    <h3 class="text-xs font-extrabold text-foreground">منوی کاربری (گزینه‌ها)</h3>
+                    <h3 class="text-xs font-extrabold text-foreground">{{ languageStore.t('منوی کاربری (گزینه‌ها)', 'User Menu (Options)') }}</h3>
                     <Badge variant="secondary" class="text-[9px] px-2 py-0.5 border border-border/50 text-muted-foreground font-mono">Profile Menu Items</Badge>
                   </div>
 
                   <!-- Vertical menu list (menu stack of ProfileOptionCards) -->
                   <div class="flex flex-col gap-2.5 w-full">
                     <ProfileOptionCard
-                      :title="'تنظیمات سیستم'"
-                      :description="'تنظیمات زبان، ظاهر، حریم خصوصی و اعلان‌ها'"
+                      :title="languageStore.t('تنظیمات سیستم', 'System Settings')"
+                      :description="languageStore.t('تنظیمات زبان، ظاهر، حریم خصوصی و اعلان‌ها', 'Language, appearance, privacy and notifications')"
                       :icon="SettingsIcon"
                       :badgeText="simulatorSettingsBadge || undefined"
                       :badgeVariant="'destructive'"
@@ -1709,8 +1901,8 @@ const resetPosts = () => {
                     />
                     
                     <ProfileOptionCard
-                      :title="'مدیریت اتصال‌ها'"
-                      :description="'مدیریت اتصال به ربات‌ها، کانال‌ها و پلتفرم‌های خارجی'"
+                      :title="languageStore.t('مدیریت اتصال‌ها', 'Manage Connections')"
+                      :description="languageStore.t('مدیریت اتصال به ربات‌ها، کانال‌ها و پلتفرم‌های خارجی', 'Manage connection to bots, channels, and external platforms')"
                       :icon="LinkIcon"
                       :badgeText="simulatorConnectionsBadge || undefined"
                       :badgeVariant="'default'"
@@ -1718,8 +1910,17 @@ const resetPosts = () => {
                     />
 
                     <ProfileOptionCard
-                      :title="'دستیار هوش مصنوعی'"
-                      :description="'تنظیمات مدل هوشمند تفکر، خلاقیت و کلیدهای API فعال'"
+                      :title="languageStore.t('زبان برنامه (Language)', 'App Language (Language)')"
+                      :description="languageStore.t('تغییر زبان کلی سامانه و چیدمان راست‌چین/چپ‌چین', 'Toggle global app language and RTL/LTR layout')"
+                      :icon="LanguagesIcon"
+                      :badgeText="languageStore.currentLanguage.toUpperCase()"
+                      :badgeVariant="'secondary'"
+                      @click="handleProfileOptionClick('Language')"
+                    />
+
+                    <ProfileOptionCard
+                      :title="languageStore.t('دستیار هوش مصنوعی', 'AI Assistant')"
+                      :description="languageStore.t('تنظیمات مدل هوشمند تفکر، خلاقیت و کلیدهای API فعال', 'Smart thinking model, creativity, and active API keys')"
                       :icon="SparklesIcon"
                       :badgeText="simulatorAiBadge || undefined"
                       :badgeVariant="'default'"
@@ -1732,7 +1933,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'profile-card-header'"
                   class="w-full flex flex-col gap-4 bg-card/10 border border-border/40 rounded-xl p-4"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <div class="flex items-center justify-between border-b border-border/40 pb-3 mb-1 px-1">
                     <h3 class="text-xs font-extrabold text-foreground">کارت هدر پروفایل</h3>
@@ -1758,7 +1959,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'post'"
                   class="w-full flex flex-col gap-2 bg-radial from-card/5 to-card/0 border border-border/40 rounded-xl p-3.5 relative overflow-hidden"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <!-- Simulated colorful background elements to highlight blur/transparency -->
                   <div class="absolute -top-12 -left-12 size-40 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
@@ -1802,7 +2003,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'create-topic-modal'"
                   class="w-full flex flex-col items-center justify-center py-10"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <Button @click="simulatorIsModalOpen = true" class="cursor-pointer flex items-center" data-icon="inline-start">
                     <PlusIcon />
@@ -1824,7 +2025,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'bot-connection'"
                   class="w-full flex flex-col items-center py-4 px-2"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <BotConnectionCard
                     :platform="simulatorBotPlatform"
@@ -1841,7 +2042,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'topic-input'"
                   class="w-full flex flex-col items-center py-4 px-2"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <TopicMessageInput
                     :placeholder="simulatorInputPlaceholder"
@@ -1857,7 +2058,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'topic-edit'"
                   class="w-full flex flex-col"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <TopicEditView 
                     :topic="simulatorTopicData"
@@ -1875,7 +2076,7 @@ const resetPosts = () => {
                 <div 
                   v-else-if="currentComponent === 'topic-connections'"
                   class="w-full flex flex-col"
-                  dir="rtl"
+                  :dir="languageStore.dir"
                 >
                   <TopicConnectionsView 
                     :topic="simulatorTopicData"
@@ -1931,6 +2132,83 @@ const resetPosts = () => {
         </div>
 
       </div>
+
+    <!-- Language Switcher Dialog -->
+    <Dialog v-slot="{ open }" v-model:open="showLanguageDialog">
+      <DialogContent :show-close-button="false" class="sm:max-w-[420px] p-0 overflow-hidden bg-card/90 dark:bg-zinc-950/90 backdrop-blur-lg border border-border/40">
+        <DialogHeader class="p-6 pb-4 border-b border-border/10">
+          <div class="flex items-center gap-2 justify-start">
+            <div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <LanguagesIcon class="size-4.5" />
+            </div>
+            <DialogTitle class="text-sm font-black text-foreground flex flex-col gap-0.5 text-start">
+              <span>تنظیم زبان و چیدمان برنامه</span>
+              <span class="text-[10px] text-muted-foreground font-normal">App Language & Direction</span>
+            </DialogTitle>
+          </div>
+          <DialogDescription class="text-[10px] text-muted-foreground text-start mt-2.5 flex flex-col gap-1 leading-relaxed">
+            <span>زبان و جهت چیدمان رابط کاربری سامانه را در این قسمت انتخاب کنید.</span>
+            <span class="opacity-80">Choose your preferred language and UI layout direction.</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <!-- Selection List -->
+        <div class="p-6 flex flex-col gap-3">
+          <!-- Persian Option -->
+          <div 
+            @click="selectedLang = 'fa'"
+            class="flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200"
+            :class="selectedLang === 'fa' ? 'bg-primary/5 border-primary text-primary font-bold shadow-xs' : 'border-border/40 hover:bg-muted/40 text-foreground'"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">🇮🇷</span>
+              <div class="flex flex-col text-start gap-0.5">
+                <span class="text-xs font-bold">فارسی (Persian)</span>
+                <span class="text-[9px] text-muted-foreground">راست‌چین / RTL Layout</span>
+              </div>
+            </div>
+            <div 
+              v-if="selectedLang === 'fa'"
+              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+            >
+              <CheckIcon class="size-3" />
+            </div>
+          </div>
+
+          <!-- English Option -->
+          <div 
+            @click="selectedLang = 'en'"
+            class="flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200"
+            :class="selectedLang === 'en' ? 'bg-primary/5 border-primary text-primary font-bold shadow-xs' : 'border-border/40 hover:bg-muted/40 text-foreground'"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">🇬🇧</span>
+              <div class="flex flex-col text-start gap-0.5">
+                <span class="text-xs font-bold">English (انگلیسی)</span>
+                <span class="text-[9px] text-muted-foreground">چپ‌چین / LTR Layout</span>
+              </div>
+            </div>
+            <div 
+              v-if="selectedLang === 'en'"
+              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+            >
+              <CheckIcon class="size-3" />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter class="p-4 bg-muted/10 dark:bg-muted/5 border-t border-border/10 flex justify-end gap-2" :dir="languageStore.dir">
+          <Button variant="outline" size="sm" @click="showLanguageDialog = false" class="text-xs font-bold h-8 flex items-center gap-1.5 cursor-pointer">
+            <span>بستن</span>
+            <span class="text-[10px] opacity-70 border-s border-muted-foreground/30 ps-1.5 ms-1">Close</span>
+          </Button>
+          <Button variant="default" size="sm" @click="handleConfirmLanguage" class="text-xs font-bold h-8 flex items-center gap-1.5 cursor-pointer">
+            <span>تایید</span>
+            <span class="text-[10px] opacity-70 border-s border-primary-foreground/30 ps-1.5 ms-1">Confirm</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     </div>
   </div>

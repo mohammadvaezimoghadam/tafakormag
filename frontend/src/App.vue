@@ -10,6 +10,7 @@ import {
 } from '@lucide/vue'
 import { useToastStore } from '@/stores/toastStore'
 import { useUserStore } from '@/stores/userStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import ChangelogModal from '@/components/ChangelogModal.vue'
 import LoginCard from '@/components/LoginCard.vue'
 import {
@@ -29,6 +30,7 @@ const toggleDark = useToggle(isDark)
 
 const toastStore = useToastStore()
 const userStore = useUserStore()
+const languageStore = useLanguageStore()
 
 const isToastActive = computed(() => toastStore.isToastActive)
 const toastMsg = computed(() => toastStore.toastMsg)
@@ -67,14 +69,17 @@ const handleLoginStateChange = (state: string) => {
   if (state === 'success') {
     userStore.isLoginModalOpen = false
     userStore.loadProfile()
-    toastStore.triggerToast('ورود با موفقیت انجام شد.', 'success')
+    toastStore.triggerToast(languageStore.t('ورود با موفقیت انجام شد.', 'Logged in successfully.'), 'success')
   }
 }
 </script>
 
 <template>
-  <ConfigProvider dir="rtl">
-    <div class="min-h-screen bg-background text-foreground font-sans transition-colors duration-300 flex flex-col relative" dir="rtl">
+  <ConfigProvider :dir="languageStore.dir">
+    <div 
+      class="min-h-screen bg-background text-foreground font-sans transition-colors duration-300 flex flex-col relative" 
+      :dir="languageStore.dir"
+    >
       
       <!-- Main Application Container -->
       <main class="w-full flex-1 flex flex-col items-center p-4 sm:p-6">
@@ -108,12 +113,12 @@ const handleLoginStateChange = (state: string) => {
       <Dialog :open="userStore.isLoginModalOpen" @update:open="(val) => userStore.isLoginModalOpen = val">
         <DialogContent 
           :show-close-button="true" 
-          class="max-w-[380px] p-0 overflow-hidden flex flex-col text-right rounded-3xl transition-all duration-300 focus-within:max-sm:top-[20%] focus-within:max-sm:-translate-y-[20%]" 
-          dir="rtl"
+          class="max-w-[380px] p-0 overflow-hidden flex flex-col text-start rounded-3xl transition-all duration-300 focus-within:max-sm:top-[20%] focus-within:max-sm:-translate-y-[20%]" 
+          :dir="languageStore.dir"
           @pointer-down-outside="(e) => e.preventDefault()"
           @escape-key-down="(e) => e.preventDefault()"
         >
-          <DialogDescription class="sr-only">ورود به حساب کاربری تفکر</DialogDescription>
+          <DialogDescription class="sr-only">{{ languageStore.t('ورود به حساب کاربری تفکر', 'Tafakor User Login') }}</DialogDescription>
           <LoginCard @stateChange="handleLoginStateChange" />
         </DialogContent>
       </Dialog>

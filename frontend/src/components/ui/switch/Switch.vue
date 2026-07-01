@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { SwitchRoot, SwitchThumb } from "reka-ui"
 import { cn } from "@/lib/utils"
+import { useLanguageStore } from "@/stores/languageStore"
+
+const languageStore = useLanguageStore()
 
 const props = withDefaults(defineProps<{
   checked?: boolean
@@ -43,8 +46,8 @@ const emit = defineEmits<{
       :class="cn(
         'pointer-events-none block rounded-full bg-background shadow-lg ring-0 transition-transform dark:data-[state=checked]:bg-background',
         size === 'default' 
-          ? 'h-5 w-5 data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5' 
-          : 'h-3 w-3 data-[state=checked]:translate-x-3 rtl:data-[state=checked]:-translate-x-3'
+          ? (languageStore.isFa ? 'h-5 w-5 data-[state=checked]:-translate-x-5' : 'h-5 w-5 data-[state=checked]:translate-x-5') 
+          : (languageStore.isFa ? 'h-3 w-3 data-[state=checked]:-translate-x-3' : 'h-3 w-3 data-[state=checked]:translate-x-3')
       )"
     />
   </SwitchRoot>

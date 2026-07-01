@@ -61,6 +61,10 @@ const handleSave = () => {
     email: editedEmail.value
   })
 }
+
+import { useLanguageStore } from '@/stores/languageStore'
+const languageStore = useLanguageStore()
+
 </script>
 
 <template>
@@ -96,25 +100,25 @@ const handleSave = () => {
         <InboxIcon class="size-6" />
       </div>
       <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-foreground">اطلاعات کاربری یافت نشد</h3>
-        <p class="text-xs text-muted-foreground max-w-xs">هیچ حساب کاربری در این بخش وجود ندارد یا دسترسی شما محدود شده است.</p>
+        <h3 class="text-sm font-semibold text-foreground">{{ languageStore.t('اطلاعات کاربری یافت نشد', 'User Profile Not Found') }}</h3>
+        <p class="text-xs text-muted-foreground max-w-xs">{{ languageStore.t('هیچ حساب کاربری در این بخش وجود ندارد یا دسترسی شما محدود شده است.', 'No user account exists in this section or your access is restricted.') }}</p>
       </div>
-      <Button size="sm" variant="outline">بارگذاری مجدد</Button>
+      <Button size="sm" variant="outline">{{ languageStore.t('بارگذاری مجدد', 'Reload') }}</Button>
     </div>
 
     <!-- ERROR STATE -->
     <div v-else-if="state === 'error'" class="p-6 flex flex-col gap-4">
       <div class="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
         <AlertTriangleIcon class="size-5 shrink-0 mt-0.5" />
-        <div class="flex flex-col gap-1 text-right">
-          <h4 class="text-sm font-bold">خطای سیستمی رخ داده است</h4>
+        <div class="flex flex-col gap-1 text-start">
+          <h4 class="text-sm font-bold">{{ languageStore.t('خطای سیستمی رخ داده است', 'System Error Occurred') }}</h4>
           <p class="text-xs opacity-90 leading-relaxed">{{ errorMessage }}</p>
         </div>
       </div>
       <div class="flex justify-end pt-2">
         <Button size="sm" variant="outline" class="flex items-center gap-1">
           <XCircleIcon data-icon="inline-start" />
-          بستن پیام
+          {{ languageStore.t('بستن پیام', 'Close Message') }}
         </Button>
       </div>
     </div>
@@ -123,7 +127,7 @@ const handleSave = () => {
     <div v-else class="flex flex-col">
       <!-- Card Header / Avatar Banner -->
       <div class="p-6 bg-gradient-to-br from-secondary/40 to-secondary/10 border-b border-border/40">
-        <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-right gap-4">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-start gap-4">
           <!-- Avatar Icon wrapper -->
           <div class="size-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm shrink-0">
             <UserIcon class="size-8" />
@@ -142,7 +146,7 @@ const handleSave = () => {
                     : 'bg-muted border-border text-muted-foreground'
                 ]"
               >
-                {{ user.status === 'active' ? 'فعال' : 'غیرفعال' }}
+                {{ user.status === 'active' ? languageStore.t('فعال', 'Active') : languageStore.t('غیرفعال', 'Inactive') }}
               </Badge>
             </div>
             
@@ -157,16 +161,16 @@ const handleSave = () => {
       <!-- Card Body / Edit Form -->
       <div class="p-6 grid gap-4">
         <div class="flex flex-col gap-1">
-          <Label for="card-name" class="text-xs text-muted-foreground">نام و نام خانوادگی:</Label>
+          <Label for="card-name" class="text-xs text-muted-foreground">{{ languageStore.t('نام و نام خانوادگی:', 'Full Name:') }}</Label>
           <div class="relative">
-            <Input id="card-name" v-model="editedName" class="h-8 text-sm" placeholder="نام کاربر را وارد کنید" />
+            <Input id="card-name" v-model="editedName" class="h-8 text-sm" :placeholder="languageStore.t('نام کاربر را وارد کنید', 'Enter user name')" />
           </div>
         </div>
 
         <div class="flex flex-col gap-1">
-          <Label for="card-email" class="text-xs text-muted-foreground">آدرس ایمیل:</Label>
+          <Label for="card-email" class="text-xs text-muted-foreground">{{ languageStore.t('آدرس ایمیل:', 'Email Address:') }}</Label>
           <div class="relative">
-            <Input id="card-email" v-model="editedEmail" class="h-8 text-sm" placeholder="ایمیل کاربر را وارد کنید" />
+            <Input id="card-email" v-model="editedEmail" class="h-8 text-sm" :placeholder="languageStore.t('ایمیل کاربر را وارد کنید', 'Enter user email')" />
           </div>
         </div>
       </div>
@@ -180,7 +184,7 @@ const handleSave = () => {
           class="text-xs flex items-center gap-1"
         >
           <ActivityIcon data-icon="inline-start" />
-          {{ user.status === 'active' ? 'غیرفعال‌سازی' : 'فعال‌سازی حساب' }}
+          {{ user.status === 'active' ? languageStore.t('غیرفعال‌سازی', 'Deactivate') : languageStore.t('فعال‌سازی حساب', 'Activate Account') }}
         </Button>
 
         <div class="flex gap-2">
@@ -190,7 +194,7 @@ const handleSave = () => {
             class="text-xs flex items-center gap-1.5"
           >
             <CheckIcon data-icon="inline-start" />
-            ذخیره تغییرات
+            {{ languageStore.t('ذخیره تغییرات', 'Save Changes') }}
           </Button>
         </div>
       </div>

@@ -13,8 +13,11 @@ import {
   MusicIcon,
   PlayIcon,
   Loader2Icon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  Maximize2Icon,
+  Minimize2Icon
 } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
 
 interface Attachment {
   id: string | number
@@ -53,6 +56,44 @@ const recordingSeconds = ref(0)
 let timerInterval: any = null
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const showExpanded = ref(false)
+const expandedTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const actualHeight = ref(40)
+
+// Check if line count is more than 4 lines
+const lineCount = computed(() => {
+  if (!text.value) return 0
+  return text.value.split('\n').length
+})
+
+const isLongText = computed(() => {
+  if (!text.value) return false
+  
+  // 1. Explicit line breaks (4 lines or more)
+  if (lineCount.value >= 4) return true
+
+  // 2. Character length fallback (> 100 characters roughly equals 3-4 lines)
+  if (text.value.length > 100) return true
+
+  // 3. Rendered height fallback (> 75px)
+  if (actualHeight.value > 75) return true
+
+  return false
+})
+
+// Focus the expanded textarea when opened
+watch(showExpanded, (newVal) => {
+  if (newVal) {
+    nextTick(() => {
+      expandedTextareaRef.value?.focus()
+    })
+  }
+})
+
+const handleSendFromModal = () => {
+  handleSend()
+  showExpanded.value = false
+}
 
 // Sync from props
 watch(() => props.initialText, (newVal) => {
@@ -105,6 +146,7 @@ const adjustHeight = () => {
   const minHeight = hasAttachments.value ? 36 : 40
   const newHeight = Math.min(Math.max(el.scrollHeight, minHeight), 140)
   el.style.height = `${newHeight}px`
+  actualHeight.value = el.scrollHeight
 }
 
 watch([text, hasAttachments], () => {
@@ -192,31 +234,17 @@ const handleRemoveAttachment = (id: string | number) => {
 
 // Dynamic classes based on attachment status
 const containerClasses = computed(() => {
-  if (hasAttachments.value) {
+  if (hasAttachments.value || (isLongText.value && !isRecording.value)) {
     return 'w-full flex flex-col relative bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 rounded-3xl p-1.5 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-white focus-within:dark:bg-muted/25'
   }
   return 'w-full flex flex-col relative transition-all duration-300'
 })
 
 const textareaClasses = computed(() => {
-  if (hasAttachments.value) {
-    return 'bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-right'
+  if (hasAttachments.value || (isLongText.value && !isRecording.value)) {
+    return 'bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-1.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start'
   }
-  return 'bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-4 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-right'
-})
-
-const secondaryButtonClasses = computed(() => {
-  if (hasAttachments.value) {
-    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
-  }
-  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-white dark:bg-muted/20 text-muted-foreground border border-border/40 dark:border-border/20 hover:text-foreground hover:bg-muted/10 dark:hover:bg-muted/70 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
-})
-
-const sendButtonClasses = computed(() => {
-  if (hasAttachments.value) {
-    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
-  }
-  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95'
+  return 'bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start'
 })
 
 const recordingStatusClasses = computed(() => {
@@ -226,25 +254,14 @@ const recordingStatusClasses = computed(() => {
   return 'w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold h-10 px-4 rounded-2xl flex items-center justify-between transition-all duration-200 select-none'
 })
 
-const cancelRecordingButtonClasses = computed(() => {
-  if (hasAttachments.value) {
-    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
-  }
-  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
-})
-
-const stopRecordingButtonClasses = computed(() => {
-  if (hasAttachments.value) {
-    return 'size-9 p-0 rounded-2xl flex items-center justify-center bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
-  }
-  return 'size-10 p-0 rounded-2xl flex items-center justify-center bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all duration-200 cursor-pointer shrink-0 outline-none active:scale-95 hover:scale-105'
-})
+import { useLanguageStore } from '@/stores/languageStore'
+const languageStore = useLanguageStore()
 </script>
 
 <template>
   <div 
     :class="containerClasses"
-    dir="rtl"
+    :dir="languageStore.dir"
   >
     <!-- Muted/Disabled overlay message -->
     <div 
@@ -253,26 +270,29 @@ const stopRecordingButtonClasses = computed(() => {
     >
       <div class="bg-card/95 border border-border/80 rounded-2xl px-4 py-2 flex items-center gap-2 shadow-xs">
         <AlertCircleIcon class="size-4 text-muted-foreground animate-pulse" />
-        <span class="text-[11px] font-bold text-muted-foreground">شما اجازه ارسال پیام در این تاپیک را ندارید.</span>
+        <span class="text-[11px] font-bold text-muted-foreground">{{ languageStore.t('شما اجازه ارسال پیام در این تاپیک را ندارید.', 'You do not have permission to send messages in this topic.') }}</span>
       </div>
     </div>
+
+
 
     <!-- Attachments Preview Bar (Inside the container) -->
     <transition name="attachments-slide">
       <div 
         v-if="attachments.length > 0" 
-        class="w-full flex gap-3 overflow-x-auto scrollbar-none z-10 text-right pb-2.5 mb-1.5 border-b border-border/20 px-2"
+        class="w-full flex gap-3 overflow-x-auto scrollbar-none z-10 text-start pb-2.5 mb-1.5 border-b border-border/20 px-2"
       >
         <div 
           v-for="file in attachments" 
           :key="file.id"
           class="size-16 rounded-xl border border-border/50 bg-background/40 relative overflow-hidden flex flex-col items-center justify-center shrink-0 group hover:border-primary/30 hover:scale-105 hover:shadow-md transition-all duration-300"
         >
-          <!-- Delete button (Top Right) -->
+          <!-- Delete button (Top Right in LTR, Top Left in RTL) -->
           <button 
             @click="handleRemoveAttachment(file.id)"
-            class="absolute top-1.5 right-1.5 z-15 size-5 p-0 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white cursor-pointer transition-all duration-200 hover:rotate-90 hover:scale-110 shadow-xs outline-none"
-            title="حذف پیوست"
+            class="absolute top-1.5 z-15 size-5 p-0 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white cursor-pointer transition-all duration-200 hover:rotate-90 hover:scale-110 shadow-xs outline-none"
+            :class="[languageStore.isFa ? 'left-1.5' : 'right-1.5']"
+            :title="languageStore.t('حذف پیوست', 'Remove attachment')"
           >
             <XIcon class="size-2.5" />
           </button>
@@ -308,7 +328,7 @@ const stopRecordingButtonClasses = computed(() => {
           <template v-else>
             <div class="size-full flex flex-col items-center justify-center gap-1 p-1.5 bg-sky-500/10">
               <FileTextIcon class="size-5 text-sky-500" />
-              <span class="text-[8.5px] truncate max-w-full font-bold text-muted-foreground leading-none">{{ file.size || 'فایل' }}</span>
+              <span class="text-[8.5px] truncate max-w-full font-bold text-muted-foreground leading-none">{{ file.size || languageStore.t('فایل', 'File') }}</span>
             </div>
           </template>
           
@@ -320,35 +340,37 @@ const stopRecordingButtonClasses = computed(() => {
       </div>
     </transition>
 
-    <!-- Main Message Input Row (RTL) -->
-    <div class="w-full flex items-end gap-1.5" dir="rtl">
+    <!-- Main Message Input Row -->
+    <div class="w-full flex items-end gap-1.5" :dir="languageStore.dir">
       
       <!-- Right Element: Attach File Button / Cancel Recording Button -->
       <transition name="button-pop" mode="out-in">
         <!-- Cancel Recording Button -->
-        <button 
+        <Button 
           v-if="isRecording"
           key="cancel-record"
+          variant="destructive"
+          :size="hasAttachments ? 'icon' : 'icon-lg'"
+          class="group bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/25 active:scale-95 transition-all duration-200"
+          :title="languageStore.t('لغو ضبط', 'Cancel recording')"
           @click="cancelRecording"
-          :class="cancelRecordingButtonClasses"
-          class="group"
-          title="لغو ضبط"
         >
-          <Trash2Icon class="size-4.5 transition-transform duration-200 group-hover:scale-110 group-hover:text-destructive" />
-        </button>
+          <Trash2Icon class="transition-transform duration-200 group-hover:scale-110" />
+        </Button>
 
         <!-- Normal Attach Button -->
-        <button 
+        <Button 
           v-else
           key="attach-file"
-          @click="handleAttachClick"
+          variant="outline"
+          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
           :disabled="props.disabled"
-          :class="secondaryButtonClasses"
-          class="group"
-          title="افزودن فایل پیوست"
+          :title="languageStore.t('افزودن فایل پیوست', 'Attach file')"
+          @click="handleAttachClick"
         >
-          <PaperclipIcon class="size-4.5 transition-transform duration-200 group-hover:rotate-12 group-hover:scale-105" />
-        </button>
+          <PaperclipIcon class="transition-transform duration-200 group-hover:rotate-12 group-hover:scale-105" />
+        </Button>
       </transition>
 
       <!-- Center Element: Text Input / Recording Info Display -->
@@ -362,7 +384,7 @@ const stopRecordingButtonClasses = computed(() => {
           >
             <div class="flex items-center gap-2">
               <span class="size-1.5 bg-destructive rounded-full animate-pulse" />
-              <span class="text-[10px] font-bold text-destructive/80">در حال ضبط صدا...</span>
+              <span class="text-[10px] font-bold text-destructive/80">{{ languageStore.t('در حال ضبط صدا...', 'Recording voice...') }}</span>
             </div>
             <span class="font-mono text-[11px] font-bold text-destructive/90">{{ formattedTime }}</span>
           </div>
@@ -374,9 +396,10 @@ const stopRecordingButtonClasses = computed(() => {
             ref="textareaRef"
             v-model="text"
             :disabled="props.disabled"
-            :placeholder="props.placeholder"
+            :placeholder="props.placeholder === 'پیام خود را بنویسید...' ? languageStore.t('پیام خود را بنویسید...', 'Type your message...') : props.placeholder"
             rows="1"
             :class="textareaClasses"
+            dir="auto"
             @keydown.enter.exact.prevent="handleSend"
           />
         </transition>
@@ -385,46 +408,163 @@ const stopRecordingButtonClasses = computed(() => {
       <!-- Left Element: Send Button / Record Voice Button -->
       <transition name="button-pop" mode="out-in">
         <!-- Stop/Send Recording Button -->
-        <button 
+        <Button 
           v-if="isRecording"
           key="stop-record"
+          :size="hasAttachments ? 'icon' : 'icon-lg'"
+          class="group bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all duration-200"
+          :title="languageStore.t('ارسال صدا', 'Send voice')"
           @click="completeRecording"
-          :class="stopRecordingButtonClasses"
-          class="group"
-          title="ارسال صدا"
         >
-          <CheckIcon class="size-5 transition-transform duration-200 group-hover:scale-110" />
-        </button>
+          <CheckIcon class="transition-transform duration-200 group-hover:scale-110" />
+        </Button>
 
         <!-- Send message button -->
-        <button 
+        <Button 
           v-else-if="hasContent"
           key="send-msg"
-          @click="handleSend"
+          variant="default"
+          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+          class="group shadow-md shadow-primary/20 hover:scale-105 active:scale-95 transition-all duration-200"
           :disabled="props.disabled"
-          :class="sendButtonClasses"
-          class="group"
-          title="ارسال پیام"
+          :title="languageStore.t('ارسال پیام', 'Send message')"
+          @click="handleSend"
         >
-          <SendIcon class="size-4 scale-x-[-1] -rotate-45 transition-transform duration-200 group-hover:translate-x-[-2px] group-hover:translate-y-[1px] group-hover:scale-110" />
-        </button>
+          <SendIcon 
+            class="-rotate-45 transition-transform duration-200 group-hover:scale-110" 
+            :class="[
+              languageStore.isFa 
+                ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
+                : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
+            ]"
+          />
+        </Button>
 
         <!-- Record Voice Button -->
-        <button 
+        <Button 
           v-else
           key="record-voice"
-          @click="startRecording"
+          variant="outline"
+          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
           :disabled="props.disabled"
-          :class="secondaryButtonClasses"
-          class="group"
-          title="ضبط صدا"
+          :title="languageStore.t('ضبط صدا', 'Record voice')"
+          @click="startRecording"
         >
-          <MicIcon class="size-4.5 transition-transform duration-200 group-hover:scale-110" />
-        </button>
+          <MicIcon class="transition-transform duration-200 group-hover:scale-110" />
+        </Button>
       </transition>
 
     </div>
+
+    <!-- Expand Button (Positioned absolutely at the top-right corner of the container, above attachment/content area) -->
+    <Button
+      v-if="isLongText && !isRecording"
+      variant="ghost"
+      size="icon-sm"
+      :class="[
+        'absolute z-30 text-zinc-500 dark:text-zinc-400 hover:text-primary transition-all duration-200 cursor-pointer outline-none active:scale-95', 
+        hasAttachments 
+          ? (languageStore.isFa ? 'top-[90px] right-2.5' : 'top-[90px] left-2.5') 
+          : (languageStore.isFa ? 'top-2.5 right-2.5' : 'top-2.5 left-2.5')
+      ]"
+      :title="languageStore.t('ویرایش در نمای بزرگ', 'Edit in expanded view')"
+      @click="showExpanded = true"
+    >
+      <Maximize2Icon />
+    </Button>
   </div>
+
+  <!-- Expand Modal (Bottom Sheet, 80% screen height) -->
+  <teleport to="body">
+    <transition name="overlay-fade">
+      <div 
+        v-if="showExpanded" 
+        class="fixed inset-0 bg-background/60 dark:bg-background/80 backdrop-blur-sm z-50 transition-opacity"
+        @click="showExpanded = false"
+      />
+    </transition>
+
+    <transition name="sheet-slide">
+      <div 
+        v-if="showExpanded" 
+        class="fixed bottom-0 inset-x-0 h-[80vh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[2.5rem] z-55 flex flex-col shadow-2xl transition-transform"
+        :dir="languageStore.dir"
+        @click.stop
+      >
+        <!-- Drag Handle for Premium Feel -->
+        <div class="w-full flex justify-center py-3 shrink-0">
+          <div class="w-12 h-1.5 rounded-full bg-muted/60 dark:bg-muted/40 cursor-pointer" @click="showExpanded = false" />
+        </div>
+
+        <!-- Header -->
+        <div class="px-6 pb-4 border-b border-border/10 flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-black text-foreground">{{ languageStore.t('ویرایش پیام طولانی', 'Edit Long Message') }}</span>
+            <span class="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">{{ languageStore.t('نمای بزرگ', 'Expanded View') }}</span>
+          </div>
+          
+          <Button 
+            variant="ghost"
+            size="icon-sm"
+            class="text-muted-foreground hover:text-foreground active:scale-95"
+            :title="languageStore.t('بستن', 'Close')"
+            @click="showExpanded = false"
+          >
+            <Minimize2Icon />
+          </Button>
+        </div>
+
+        <!-- Body: Large Textarea -->
+        <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0">
+          <textarea
+            ref="expandedTextareaRef"
+            v-model="text"
+            :placeholder="languageStore.t('پیام خود را بنویسید...', 'Type your message...')"
+            class="w-full flex-1 bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-sm font-semibold leading-relaxed text-foreground placeholder:text-muted-foreground/50 resize-none overflow-y-auto scrollbar-thin text-start"
+            dir="auto"
+          />
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-border/10 bg-muted/5 dark:bg-muted/2 flex items-center justify-between shrink-0 rounded-b-none flex-row-reverse">
+          <!-- Actions -->
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="showExpanded = false"
+              class="px-4 h-9 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 transition-all duration-200 cursor-pointer outline-none active:scale-95"
+            >
+              {{ languageStore.t('انصراف', 'Cancel') }}
+            </button>
+            <button
+              type="button"
+              @click="handleSendFromModal"
+              :disabled="props.disabled || !hasContent"
+              class="px-4 h-9 rounded-xl text-xs font-black bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <SendIcon 
+                class="size-3.5 -rotate-45 transition-transform duration-200 group-hover:scale-110" 
+                :class="[
+                  languageStore.isFa 
+                    ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
+                    : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
+                ]"
+              />
+              <span>{{ languageStore.t('ارسال پیام', 'Send Message') }}</span>
+            </button>
+          </div>
+
+          <!-- Stats -->
+          <div class="flex items-center gap-3 text-[10px] text-muted-foreground font-bold">
+            <span>{{ languageStore.n(text.length) }} {{ languageStore.t('کاراکتر', 'characters') }}</span>
+            <span class="size-1 bg-muted-foreground/30 rounded-full" />
+            <span>{{ languageStore.n(lineCount) }} {{ languageStore.t('خط', 'lines') }}</span>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </teleport>
 </template>
 
 <style scoped>
@@ -471,6 +611,27 @@ const stopRecordingButtonClasses = computed(() => {
   opacity: 0;
 }
 
+/* Overlay Fade */
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
+}
+
+/* Sheet Slide Up */
+.sheet-slide-enter-active,
+.sheet-slide-leave-active {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+.sheet-slide-enter-from,
+.sheet-slide-leave-to {
+  transform: translateY(100%);
+  opacity: 0.8;
+}
+
 /* Scrollbar styling */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
@@ -478,5 +639,20 @@ const stopRecordingButtonClasses = computed(() => {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Thin Scrollbar for textarea in modal */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
 }
 </style>

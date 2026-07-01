@@ -16,8 +16,10 @@ import {
 } from '@lucide/vue'
 import { useUserStore } from '@/stores/userStore'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
 
 const toastStore = useToastStore()
+const languageStore = useLanguageStore()
 
 // Props to control state from the playground
 const props = withDefaults(defineProps<{
@@ -63,7 +65,7 @@ const startTimer = () => {
 const formattedTime = computed(() => {
   const minutes = Math.floor(cooldown.value / 60)
   const seconds = cooldown.value % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  return languageStore.n(`${minutes}:${seconds.toString().padStart(2, '0')}`)
 })
 
 const handleResendOtp = async () => {
@@ -73,9 +75,9 @@ const handleResendOtp = async () => {
   try {
     await userStore.requestOtp(phone.value)
     startTimer()
-    toastStore.triggerToast('کد تایید مجدداً ارسال شد.', 'success')
+    toastStore.triggerToast(languageStore.t('کد تایید مجدداً ارسال شد.', 'Verification code resent successfully.'), 'success')
   } catch (err: any) {
-    const errorText = err.response?.data?.error || 'خطا در ارسال مجدد کد تایید.'
+    const errorText = err.response?.data?.error || languageStore.t('خطا در ارسال مجدد کد تایید.', 'Failed to resend verification code.')
     localError.value = errorText
     toastStore.triggerToast(errorText, 'error')
   } finally {
@@ -114,7 +116,9 @@ watch(() => props.state, (newVal) => {
     localError.value = ''
   } else if (newVal === 'error') {
     isLoading.value = false
-    localError.value = props.errorMessage
+    localError.value = props.errorMessage === 'شماره همراه وارد شده معتبر نیست. لطفا شماره معتبری وارد کنید.'
+      ? languageStore.t('شماره همراه وارد شده معتبر نیست. لطفا شماره معتبری وارد کنید.', 'The entered mobile number is not valid. Please enter a valid number.')
+      : props.errorMessage
   } else if (newVal === 'success') {
     isLoading.value = false
     localError.value = ''
@@ -136,11 +140,11 @@ const validatePhone = (value: string) => {
 const handleSubmitPhone = async () => {
   localError.value = ''
   if (!phone.value) {
-    toastStore.triggerToast('لطفا شماره همراه خود را وارد کنید.', 'error')
+    toastStore.triggerToast(languageStore.t('لطفا شماره همراه خود را وارد کنید.', 'Please enter your mobile number.'), 'error')
     return
   }
   if (!validatePhone(phone.value)) {
-    toastStore.triggerToast('فرمت شماره همراه نادرست است (مثال: ۰۹۱۲۳۴۵۶۷۸۹).', 'error')
+    toastStore.triggerToast(languageStore.t('فرمت شماره همراه نادرست است (مثال: ۰۹۱۲۳۴۵۶۷۸۹).', 'Invalid phone format (e.g., 09123456789).'), 'error')
     return
   }
 
@@ -153,7 +157,7 @@ const handleSubmitPhone = async () => {
     startTimer()
     emit('stateChange', 'otp')
   } catch (err: any) {
-    const errorText = err.response?.data?.error || 'خطا در ارسال کد تایید. لطفاً بعداً تلاش کنید.'
+    const errorText = err.response?.data?.error || languageStore.t('خطا در ارسال کد تایید. لطفاً بعداً تلاش کنید.', 'Failed to send verification code. Please try again later.')
     localError.value = errorText
     toastStore.triggerToast(errorText, 'error')
   } finally {
@@ -165,7 +169,7 @@ const handleSubmitPhone = async () => {
 const handleSubmitOtp = async () => {
   localError.value = ''
   if (otp.value.length < 4) {
-    toastStore.triggerToast('لطفا کد تایید ۴ رقمی را به طور کامل وارد کنید.', 'error')
+    toastStore.triggerToast(languageStore.t('لطفا کد تایید ۴ رقمی را به طور کامل وارد کنید.', 'Please enter the complete 4-digit code.'), 'error')
     return
   }
 
@@ -176,7 +180,7 @@ const handleSubmitOtp = async () => {
     await userStore.verifyOtp(phone.value, otp.value)
     emit('stateChange', 'success')
   } catch (err: any) {
-    const errorText = err.response?.data?.error || 'کد تایید وارد شده معتبر نیست.'
+    const errorText = err.response?.data?.error || languageStore.t('کد تایید وارد شده معتبر نیست.', 'The entered verification code is not valid.')
     localError.value = errorText
     toastStore.triggerToast(errorText, 'error')
     otp.value = ''
@@ -205,7 +209,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-full bg-card rounded-3xl overflow-hidden transition-all duration-300">
+  <div 
+    class="w-full bg-card rounded-3xl overflow-hidden transition-all duration-300"
+    :dir="languageStore.dir"
+  >
     
     <!-- HEADER -->
     <div class="pt-8 pb-4 px-6 text-center flex flex-col items-center gap-3">
@@ -217,15 +224,19 @@ onUnmounted(() => {
       </div>
       
       <div class="flex flex-col gap-1">
-        <h1 class="text-xl font-extrabold tracking-tight text-foreground">تفکر</h1>
+        <h1 class="text-xl font-extrabold tracking-tight text-foreground">
+          {{ languageStore.t('تفکر', 'Tafakor') }}
+        </h1>
         <p v-if="step === 'phone'" class="text-muted-foreground text-xs leading-normal">
-          برای ورود شماره همراه خود را وارد کنید
+          {{ languageStore.t('برای ورود شماره همراه خود را وارد کنید', 'Enter your mobile number to log in') }}
         </p>
         <p v-else-if="step === 'otp'" class="text-muted-foreground text-xs leading-normal">
-          کد تایید ارسال شده به شماره <code class="bg-muted px-1 py-0.5 rounded font-sans">{{ phone }}</code> را وارد کنید
+          {{ languageStore.t('کد تایید ارسال شده به شماره', 'Enter the code sent to') }} 
+          <code class="bg-muted px-1 py-0.5 rounded font-sans">{{ languageStore.n(phone) }}</code> 
+          {{ languageStore.t('را وارد کنید', '') }}
         </p>
         <p v-else class="text-muted-foreground text-xs leading-normal">
-          ورود شما با موفقیت انجام شد
+          {{ languageStore.t('ورود شما با موفقیت انجام شد', 'You have successfully signed in') }}
         </p>
       </div>
     </div>
@@ -237,7 +248,7 @@ onUnmounted(() => {
       <transition name="alert-slide">
         <div 
           v-if="localError" 
-          class="flex items-start gap-2.5 p-3.5 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 text-[10.5px] font-bold text-right mb-4 shadow-xs"
+          class="flex items-start gap-2.5 p-3.5 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 text-[10.5px] font-bold text-start mb-4 shadow-xs"
         >
           <AlertTriangleIcon class="size-4 shrink-0 mt-0.5" />
           <p class="leading-relaxed">{{ localError }}</p>
@@ -248,19 +259,25 @@ onUnmounted(() => {
       <div v-if="step === 'phone'" class="grid gap-4">
 
         <div class="flex flex-col gap-1.5">
-          <Label for="login-phone" class="text-xs text-muted-foreground font-semibold">شماره همراه:</Label>
-          <div class="relative w-full" dir="rtl">
+          <Label for="login-phone" class="text-xs text-muted-foreground font-semibold">
+            {{ languageStore.t('شماره همراه:', 'Mobile Number:') }}
+          </Label>
+          <div class="relative w-full" :dir="languageStore.dir">
             <Input 
               id="login-phone" 
               type="tel" 
               v-model="phone" 
-              placeholder="۰۹۱۲۳۴۵۶۷۸۹" 
+              :placeholder="languageStore.t('۰۹۱۲۳۴۵۶۷۸۹', '09123456789')" 
               maxlength="11"
               :disabled="isLoading"
-              class="h-10 text-center font-sans pr-10 tracking-widest text-sm focus-visible:ring-primary/20"
+              class="h-10 text-center font-sans tracking-widest text-sm focus-visible:ring-primary/20"
+              :class="[languageStore.isFa ? 'pr-10' : 'pl-10']"
               @keyup.enter="handleSubmitPhone"
             />
-            <span class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted-foreground/60">
+            <span 
+              class="absolute inset-y-0 flex items-center pointer-events-none text-muted-foreground/60"
+              :class="[languageStore.isFa ? 'right-3' : 'left-3']"
+            >
               <SmartphoneIcon class="size-4" />
             </span>
           </div>
@@ -274,11 +291,11 @@ onUnmounted(() => {
         >
           <span v-if="isLoading" class="flex items-center gap-1.5">
             <span class="size-3.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-            در حال ارسال...
+            {{ languageStore.t('در حال ارسال...', 'Sending...') }}
           </span>
-          <span v-else class="flex items-center gap-2">
-            ارسال کد تایید
-            <SendIcon data-icon="inline-end" />
+          <span v-else class="flex items-center gap-2" :class="[languageStore.isFa ? 'flex-row' : 'flex-row-reverse']">
+            {{ languageStore.t('ارسال کد تایید', 'Send Verification Code') }}
+            <SendIcon data-icon="inline-end" :class="[languageStore.isFa ? '' : 'rotate-180']" />
           </span>
         </Button>
       </div>
@@ -287,7 +304,9 @@ onUnmounted(() => {
       <div v-else-if="step === 'otp'" class="grid gap-4">
 
         <div class="flex flex-col items-center gap-3">
-          <Label class="text-xs text-muted-foreground font-semibold text-center">کد تایید ۴ رقمی:</Label>
+          <Label class="text-xs text-muted-foreground font-semibold text-center">
+            {{ languageStore.t('کد تایید ۴ رقمی:', '4-Digit Verification Code:') }}
+          </Label>
           <div dir="ltr" class="flex justify-center w-full">
             <InputOTP v-model="otp" :maxlength="4" :disabled="isLoading" @complete="handleSubmitOtp">
               <InputOTPGroup>
@@ -307,7 +326,7 @@ onUnmounted(() => {
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/5 text-primary border border-primary/15 rounded-full text-[10px] font-bold tracking-normal transition-all duration-300 shadow-xs"
               >
                 <ClockIcon class="size-3.5 text-primary/70" style="animation: spin 6s linear infinite" />
-                <span>ارسال مجدد پس از {{ formattedTime }}</span>
+                <span>{{ languageStore.t('ارسال مجدد پس از', 'Resend in') }} {{ formattedTime }}</span>
               </div>
               <button 
                 v-else 
@@ -317,7 +336,7 @@ onUnmounted(() => {
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:text-foreground border border-border/40 rounded-full text-[10px] font-bold transition-all duration-200 shadow-xs cursor-pointer disabled:opacity-50"
               >
                 <RotateCcwIcon class="size-3 text-muted-foreground" />
-                <span>ارسال مجدد کد تایید</span>
+                <span>{{ languageStore.t('ارسال مجدد کد تایید', 'Resend Verification Code') }}</span>
               </button>
             </transition>
           </div>
@@ -332,10 +351,10 @@ onUnmounted(() => {
           >
             <span v-if="isLoading" class="flex items-center gap-1.5">
               <span class="size-3.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              در حال بررسی...
+              {{ languageStore.t('در حال بررسی...', 'Verifying...') }}
             </span>
             <span v-else class="flex items-center gap-2">
-              بررسی کد تایید
+              {{ languageStore.t('بررسی کد تایید', 'Verify Code') }}
               <CheckCircle2Icon data-icon="inline-end" />
             </span>
           </Button>
@@ -344,9 +363,10 @@ onUnmounted(() => {
             @click="handleResetPhone" 
             :disabled="isLoading" 
             class="text-[11px] text-primary hover:underline font-medium text-center py-2 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+            :class="[languageStore.isFa ? 'flex-row' : 'flex-row-reverse']"
           >
-            <ArrowRightIcon class="size-3" />
-            تغییر شماره همراه
+            <ArrowRightIcon class="size-3" :class="[languageStore.isFa ? '' : 'rotate-180']" />
+            {{ languageStore.t('تغییر شماره همراه', 'Change Phone Number') }}
           </button>
         </div>
       </div>
@@ -355,9 +375,11 @@ onUnmounted(() => {
       <div v-else class="grid gap-6 text-center py-4">
         <div class="text-emerald-600 dark:text-emerald-400 flex flex-col items-center gap-3">
           <CheckCircle2Icon class="size-16 animate-bounce" />
-          <h2 class="text-lg font-extrabold text-foreground">خوش آمدید!</h2>
+          <h2 class="text-lg font-extrabold text-foreground">
+            {{ languageStore.t('خوش آمدید!', 'Welcome!') }}
+          </h2>
           <p class="text-xs text-muted-foreground max-w-xs leading-relaxed">
-            احراز هویت شما با موفقیت به پایان رسید و شما وارد سامانه تفکر شدید.
+            {{ languageStore.t('احراز هویت شما با موفقیت به پایان رسید و شما وارد سامانه تفکر شدید.', 'Your authentication was successful and you have signed in to Tafakor Platform.') }}
           </p>
         </div>
 
@@ -366,7 +388,7 @@ onUnmounted(() => {
           @click="handleReset" 
           class="w-full flex items-center justify-center gap-2 cursor-pointer"
         >
-          خروج از حساب / تست مجدد
+          {{ languageStore.t('خروج از حساب / تست مجدد', 'Sign Out / Test Again') }}
         </Button>
       </div>
 

@@ -9,7 +9,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { SparklesIcon, CheckIcon, ChevronLeftIcon, ChevronDownIcon } from '@lucide/vue'
+import { 
+  SparklesIcon, 
+  CheckIcon, 
+  ChevronLeftIcon, 
+  ChevronRightIcon, 
+  ChevronDownIcon 
+} from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 interface ChangelogSection {
   version: string
@@ -33,8 +42,8 @@ const fetchAndParseChangelog = async () => {
     const text = await response.text()
     
     // Parse markdown into sections
-    // Split by version headers: ### نسخه X.Y.Z - عنوان
-    const rawSections = text.split(/###\s+نسخه\s+/)
+    // Split by version headers: ### نسخه X.Y.Z or ### Version X.Y.Z
+    const rawSections = text.split(/###\s+(?:نسخه|Version)\s+/i)
     const parsedSections: ChangelogSection[] = []
 
     // Index 0 contains the title "# تغییرات ...", so we start from index 1
@@ -50,23 +59,23 @@ const fetchAndParseChangelog = async () => {
       const match = headerLine.match(/^([\d\.]+)\s*-\s*(.+)$/)
       
       if (match) {
-        const version = match[1]
-        const title = match[2]
-        const changes: string[] = []
+         const version = match[1]
+         const title = match[2]
+         const changes: string[] = []
 
-        if (version && title) {
-          // Parse list items starting with "-"
-          for (let j = 1; j < lines.length; j++) {
-            const line = lines[j]?.trim()
-            if (line && line.startsWith('-')) {
-              // Remove bullet point and format bold text
-              const changeText = line.substring(1).trim()
-              changes.push(changeText)
-            }
-          }
+         if (version && title) {
+           // Parse list items starting with "-"
+           for (let j = 1; j < lines.length; j++) {
+             const line = lines[j]?.trim()
+             if (line && line.startsWith('-')) {
+               // Remove bullet point and format bold text
+               const changeText = line.substring(1).trim()
+               changes.push(changeText)
+             }
+           }
 
-          parsedSections.push({ version, title, changes })
-        }
+           parsedSections.push({ version, title, changes })
+         }
       }
     }
 
@@ -116,11 +125,15 @@ const formatChange = (change: string) => {
 
 <template>
   <Dialog :open="isOpen" @update:open="(val) => { if (!val) handleConfirm() }">
-    <DialogContent :show-close-button="false" class="max-w-[440px] p-0 overflow-hidden flex flex-col text-right rounded-3xl" dir="rtl">
+    <DialogContent 
+      :show-close-button="false" 
+      class="max-w-[440px] p-0 overflow-hidden flex flex-col rounded-3xl text-start" 
+      :dir="languageStore.dir"
+    >
       
       <!-- Accessibility Description -->
       <DialogDescription class="sr-only">
-        تغییرات و بروزرسانی‌های اخیر پلتفرم تفکر شامل بهبودهای رابط کاربری، سیستم اعلان خطا و تفکیک رنگ‌ها.
+        {{ languageStore.t('تغییرات و بروزرسانی‌های اخیر پلتفرم تفکر شامل بهبودهای رابط کاربری، سیستم اعلان خطا و تفکیک رنگ‌ها.', 'Recent updates and changes in Tafakor Platform, including UI improvements, error notification systems, and color themes.') }}
       </DialogDescription>
 
       <!-- Header -->
@@ -129,7 +142,7 @@ const formatChange = (change: string) => {
           <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-xs">
             <SparklesIcon class="size-4 animate-pulse" />
           </div>
-          <DialogTitle class="text-xs font-black text-foreground">آخرین بروزرسانی‌های تفکر</DialogTitle>
+          <DialogTitle class="text-xs font-black text-foreground">{{ languageStore.t('آخرین بروزرسانی‌های تفکر', 'Tafakor Latest Updates') }}</DialogTitle>
         </div>
       </DialogHeader>
 
@@ -138,10 +151,12 @@ const formatChange = (change: string) => {
         <div 
           v-for="(section, idx) in changelogData" 
           :key="section.version"
-          class="flex flex-col gap-2 relative pr-3 border-r border-border/60 pb-1"
+          class="flex flex-col gap-2 relative pb-1 ps-3 border-s border-border/60"
         >
           <!-- Timeline point -->
-          <div class="absolute -right-[4.5px] top-1.5 size-2 rounded-full border border-background bg-primary" />
+          <div 
+            class="absolute top-1.5 size-2 rounded-full border border-background bg-primary start-[-4.5px]"
+          />
 
           <!-- Version Title (Accordion Trigger) -->
           <div 
@@ -149,7 +164,7 @@ const formatChange = (change: string) => {
             class="flex items-center justify-between flex-wrap gap-2 cursor-pointer hover:text-primary transition-colors select-none"
           >
             <div class="flex items-center gap-2">
-              <span class="text-xs font-black text-foreground">نسخه {{ section.version }}</span>
+              <span class="text-xs font-black text-foreground">{{ languageStore.t('نسخه', 'Version') }} {{ section.version }}</span>
               <span class="text-[10px] font-bold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-lg border border-border/20">{{ section.title }}</span>
             </div>
             <ChevronDownIcon 
@@ -162,14 +177,17 @@ const formatChange = (change: string) => {
           <transition name="accordion-slide">
             <ul 
               v-show="expandedVersions[section.version]" 
-              class="flex flex-col gap-1.5 mt-1 pr-1 overflow-hidden"
+              class="flex flex-col gap-1.5 mt-1 overflow-hidden ps-1"
             >
               <li 
                 v-for="(change, cIdx) in section.changes" 
                 :key="cIdx"
                 class="text-[10.5px] text-muted-foreground leading-relaxed flex items-start gap-1.5"
               >
-                <ChevronLeftIcon class="size-3 text-primary/60 shrink-0 mt-1" />
+                <component 
+                  :is="languageStore.isFa ? ChevronLeftIcon : ChevronRightIcon" 
+                  class="size-3 text-primary/60 shrink-0 mt-1" 
+                />
                 <span v-html="formatChange(change)" />
               </li>
             </ul>
@@ -184,7 +202,7 @@ const formatChange = (change: string) => {
           class="w-full h-10 text-xs font-bold rounded-2xl cursor-pointer shadow-md shadow-primary/10"
         >
           <CheckIcon class="size-4" data-icon="inline-start" />
-          متوجه شدم
+          {{ languageStore.t('متوجه شدم', 'Got it') }}
         </Button>
       </DialogFooter>
 

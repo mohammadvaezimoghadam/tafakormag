@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { SaveIcon, RefreshCwIcon, CheckCircle2Icon, ImageIcon, UploadIcon, Trash2Icon } from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 const props = defineProps<{
   topic: {
@@ -21,8 +24,8 @@ const emit = defineEmits<{
   (e: 'save', updatedTopic: { title: string; description: string; image: string | File }): void
 }>()
 
-const title = ref(props.topic.title)
-const description = ref(props.topic.description)
+const title = ref(props.topic?.title || '')
+const description = ref(props.topic?.description || '')
 
 // File upload state refs
 const imageFile = ref<File | null>(null)
@@ -72,39 +75,44 @@ const handleSave = () => {
 </script>
 
 <template>
-  <div class="w-full flex flex-col gap-5 text-right font-sans" dir="rtl">
+  <div 
+    class="w-full flex flex-col gap-5 text-start font-sans" 
+    :dir="languageStore.dir"
+  >
     <!-- Header -->
     <PlatformHeader 
       is-inner-page
-      inner-title="ویرایش تاپیک"
+      :inner-title="languageStore.t('ویرایش تاپیک', 'Edit Topic')"
       :show-options-button="false"
       @back="emit('back')"
     />
 
     <!-- Edit Form Card -->
     <div class="w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-5 shadow-xs flex flex-col gap-4.5">
-      <div class="flex flex-col gap-2">
-        <Label for="topic-title" class="text-xs font-bold text-foreground/80">نام تاپیک</Label>
+      <div class="flex flex-col gap-2 text-start">
+        <Label for="topic-title" class="text-xs font-bold text-foreground/80">{{ languageStore.t('نام تاپیک', 'Topic Name') }}</Label>
         <Input 
           id="topic-title" 
           v-model="title" 
-          placeholder="مثال: پشتیبانی فنی پلتفرم" 
-          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 h-10.5 font-bold"
+          :placeholder="languageStore.t('مثال: پشتیبانی فنی پلتفرم', 'e.g., Technical Support Platform')" 
+          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 h-10.5 font-bold text-start"
+          dir="auto"
         />
       </div>
 
-      <div class="flex flex-col gap-2">
-        <Label for="topic-desc" class="text-xs font-bold text-foreground/80">توضیحات تاپیک</Label>
+      <div class="flex flex-col gap-2 text-start">
+        <Label for="topic-desc" class="text-xs font-bold text-foreground/80">{{ languageStore.t('توضیحات تاپیک', 'Topic Description') }}</Label>
         <Textarea 
           id="topic-desc" 
           v-model="description" 
-          placeholder="توضیحاتی درباره این تاپیک بنویسید..." 
-          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 min-h-[90px] resize-none"
+          :placeholder="languageStore.t('توضیحاتی درباره این تاپیک بنویسید...', 'Write a description about this topic...')" 
+          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 min-h-[90px] resize-none text-start"
+          dir="auto"
         />
       </div>
 
-      <div class="flex flex-col gap-2">
-        <Label class="text-xs font-bold text-foreground/80">تصویر تاپیک (اختیاری)</Label>
+      <div class="flex flex-col gap-2 text-start">
+        <Label class="text-xs font-bold text-foreground/80">{{ languageStore.t('تصویر تاپیک (اختیاری)', 'Topic Image (Optional)') }}</Label>
         
         <!-- Image Preview and Upload Controls -->
         <div class="flex items-center gap-4 p-3 rounded-2xl bg-white/5 dark:bg-black/20 border border-border/60">
@@ -112,8 +120,8 @@ const handleSave = () => {
             <img v-if="imagePreview" :src="imagePreview" class="w-full h-full object-cover" alt="Topic preview" />
             <ImageIcon v-else class="size-6 text-muted-foreground/60" />
           </div>
-          <div class="flex flex-col gap-1.5 flex-1">
-            <span class="text-[10px] text-muted-foreground leading-normal">برای تاپیک خود یک لوگو یا کاور انتخاب کنید.</span>
+          <div class="flex flex-col gap-1.5 flex-1 text-start">
+            <span class="text-[10px] text-muted-foreground leading-normal">{{ languageStore.t('برای تاپیک خود یک لوگو یا کاور انتخاب کنید.', 'Choose a logo or cover for your topic.') }}</span>
             <div class="flex gap-2">
               <Button 
                 variant="secondary" 
@@ -122,7 +130,7 @@ const handleSave = () => {
                 @click="triggerImageSelect"
               >
                 <UploadIcon class="size-3.5" data-icon="inline-start" />
-                آپلود عکس
+                {{ languageStore.t('آپلود عکس', 'Upload Photo') }}
               </Button>
               <Button 
                 v-if="imagePreview"
@@ -132,7 +140,7 @@ const handleSave = () => {
                 @click="clearImage"
               >
                 <Trash2Icon class="size-3.5" data-icon="inline-start" />
-                حذف
+                {{ languageStore.t('حذف', 'Remove') }}
               </Button>
             </div>
             <input 
@@ -158,15 +166,15 @@ const handleSave = () => {
         <transition name="btn-content" mode="out-in">
           <div v-if="isSaving" class="flex items-center gap-2 justify-center">
             <RefreshCwIcon class="size-4 animate-spin" />
-            <span>در حال ذخیره‌سازی...</span>
+            <span>{{ languageStore.t('در حال ذخیره‌سازی...', 'Saving...') }}</span>
           </div>
-          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-600 dark:text-emerald-400">
+          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-650 dark:text-emerald-400">
             <CheckCircle2Icon class="size-4" />
-            <span>تغییرات با موفقیت ذخیره شد</span>
+            <span>{{ languageStore.t('تغییرات با موفقیت ذخیره شد', 'Changes saved successfully') }}</span>
           </div>
           <div v-else class="flex items-center gap-2 justify-center">
             <SaveIcon class="size-4" />
-            <span>ذخیره تغییرات</span>
+            <span>{{ languageStore.t('ذخیره تغییرات', 'Save Changes') }}</span>
           </div>
         </transition>
       </Button>

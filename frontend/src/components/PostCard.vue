@@ -20,7 +20,8 @@ import {
   ImageIcon,
   UserIcon,
   CopyIcon,
-  ClipboardIcon
+  ClipboardIcon,
+  CircleFadingArrowUpIcon
 } from '@lucide/vue'
 
 // Interfaces
@@ -58,13 +59,15 @@ interface Props {
   comments?: Comment[]
   liked?: boolean
   reactions?: PostReaction[]
+  isPinned?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   likesCount: 0,
   comments: () => [],
   liked: false,
-  reactions: () => []
+  reactions: () => [],
+  isPinned: false
 })
 
 const emit = defineEmits<{
@@ -78,10 +81,32 @@ const emit = defineEmits<{
   (e: 'copy', id: string | number): void
 }>()
 
+import { useLanguageStore } from '@/stores/languageStore'
+const languageStore = useLanguageStore()
+
 // Helper for Farsi digits
 const toPersianDigits = (num: number | string) => {
-  const id = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
-  return num.toString().replace(/[0-9]/g, (w) => id[+w]!)
+  return languageStore.n(num)
+}
+
+const formatTimestamp = (isoString: string) => {
+  if (!isoString) return ''
+  if (isoString === 'هم‌اکنون') return languageStore.t('هم‌اکنون', 'just now')
+  if (isoString.includes(':') && !isoString.includes('-')) {
+    return languageStore.n(isoString)
+  }
+  try {
+    const date = new Date(isoString)
+    if (isNaN(date.getTime())) return languageStore.n(isoString)
+    
+    return date.toLocaleDateString(languageStore.currentLanguage === 'fa' ? 'fa-IR' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      numberingSystem: languageStore.currentLanguage === 'fa' ? 'arabext' : 'latn'
+    })
+  } catch (e) {
+    return languageStore.n(isoString)
+  }
 }
 
 // Local interactive state
@@ -601,11 +626,11 @@ onBeforeUnmount(() => {
 
 // Time formatter (mm:ss)
 const formatTime = (timeInSeconds: number) => {
-  if (isNaN(timeInSeconds)) return '۰۰:۰۰'
+  if (isNaN(timeInSeconds)) return languageStore.n('00:00')
   const minutes = Math.floor(timeInSeconds / 60)
   const seconds = Math.floor(timeInSeconds % 60)
   const pad = (num: number) => num < 10 ? '0' + num : num
-  return toPersianDigits(`${pad(minutes)}:${pad(seconds)}`)
+  return languageStore.n(`${pad(minutes)}:${pad(seconds)}`)
 }
 </script>
 
@@ -613,11 +638,12 @@ const formatTime = (timeInSeconds: number) => {
   <div 
     ref="cardRef"
     :class="[
-      'w-full bg-background/12 dark:bg-card/10 backdrop-blur-md border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-right',
+      'w-full bg-background/12 dark:bg-card/10 backdrop-blur-md border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-start',
+      props.isPinned ? 'border-primary/45 bg-primary/[0.01]' : '',
       isEditing ? 'select-text' : 'select-none',
       isPressing ? 'scale-[0.96] shadow-inner bg-background/5 dark:bg-card/5 border-border/30 brightness-95' : 'scale-100'
     ]"
-    dir="rtl"
+    :dir="languageStore.dir"
     @mousedown="handleMouseDown"
     @mouseup="handleMouseUp"
     @mouseleave="handleMouseLeave"
@@ -638,9 +664,9 @@ const formatTime = (timeInSeconds: number) => {
         </Avatar>
         
         <!-- Author Info -->
-        <div class="flex flex-col text-right">
+        <div class="flex flex-col text-start">
           <span class="text-xs font-bold text-foreground">{{ author.name }}</span>
-          <span class="text-[10px] text-muted-foreground mt-0.5">{{ author.role || 'عضو تاپیک' }}</span>
+          <span class="text-[10px] text-muted-foreground mt-0.5">{{ author.role || languageStore.t('عضو تاپیک', 'Topic Member') }}</span>
         </div>
       </div>
 
@@ -648,7 +674,7 @@ const formatTime = (timeInSeconds: number) => {
         <!-- Timestamp -->
         <div class="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
           <ClockIcon class="size-3.5 text-primary" />
-          <span>{{ toPersianDigits(timestamp) }}</span>
+          <span>{{ formatTimestamp(timestamp) }}</span>
         </div>
         <!-- Options Menu (Simulated) -->
         <Button 
@@ -665,13 +691,13 @@ const formatTime = (timeInSeconds: number) => {
     <!-- Card Body Content -->
     <div class="p-5 flex flex-col gap-4">
       <!-- Post Text Content / Edit Box -->
-      <div v-if="isEditing" class="flex flex-col gap-2 w-full text-right" dir="rtl">
+      <div v-if="isEditing" class="flex flex-col gap-2 w-full text-start" :dir="languageStore.dir">
         <textarea
           ref="textareaRef"
           v-model="editedContent"
           class="w-full min-h-[90px] p-3 text-xs font-semibold rounded-2xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/20 text-foreground resize-none overflow-y-hidden select-text"
           style="-webkit-user-select: text !important; user-select: text !important;"
-          placeholder="یادداشت خود را ویرایش کنید..."
+          :placeholder="languageStore.t('یادداشت خود را ویرایش کنید...', 'Edit your note...')"
           @input="adjustTextareaHeight"
           @contextmenu.prevent="handleEditTextareaContextMenu"
           @touchstart.stop="textareaRef?.focus()"
@@ -686,7 +712,7 @@ const formatTime = (timeInSeconds: number) => {
               @click="handleEditTextareaDropdownToggle"
             >
               <MoreVerticalIcon class="size-3.5" />
-              <span>عملیات متن</span>
+              <span>{{ languageStore.t('عملیات متن', 'Text Actions') }}</span>
             </Button>
           </div>
           <div class="flex items-center gap-2">
@@ -696,14 +722,14 @@ const formatTime = (timeInSeconds: number) => {
               class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
               @click="handleEditCancel"
             >
-              انصراف
+              {{ languageStore.t('انصراف', 'Cancel') }}
             </Button>
             <Button 
               size="sm" 
               class="h-8 px-3 rounded-xl text-[10px] font-bold cursor-pointer"
               @click="handleEditSave"
             >
-              ذخیره تغییرات
+              {{ languageStore.t('ذخیره تغییرات', 'Save Changes') }}
             </Button>
           </div>
         </div>
@@ -711,7 +737,8 @@ const formatTime = (timeInSeconds: number) => {
       
       <p 
         v-else-if="content" 
-        class="text-sm font-medium leading-relaxed text-foreground/90 whitespace-pre-line"
+        class="text-sm font-medium leading-relaxed text-foreground/90 whitespace-pre-line text-start"
+        dir="auto"
       >
         {{ content }}
       </p>
@@ -730,7 +757,7 @@ const formatTime = (timeInSeconds: number) => {
         <div class="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
           <span class="text-[9px] bg-black/60 backdrop-blur-xs text-white px-2.5 py-1 rounded-md flex items-center gap-1 font-bold">
             <ImageIcon class="size-3" />
-            نمایش تصویر کامل
+            {{ languageStore.t('نمایش تصویر کامل', 'View Full Image') }}
           </span>
         </div>
       </div>
@@ -789,7 +816,7 @@ const formatTime = (timeInSeconds: number) => {
             <div class="flex justify-between items-center gap-2">
               <span class="text-[10px] font-bold text-foreground truncate flex items-center gap-1">
                 <MusicIcon class="size-3 text-primary" />
-                فایل صوتی ضمیمه شده
+                {{ languageStore.t('فایل صوتی ضمیمه شده', 'Attached audio file') }}
               </span>
               <span class="text-[10px] text-muted-foreground font-bold shrink-0">
                 {{ formatTime(audioCurrentTime) }} / {{ formatTime(audioDuration || parseFloat(duration || '0')) }}
@@ -878,7 +905,7 @@ const formatTime = (timeInSeconds: number) => {
             variant="secondary" 
             class="h-4 px-1 rounded-sm text-[8px] bg-primary/20 text-primary border-0 font-bold"
           >
-            جدید
+            {{ languageStore.t('جدید', 'New') }}
           </Badge>
         </button>
       </div>
@@ -903,12 +930,12 @@ const formatTime = (timeInSeconds: number) => {
         <!-- Comments List -->
         <div class="px-5 py-4 flex flex-col gap-3.5 max-h-[250px] overflow-y-auto scrollbar-thin">
           <div v-if="localComments.length === 0" class="text-center py-4 text-[10.5px] text-muted-foreground font-medium">
-            هنوز نظری ثبت نشده است. اولین نظر را شما بنویسید!
+            {{ languageStore.t('هنوز نظری ثبت نشده است. اولین نظر را شما بنویسید!', 'No comments yet. Be the first to comment!') }}
           </div>
           <div 
             v-for="comment in localComments" 
             :key="comment.id"
-            class="flex items-start gap-3 text-right"
+            class="flex items-start gap-3 text-start"
           >
             <!-- Commenter Avatar -->
             <Avatar class="size-8">
@@ -922,9 +949,9 @@ const formatTime = (timeInSeconds: number) => {
             <div class="flex-1 bg-white/5 dark:bg-black/15 rounded-2xl px-3.5 py-2.5 flex flex-col gap-1">
               <div class="flex justify-between items-center">
                 <span class="text-[11.5px] font-extrabold text-foreground">{{ comment.authorName }}</span>
-                <span class="text-[10px] text-muted-foreground font-semibold">{{ toPersianDigits(comment.timestamp) }}</span>
+                <span class="text-[10px] text-muted-foreground font-semibold">{{ formatTimestamp(comment.timestamp) }}</span>
               </div>
-              <p class="text-[12.5px] leading-relaxed text-foreground/90 font-medium">
+              <p class="text-[12.5px] leading-relaxed text-foreground/90 font-medium text-start" dir="auto">
                 {{ comment.text }}
               </p>
             </div>
@@ -941,17 +968,22 @@ const formatTime = (timeInSeconds: number) => {
           <div class="flex-1 relative flex items-center">
             <Input 
               v-model="newCommentText"
-              placeholder="دیدگاه خود را بنویسید..." 
-              class="pr-3 pl-10 py-1.5 h-8.5 text-xs font-semibold rounded-xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus-visible:ring-primary/30"
+              :placeholder="languageStore.t('دیدگاه خود را بنویسید...', 'Write a comment...')" 
+              class="py-1.5 h-8.5 text-xs font-semibold rounded-xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus-visible:ring-primary/30 text-start"
+              :class="[languageStore.isFa ? 'pr-3 pl-10' : 'pl-3 pr-10']"
+              dir="auto"
               @keydown.enter="submitComment"
             />
             <!-- Submit comment button inside input -->
-            <button 
+            <Button 
               @click="submitComment"
-              class="absolute left-1.5 z-10 pointer-events-auto size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 active:scale-95 transition-all cursor-pointer"
+              variant="outline"
+              size="icon"
+              class="absolute z-10 pointer-events-auto size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 active:scale-95 transition-all border-none"
+              :class="[languageStore.isFa ? 'left-1.5' : 'right-1.5']"
             >
-              <SendIcon class="size-4 scale-x-[-1] -rotate-45" />
-            </button>
+              <CircleFadingArrowUpIcon class="size-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -986,29 +1018,29 @@ const formatTime = (timeInSeconds: number) => {
         @contextmenu.prevent="isEditTextareaContextMenuOpen = false"
       >
         <div 
-          class="flex flex-col gap-2 pointer-events-auto select-none scale-up text-right w-56 animate-menu-pop"
+          class="flex flex-col gap-2 pointer-events-auto select-none scale-up text-start w-56 animate-menu-pop"
           :style="editTextareaMenuStyle"
           @click.stop
         >
           <div 
             class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-full"
-            dir="rtl"
+            :dir="languageStore.dir"
           >
             <!-- Copy Text -->
             <button 
               @click="handleEditTextareaCopy" 
-              class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              <span>کپی کردن متن</span>
+              <span>{{ languageStore.t('کپی کردن متن', 'Copy Text') }}</span>
               <CopyIcon class="size-3.5 text-muted-foreground" />
             </button>
             
             <!-- Paste Text -->
             <button 
               @click="handleEditTextareaPaste" 
-              class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              <span>پیست کردن متن</span>
+              <span>{{ languageStore.t('پیست کردن متن', 'Paste Text') }}</span>
               <ClipboardIcon class="size-3.5 text-muted-foreground" />
             </button>
           </div>

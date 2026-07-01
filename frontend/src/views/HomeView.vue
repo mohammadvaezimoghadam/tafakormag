@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import LoginCard from '@/components/LoginCard.vue'
+import { useLanguageStore } from '@/stores/languageStore'
 
 const router = useRouter()
+const languageStore = useLanguageStore()
 
 const handleStateChange = (state: string) => {
   if (state === 'success') {
@@ -13,11 +15,13 @@ const handleStateChange = (state: string) => {
 </script>
 
 <template>
-  <div class="w-full min-h-[80vh] flex justify-center items-center py-6 px-4" dir="rtl">
+  <div 
+    class="w-full min-h-[80vh] flex justify-center items-center py-6 px-4" 
+    :dir="languageStore.dir"
+  >
     <!-- Centered, width-restricted Login Container (mobile & tablet layout) -->
     <div class="w-full max-w-[420px] transition-all duration-500 animate-in fade-in slide-in-from-bottom-5">
       <LoginCard @state-change="handleStateChange" />
     </div>
   </div>
 </template>
-

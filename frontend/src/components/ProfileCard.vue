@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { PencilIcon } from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 const props = withDefaults(defineProps<{
   name: string
@@ -25,13 +28,17 @@ const emit = defineEmits<{
 
 // Generate fallback letter
 const nameLetter = computed(() => {
-  return props.name ? props.name.trim().charAt(0) : 'ک'
+  return props.name ? props.name.trim().charAt(0) : languageStore.t('ک', 'U')
 })
 
 // Helper for Farsi digits
 const toPersianDigits = (num: number | string) => {
   const id = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
   return num.toString().replace(/[0-9]/g, (w) => id[+w]!)
+}
+
+const formatNumber = (num: number | string) => {
+  return languageStore.n(num)
 }
 
 // Compute status indicator color
@@ -68,20 +75,27 @@ const statusBgGlow = computed(() => {
 <template>
   <div
     class="w-full bg-card/25 dark:bg-card/15 backdrop-blur-md border border-border/50 rounded-3xl overflow-hidden relative shadow-xs flex flex-col items-center select-none pt-0 pb-6 transition-all duration-300 hover:border-border/80 group"
-    dir="rtl"
+    :dir="languageStore.dir"
   >
     <!-- Decorative Header Banner -->
     <div class="w-full h-16 bg-gradient-to-tr from-primary/15 via-primary/5 to-transparent border-b border-border/20 relative overflow-hidden">
       <!-- Ambient background blur bubbles for depth -->
-      <div class="absolute -top-10 -right-10 size-24 rounded-full bg-primary/10 blur-xl transition-all duration-500 group-hover:scale-110" />
-      <div class="absolute -bottom-8 -left-6 size-16 rounded-full bg-primary/5 blur-lg" />
+      <div 
+        class="absolute -top-10 size-24 rounded-full bg-primary/10 blur-xl transition-all duration-500 group-hover:scale-110"
+        :class="[languageStore.isFa ? '-right-10' : '-left-10']"
+      />
+      <div 
+        class="absolute -bottom-8 size-16 rounded-full bg-primary/5 blur-lg"
+        :class="[languageStore.isFa ? '-left-6' : '-right-6']"
+      />
     </div>
 
-    <!-- Floating Edit Account button (Top-Right) -->
+    <!-- Floating Edit Account button -->
     <button
       @click="emit('edit')"
-      class="absolute top-3.5 right-3.5 size-7.5 rounded-full bg-background/55 dark:bg-card/40 backdrop-blur-xs border border-border/50 hover:bg-muted/80 text-muted-foreground hover:text-foreground active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
-      title="ویرایش حساب کاربری"
+      class="absolute top-3.5 size-7.5 rounded-full bg-background/55 dark:bg-card/40 backdrop-blur-xs border border-border/50 hover:bg-muted/80 text-muted-foreground hover:text-foreground active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
+      :class="[languageStore.isFa ? 'left-3.5' : 'right-3.5']"
+      :title="languageStore.t('ویرایش حساب کاربری', 'Edit Profile')"
     >
       <PencilIcon class="size-3.5 shrink-0" />
     </button>
@@ -103,15 +117,16 @@ const statusBgGlow = computed(() => {
 
       <!-- Overlapping Discord-style Status indicator dot -->
       <div
-        :class="[
-          'absolute bottom-0 right-0.5 size-4.5 rounded-full border-3 border-background dark:border-card shadow-xs flex items-center justify-center',
-          statusDotColor
-        ]"
+        class="absolute bottom-0 size-4.5 rounded-full border-3 border-background dark:border-card shadow-xs flex items-center justify-center"
+        :class="[languageStore.isFa ? 'left-0.5' : 'right-0.5']"
+        :style="statusDotColor"
       >
         <span 
           v-if="statusVariant === 'success' || statusVariant === 'warning'"
-          :class="['absolute inset-0 rounded-full animate-ping opacity-75', statusBgGlow]" 
+          class="absolute inset-0 rounded-full animate-ping opacity-75"
+          :class="[statusBgGlow, statusDotColor]" 
         />
+        <span class="absolute inset-0 rounded-full" :class="statusDotColor" />
       </div>
     </div>
 
@@ -124,23 +139,29 @@ const statusBgGlow = computed(() => {
       
       <!-- Phone Number -->
       <span class="text-xs text-muted-foreground/80 mt-4 select-all font-semibold font-sans">
-        {{ phone }}
+        {{ formatNumber(phone) }}
       </span>
     </div>
 
     <!-- Statistics Section (Topics, Posts, Connections) -->
     <div class="grid grid-cols-3 gap-2 w-full mt-6 pt-5 px-6 border-t border-border/40 text-center">
       <div class="flex flex-col gap-0.5">
-        <span class="text-sm font-black text-foreground">{{ toPersianDigits(topicsCount) }}</span>
-        <span class="text-[9.5px] font-medium text-muted-foreground">تاپیک‌ها</span>
+        <span class="text-sm font-black text-foreground">{{ formatNumber(topicsCount) }}</span>
+        <span class="text-[9.5px] font-medium text-muted-foreground">
+          {{ languageStore.t('تاپیک‌ها', 'Topics') }}
+        </span>
       </div>
       <div class="flex flex-col gap-0.5">
-        <span class="text-sm font-black text-foreground">{{ toPersianDigits(postsCount) }}</span>
-        <span class="text-[9.5px] font-medium text-muted-foreground">پست‌ها</span>
+        <span class="text-sm font-black text-foreground">{{ formatNumber(postsCount) }}</span>
+        <span class="text-[9.5px] font-medium text-muted-foreground">
+          {{ languageStore.t('پست‌ها', 'Posts') }}
+        </span>
       </div>
       <div class="flex flex-col gap-0.5">
-        <span class="text-sm font-black text-foreground">{{ toPersianDigits(connectionsCount) }}</span>
-        <span class="text-[9.5px] font-medium text-muted-foreground">اتصال‌ها</span>
+        <span class="text-sm font-black text-foreground">{{ formatNumber(connectionsCount) }}</span>
+        <span class="text-[9.5px] font-medium text-muted-foreground">
+          {{ languageStore.t('اتصال‌ها', 'Connections') }}
+        </span>
       </div>
     </div>
   </div>

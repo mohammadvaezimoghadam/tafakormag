@@ -4,6 +4,9 @@ import { validateCustomBot } from '../api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
@@ -62,7 +65,7 @@ const botInfo = ref<{
 
 // Sync states with props
 watch(() => props.initialStatus, (newVal) => {
-  status.value = newVal
+  status.value = newVal || 'disconnected'
   if (newVal === 'connected') {
     botInfo.value = null
     validationError.value = ''
@@ -71,7 +74,7 @@ watch(() => props.initialStatus, (newVal) => {
 })
 
 watch(() => props.initialToken, (newVal) => {
-  token.value = newVal
+  token.value = newVal || ''
 })
 
 let debounceTimer: any = null
@@ -79,7 +82,7 @@ let debounceTimer: any = null
 watch(token, (newVal) => {
   if (debounceTimer) clearTimeout(debounceTimer)
   
-  const cleanToken = newVal.trim()
+  const cleanToken = (newVal || '').trim()
   if (!cleanToken) {
     isValidating.value = false
     validationError.value = ''
@@ -91,7 +94,7 @@ watch(token, (newVal) => {
   const tokenRegex = /^(mock_.*|\d+:[A-Za-z0-9_-]+)$/
   if (!tokenRegex.test(cleanToken)) {
     botInfo.value = null
-    validationError.value = 'فرمت توکن نامعتبر است.'
+    validationError.value = languageStore.t('فرمت توکن نامعتبر است.', 'Invalid token format.')
     return
   }
 
@@ -102,25 +105,30 @@ watch(token, (newVal) => {
       const response = await validateCustomBot(props.platform, cleanToken)
       if (response.data && response.data.valid) {
         botInfo.value = {
-          name: response.data.name || 'ربات اختصاصی',
+          name: response.data.name || languageStore.t('ربات اختصاصی', 'Custom Bot'),
           username: response.data.username || '',
           avatar: response.data.avatar || null
         }
         validationError.value = ''
       } else {
         botInfo.value = null
-        validationError.value = response.data?.error || 'توکن نامعتبر است.'
+        validationError.value = response.data?.error || languageStore.t('توکن نامعتبر است.', 'Invalid token.')
       }
     } catch (err: any) {
       botInfo.value = null
-      validationError.value = err.response?.data?.error || 'خطا در اعتبارسنجی توکن.'
+      validationError.value = err.response?.data?.error || languageStore.t('خطا در اعتبارسنجی توکن.', 'Error validating token.')
     } finally {
       isValidating.value = false
     }
   }, 600)
 })
 
-const platformName = computed(() => props.platform === 'telegram' ? 'تلگرام' : 'بله')
+const platformName = computed(() => {
+  if (props.platform === 'telegram') {
+    return languageStore.t('تلگرام', 'Telegram')
+  }
+  return languageStore.t('بله', 'Bale')
+})
 
 const isConnected = computed(() => status.value === 'connected')
 const isConnecting = computed(() => status.value === 'connecting')
@@ -130,24 +138,24 @@ const isDisconnected = computed(() => status.value === 'disconnected')
 // Create masked token representation
 const maskedToken = computed(() => {
   if (!token.value) return ''
-  const t = token.value.trim()
+  const t = (token.value || '').trim()
   if (t.length <= 12) return '••••••••••••'
   return `${t.substring(0, 6)}••••••••${t.substring(t.length - 6)}`
 })
 
 const handleConnect = () => {
   errorMsg.value = ''
-  const cleanToken = token.value.trim()
+  const cleanToken = (token.value || '').trim()
   
   if (!cleanToken) {
-    errorMsg.value = `لطفاً توکن ربات ${platformName.value} خود را وارد کنید.`
+    errorMsg.value = languageStore.t(`لطفاً توکن ربات ${platformName.value} خود را وارد کنید.`, `Please enter your ${platformName.value} bot token.`)
     return
   }
   
   // Format check
   const tokenRegex = /^(mock_.*|\d+:[A-Za-z0-9_-]+)$/
   if (!tokenRegex.test(cleanToken)) {
-    errorMsg.value = 'فرمت توکن نامعتبر است. توکن معتبر شامل شناسه عددی و کلید رمزنگاری است (مثال: 123456:ABC-DEF...).'
+    errorMsg.value = languageStore.t('فرمت توکن نامعتبر است. توکن معتبر شامل شناسه عددی و کلید رمزنگاری است (مثال: 123456:ABC-DEF...).', 'Invalid token format. A valid token includes a numeric ID and a cryptographic key (e.g., 123456:ABC-DEF...).')
     return
   }
 
@@ -184,7 +192,7 @@ const toggleGuide = () => {
 <template>
   <div 
     class="w-full bg-card/45 backdrop-blur-md border border-border/40 rounded-3xl p-5 md:p-6 flex flex-col gap-5 select-none shadow-xs transition-all duration-300 relative overflow-hidden"
-    dir="rtl"
+    :dir="languageStore.dir"
   >
     <!-- Background subtle tint decoration -->
     <div 
@@ -206,9 +214,9 @@ const toggleGuide = () => {
         >
           <span class="font-sans text-[10px] tracking-tighter">{{ props.platform === 'telegram' ? 'TG' : 'BL' }}</span>
         </div>
-        <div class="flex flex-col text-right">
-          <h3 class="text-xs font-black text-foreground">اتصال به {{ platformName }}</h3>
-          <span class="text-[9px] text-muted-foreground mt-0.5">اتصال ربات و دریافت نوتیفیکیشن‌ها</span>
+        <div class="flex flex-col text-start">
+          <h3 class="text-xs font-black text-foreground">{{ languageStore.t('اتصال به', 'Connect to') }} {{ platformName }}</h3>
+          <span class="text-[9px] text-muted-foreground mt-0.5">{{ languageStore.t('اتصال ربات و دریافت نوتیفیکیشن‌ها', 'Connect bot and receive notifications') }}</span>
         </div>
       </div>
 
@@ -220,7 +228,7 @@ const toggleGuide = () => {
           class="bg-emerald-500/10 border-emerald-500/20 text-emerald-650 dark:text-emerald-400 text-[9px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse"
         >
           <span class="size-1.5 rounded-full bg-emerald-500" />
-          متصل (Live)
+          {{ languageStore.t('متصل (Live)', 'Connected (Live)') }}
         </Badge>
         <Badge 
           v-else-if="isConnecting" 
@@ -228,7 +236,7 @@ const toggleGuide = () => {
           class="bg-amber-500/10 border-amber-500/20 text-amber-500 text-[9px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1.5"
         >
           <RefreshCwIcon class="animate-spin" data-icon="inline-start" />
-          در حال اتصال...
+          {{ languageStore.t('در حال اتصال...', 'Connecting...') }}
         </Badge>
       </transition>
     </div>
@@ -239,7 +247,7 @@ const toggleGuide = () => {
       <transition name="alert-slide">
         <div 
           v-if="errorMsg" 
-          class="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-xl border border-destructive/20 text-[10.5px] font-bold text-right"
+          class="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-xl border border-destructive/20 text-[10.5px] font-bold text-start"
         >
           <AlertTriangleIcon class="size-4 shrink-0 mt-0.5" />
           <p class="leading-relaxed">{{ errorMsg }}</p>
@@ -250,16 +258,19 @@ const toggleGuide = () => {
       <transition name="alert-slide">
         <div 
           v-if="isConflict" 
-          class="flex flex-col gap-2 p-3.5 bg-amber-500/10 text-amber-650 dark:text-amber-400 rounded-xl border border-amber-500/20 text-[10.5px] font-bold text-right"
+          class="flex flex-col gap-2 p-3.5 bg-amber-500/10 text-amber-650 dark:text-amber-400 rounded-xl border border-amber-500/20 text-[10.5px] font-bold text-start"
         >
           <div class="flex items-start gap-2">
             <AlertTriangleIcon class="size-4 shrink-0 mt-0.5 text-amber-500" />
             <p class="leading-relaxed">
-              این توکن به دلیل اتصال به حساب یا پلتفرم دیگر قطع شده است. ربات‌ها در هر زمان فقط می‌توانند به یک سیستم متصل باشند.
+              {{ languageStore.t('این توکن به دلیل اتصال به حساب یا پلتفرم دیگر قطع شده است. ربات‌ها در هر زمان فقط می‌توانند به یک سیستم متصل باشند.', 'This token was disconnected because it is connected to another account or platform. Bots can only connect to one system at a time.') }}
             </p>
           </div>
-          <span class="text-[9.5px] text-muted-foreground/90 font-medium mr-6">
-            برای برقراری مجدد ارتباط، از متصل نبودن ربات به پروژه‌های دیگر اطمینان حاصل کرده و دوباره تلاش کنید.
+          <span 
+            class="text-[9.5px] text-muted-foreground/90 font-medium"
+            :class="[languageStore.isFa ? 'mr-6' : 'ml-6']"
+          >
+            {{ languageStore.t('برای برقراری مجدد ارتباط، از متصل نبودن ربات به پروژه‌های دیگر اطمینان حاصل کرده و دوباره تلاش کنید.', 'To reconnect, make sure the bot is not connected to other projects and try again.') }}
           </span>
         </div>
       </transition>
@@ -269,15 +280,15 @@ const toggleGuide = () => {
     <div class="form-group-layout z-10">
       <!-- Connected State view -->
       <div v-if="isConnected" class="flex flex-col gap-3 bg-background/30 border border-border/40 p-4 rounded-2xl">
-        <div class="flex flex-col gap-1 text-right">
-          <Label class="text-[10px] text-muted-foreground font-semibold">توکن ربات فعال:</Label>
+        <div class="flex flex-col gap-1 text-start">
+          <Label class="text-[10px] text-muted-foreground font-semibold">{{ languageStore.t('توکن ربات فعال:', 'Active Bot Token:') }}</Label>
           <code class="text-xs font-mono font-bold tracking-wider text-foreground/80 break-all select-all mt-1 select-none">
             {{ maskedToken }}
           </code>
         </div>
 
         <div v-if="props.botUsername" class="flex items-center gap-1.5 mt-1">
-          <span class="text-[10px] text-muted-foreground font-semibold">نام کاربری ربات:</span>
+          <span class="text-[10px] text-muted-foreground font-semibold">{{ languageStore.t('نام کاربری ربات:', 'Bot Username:') }}</span>
           <span class="inline-flex items-center bg-primary/10 border border-primary/20 text-primary font-bold text-xs py-0.5 px-2.5 rounded-full select-all font-mono">
             {{ props.botUsername }}
           </span>
@@ -291,7 +302,7 @@ const toggleGuide = () => {
             class="h-8.5 text-[11px] font-bold cursor-pointer"
           >
             <Edit2Icon data-icon="inline-start" />
-            ویرایش توکن
+            {{ languageStore.t('ویرایش توکن', 'Edit Token') }}
           </Button>
           <Button 
             variant="outline" 
@@ -300,15 +311,15 @@ const toggleGuide = () => {
             class="h-8.5 text-[11px] font-bold text-destructive hover:bg-destructive/5 hover:text-destructive border-destructive/20 hover:border-destructive/30 cursor-pointer"
           >
             <Trash2Icon data-icon="inline-start" />
-            قطع اتصال
+            {{ languageStore.t('قطع اتصال', 'Disconnect') }}
           </Button>
         </div>
       </div>
 
       <!-- Connecting, Disconnected or Conflict State View -->
       <div v-else class="flex flex-col gap-4">
-        <div class="flex flex-col gap-1.5 text-right">
-          <Label for="bot-token-input" class="text-[10.5px] text-muted-foreground font-extrabold">توکن ربات {{ platformName }}:</Label>
+        <div class="flex flex-col gap-1.5 text-start">
+          <Label for="bot-token-input" class="text-[10.5px] text-muted-foreground font-extrabold">{{ languageStore.t('توکن ربات', 'Bot token for') }} {{ platformName }}:</Label>
           <div class="relative">
             <Input 
               id="bot-token-input" 
@@ -342,7 +353,7 @@ const toggleGuide = () => {
 
         <!-- Preview Section -->
         <transition name="alert-slide">
-          <div v-if="botInfo" class="flex items-center gap-3 p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-right">
+          <div v-if="botInfo" class="flex items-center gap-3 p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-start">
             <!-- Bot Avatar -->
             <img 
               v-if="botInfo.avatar" 
@@ -360,67 +371,114 @@ const toggleGuide = () => {
             <div class="flex-1 flex flex-col gap-0.5">
               <div class="flex items-center gap-1.5">
                 <span class="text-xs font-extrabold text-foreground">{{ botInfo.name }}</span>
-                <Badge variant="secondary" class="bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-none text-[8.5px] py-0.5 px-2 font-extrabold rounded-full">تایید شده</Badge>
+                <Badge variant="secondary" class="bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-none text-[8.5px] py-0.5 px-2 font-extrabold rounded-full">{{ languageStore.t('تایید شده', 'Verified') }}</Badge>
               </div>
               <span class="text-[10px] text-muted-foreground font-mono" dir="ltr">{{ botInfo.username }}</span>
             </div>
           </div>
         </transition>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center justify-between gap-3">
-          <!-- Guide Trigger Link -->
-          <CollapsibleTrigger as-child>
-            <button 
-              class="flex items-center gap-1 text-[10px] font-extrabold text-primary/80 hover:text-primary transition-colors cursor-pointer outline-none select-none border border-transparent"
+        <Collapsible v-model:open="showGuide" class="w-full flex flex-col gap-4">
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-between gap-3">
+            <!-- Guide Trigger Link -->
+            <CollapsibleTrigger as-child>
+              <button 
+                class="flex items-center gap-1 text-[10px] font-extrabold text-primary/80 hover:text-primary transition-colors cursor-pointer outline-none select-none border border-transparent"
+              >
+                <HelpCircleIcon class="size-3.5" />
+                <span>{{ languageStore.t('نیاز به راهنمایی دارید؟', 'Need help?') }}</span>
+                <ChevronDownIcon v-if="!showGuide" class="size-3" />
+                <ChevronUpIcon v-else class="size-3" />
+              </button>
+            </CollapsibleTrigger>
+
+            <Button 
+              size="sm" 
+              @click="handleConnect" 
+              :disabled="isConnecting || isValidating || !!validationError"
+              class="h-9.5 text-xs font-bold px-4 cursor-pointer"
             >
-              <HelpCircleIcon class="size-3.5" />
-              <span>نیاز به راهنمایی دارید؟</span>
-              <ChevronDownIcon v-if="!showGuide" class="size-3" />
-              <ChevronUpIcon v-else class="size-3" />
-            </button>
-          </CollapsibleTrigger>
+              <RefreshCwIcon v-if="isConnecting" class="animate-spin" data-icon="inline-start" />
+              <SendIcon v-else data-icon="inline-start" />
+              <span>{{ isConnecting ? languageStore.t('در حال اتصال...', 'Connecting...') : (isConflict ? languageStore.t('اتصال مجدد', 'Reconnect') : languageStore.t('ذخیره و اتصال', 'Save & Connect')) }}</span>
+            </Button>
+          </div>
 
-          <Button 
-            size="sm" 
-            @click="handleConnect" 
-            :disabled="isConnecting || isValidating || !!validationError"
-            class="h-9.5 text-xs font-bold px-4 cursor-pointer"
-          >
-            <RefreshCwIcon v-if="isConnecting" class="animate-spin" data-icon="inline-start" />
-            <SendIcon v-else data-icon="inline-start" />
-            <span>{{ isConnecting ? 'در حال اتصال...' : (isConflict ? 'اتصال مجدد' : 'ذخیره و اتصال') }}</span>
-          </Button>
-        </div>
-
-        <!-- Interactive Help Guide (Collapsible via Shadcn-Vue) -->
-        <Collapsible v-model:open="showGuide" class="w-full">
+          <!-- Interactive Help Guide (Collapsible via Shadcn-Vue) -->
           <transition name="guide-slide">
             <CollapsibleContent v-if="showGuide" class="w-full overflow-hidden">
-              <Alert class="bg-muted/40 border border-border/40 rounded-2xl p-4 text-[10.5px] text-muted-foreground leading-relaxed flex flex-col gap-2.5 text-right w-full">
-                <AlertTitle class="font-extrabold text-foreground text-[11px] border-r-2 border-primary pr-1.5 leading-none mb-1">
-                  مراحل دریافت توکن در {{ platformName }}
+              <Alert class="bg-muted/40 border border-border/40 rounded-2xl p-4 flex flex-col gap-2.5 text-start w-full">
+                <AlertTitle class="font-extrabold text-foreground text-xs leading-none mb-1.5" :class="[languageStore.isFa ? 'border-r-2 border-primary pr-1.5' : 'border-l-2 border-primary pl-1.5']">
+                  {{ languageStore.t('مراحل دریافت توکن در', 'Steps to get token in') }} {{ platformName }}
                 </AlertTitle>
-                <AlertDescription class="mt-1 w-full">
-                  <ol v-if="props.platform === 'telegram'" class="list-decimal list-inside flex flex-col gap-1.5 pr-1 font-semibold text-muted-foreground">
-                    <li>به ربات رسمی <a href="https://t.me/BotFather" target="_blank" class="text-sky-500 hover:underline font-bold">@BotFather</a> در تلگرام پیام دهید.</li>
-                    <li>دستور <code class="bg-muted px-1 py-0.5 rounded font-mono font-black text-foreground">/newbot</code> را تایپ و ارسال کنید.</li>
-                    <li>یک نام کاربری مناسب برای ربات خود تعیین کنید (باید با کلمه bot تمام شود).</li>
-                    <li>توکن ارسالی از طرف BotFather (به شکل <code class="bg-muted px-1.5 py-0.5 rounded font-mono text-[9.5px]">123456:ABC...</code>) را کپی کرده و در کادر بالا وارد کنید.</li>
-                    <li class="mt-1.5 text-amber-500 font-extrabold border-t border-border/40 pt-1.5 list-none text-right" dir="rtl">
-                      💡 <b>اتصال مقاصد از قبل عضو شده:</b> اگر ربات از قبل در کانال یا گروه شما عضو و مدیر بوده است، کافیست شناسه عددی (Chat ID) آن را در چت خصوصی همین ربات ارسال کنید تا متصل شود.
-                    </li>
-                  </ol>
-                  
-                  <ol v-else class="list-decimal list-inside flex flex-col gap-1.5 pr-1 font-semibold text-muted-foreground">
-                    <li>به ربات رسمی <code class="bg-muted px-1 py-0.5 rounded font-mono font-black text-foreground">@BotFather</code> در پیام‌رسان بله پیام دهید.</li>
-                    <li>با استفاده از دکمه‌ها یا دستورات، درخواست ساخت ربات جدید را ارسال کنید.</li>
-                    <li>نام و شناسه ربات خود را انتخاب و ثبت نمایید.</li>
-                    <li>توکن رمزنگاری ارائه شده را کپی کرده و در فیلد بالا جایگذاری نمایید.</li>
-                    <li class="mt-1.5 text-amber-500 font-extrabold border-t border-border/40 pt-1.5 list-none text-right" dir="rtl">
-                      💡 <b>اتصال مقاصد از قبل عضو شده:</b> اگر ربات از قبل در کانال یا گروه شما عضو و مدیر بوده است، کافیست شناسه عددی (Chat ID) آن را در چت خصوصی همین ربات ارسال کنید تا متصل شود.
-                    </li>
-                  </ol>
+                <AlertDescription class="w-full">
+                  <!-- Telegram Steps -->
+                  <div v-if="props.platform === 'telegram'" class="flex flex-col gap-3 text-xs text-muted-foreground text-start mt-2">
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(1) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('به ربات رسمی @BotFather در تلگرام پیام دهید:', 'Message the official @BotFather bot on Telegram:') }}
+                        <a href="https://t.me/BotFather" target="_blank" class="text-sky-500 hover:underline font-mono font-bold ms-1" dir="ltr">@BotFather</a>
+                      </p>
+                    </div>
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(2) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('دستور /newbot را تایپ و ارسال کنید:', 'Type and send the /newbot command:') }}
+                        <code class="bg-muted/80 px-1.5 py-0.5 rounded font-mono font-bold text-foreground ms-1" dir="ltr">/newbot</code>
+                      </p>
+                    </div>
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(3) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('یک نام کاربری مناسب برای ربات خود تعیین کنید (باید با کلمه bot تمام شود).', 'Choose a username for your bot (must end with "bot").') }}
+                      </p>
+                    </div>
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(4) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('توکن ارسالی از طرف BotFather (به شکل 123456:ABC...) را کپی کرده و در کادر بالا وارد کنید.', 'Copy the token sent by BotFather (looks like 123456:ABC...) and paste it in the field above.') }}
+                        <code class="bg-muted/80 px-1.5 py-0.5 rounded font-mono text-[9px] ms-1" dir="ltr">123456:ABC...</code>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Bale Steps -->
+                  <div v-else class="flex flex-col gap-3 text-xs text-muted-foreground text-start mt-2">
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(1) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('به ربات رسمی @BotFather در پیام‌رسان بله پیام دهید:', 'Message the official @BotFather bot in Bale messenger:') }}
+                        <code class="bg-muted/80 px-1.5 py-0.5 rounded font-mono font-bold text-foreground ms-1" dir="ltr">@BotFather</code>
+                      </p>
+                    </div>
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(2) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('با استفاده از دکمه‌ها یا دستورات، درخواست ساخت ربات جدید را ارسال کنید.', 'Send a request to create a new bot using the buttons or commands.') }}
+                      </p>
+                    </div>
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(3) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('نام و شناسه ربات خود را انتخاب و ثبت نمایید.', 'Select and register your bot\'s name and ID.') }}
+                      </p>
+                    </div>
+                    <div class="flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shrink-0 font-sans mt-0.5">{{ languageStore.n(4) }}</span>
+                      <p class="leading-relaxed">
+                        {{ languageStore.t('توکن رمزنگاری ارائه شده را کپی کرده و در فیلد بالا جایگذاری نمایید.', 'Copy the provided token and paste it in the field above.') }}
+                      </p>
+                    </div>
+                    <div class="mt-2 text-amber-600 dark:text-amber-400 font-semibold border-t border-border/40 pt-3 flex gap-2.5 items-start">
+                      <span class="size-5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-black shrink-0 font-sans">💡</span>
+                      <p class="leading-relaxed">
+                        <b>{{ languageStore.t('اتصال مقاصد از قبل عضو شده:', 'Connecting existing destinations:') }}</b>
+                        {{ languageStore.t('اگر ربات از قبل در کانال یا گروه شما عضو و مدیر بوده است، کافیست شناسه عددی (Chat ID) آن را در چت خصوصی همین ربات ارسال کنید تا متصل شود.', 'If the bot is already a member and admin of your channel or group, just send the numeric Chat ID in the bot\'s private chat to connect it.') }}
+                      </p>
+                    </div>
+                  </div>
                 </AlertDescription>
               </Alert>
             </CollapsibleContent>

@@ -18,7 +18,16 @@ import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon } from '@lucide/vue'
+import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon } from '@lucide/vue'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog'
+import { useLanguageStore } from '@/stores/languageStore'
 
 import { useBotStore } from '@/stores/botStore'
 import { useUserStore } from '@/stores/userStore'
@@ -42,6 +51,21 @@ const topicStore = useTopicStore()
 const postStore = usePostStore()
 const toastStore = useToastStore()
 
+const languageStore = useLanguageStore()
+const showLanguageDialog = ref(false)
+const selectedLang = ref<'fa' | 'en'>(languageStore.currentLanguage)
+
+watch(showLanguageDialog, (isOpen) => {
+  if (isOpen) {
+    selectedLang.value = languageStore.currentLanguage
+  }
+})
+
+const handleConfirmLanguage = () => {
+  languageStore.setLanguage(selectedLang.value)
+  showLanguageDialog.value = false
+}
+
 const { telegramBotStatus, telegramBotToken, baleBotStatus, baleBotToken } = storeToRefs(botStore)
 const { userProfile } = storeToRefs(userStore)
 const { topics, selectedTopic } = storeToRefs(topicStore)
@@ -63,7 +87,7 @@ const syncRouteToState = () => {
       if (found) {
         selectedTopic.value = found
       } else {
-        selectedTopic.value = { id: topicId, title: 'در حال بارگذاری...' } as any
+        selectedTopic.value = { id: topicId, title: languageStore.t('در حال بارگذاری...', 'Loading...') } as any
       }
     }
   } else {
@@ -148,15 +172,15 @@ const headerInnerTitle = computed(() => {
   if (currentTab.value === 'home') {
     return selectedTopic.value?.title || ''
   } else {
-    return 'مدیریت اتصال‌ها'
+    return languageStore.t('مدیریت اتصالات', 'Connections Management')
   }
 })
 
 const headerTitle = computed(() => {
   if (currentTab.value === 'profile') {
-    return 'پروفایل'
+    return languageStore.t('پروفایل', 'Profile')
   }
-  return 'تفکر'
+  return languageStore.t('تفکر', 'Tafakor')
 })
 
 const handleHeaderBack = () => {
@@ -174,7 +198,7 @@ const handleHeaderBack = () => {
 const handleTelegramConnect = async (token: string) => {
   try {
     await botStore.connectTelegram(token, () => {
-      triggerToast('ربات تلگرام با موفقیت متصل شد.')
+      triggerToast(languageStore.t('ربات تلگرام با موفقیت متصل شد.', 'Telegram bot connected successfully.'))
     })
   } catch (err) {
     //
@@ -184,7 +208,7 @@ const handleTelegramConnect = async (token: string) => {
 const handleTelegramDisconnect = async () => {
   try {
     await botStore.disconnectTelegram(() => {
-      triggerToast('اتصال ربات تلگرام قطع شد.')
+      triggerToast(languageStore.t('اتصال ربات تلگرام قطع شد.', 'Telegram bot disconnected.'))
     })
   } catch (err) {
     //
@@ -194,7 +218,7 @@ const handleTelegramDisconnect = async () => {
 const handleBaleConnect = async (token: string) => {
   try {
     await botStore.connectBale(token, () => {
-      triggerToast('ربات بله با موفقیت متصل شد.')
+      triggerToast(languageStore.t('ربات بله با موفقیت متصل شد.', 'Bale bot connected successfully.'))
     })
   } catch (err) {
     //
@@ -204,7 +228,7 @@ const handleBaleConnect = async (token: string) => {
 const handleBaleDisconnect = async () => {
   try {
     await botStore.disconnectBale(() => {
-      triggerToast('اتصال ربات بله قطع شد.')
+      triggerToast(languageStore.t('اتصال ربات بله قطع شد.', 'Bale bot disconnected.'))
     })
   } catch (err) {
     //
@@ -220,8 +244,8 @@ const activeConnectionsCount = computed(() => {
 
 const connectionsBadgeText = computed(() => {
   const count = activeConnectionsCount.value
-  if (count === 0) return 'بدون اتصال'
-  return `${count} فعال`
+  if (count === 0) return languageStore.t('بدون اتصال', 'No connection')
+  return languageStore.t(count + ' فعال', count + ' active')
 })
 
 const connectionsBadgeVariant = computed(() => {
@@ -262,7 +286,7 @@ const handleCreateTopic = async (newTopic: { title: string; description: string;
       image: imageFile
     })
     isCreateModalOpen.value = false
-    triggerToast(`تاپیک «${newTopic.title}» با موفقیت ایجاد شد.`)
+    triggerToast(languageStore.t('تاپیک «' + newTopic.title + '» با موفقیت ایجاد شد.', 'Topic "' + newTopic.title + '" was created successfully.'))
   } catch (err) {
     //
   }
@@ -300,14 +324,14 @@ const handleProfileSave = async (data: { first_name: string; last_name: string; 
   try {
     await userStore.updateProfile(formData)
     isEditProfileOpen.value = false
-    triggerToast('اطلاعات کاربری با موفقیت به‌روزرسانی شد.', 'success')
+    triggerToast(languageStore.t('اطلاعات کاربری با موفقیت به‌روزرسانی شد.', 'User profile updated successfully.'), 'success')
   } catch (err) {
     //
   }
 }
 
 const handleLogout = () => {
-  triggerToast('در حال خروج از سیستم...')
+  triggerToast(languageStore.t('در حال خروج از سیستم...', 'Logging out...'))
   setTimeout(() => {
     selectedTopic.value = null
     currentTab.value = 'home'
@@ -346,16 +370,16 @@ const handlePostLike = async (postId: string | number, isLiked: boolean) => {
 const handlePostShare = (postId: string | number) => {
   const shareUrl = `${window.location.origin}/topic/${selectedTopic.value?.id}`
   navigator.clipboard.writeText(shareUrl).then(() => {
-    triggerToast(`لینک تاپیک در حافظه موقت کپی شد.`);
+    triggerToast(languageStore.t('لینک تاپیک در حافظه موقت کپی شد.', 'Topic link copied to clipboard.'));
   }).catch(() => {
-    triggerToast(`لینک پست شماره ${postId} در حافظه موقت کپی شد.`);
+    triggerToast(languageStore.t('لینک پست در حافظه موقت کپی شد.', 'Post link copied to clipboard.'));
   })
 }
 
 const handleAddComment = async (postId: string | number, comment: any) => {
   // Comments are submitted directly through the store from PostCard watcher,
   // but we keep this handler to display the toast message.
-  triggerToast('دیدگاه شما با موفقیت ثبت شد.');
+  triggerToast(languageStore.t('دیدگاه شما با موفقیت ثبت شد.', 'Your comment was posted successfully.'));
 }
 
 const handlePostReact = async (postId: string | number, emoji: string) => {
@@ -367,10 +391,11 @@ const handlePostReact = async (postId: string | number, emoji: string) => {
 }
 
 const handlePostDelete = async (postId: string | number) => {
-  if (window.confirm('پست حذف شود؟ (با حذف این پست، پیام‌های مرتبط در پیام‌رسان‌ها نیز حذف خواهند شد)')) {
+  if (window.confirm(languageStore.t('پست حذف شود؟ (با حذف این پست، پیام‌های مرتبط در پیام‌رسان‌ها نیز حذف خواهند شد)', 'Delete post? (Deleting this post will also delete related messages in messengers)'))) {
     try {
       await postStore.deletePost(postId)
-      triggerToast('پست با موفقیت حذف شد.')
+      await topicStore.loadTopics()
+      triggerToast(languageStore.t('پست با موفقیت حذف شد.', 'Post deleted successfully.'))
     } catch (err) {
       //
     }
@@ -395,10 +420,10 @@ const handleEditTopic = () => {
 const handleDeleteTopic = async () => {
   if (!selectedTopic.value) return
   const title = selectedTopic.value.title
-  if (window.confirm(`آیا مطمئن هستید که می‌خواهید تاپیک «${title}» را به همراه تمام پیام‌های آن حذف کنید؟`)) {
+  if (window.confirm(languageStore.t('آیا مطمئن هستید که می‌خواهید تاپیک «' + title + '» را به همراه تمام پیام‌های آن حذف کنید؟', 'Are you sure you want to delete topic "' + title + '" along with all its messages?'))) {
     try {
       await topicStore.deleteTopic(selectedTopic.value.id)
-      triggerToast(`تاپیک «${title}» با موفقیت حذف شد.`)
+      triggerToast(languageStore.t('تاپیک «' + title + '» با موفقیت حذف شد.', 'Topic "' + title + '" deleted successfully.'))
     } catch (err) {
       //
     }
@@ -419,7 +444,7 @@ const handleSaveTopicEdit = async (updatedTopic: { title: string; description: s
       image: updatedTopic.image
     })
     activeTopicSubView.value = 'feed'
-    triggerToast('مشخصات تاپیک با موفقیت ویرایش شد.')
+    triggerToast(languageStore.t('مشخصات تاپیک با موفقیت ویرایش شد.', 'Topic details edited successfully.'))
   } catch (err) {
     //
   }
@@ -434,7 +459,7 @@ const handleSaveTopicConnections = async (data: {
   if (!selectedTopic.value) return
   try {
     await topicStore.saveTopicConnections(selectedTopic.value.id, data)
-    triggerToast('تنظیمات اتصالات تاپیک با موفقیت به روز رسانی شد.')
+    triggerToast(languageStore.t('تنظیمات اتصالات تاپیک با موفقیت به روز رسانی شد.', 'Topic connections settings updated successfully.'))
   } catch (err) {
     throw err
   }
@@ -514,7 +539,8 @@ const handleSendPost = async (message: { text: string }) => {
 
   try {
     await postStore.createPost(formData)
-    triggerToast('پست جدید ارسال و در کانال‌های فعال بازنشر شد', 'success')
+    await topicStore.loadTopics()
+    triggerToast(languageStore.t('پست جدید ارسال و در کانال‌های فعال بازنشر شد', 'New post sent and republished in active channels'), 'success')
     removePostAttachment()
   } catch (err) {
     //
@@ -532,7 +558,11 @@ const toggleTheme = useToggle(isDark)
 </script>
 
 <template>
-  <div class="w-full max-w-[500px] flex flex-col gap-5 pb-24 text-right mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" dir="rtl">
+  <div 
+    class="w-full max-w-[500px] flex flex-col gap-5 pb-24 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
+    :class="[languageStore.isFa ? 'text-right' : 'text-left']"
+    :dir="languageStore.dir"
+  >
     
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
     <div 
@@ -573,7 +603,7 @@ const toggleTheme = useToggle(isDark)
                 />
                 
                 <div v-if="filteredTopics.length === 0" class="text-center py-12 text-xs text-muted-foreground font-medium">
-                  هیچ تاپیکی مطابق با جستجوی شما یافت نشد.
+                  {{ languageStore.t('هیچ تاپیکی مطابق با جستجوی شما یافت نشد.', 'No topics match your search.') }}
                 </div>
               </div>
             </div>
@@ -593,14 +623,14 @@ const toggleTheme = useToggle(isDark)
               />
               
               <div v-if="filteredCurrentTopicPosts.length === 0" class="text-center py-12 bg-card/20 rounded-xl border border-border/60 text-xs text-muted-foreground font-medium">
-                هیچ پست یا مطلبی در این تاپیک ثبت نشده است.
+                {{ languageStore.t('هیچ پست یا مطلبی در این تاپیک ثبت نشده است.', 'No posts in this topic yet.') }}
               </div>
 
               <!-- Message Input component at the bottom of the feed -->
               <div class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] w-full">
                 <TopicMessageInput 
                   :disabled="!isTopicCreator"
-                  placeholder="یادداشت خود را بنویسید..."
+                  :placeholder="languageStore.t('یادداشت خود را بنویسید...', 'Write your note...')"
                   @send="handleSendPost"
                   @attach="triggerFileSelect"
                   :initialAttachments="postAttachments"
@@ -682,8 +712,8 @@ const toggleTheme = useToggle(isDark)
               <!-- Options -->
               <div class="flex flex-col gap-3">
                 <ProfileOptionCard 
-                  title="🔌 اتصالات پیام‌رسان"
-                  description="مدیریت حساب‌های متصل و سرویس‌های خارجی"
+                  :title="languageStore.t('اتصالات پیام‌رسان', 'Messenger Connections')"
+                  :description="languageStore.t('مدیریت حساب‌های متصل و سرویس‌های خارجی', 'Manage connected accounts and external services')"
                   :icon="LinkIcon"
                   :badge-text="connectionsBadgeText"
                   :badge-variant="connectionsBadgeVariant"
@@ -693,8 +723,9 @@ const toggleTheme = useToggle(isDark)
                 <!-- Light/Dark Mode Switcher -->
                 <div
                   @click="isDark = !isDark"
-                  class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none text-right relative active:scale-[0.995] group gap-3.5"
-                  dir="rtl"
+                  class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none relative active:scale-[0.995] group gap-3.5"
+                  :class="[languageStore.isFa ? 'text-right' : 'text-left']"
+                  :dir="languageStore.dir"
                 >
                   <!-- Right side: Icon Container -->
                   <div class="size-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary shrink-0 transition-transform duration-200 group-hover:scale-102">
@@ -704,12 +735,12 @@ const toggleTheme = useToggle(isDark)
                   </div>
 
                   <!-- Middle: Title & Description -->
-                  <div class="flex-1 flex flex-col text-right gap-1 min-w-0">
+                  <div class="flex-1 flex flex-col text-start gap-1 min-w-0">
                     <span class="text-xs font-bold text-foreground truncate leading-none">
-                      حالت تاریک
+                      {{ languageStore.t('حالت تاریک', 'Dark Mode') }}
                     </span>
                     <span class="text-[10px] text-muted-foreground truncate leading-relaxed">
-                      تغییر تم رنگی برنامه به حالت شب یا روز
+                      {{ languageStore.t('تغییر تم رنگی برنامه به حالت شب یا روز', 'Toggle dark or light theme for the app') }}
                     </span>
                   </div>
 
@@ -719,9 +750,19 @@ const toggleTheme = useToggle(isDark)
                   </div>
                 </div>
 
+                <!-- Language Switcher Option -->
                 <ProfileOptionCard 
-                  title="خروج از حساب کاربری"
-                  description="خروج امن از سیستم و بازگشت به صفحه ورود"
+                  :title="languageStore.t('زبان برنامه (Language)', 'App Language (Language)')"
+                  :description="languageStore.t('تغییر زبان کلی سامانه و چیدمان راست‌چین/چپ‌چین', 'Toggle global app language and RTL/LTR layout')"
+                  :icon="LanguagesIcon"
+                  :badge-text="languageStore.currentLanguage.toUpperCase()"
+                  badge-variant="secondary"
+                  @click="showLanguageDialog = true"
+                />
+
+                <ProfileOptionCard 
+                  :title="languageStore.t('خروج از حساب کاربری', 'Log Out')"
+                  :description="languageStore.t('خروج امن از سیستم و بازگشت به صفحه ورود', 'Safely log out of system and return to login')"
                   :icon="LogOutIcon"
                   badge-variant="destructive"
                   @click="handleLogout"
@@ -746,7 +787,7 @@ const toggleTheme = useToggle(isDark)
       v-if="currentTab === 'home' && selectedTopic === null"
       @click="handleCreateTopicClick"
       class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
-      title="ایجاد تاپیک جدید"
+      :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
     >
       <PlusIcon class="size-6" />
     </Button>
@@ -765,6 +806,83 @@ const toggleTheme = useToggle(isDark)
       @close="isEditProfileOpen = false"
       @save="handleProfileSave"
     />
+
+    <!-- Language Switcher Dialog -->
+    <Dialog v-slot="{ open }" v-model:open="showLanguageDialog">
+      <DialogContent :show-close-button="false" class="sm:max-w-[420px] p-0 overflow-hidden bg-card/90 dark:bg-zinc-950/90 backdrop-blur-lg border border-border/40">
+        <DialogHeader class="p-6 pb-4 border-b border-border/10">
+          <div class="flex items-center gap-2 justify-start">
+            <div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <LanguagesIcon class="size-4.5" />
+            </div>
+            <DialogTitle class="text-sm font-black text-foreground flex flex-col gap-0.5 text-start">
+              <span>تنظیم زبان و چیدمان برنامه</span>
+              <span class="text-[10px] text-muted-foreground font-normal">App Language & Direction</span>
+            </DialogTitle>
+          </div>
+          <DialogDescription class="text-[10px] text-muted-foreground text-start mt-2.5 flex flex-col gap-1 leading-relaxed">
+            <span>زبان و جهت چیدمان رابط کاربری سامانه را در این قسمت انتخاب کنید.</span>
+            <span class="opacity-80">Choose your preferred language and UI layout direction.</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <!-- Selection List -->
+        <div class="p-6 flex flex-col gap-3">
+          <!-- Persian Option -->
+          <div 
+            @click="selectedLang = 'fa'"
+            class="flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200"
+            :class="selectedLang === 'fa' ? 'bg-primary/5 border-primary text-primary font-bold shadow-xs' : 'border-border/40 hover:bg-muted/40 text-foreground'"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">🇮🇷</span>
+              <div class="flex flex-col text-start gap-0.5">
+                <span class="text-xs font-bold">فارسی (Persian)</span>
+                <span class="text-[9px] text-muted-foreground">راست‌چین / RTL Layout</span>
+              </div>
+            </div>
+            <div 
+              v-if="selectedLang === 'fa'"
+              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+            >
+              <CheckIcon class="size-3" />
+            </div>
+          </div>
+
+          <!-- English Option -->
+          <div 
+            @click="selectedLang = 'en'"
+            class="flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200"
+            :class="selectedLang === 'en' ? 'bg-primary/5 border-primary text-primary font-bold shadow-xs' : 'border-border/40 hover:bg-muted/40 text-foreground'"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">🇬🇧</span>
+              <div class="flex flex-col text-start gap-0.5">
+                <span class="text-xs font-bold">English (انگلیسی)</span>
+                <span class="text-[9px] text-muted-foreground">چپ‌چین / LTR Layout</span>
+              </div>
+            </div>
+            <div 
+              v-if="selectedLang === 'en'"
+              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+            >
+              <CheckIcon class="size-3" />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter class="p-4 bg-muted/10 dark:bg-muted/5 border-t border-border/10 flex justify-end gap-2" :dir="languageStore.dir">
+          <Button variant="outline" size="sm" @click="showLanguageDialog = false" class="text-xs font-bold h-8 flex items-center gap-1.5 cursor-pointer">
+            <span>بستن</span>
+            <span class="text-[10px] opacity-70 border-s border-muted-foreground/30 ps-1.5 ms-1">Close</span>
+          </Button>
+          <Button variant="default" size="sm" @click="handleConfirmLanguage" class="text-xs font-bold h-8 flex items-center gap-1.5 cursor-pointer">
+            <span>تایید</span>
+            <span class="text-[10px] opacity-70 border-s border-primary-foreground/30 ps-1.5 ms-1">Confirm</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
   </div>
 </template>

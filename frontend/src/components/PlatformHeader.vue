@@ -2,12 +2,16 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { 
   ArrowRightIcon, 
+  ArrowLeftIcon,
   SearchIcon,
   MoreVerticalIcon,
   XIcon
 } from '@lucide/vue'
 import TopicSettingsMenu from './TopicSettingsMenu.vue'
 import { Button } from '@/components/ui/button'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 // Props configuration
 const props = withDefaults(defineProps<{
@@ -118,20 +122,28 @@ watch(() => props.showSearchButton, (newVal) => {
 </script>
 
 <template>
-  <div class="w-full flex items-center text-right select-none font-sans" dir="rtl">
+  <div 
+    class="w-full flex items-center select-none font-sans" 
+    :dir="languageStore.dir"
+  >
     
-    <!-- Detachable Back Button (RTL, right-aligned) -->
+    <!-- Detachable Back Button -->
     <button
       @click="emit('back')"
       :class="[
         'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-muted/80 active:scale-95 transition-all duration-300 ease-out shrink-0 cursor-pointer shadow-xs p-0 border outline-none',
         props.isInnerPage 
-          ? 'w-11 opacity-100 ml-1 border-border/60' 
-          : 'w-0 opacity-0 ml-0 border-transparent overflow-hidden pointer-events-none'
+          ? 'w-11 opacity-100 border-border/60' 
+          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none',
+        props.isInnerPage ? 'me-1' : ''
       ]"
-      title="بازگشت"
+      :title="languageStore.t('بازگشت', 'Back')"
     >
-      <ArrowRightIcon class="size-4 text-foreground/80 transition-transform group-hover:-translate-x-0.5" />
+      <component 
+        :is="languageStore.isFa ? ArrowRightIcon : ArrowLeftIcon" 
+        class="size-4 text-foreground/80 transition-transform"
+        :class="[languageStore.isFa ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5']"
+      />
     </button>
 
     <!-- Main Header Card Bar -->
@@ -153,38 +165,38 @@ watch(() => props.showSearchButton, (newVal) => {
       <transition name="header-content-fade" mode="out-in">
         <!-- Normal Mode Header Content -->
         <div v-if="!isSearchActive" class="w-full flex items-center justify-between" key="normal">
-          <!-- Title & Status Section (RTL: right side) -->
+          <!-- Title & Status Section -->
           <div class="flex items-center gap-2">
             <!-- Dynamic Error Glow Indicator -->
             <span 
               v-if="error" 
               class="size-2 rounded-full bg-destructive animate-pulse shrink-0" 
-              title="خطای ارتباطی"
+              :title="languageStore.t('خطای ارتباطی', 'Connection Error')"
             />
             
-            <div class="flex flex-col text-right">
+            <div class="flex flex-col text-start">
               <span class="text-xs font-extrabold text-foreground transition-all duration-300">
-                {{ isInnerPage ? innerTitle : title }}
+                {{ isInnerPage ? innerTitle : (title === 'تفکر' ? languageStore.t('تفکر', 'Tafakor') : title) }}
               </span>
               <transition name="status-fade">
                 <span 
                   v-if="loading"
                   class="text-[8.5px] font-medium transition-all duration-300 mt-0.5 text-muted-foreground block overflow-hidden"
                 >
-                  در حال اتصال...
+                  {{ languageStore.t('در حال اتصال...', 'Connecting...') }}
                 </span>
               </transition>
             </div>
           </div>
 
-          <!-- Actions Section (RTL: left side) -->
+          <!-- Actions Section -->
           <div v-if="!isInnerPage && showSearchButton" class="flex items-center gap-1">
             <slot name="actions">
               <Button 
                 @click="activateSearch"
                 variant="ghost"
                 class="size-7.5 rounded-md hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-0"
-                title="جستجو"
+                :title="languageStore.t('جستجو', 'Search')"
               >
                 <SearchIcon class="size-4" />
               </Button>
@@ -193,7 +205,7 @@ watch(() => props.showSearchButton, (newVal) => {
         </div>
 
         <!-- Search Mode Header Content -->
-        <div v-else class="w-full flex items-center gap-2" key="search" dir="rtl">
+        <div v-else class="w-full flex items-center gap-2" key="search" :dir="languageStore.dir">
           <SearchIcon class="size-4 text-primary shrink-0 transition-colors" />
           
           <input
@@ -201,18 +213,18 @@ watch(() => props.showSearchButton, (newVal) => {
             :value="searchQuery"
             @input="onSearchInput"
             type="text"
-            placeholder="جستجو در تاپیک‌ها..."
-            class="flex-1 bg-transparent border-none outline-none text-xs font-bold text-foreground placeholder:text-muted-foreground/60 w-full font-sans py-1 focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-none"
+            :placeholder="languageStore.t('جستجو در تاپیک‌ها...', 'Search topics...')"
+            class="flex-1 bg-transparent border-none outline-none text-xs font-bold text-foreground placeholder:text-muted-foreground/60 w-full font-sans py-1 focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-none text-start"
             @keydown.esc="deactivateSearch"
           />
 
           <div class="flex items-center gap-1 shrink-0">
-            <!-- Clear input button (only if searchQuery is not empty) -->
+            <!-- Clear input button -->
             <button
               v-if="searchQuery"
               @click.stop="clearSearch"
               class="size-6 rounded-md flex items-center justify-center hover:bg-muted/80 text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer border-0"
-              title="پاک کردن متن"
+              :title="languageStore.t('پاک کردن متن', 'Clear text')"
             >
               <XIcon class="size-3 shrink-0" />
             </button>
@@ -224,7 +236,7 @@ watch(() => props.showSearchButton, (newVal) => {
             <button
               @click.stop="deactivateSearch"
               class="size-7.5 rounded-md hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-colors cursor-pointer border-0"
-              title="بستن جستجو"
+              :title="languageStore.t('بستن جستجو', 'Close search')"
             >
               <XIcon class="size-4 shrink-0" />
             </button>
@@ -234,16 +246,17 @@ watch(() => props.showSearchButton, (newVal) => {
 
     </div>
 
-    <!-- Detachable Options Button (RTL, left-aligned) -->
+    <!-- Detachable Options Button -->
     <button
       @click="handleOptionsClick"
       :class="[
         'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-muted/80 active:scale-95 transition-all duration-300 ease-out shrink-0 cursor-pointer shadow-xs p-0 border outline-none',
         props.isInnerPage && props.showOptionsButton
-          ? 'w-11 opacity-100 mr-1 border-border/60' 
-          : 'w-0 opacity-0 mr-0 border-transparent overflow-hidden pointer-events-none'
+          ? 'w-11 opacity-100 border-border/60' 
+          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none',
+        props.isInnerPage && props.showOptionsButton ? 'ms-1' : ''
       ]"
-      title="تنظیمات تاپیک"
+      :title="languageStore.t('تنظیمات تاپیک', 'Topic settings')"
     >
       <MoreVerticalIcon class="size-4 text-foreground/80" />
     </button>

@@ -50,14 +50,13 @@ export const useTopicStore = defineStore('topic', () => {
   }
 
   const mapTopic = (data: any): Topic => {
-    const formattedDate = data.created_at ? new Date(data.created_at).toLocaleDateString('fa-IR') : 'هم‌اکنون'
     return {
       id: data.id,
       title: data.name,
       description: data.description || '',
       image: getImageUrl(data.image),
       unreadCount: data.post_count || 0,
-      time: formattedDate,
+      time: data.created_at || 'هم‌اکنون',
       labels: data.telegram_bot_active || data.bale_bot_active ? ['فعال'] : [],
       pinned: false,
       created_by: data.created_by,

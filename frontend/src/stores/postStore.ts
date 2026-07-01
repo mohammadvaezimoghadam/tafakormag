@@ -68,25 +68,15 @@ export const usePostStore = defineStore('post', () => {
   }
 
   const mapComment = (c: any): Comment => {
-    const formattedDate = c.created_at ? new Date(c.created_at).toLocaleDateString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : 'هم‌اکنون'
-    
     return {
       id: c.id,
       authorName: c.user_name || 'کاربر',
       text: c.content,
-      timestamp: formattedDate
+      timestamp: c.created_at || 'هم‌اکنون'
     }
   }
 
   const mapPost = (p: any): Post => {
-    const formattedDate = p.created_at ? new Date(p.created_at).toLocaleDateString('fa-IR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : 'هم‌اکنون'
-    
     const reactions: PostReaction[] = []
     if (p.reactions_summary) {
       Object.entries(p.reactions_summary).forEach(([emoji, count]) => {
@@ -113,7 +103,7 @@ export const usePostStore = defineStore('post', () => {
       type: p.media_type || 'text',
       content: p.content,
       mediaUrl: getImageUrl(p.media_file),
-      timestamp: formattedDate,
+      timestamp: p.created_at || 'هم‌اکنون',
       likesCount,
       liked,
       reactions,

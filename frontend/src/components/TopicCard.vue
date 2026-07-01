@@ -2,6 +2,9 @@
 import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { PinIcon } from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 const props = withDefaults(defineProps<{
   title: string
@@ -23,17 +26,36 @@ const emit = defineEmits<{
 
 // Generate first letter of title for placeholder avatar
 const avatarPlaceholder = computed(() => {
-  return props.title ? props.title.trim().charAt(0) : 'ت'
+  return props.title ? props.title.trim().charAt(0) : languageStore.t('ت', 'T')
 })
+
+const formatTime = (isoString: string) => {
+  if (!isoString) return ''
+  if (isoString === 'هم‌اکنون') return languageStore.t('هم‌اکنون', 'just now')
+  // If it's not a valid ISO date, return as is (for mock data in playground)
+  if (isoString.includes(':') && !isoString.includes('-')) {
+    return languageStore.n(isoString)
+  }
+  try {
+    const date = new Date(isoString)
+    if (isNaN(date.getTime())) return languageStore.n(isoString)
+    
+    return date.toLocaleDateString(languageStore.currentLanguage === 'fa' ? 'fa-IR' : 'en-US', {
+      numberingSystem: languageStore.currentLanguage === 'fa' ? 'arabext' : 'latn'
+    })
+  } catch (e) {
+    return languageStore.n(isoString)
+  }
+}
 </script>
 
 <template>
   <div
     @click="emit('click')"
-    class="w-full flex items-center gap-3.5 p-3 rounded-2xl hover:bg-muted/40 transition-all duration-200 cursor-pointer select-none text-right border-0 group relative"
-    dir="rtl"
+    class="w-full flex items-center gap-3.5 p-3 rounded-2xl hover:bg-muted/40 transition-all duration-200 cursor-pointer select-none border-0 group relative text-start"
+    :dir="languageStore.dir"
   >
-    <!-- Avatar / Image (RTL: right side) -->
+    <!-- Avatar / Image -->
     <div class="relative shrink-0">
       <img
         v-if="image"
@@ -48,21 +70,20 @@ const avatarPlaceholder = computed(() => {
         {{ avatarPlaceholder }}
       </div>
       
-      <!-- Pinned marker indicator -->
-      <span 
-        v-if="pinned" 
-        class="absolute -top-1 -right-1 size-3.5 bg-primary rounded-full border border-background flex items-center justify-center text-primary-foreground"
-        title="سنجاق شده"
+      <!-- Pinned Badge Badge -->
+      <div 
+        v-if="pinned"
+        class="absolute -top-1 -right-1 size-5 rounded-full bg-background border border-border/50 shadow-xs flex items-center justify-center text-muted-foreground"
       >
-        <PinIcon class="size-2 text-primary-foreground fill-primary-foreground" />
-      </span>
+        <PinIcon class="size-2.5 rotate-45" />
+      </div>
     </div>
 
     <!-- Middle Content Section (Title, Labels, Description) -->
-    <div class="flex-1 flex flex-col min-w-0 text-right gap-1.5">
+    <div class="flex-1 flex flex-col min-w-0 text-start gap-1.5">
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Title -->
-        <span class="text-xs font-bold text-foreground truncate select-all">
+        <span class="text-xs font-bold text-foreground truncate select-all text-start" dir="auto">
           {{ title }}
         </span>
         
@@ -80,7 +101,7 @@ const avatarPlaceholder = computed(() => {
       </div>
 
       <!-- Description / Last Message -->
-      <p class="text-[11px] text-muted-foreground truncate leading-relaxed">
+      <p class="text-[11px] text-muted-foreground truncate leading-relaxed text-start" dir="auto">
         {{ description }}
       </p>
     </div>
@@ -89,7 +110,7 @@ const avatarPlaceholder = computed(() => {
     <div class="flex flex-col items-end shrink-0 gap-2">
       <!-- Time Stamp -->
       <span class="text-[10px] text-muted-foreground font-bold select-none">
-        {{ time }}
+        {{ formatTime(time) }}
       </span>
 
       <!-- Unread Count Badge -->
@@ -98,9 +119,8 @@ const avatarPlaceholder = computed(() => {
         variant="default"
         class="h-5 min-w-5 rounded-full text-[10px] font-black px-1.5 shadow-xs"
       >
-        {{ unreadCount }}
+        {{ languageStore.n(unreadCount) }}
       </Badge>
     </div>
-
   </div>
 </template>

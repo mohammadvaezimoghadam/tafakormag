@@ -15,6 +15,9 @@ import {
   ChevronRightIcon 
 } from '@lucide/vue'
 import * as api from '@/api'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 const props = defineProps<{
   topic: {
@@ -26,153 +29,151 @@ const props = defineProps<{
     bale_connections?: any[]
     [key: string]: any
   }
-  telegramConnected: boolean
-  baleConnected: boolean
-  onSave?: (data: { 
-    telegram_bot_active: boolean
-    bale_bot_active: boolean
-    telegram_connections: number[]
-    bale_connections: number[] 
-  }) => Promise<any> | any
+  telegramConnected?: boolean
+  baleConnected?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'back'): void
-  (e: 'save', data: { 
+  (e: 'goToConnections'): void
+  (e: 'save', data: {
     telegram_bot_active: boolean
     bale_bot_active: boolean
     telegram_connections: number[]
-    bale_connections: number[] 
+    bale_connections: number[]
   }): void
-  (e: 'goToConnections'): void
 }>()
 
-const getIds = (connections?: any[]) => {
-  if (!connections) return []
-  return connections.map(c => typeof c === 'object' && c !== null ? c.id : c)
-}
+// Active Toggles
+const telegramActive = ref(props.topic.telegram_bot_active || false)
+const baleActive = ref(props.topic.bale_bot_active || false)
 
-const telegramActive = ref(props.topic.telegram_bot_active ?? false)
-const baleActive = ref(props.topic.bale_bot_active ?? false)
+// Verification Connection States (Retrieved from global or profiles)
+const telegramConnected = ref(props.telegramConnected || false)
+const baleConnected = ref(props.baleConnected || false)
 
-const selectedTgConnections = ref<number[]>(getIds(props.topic.telegram_connections))
-const selectedBaleConnections = ref<number[]>(getIds(props.topic.bale_connections))
+watch(() => props.telegramConnected, (newVal) => {
+  telegramConnected.value = newVal || false
+})
 
-interface Destination {
-  id: number
-  label: string
-  chat_id: string
-}
+watch(() => props.baleConnected, (newVal) => {
+  baleConnected.value = newVal || false
+})
 
-const tgDestinations = ref<Destination[]>([])
-const baleDestinations = ref<Destination[]>([])
+// Mock/Fetched Destinations (Telegram Channels / Bale Groups)
+const tgDestinations = ref<any[]>([])
+const baleDestinations = ref<any[]>([])
 
 const loadingTg = ref(false)
 const loadingBale = ref(false)
+
+// Selected list of connection IDs
+const selectedTgConnections = ref<number[]>([])
+const selectedBaleConnections = ref<number[]>([])
+
 const isSaving = ref(false)
 const saveSuccess = ref(false)
 
-const loadTgDestinations = async () => {
-  if (!props.telegramConnected) return
-  loadingTg.value = true
+const loadConnectionsData = async () => {
   try {
-    const res = await api.fetchDestinations('telegram')
-    tgDestinations.value = res.data ?? []
+    // 1. Fetch current profile to verify bot connection statuses
+    const profileRes = await api.fetchProfile()
+    if (profileRes.data) {
+      telegramConnected.value = !!profileRes.data.telegram_token
+      baleConnected.value = !!profileRes.data.bale_token
+    }
   } catch (err) {
-    console.error('Error fetching tg destinations:', err)
-  } finally {
-    loadingTg.value = false
+    console.error('Failed to load connections configuration from API:', err)
+    telegramConnected.value = props.telegramConnected || false
+    baleConnected.value = props.baleConnected || false
   }
-}
 
-const loadBaleDestinations = async () => {
-  if (!props.baleConnected) return
-  loadingBale.value = true
   try {
-    const res = await api.fetchDestinations('bale')
-    baleDestinations.value = res.data ?? []
+    // 2. Fetch all channels/destinations for both if connected
+    if (telegramConnected.value) {
+      loadingTg.value = true
+      const tgRes = await api.fetchDestinations('telegram')
+      if (tgRes.data) {
+        tgDestinations.value = tgRes.data
+      }
+      loadingTg.value = false
+    }
+
+    if (baleConnected.value) {
+      loadingBale.value = true
+      const baleRes = await api.fetchDestinations('bale')
+      if (baleRes.data) {
+        baleDestinations.value = baleRes.data
+      }
+      loadingBale.value = false
+    }
+
+    // Initialize selections from props connections
+    if (props.topic.telegram_connections) {
+      selectedTgConnections.value = props.topic.telegram_connections.map(c => c.id || c)
+    }
+    if (props.topic.bale_connections) {
+      selectedBaleConnections.value = props.topic.bale_connections.map(c => c.id || c)
+    }
+
   } catch (err) {
-    console.error('Error fetching bale destinations:', err)
-  } finally {
+    console.error('Failed to load destinations channels:', err)
+    loadingTg.value = false
     loadingBale.value = false
   }
 }
 
-watch(telegramActive, (active) => {
-  if (active) {
-    loadTgDestinations()
-  }
+onMounted(() => {
+  loadConnectionsData()
 })
 
-watch(baleActive, (active) => {
-  if (active) {
-    loadBaleDestinations()
-  }
-})
-
-const toggleTgChannel = (destId: number) => {
-  const index = selectedTgConnections.value.indexOf(destId)
-  if (index === -1) {
-    selectedTgConnections.value.push(destId)
+const toggleTgChannel = (id: number) => {
+  const idx = selectedTgConnections.value.indexOf(id)
+  if (idx > -1) {
+    selectedTgConnections.value.splice(idx, 1)
   } else {
-    selectedTgConnections.value.splice(index, 1)
+    selectedTgConnections.value.push(id)
   }
 }
 
-const toggleBaleChannel = (destId: number) => {
-  const index = selectedBaleConnections.value.indexOf(destId)
-  if (index === -1) {
-    selectedBaleConnections.value.push(destId)
+const toggleBaleChannel = (id: number) => {
+  const idx = selectedBaleConnections.value.indexOf(id)
+  if (idx > -1) {
+    selectedBaleConnections.value.splice(idx, 1)
   } else {
-    selectedBaleConnections.value.splice(index, 1)
+    selectedBaleConnections.value.push(id)
   }
 }
 
-const handleSave = async () => {
+const handleSave = () => {
   isSaving.value = true
-  try {
-    const payload = {
+  setTimeout(() => {
+    isSaving.value = false
+    saveSuccess.value = true
+    emit('save', {
       telegram_bot_active: telegramActive.value,
       bale_bot_active: baleActive.value,
       telegram_connections: selectedTgConnections.value,
       bale_connections: selectedBaleConnections.value
-    }
-    
-    if (props.onSave) {
-      await props.onSave(payload)
-    } else {
-      emit('save', payload)
-    }
-    
-    saveSuccess.value = true
+    })
     
     setTimeout(() => {
       saveSuccess.value = false
       emit('back')
     }, 1000)
-  } catch (err) {
-    console.error('Error saving connections:', err)
-  } finally {
-    isSaving.value = false
-  }
+  }, 1200)
 }
-
-onMounted(() => {
-  if (telegramActive.value) {
-    loadTgDestinations()
-  }
-  if (baleActive.value) {
-    loadBaleDestinations()
-  }
-})
 </script>
 
 <template>
-  <div class="w-full flex flex-col gap-5 text-right font-sans" dir="rtl">
+  <div 
+    class="w-full flex flex-col gap-5 text-start font-sans" 
+    :dir="languageStore.dir"
+  >
     <!-- Header -->
     <PlatformHeader 
       is-inner-page
-      inner-title="تنظیمات اتصالات"
+      :inner-title="languageStore.t('تنظیمات اتصالات', 'Connections Settings')"
       :show-options-button="false"
       @back="emit('back')"
     />
@@ -180,20 +181,20 @@ onMounted(() => {
     <!-- Main Card wrapper -->
     <div class="w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-5 shadow-xs flex flex-col gap-5">
       
-      <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">
-        💡 با فعال‌سازی بازنشر، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.
+      <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed text-start">
+        {{ languageStore.t('💡 با فعال‌سازی بازنشر، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.', '💡 By enabling auto-repost, your posts in this topic will be automatically published via dedicated bots in the selected groups and channels.') }}
       </div>
 
       <!-- Telegram Section -->
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 transition-all duration-300">
-          <div class="flex flex-col text-right pl-4">
+          <div class="flex flex-col text-start pe-4">
             <span class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
               <span class="size-2 rounded-full bg-sky-500 shrink-0" />
-              بازنشر در تلگرام
+              {{ languageStore.t('بازنشر در تلگرام', 'Repost in Telegram') }}
             </span>
             <span class="text-[9.5px] text-muted-foreground mt-1 leading-normal">
-              ارسال پیام‌های جدید این تاپیک به کانال‌ها و گروه‌های تلگرام
+              {{ languageStore.t('ارسال پیام‌های جدید این تاپیک به کانال‌ها و گروه‌های تلگرام', 'Send new messages of this topic to Telegram channels and groups') }}
             </span>
           </div>
           <Switch v-model:checked="telegramActive" />
@@ -204,33 +205,33 @@ onMounted(() => {
             <!-- Telegram not connected -->
             <div 
               v-if="!telegramConnected" 
-              class="flex flex-col gap-3 p-3.5 rounded-2xl bg-destructive/5 border border-destructive/15 text-right font-sans"
+              class="flex flex-col gap-3 p-3.5 rounded-2xl bg-destructive/5 border border-destructive/15 text-start font-sans"
             >
               <div class="flex items-start gap-2.5">
                 <AlertCircleIcon class="size-4.5 text-destructive shrink-0 mt-0.5" />
                 <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-destructive">ربات تلگرام متصل نیست</span>
+                  <span class="text-[11px] font-bold text-destructive">{{ languageStore.t('ربات تلگرام متصل نیست', 'Telegram bot is not connected') }}</span>
                   <span class="text-[9.5px] text-muted-foreground leading-normal">
-                    برای تعریف مقاصد بازنشر در تلگرام، ابتدا باید ربات تلگرام خود را در پروفایل متصل کنید.
+                    {{ languageStore.t('برای تعریف مقاصد بازنشر در تلگرام، ابتدا باید ربات تلگرام خود را در پروفایل متصل کنید.', 'To define repost destinations in Telegram, you must first connect your Telegram bot in your profile.') }}
                   </span>
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 size="xs" 
-                class="self-start text-[10px] h-7 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer pr-2.5 pl-2 gap-1"
+                class="self-start text-[10px] h-7 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer gap-1 ps-2.5 pe-2"
                 @click="emit('goToConnections')"
               >
-                <span>اتصال ربات تلگرام</span>
-                <ChevronRightIcon class="size-3.5 rotate-180" />
+                <span>{{ languageStore.t('اتصال ربات تلگرام', 'Connect Telegram Bot') }}</span>
+                <ChevronRightIcon class="size-3.5" :class="[languageStore.isFa ? 'rotate-180' : '']" />
               </Button>
             </div>
 
             <!-- Telegram Channels list -->
             <div v-else class="flex flex-col gap-2 bg-background/30 rounded-2xl p-1.5 border border-border/40">
-              <div v-if="loadingTg" class="text-center text-xs text-gray-400 py-4">در حال بارگذاری مقاصد تلگرام...</div>
-              <div v-else-if="tgDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30">
-                ⚠️ هیچ مقصد متصلی در تلگرام یافت نشد. ابتدا ربات خود را در تلگرام به گروه یا کانال عضو و مدیر کنید.
+              <div v-if="loadingTg" class="text-center text-xs text-gray-400 py-4">{{ languageStore.t('در حال بارگذاری مقاصد تلگرام......', 'Loading Telegram destinations...') }}</div>
+              <div v-else-if="tgDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30 text-start">
+                {{ languageStore.t('⚠️ هیچ مقصد متصلی در تلگرام یافت نشد. ابتدا ربات خود را در تلگرام به گروه یا کانال عضو و مدیر کنید.', '⚠️ No connected destination found in Telegram. First add your bot to a group or channel and make it an admin.') }}
               </div>
               <template v-else>
                 <div 
@@ -243,17 +244,17 @@ onMounted(() => {
                     <div class="size-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-500 shrink-0">
                       <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
                     </div>
-                    <div class="flex flex-col text-right">
+                    <div class="flex flex-col text-start">
                       <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
-                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
+                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start">{{ ch.chat_id }}</span>
                     </div>
                   </div>
                   <Checkbox :checked="selectedTgConnections.includes(ch.id)" @update:checked="toggleTgChannel(ch.id)" @click.stop class="shrink-0" />
                 </div>
                 <!-- Disconnect Guide -->
-                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-right">
-                  <span class="text-[10px] font-bold text-muted-foreground block">💡 راهنمای حذف مقصد:</span>
-                  <span class="text-[9px] text-muted-foreground/80 mt-1 block">برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در تلگرام ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.</span>
+                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-start">
+                  <span class="text-[10px] font-bold text-muted-foreground block">{{ languageStore.t('💡 راهنمای حذف مقصد:', '💡 Destination Removal Guide:') }}</span>
+                  <span class="text-[9px] text-muted-foreground/80 mt-1 block">{{ languageStore.t('برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در تلگرام ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.', 'To permanently remove any of the above destinations, simply remove the Tafakor bot from the corresponding channel or group in Telegram. The system will apply the changes automatically.') }}</span>
                 </div>
               </template>
             </div>
@@ -264,13 +265,13 @@ onMounted(() => {
       <!-- Bale Section -->
       <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 transition-all duration-300">
-          <div class="flex flex-col text-right pl-4">
+          <div class="flex flex-col text-start pe-4">
             <span class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
               <span class="size-2 rounded-full bg-emerald-500 shrink-0" />
-              بازنشر در بله
+              {{ languageStore.t('بازنشر در بله', 'Repost in Bale') }}
             </span>
             <span class="text-[9.5px] text-muted-foreground mt-1 leading-normal">
-              ارسال پیام‌های جدید این تاپیک به کانال‌ها و گروه‌های بله
+              {{ languageStore.t('ارسال پیام‌های جدید این تاپیک به کانال‌ها و گروه‌های بله', 'Send new messages of this topic to Bale channels and groups') }}
             </span>
           </div>
           <Switch v-model:checked="baleActive" />
@@ -281,33 +282,33 @@ onMounted(() => {
             <!-- Bale not connected -->
             <div 
               v-if="!baleConnected" 
-              class="flex flex-col gap-3 p-3.5 rounded-2xl bg-destructive/5 border border-destructive/15 text-right font-sans"
+              class="flex flex-col gap-3 p-3.5 rounded-2xl bg-destructive/5 border border-destructive/15 text-start font-sans"
             >
               <div class="flex items-start gap-2.5">
                 <AlertCircleIcon class="size-4.5 text-destructive shrink-0 mt-0.5" />
                 <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-destructive">ربات بله متصل نیست</span>
+                  <span class="text-[11px] font-bold text-destructive">{{ languageStore.t('ربات بله متصل نیست', 'Bale bot is not connected') }}</span>
                   <span class="text-[9.5px] text-muted-foreground leading-normal">
-                    برای تعریف مقاصد بازنشر در بله، ابتدا باید ربات بله خود را در پروفایل متصل کنید.
+                    {{ languageStore.t('برای تعریف مقاصد بازنشر در بله، ابتدا باید ربات بله خود را در پروفایل متصل کنید.', 'To define repost destinations in Bale, you must first connect your Bale bot in your profile.') }}
                   </span>
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 size="xs" 
-                class="self-start text-[10px] h-7 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer pr-2.5 pl-2 gap-1"
+                class="self-start text-[10px] h-7 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer gap-1 ps-2.5 pe-2"
                 @click="emit('goToConnections')"
               >
-                <span>اتصال ربات بله</span>
-                <ChevronRightIcon class="size-3.5 rotate-180" />
+                <span>{{ languageStore.t('اتصال ربات بله', 'Connect Bale Bot') }}</span>
+                <ChevronRightIcon class="size-3.5" :class="[languageStore.isFa ? 'rotate-180' : '']" />
               </Button>
             </div>
 
             <!-- Bale Channels list -->
             <div v-else class="flex flex-col gap-2 bg-background/30 rounded-2xl p-1.5 border border-border/40">
-              <div v-if="loadingBale" class="text-center text-xs text-gray-400 py-4">در حال بارگذاری مقاصد بله...</div>
-              <div v-else-if="baleDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30">
-                ⚠️ هیچ مقصد متصلی در بله یافت نشد. ابتدا ربات خود را در بله به گروه یا کانال عضو و مدیر کنید.
+              <div v-if="loadingBale" class="text-center text-xs text-gray-400 py-4">{{ languageStore.t('در حال بارگذاری مقاصد بله......', 'Loading Bale destinations...') }}</div>
+              <div v-else-if="baleDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30 text-start">
+                {{ languageStore.t('⚠️ هیچ مقصد متصلی در بله یافت نشد. ابتدا ربات خود را در بله به گروه یا کانال عضو و مدیر کنید.', '⚠️ No connected destination found in Bale. First add your bot to a group or channel and make it an admin.') }}
               </div>
               <template v-else>
                 <div 
@@ -320,17 +321,17 @@ onMounted(() => {
                     <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
                       <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
                     </div>
-                    <div class="flex flex-col text-right">
+                    <div class="flex flex-col text-start">
                       <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
-                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-right">{{ ch.chat_id }}</span>
+                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start">{{ ch.chat_id }}</span>
                     </div>
                   </div>
                   <Checkbox :checked="selectedBaleConnections.includes(ch.id)" @update:checked="toggleBaleChannel(ch.id)" @click.stop class="shrink-0" />
                 </div>
                 <!-- Disconnect Guide -->
-                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-right">
-                  <span class="text-[10px] font-bold text-muted-foreground block">💡 راهنمای حذف مقصد:</span>
-                  <span class="text-[9px] text-muted-foreground/80 mt-1 block">برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در بله ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.</span>
+                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-start">
+                  <span class="text-[10px] font-bold text-muted-foreground block">{{ languageStore.t('💡 راهنمای حذف مقصد:', '💡 Destination Removal Guide:') }}</span>
+                  <span class="text-[9px] text-muted-foreground/80 mt-1 block">{{ languageStore.t('برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در بله ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.', 'To permanently remove any of the above destinations, simply remove the Tafakor bot from the corresponding channel or group in Bale. The system will apply the changes automatically.') }}</span>
                 </div>
               </template>
             </div>
@@ -350,15 +351,15 @@ onMounted(() => {
         <transition name="btn-content" mode="out-in">
           <div v-if="isSaving" class="flex items-center gap-2 justify-center">
             <RefreshCwIcon class="size-4 animate-spin" />
-            <span>در حال ذخیره‌سازی...</span>
+            <span>{{ languageStore.t('در حال ذخیره‌سازی...', 'Saving...') }}</span>
           </div>
-          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-600 dark:text-emerald-400">
+          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-650 dark:text-emerald-400">
             <CheckCircle2Icon class="size-4" />
-            <span>اتصالات با موفقیت به روز رسانی شد</span>
+            <span>{{ languageStore.t('اتصالات با موفقیت به روز رسانی شد', 'Connections updated successfully') }}</span>
           </div>
           <div v-else class="flex items-center gap-2 justify-center">
             <SaveIcon class="size-4" />
-            <span>ذخیره تنظیمات اتصالات</span>
+            <span>{{ languageStore.t('ذخیره تنظیمات اتصالات', 'Save Connections Settings') }}</span>
           </div>
         </transition>
       </Button>

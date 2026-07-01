@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 import { 
   PencilIcon, 
   CopyIcon, 
@@ -148,21 +151,21 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy') => {
     >
       <!-- Floating Menu Wrapper -->
       <div 
-        class="flex flex-col gap-2 pointer-events-auto select-none scale-up text-right w-56 animate-menu-pop"
+        class="flex flex-col gap-2 pointer-events-auto select-none scale-up text-start w-56 animate-menu-pop"
         :style="menuStyle"
         @click.stop
       >
         <!-- Vertical Dropdown Menu Options -->
         <div 
           class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-full"
-          dir="rtl"
+          :dir="languageStore.dir"
         >
           <!-- Copy Text -->
           <button 
             @click="handleAction('copy')" 
-            class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
           >
-            <span>کپی متن پست</span>
+            <span>{{ languageStore.t('کپی متن پست', 'Copy Post Text') }}</span>
             <CopyIcon class="size-3.5 text-muted-foreground" />
           </button>
 
@@ -170,9 +173,9 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy') => {
             <!-- Edit Post -->
             <button 
               @click="handleAction('edit')" 
-              class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              <span>ویرایش پست</span>
+              <span>{{ languageStore.t('ویرایش پست', 'Edit Post') }}</span>
               <PencilIcon class="size-3.5 text-muted-foreground" />
             </button>
 
@@ -182,9 +185,9 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy') => {
             <!-- Delete Post -->
             <button 
               @click="handleAction('delete')" 
-              class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
-              <span>حذف پست</span>
+              <span>{{ languageStore.t('حذف پست', 'Delete Post') }}</span>
               <Trash2Icon class="size-3.5 text-destructive" />
             </button>
           </template>

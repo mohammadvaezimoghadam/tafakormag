@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ChevronLeftIcon } from '@lucide/vue'
+import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/vue'
 import { Badge } from '@/components/ui/badge'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 const props = withDefaults(defineProps<{
   title: string
@@ -20,16 +23,16 @@ const emit = defineEmits<{
 <template>
   <button
     @click="emit('click')"
-    class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none text-right relative active:scale-[0.995] group gap-3.5 outline-none font-inherit text-foreground"
-    dir="rtl"
+    class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none relative active:scale-[0.995] group gap-3.5 outline-none font-inherit text-foreground"
+    :dir="languageStore.dir"
   >
-    <!-- Right side: Icon Container (No border, lighter bg) -->
+    <!-- Icon Container -->
     <div class="size-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary shrink-0 transition-transform duration-200 group-hover:scale-102">
       <component :is="icon" class="size-5 shrink-0" />
     </div>
 
-    <!-- Middle: Title & Description -->
-    <div class="flex-1 flex flex-col text-right gap-1 min-w-0">
+    <!-- Title & Description -->
+    <div class="flex-1 flex flex-col text-start gap-1 min-w-0">
       <span class="text-xs font-bold text-foreground truncate select-all leading-none">
         {{ title }}
       </span>
@@ -38,7 +41,7 @@ const emit = defineEmits<{
       </span>
     </div>
 
-    <!-- Left side: Badge & Arrow indicator -->
+    <!-- Badge & Arrow indicator -->
     <div class="flex items-center gap-2 shrink-0">
       <!-- Badge element -->
       <Badge
@@ -49,8 +52,12 @@ const emit = defineEmits<{
         {{ badgeText }}
       </Badge>
 
-      <!-- RTL pointing back chevron -->
-      <ChevronLeftIcon class="size-4 text-muted-foreground/60 transition-transform duration-200 group-hover:-translate-x-0.5" />
+      <!-- Dynamic chevron pointing backward based on language direction -->
+      <component 
+        :is="languageStore.isFa ? ChevronLeftIcon : ChevronRightIcon" 
+        class="size-4 text-muted-foreground/60 transition-transform duration-200"
+        :class="[languageStore.isFa ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5']"
+      />
     </div>
   </button>
 </template>

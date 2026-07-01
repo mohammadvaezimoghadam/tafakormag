@@ -5,6 +5,9 @@ import {
   LinkIcon, 
   Trash2Icon 
 } from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 const props = defineProps<{
   isOpen: boolean
@@ -71,26 +74,26 @@ const handleAction = (action: 'edit' | 'connections' | 'delete') => {
     >
       <!-- Floating Menu Wrapper -->
       <div 
-        class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-56 pointer-events-auto select-none scale-up text-right animate-menu-pop"
+        class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-56 pointer-events-auto select-none scale-up text-start animate-menu-pop"
         :style="menuStyle"
         @click.stop
-        dir="rtl"
+        :dir="languageStore.dir"
       >
         <!-- Edit Topic -->
         <button 
           @click="handleAction('edit')" 
-          class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
-          <span>ویرایش مشخصات تاپیک</span>
+          <span>{{ languageStore.t('ویرایش مشخصات تاپیک', 'Edit Topic Info') }}</span>
           <PencilIcon class="size-3.5 text-muted-foreground" />
         </button>
 
         <!-- Topic Connections -->
         <button 
           @click="handleAction('connections')" 
-          class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
-          <span>تنظیمات اتصالات تاپیک</span>
+          <span>{{ languageStore.t('تنظیمات اتصالات تاپیک', 'Topic Connections Settings') }}</span>
           <LinkIcon class="size-3.5 text-muted-foreground" />
         </button>
 
@@ -100,9 +103,9 @@ const handleAction = (action: 'edit' | 'connections' | 'delete') => {
         <!-- Delete Topic -->
         <button 
           @click="handleAction('delete')" 
-          class="w-full text-right px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
-          <span>حذف تاپیک</span>
+          <span>{{ languageStore.t('حذف تاپیک', 'Delete Topic') }}</span>
           <Trash2Icon class="size-3.5 text-destructive" />
         </button>
       </div>
@@ -122,18 +125,16 @@ const handleAction = (action: 'edit' | 'connections' | 'delete') => {
   opacity: 0;
 }
 
-@keyframes menuPop {
-  0% {
-    opacity: 0;
-    transform: scale(0.92) translateY(5px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.scale-up {
+  transform-origin: top right;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.96); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .animate-menu-pop {
-  animation: menuPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: pop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 </style>
