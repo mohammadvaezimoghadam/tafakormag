@@ -16,6 +16,7 @@ import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import LoadingDialog from '@/components/LoadingDialog.vue'
+import TopicImportView from '@/components/TopicImportView.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -56,11 +57,12 @@ import {
   ChevronLeftIcon,
   PlusIcon,
   CopyIcon,
-  CheckIcon
+  CheckIcon,
+  UploadCloudIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog'>('profile')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import'>('profile')
 const viewportWidth = ref<'100%' | '768px' | '375px'>('100%')
 const sandboxBg = ref<'default' | 'gradient' | 'grid' | 'image'>('default')
 const activeState = ref<'idle' | 'loading' | 'error' | 'empty' | 'success'>('idle')
@@ -199,6 +201,7 @@ const currentComponentFile = computed(() => {
     case 'topic-edit': return 'TopicEditView.vue'
     case 'topic-connections': return 'TopicConnectionsView.vue'
     case 'loading-dialog': return 'LoadingDialog.vue'
+    case 'topic-import': return 'TopicImportView.vue'
     default: return ''
   }
 })
@@ -219,7 +222,7 @@ const copyComponentFile = async () => {
   }
 }
 
-const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog') => {
+const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import') => {
   currentComponent.value = comp
   activeState.value = 'idle'
   logEvent('Component Changed', { component: comp })
@@ -1146,6 +1149,21 @@ const stopLoadingSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'loading-dialog'" class="size-3.5 text-primary" />
               </button>
+              <button 
+                @click="handleComponentChange('topic-import')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'topic-import' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <UploadCloudIcon class="size-3.5 text-primary" />
+                  درون‌ریزی تاریخچه کانال (جدید)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'topic-import'" class="size-3.5 text-primary" />
+              </button>
             </div>
           </div>
         </div>
@@ -1310,7 +1328,7 @@ const stopLoadingSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -1726,6 +1744,23 @@ const stopLoadingSimulation = () => {
                   <div class="flex justify-between">
                     <span>در حال پردازش: {{ simulatorLoadingIsProcessing ? 'بله' : 'خیر' }}</span>
                   </div>
+                </div>
+              </div>
+
+              <!-- TopicImport Specific Controls -->
+              <div v-if="currentComponent === 'topic-import'" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <p class="text-[9.5px] text-muted-foreground leading-relaxed text-start">
+                  این کامپوننت به کاربر امکان می‌دهد فایل نتیجه تلگرام (result.json) را درون‌ریزی کند. کلیک بر روی دکمه شروع در پیش‌نمایش، لودینگ شبیه‌سازی شده را فعال می‌کند.
+                </p>
+                <div class="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    @click="logEvent('TopicImport: Simulated info request', {})"
+                    class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                  >
+                    مستندات درون‌ریزی
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2240,6 +2275,18 @@ const stopLoadingSimulation = () => {
                       logEvent('LoadingDialog: Action clicked (Redirection)', {});
                       stopLoadingSimulation();
                     }"
+                  />
+                </div>
+
+                <!-- TopicImportView Preview -->
+                <div 
+                  v-else-if="currentComponent === 'topic-import'"
+                  class="w-full flex flex-col"
+                  :dir="languageStore.dir"
+                >
+                  <TopicImportView 
+                    @import-complete="logEvent('TopicImport: Import completed successfully', {})"
+                    @import-failed="(err) => logEvent('TopicImport: Import failed', { error: err })"
                   />
                 </div>
 
