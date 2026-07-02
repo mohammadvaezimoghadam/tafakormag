@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Topic, Post, PostReaction, PostComment
+from .models import Topic, Post, PostReaction, PostComment, ImportTask
 from apps.accounts.models import MessagingTarget
+
 
 
 class TopicSerializer(serializers.ModelSerializer):
@@ -94,3 +95,13 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_comments_count(self, obj):
         return obj.comments.count()
+
+
+class ImportTaskStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImportTask
+        fields = [
+            'id', 'topic', 'status', 'current_stage', 'progress',
+            'error_message', 'created_at'
+        ]
+        read_only_fields = fields

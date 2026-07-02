@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import PlatformHeader from './PlatformHeader.vue'
 import { Button } from '@/components/ui/button'
 import LoadingDialog from '@/components/LoadingDialog.vue'
 import { useLanguageStore } from '@/stores/languageStore'
+import { importHistory, getImportStatus } from '@/api'
 import {
   UploadCloudIcon,
   FileJsonIcon,
@@ -76,59 +77,87 @@ const formatBytes = (bytes: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
-// Simulated Pipeline Process (Upload + Polling Simulation)
-let simulationInterval: any = null
+// Active Polling Interval reference
+let pollingInterval: any = null
 
-const startImportPipeline = () => {
-  if (!selectedFile.value) return
+const startStatusPolling = (taskId: string) => {
+  pollingInterval = setInterval(async () => {
+    try {
+      const res = await getImportStatus(taskId)
+      const taskData = res.data
+      
+      globalProgress.value = taskData.progress
+      
+      // Map backend status to loading dialog stage status codes
+      const statusMap: Record<string, typeof currentStatus.value> = {
+        'PENDING': 'uploading',
+        'EXTRACTING': 'validating',
+        'IMPORTING': 'importing',
+        'COMPLETED': 'completed',
+        'FAILED': 'failed'
+      }
+      currentStatus.value = statusMap[taskData.status] || 'idle'
+
+      if (taskData.status === 'COMPLETED') {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+        isProcessing.value = false
+        emit('import-complete')
+      } else if (taskData.status === 'FAILED') {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+        isProcessing.value = false
+        emit('import-failed', taskData.error_message || 'خطا در درون‌ریزی تاریخچه.')
+      }
+    } catch (err) {
+      console.error('Polling import status failed:', err)
+    }
+  }, 1200)
+}
+
+const startImportPipeline = async () => {
+  if (!selectedFile.value || !props.topicId) return
 
   isImporting.value = true
   isProcessing.value = true
   globalProgress.value = 0
   currentStatus.value = 'uploading'
 
-  // Stage 1: Uploading Simulation (Axios onUploadProgress style)
-  let progress = 0
-  simulationInterval = setInterval(() => {
-    if (currentStatus.value === 'uploading') {
-      progress += Math.floor(Math.random() * 15) + 5
-      if (progress >= 100) {
-        progress = 100
-        globalProgress.value = 100
-        currentStatus.value = 'validating'
-        progress = 0
-      } else {
-        // Pump progress directly to global progress
-        globalProgress.value = Math.min(progress * 0.4, 40) // Upload is 40% of overall progress
-      }
-    } else if (currentStatus.value === 'validating') {
-      progress += 10
-      globalProgress.value = 40 + Math.min(progress * 0.3, 30) // Validate is next 30%
-      if (progress >= 100) {
-        currentStatus.value = 'importing'
-        progress = 0
-      }
-    } else if (currentStatus.value === 'importing') {
-      progress += 5
-      globalProgress.value = 70 + Math.min(progress * 0.3, 30) // Import is final 30%
-      if (progress >= 100) {
-        currentStatus.value = 'completed'
-        globalProgress.value = 100
-        isProcessing.value = false
-        clearInterval(simulationInterval)
-        emit('import-complete')
-      }
-    }
-  }, 150)
+  try {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    
+    // Call Django API multipart upload
+    const res = await importHistory(props.topicId, formData)
+    const taskId = res.data.id
+    
+    // Start tracking background process status
+    startStatusPolling(taskId)
+  } catch (err: any) {
+    isImporting.value = false
+    isProcessing.value = false
+    const errMsg = err.response?.data?.error || 'خطا در آپلود فایل تاریخچه تلگرام.'
+    emit('import-failed', errMsg)
+  }
 }
 
 const handleDialogClose = () => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+  }
   if (!isProcessing.value) {
     isImporting.value = false
     removeFile()
     currentStatus.value = 'idle'
   }
 }
+
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+  }
+})
 </script>
 
 <template>

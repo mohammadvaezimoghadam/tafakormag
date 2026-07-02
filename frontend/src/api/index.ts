@@ -133,4 +133,10 @@ export const fetchProfile = () =>
 export const updateProfile = (data: FormData) => 
   instance.patch('/api/auth/profile/', data, getMultipartConfig(data))
 
+export const importHistory = (topicId: number | string, data: FormData) =>
+  instance.post(`/api/notes/topics/${topicId}/import-json/`, data, getMultipartConfig(data))
+
+export const getImportStatus = (taskId: string) =>
+  instance.get(`/api/notes/import-tasks/${taskId}/status/`)
+
 export default instance

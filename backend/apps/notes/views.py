@@ -1,11 +1,13 @@
+import os
 from django.db.models import Q, Count
+from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from .models import Topic, Post, PostReaction, PostComment
-from .serializers import TopicSerializer, PostSerializer, PostCommentSerializer
+from .models import Topic, Post, PostReaction, PostComment, ImportTask
+from .serializers import TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer
 from .services import create_bot_tasks
 
 
@@ -44,6 +46,57 @@ class TopicViewSet(viewsets.ModelViewSet):
         if instance.created_by and instance.created_by != self.request.user and not self.request.user.is_superuser:
             raise PermissionDenied("شما اجازه حذف این تاپیک را ندارید.")
         instance.delete()
+
+    @action(detail=True, methods=['post'], url_path='import-json', permission_classes=[permissions.IsAuthenticated])
+    def import_json(self, request, pk=None):
+        topic = self.get_object()
+        
+        # بررسی دسترسی سازنده تاپیک
+        if topic.created_by and topic.created_by != request.user and not request.user.is_superuser:
+            raise PermissionDenied("فقط سازنده تاپیک مجاز به درون‌ریزی تاریخچه در آن است.")
+            
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"error": "هیچ فایلی ارسال نشده است."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not uploaded_file.name.endswith('.json'):
+            return Response({"error": "فقط فایل با پسوند .json مجاز است."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # ذخیره فایل به صورت موقت در media/temp_imports/
+        import uuid
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_imports')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
+        temp_filepath = os.path.join(temp_dir, temp_filename)
+        
+        # نوشتن فایل روی دیسک
+        with open(temp_filepath, 'wb+') as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+                
+        # ایجاد تسک وضعیت درون‌ریزی
+        task = ImportTask.objects.create(
+            topic=topic,
+            status='PENDING',
+            current_stage='در حال شروع فرآیند درون‌ریزی...',
+            progress=0
+        )
+        
+        # اجرای ناهمگام تسک در پس‌زمینه (Non-blocking Thread)
+        import threading
+        from .services import process_telegram_json_import
+        
+        thread = threading.Thread(
+            target=process_telegram_json_import,
+            args=(str(task.id), temp_filepath)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        # بازگرداندن پاسخ ۲۰۲ Accepted به همراه شناسه تسک
+        serializer = ImportTaskStatusSerializer(task)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -167,3 +220,20 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         serializer = PostCommentSerializer(comment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ImportTaskViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ImportTask.objects.all()
+    serializer_class = ImportTaskStatusSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return ImportTask.objects.all()
+        return ImportTask.objects.filter(topic__created_by=self.request.user)
+
+    @action(detail=True, methods=['get'])
+    def status(self, request, pk=None):
+        task = self.get_object()
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)

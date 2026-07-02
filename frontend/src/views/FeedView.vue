@@ -677,8 +677,15 @@ const toggleTheme = useToggle(isDark)
             <!-- Topic Import History View -->
             <div v-else-if="activeTopicSubView === 'import'" key="import" class="w-full">
               <TopicImportView 
+                :topic-id="selectedTopic?.id"
                 @back="activeTopicSubView = 'feed'"
-                @import-complete="activeTopicSubView = 'feed'"
+                @import-complete="async () => {
+                  activeTopicSubView = 'feed';
+                  await topicStore.loadTopics();
+                  if (selectedTopic) {
+                    await postStore.loadPosts(selectedTopic.id);
+                  }
+                }"
                 @import-failed="activeTopicSubView = 'feed'"
               />
             </div>

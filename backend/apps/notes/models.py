@@ -1,5 +1,6 @@
 from django.db import models
 from apps.accounts.models import User, MessagingTarget
+import uuid
 
 
 class Topic(models.Model):
@@ -50,8 +51,11 @@ class Post(models.Model):
     telegram_message_ids = models.JSONField(default=dict, blank=True)
     bale_message_ids = models.JSONField(default=dict, blank=True)
 
+    is_imported = models.BooleanField(default=False)
+    telegram_message_id = models.IntegerField(null=True, blank=True)
+
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['created_at', 'telegram_message_id']
 
     def __str__(self):
         return f"Post by {self.author.phone} in {self.topic.name} at {self.created_at}"
@@ -113,3 +117,27 @@ class BotTask(models.Model):
 
     def __str__(self):
         return f"BotTask({self.action}, {self.platform}, processed={self.processed})"
+
+
+class ImportTask(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('EXTRACTING', 'Extracting'),
+        ('IMPORTING', 'Importing'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='import_tasks')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    current_stage = models.CharField(max_length=255, default='Pending')
+    progress = models.IntegerField(default=0)  # 0 to 100
+    error_message = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"ImportTask {self.id} ({self.status})"
