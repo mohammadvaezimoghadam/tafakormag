@@ -15,6 +15,7 @@ import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
+import LoadingDialog from '@/components/LoadingDialog.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -59,7 +60,7 @@ import {
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections'>('profile')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog'>('profile')
 const viewportWidth = ref<'100%' | '768px' | '375px'>('100%')
 const sandboxBg = ref<'default' | 'gradient' | 'grid' | 'image'>('default')
 const activeState = ref<'idle' | 'loading' | 'error' | 'empty' | 'success'>('idle')
@@ -197,6 +198,7 @@ const currentComponentFile = computed(() => {
     case 'topic-input': return 'TopicMessageInput.vue'
     case 'topic-edit': return 'TopicEditView.vue'
     case 'topic-connections': return 'TopicConnectionsView.vue'
+    case 'loading-dialog': return 'LoadingDialog.vue'
     default: return ''
   }
 })
@@ -217,7 +219,7 @@ const copyComponentFile = async () => {
   }
 }
 
-const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections') => {
+const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog') => {
   currentComponent.value = comp
   activeState.value = 'idle'
   logEvent('Component Changed', { component: comp })
@@ -821,6 +823,65 @@ const resetPosts = () => {
   )
   logEvent('Post: Feed Reset to Default', {})
 }
+
+// LoadingDialog simulation state
+const simulatorLoadingIsOpen = ref(false)
+const simulatorLoadingProgress = ref(0)
+const simulatorLoadingStatus = ref<'idle' | 'uploading' | 'validating' | 'importing' | 'completed' | 'failed'>('idle')
+const simulatorLoadingIsProcessing = ref(true)
+let simulatorLoadingIntervalId: any = null
+
+const startLoadingSimulation = (shouldSucceed = true) => {
+  // Clear any existing interval
+  if (simulatorLoadingIntervalId) {
+    clearInterval(simulatorLoadingIntervalId)
+  }
+  
+  simulatorLoadingIsOpen.value = true
+  simulatorLoadingProgress.value = 0
+  simulatorLoadingStatus.value = 'uploading'
+  simulatorLoadingIsProcessing.value = true
+  logEvent('LoadingDialog: Simulation Started', { shouldSucceed })
+  
+  simulatorLoadingIntervalId = setInterval(() => {
+    if (simulatorLoadingProgress.value < 100) {
+      simulatorLoadingProgress.value += 5
+      
+      // Update statuses based on progress
+      if (simulatorLoadingProgress.value >= 25 && simulatorLoadingProgress.value < 60) {
+        simulatorLoadingStatus.value = 'validating'
+      } else if (simulatorLoadingProgress.value >= 60 && simulatorLoadingProgress.value < 90) {
+        simulatorLoadingStatus.value = 'importing'
+      } else if (simulatorLoadingProgress.value >= 90) {
+        if (shouldSucceed) {
+          simulatorLoadingStatus.value = 'completed'
+        } else {
+          simulatorLoadingStatus.value = 'failed'
+          simulatorLoadingIsProcessing.value = false
+          clearInterval(simulatorLoadingIntervalId)
+          logEvent('LoadingDialog: Simulation Failed at Import stage', {})
+          return
+        }
+      }
+    } else {
+      // Completed successfully
+      simulatorLoadingIsProcessing.value = false
+      clearInterval(simulatorLoadingIntervalId)
+      logEvent('LoadingDialog: Simulation Completed Successfully', {})
+    }
+  }, 200)
+}
+
+const stopLoadingSimulation = () => {
+  if (simulatorLoadingIntervalId) {
+    clearInterval(simulatorLoadingIntervalId)
+  }
+  simulatorLoadingIsOpen.value = false
+  simulatorLoadingProgress.value = 0
+  simulatorLoadingStatus.value = 'idle'
+  simulatorLoadingIsProcessing.value = false
+  logEvent('LoadingDialog: Simulation Closed/Reset', {})
+}
 </script>
 
 <template>
@@ -1070,6 +1131,21 @@ const resetPosts = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'topic-connections'" class="size-3.5 text-primary" />
               </button>
+              <button 
+                @click="handleComponentChange('loading-dialog')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'loading-dialog' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <FlaskConicalIcon class="size-3.5 text-primary" />
+                  دیالوگ لودینگ مرحله‌ای (جدید)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'loading-dialog'" class="size-3.5 text-primary" />
+              </button>
             </div>
           </div>
         </div>
@@ -1234,7 +1310,7 @@ const resetPosts = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -1605,6 +1681,50 @@ const resetPosts = () => {
                     <Button size="sm" variant="outline" @click="simulateAddAttachment('video')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">ویدیو</Button>
                     <Button size="sm" variant="outline" @click="simulateAddAttachment('audio')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">صوت</Button>
                     <Button size="sm" variant="outline" @click="simulateAddAttachment('file')" class="text-[9.5px] font-semibold py-1 h-8.5 cursor-pointer">سند/فایل</Button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LoadingDialog Specific Controls -->
+              <div v-if="currentComponent === 'loading-dialog'" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">شبیه‌سازی سناریو:</Label>
+                  <div class="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      @click="startLoadingSimulation(true)"
+                      class="flex-1 text-[10px] font-bold cursor-pointer bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      شروع شبیه‌سازی موفق
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      @click="startLoadingSimulation(false)"
+                      class="flex-1 text-[10px] font-bold cursor-pointer"
+                    >
+                      شروع شبیه‌سازی خطا
+                    </Button>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">کنترل دیالوگ:</Label>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    @click="stopLoadingSimulation"
+                    class="w-full text-[10px] font-bold cursor-pointer"
+                  >
+                    ریست و بستن دیالوگ
+                  </Button>
+                </div>
+                <div class="flex flex-col gap-1 text-[10px] text-muted-foreground bg-muted/40 p-2 rounded-xl border border-border/40">
+                  <div class="flex justify-between">
+                    <span>وضعیت: {{ simulatorLoadingStatus }}</span>
+                    <span>پیشرفت: {{ simulatorLoadingProgress }}%</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>در حال پردازش: {{ simulatorLoadingIsProcessing ? 'بله' : 'خیر' }}</span>
                   </div>
                 </div>
               </div>
@@ -2090,6 +2210,35 @@ const resetPosts = () => {
                       simulatorTopicData.telegram_connections = data.telegram_connections;
                       simulatorTopicData.bale_connections = data.bale_connections;
                       logEvent('TopicConnections: Saved Settings', data);
+                    }"
+                  />
+                </div>
+
+                <!-- LoadingDialog Preview -->
+                <div 
+                  v-else-if="currentComponent === 'loading-dialog'"
+                  class="w-full flex flex-col items-center justify-center py-10"
+                  :dir="languageStore.dir"
+                >
+                  <Button @click="startLoadingSimulation(true)" class="cursor-pointer flex items-center gap-1.5" data-icon="inline-start">
+                    <FlaskConicalIcon class="size-4 animate-bounce" />
+                    شبیه‌سازی و باز کردن دیالوگ لودینگ
+                  </Button>
+                  
+                  <p class="text-[10px] text-muted-foreground text-center mt-3 max-w-xs leading-relaxed">
+                    با کلیک بر روی دکمه بالا، دیالوگ لودینگ شبیه‌سازی شده و فرآیند ۴ مرحله‌ای خط لوله آغاز می‌شود.
+                  </p>
+                  
+                  <!-- LoadingDialog Component -->
+                  <LoadingDialog
+                    :isOpen="simulatorLoadingIsOpen"
+                    :progress="simulatorLoadingProgress"
+                    :currentStatus="simulatorLoadingStatus"
+                    :isProcessing="simulatorLoadingIsProcessing"
+                    @close="stopLoadingSimulation"
+                    @action="() => {
+                      logEvent('LoadingDialog: Action clicked (Redirection)', {});
+                      stopLoadingSimulation();
                     }"
                   />
                 </div>
