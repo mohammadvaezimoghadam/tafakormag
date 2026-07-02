@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { 
   PencilIcon, 
   LinkIcon, 
-  Trash2Icon 
+  Trash2Icon,
+  UploadCloudIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -18,6 +19,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'edit'): void
   (e: 'connections'): void
+  (e: 'import'): void
   (e: 'delete'): void
 }>()
 
@@ -52,11 +54,13 @@ const menuStyle = computed(() => {
   }
 })
 
-const handleAction = (action: 'edit' | 'connections' | 'delete') => {
+const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
   if (action === 'edit') {
     emit('edit')
   } else if (action === 'connections') {
     emit('connections')
+  } else if (action === 'import') {
+    emit('import')
   } else if (action === 'delete') {
     emit('delete')
   }
@@ -95,6 +99,15 @@ const handleAction = (action: 'edit' | 'connections' | 'delete') => {
         >
           <span>{{ languageStore.t('تنظیمات اتصالات تاپیک', 'Topic Connections Settings') }}</span>
           <LinkIcon class="size-3.5 text-muted-foreground" />
+        </button>
+
+        <!-- Upload Telegram History -->
+        <button 
+          @click="handleAction('import')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+        >
+          <span>{{ languageStore.t('آپلود تاریخچه تلگرام', 'Upload Telegram History') }}</span>
+          <UploadCloudIcon class="size-3.5 text-muted-foreground" />
         </button>
 
         <!-- Divider -->

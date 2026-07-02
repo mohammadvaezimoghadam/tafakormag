@@ -371,6 +371,11 @@ const handleSimulatorTopicConnections = () => {
   currentComponent.value = 'topic-connections'
 }
 
+const handleSimulatorTopicImport = () => {
+  logEvent('Header: Topic Import History Opened', { topicTitle: simulatorInnerTitle.value })
+  currentComponent.value = 'topic-import'
+}
+
 // Simulator Topic Edit & Connections state variables
 const simulatorTelegramConnected = ref(true)
 const simulatorBaleConnected = ref(false)
@@ -1849,6 +1854,7 @@ const stopLoadingSimulation = () => {
                       @edit-topic="handleSimulatorEditTopic"
                       @delete-topic="handleSimulatorDeleteTopic"
                       @topic-connections="handleSimulatorTopicConnections"
+                      @topic-import="handleSimulatorTopicImport"
                     />
                   </div>
                   

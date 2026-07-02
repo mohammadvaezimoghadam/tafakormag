@@ -40,6 +40,7 @@ const emit = defineEmits<{
   (e: 'edit-topic'): void
   (e: 'delete-topic'): void
   (e: 'topic-connections'): void
+  (e: 'topic-import'): void
   (e: 'update:searchQuery', val: string): void
 }>()
 
@@ -270,6 +271,7 @@ watch(() => props.showSearchButton, (newVal) => {
       @close="isMenuOpen = false"
       @edit="emit('edit-topic')"
       @connections="emit('topic-connections')"
+      @import="emit('topic-import')"
       @delete="emit('delete-topic')"
     />
   </Teleport>

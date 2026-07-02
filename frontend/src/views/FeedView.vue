@@ -15,6 +15,7 @@ import EditProfileModal from '@/components/EditProfileModal.vue'
 import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
+import TopicImportView from '@/components/TopicImportView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -41,8 +42,8 @@ const currentTab = ref<'home' | 'profile'>('home')
 // Subview connection state
 const showConnections = ref(false)
 
-// Active topic subview ('feed' | 'edit' | 'connections')
-const activeTopicSubView = ref<'feed' | 'edit' | 'connections'>('feed')
+// Active topic subview ('feed' | 'edit' | 'connections' | 'import')
+const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import'>('feed')
 
 // Initialize Pinia stores
 const botStore = useBotStore()
@@ -435,6 +436,11 @@ const handleTopicConnections = () => {
   activeTopicSubView.value = 'connections'
 }
 
+const handleTopicImport = () => {
+  if (!selectedTopic.value) return
+  activeTopicSubView.value = 'import'
+}
+
 const handleSaveTopicEdit = async (updatedTopic: { title: string; description: string; image: string | File }) => {
   if (!selectedTopic.value) return
   try {
@@ -581,6 +587,7 @@ const toggleTheme = useToggle(isDark)
         @edit-topic="handleEditTopic"
         @delete-topic="handleDeleteTopic"
         @topic-connections="handleTopicConnections"
+        @topic-import="handleTopicImport"
       />
     </div>
 
@@ -664,6 +671,15 @@ const toggleTheme = useToggle(isDark)
                 @back="activeTopicSubView = 'feed'"
                 @goToConnections="handleGoToConnections"
                 @save="handleSaveTopicConnections"
+              />
+            </div>
+
+            <!-- Topic Import History View -->
+            <div v-else-if="activeTopicSubView === 'import'" key="import" class="w-full">
+              <TopicImportView 
+                @back="activeTopicSubView = 'feed'"
+                @import-complete="activeTopicSubView = 'feed'"
+                @import-failed="activeTopicSubView = 'feed'"
               />
             </div>
           </transition>
