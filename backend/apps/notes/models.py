@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from apps.accounts.models import User, MessagingTarget
 import uuid
 
@@ -44,7 +45,7 @@ class Post(models.Model):
     media_type = models.CharField(max_length=20, choices=MEDIA_CHOICES, default="text")
     media_file = models.FileField(upload_to='post_media/', null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     # شناسه‌های پیام ارسال شده در پیام‌رسان‌ها (chat_id: message_id)
