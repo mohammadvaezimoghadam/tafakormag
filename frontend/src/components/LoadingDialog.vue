@@ -117,28 +117,28 @@ const handleActionClick = () => {
 <template>
   <Dialog :open="isOpen" @update:open="(val) => !isProcessing && !val && emit('close')">
     <DialogContent
-      class="sm:max-w-md font-[IRANYekanX] text-right rounded-3xl"
+      class="sm:max-w-md font-sans text-right rounded-3xl"
       dir="rtl"
       :show-close-button="!isProcessing"
       @pointer-down-outside="handleInteractOutside"
       @escape-key-down="handleEscapeKeyDown"
     >
       <!-- Dialog Header -->
-      <DialogHeader class="text-right flex flex-col gap-1.5">
-        <DialogTitle class="text-lg font-black text-foreground flex items-center gap-2.5">
-          <div class="size-9 rounded-xl bg-primary/[0.04] flex items-center justify-center text-primary shrink-0">
-            <FileTextIcon class="size-5" />
+      <DialogHeader class="text-right flex flex-col gap-1">
+        <DialogTitle class="text-sm font-black text-foreground flex items-center gap-2.5">
+          <div class="size-8 rounded-lg bg-primary/[0.04] flex items-center justify-center text-primary shrink-0">
+            <FileTextIcon class="size-4.5" />
           </div>
           <span>{{ title }}</span>
         </DialogTitle>
-        <DialogDescription class="text-xs text-muted-foreground leading-relaxed">
+        <DialogDescription class="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
           {{ description }}
         </DialogDescription>
       </DialogHeader>
 
       <!-- Global Progress Section -->
-      <div class="flex flex-col gap-2 mt-2">
-        <div class="flex items-center justify-between text-xs font-bold px-1">
+      <div class="flex flex-col gap-1.5 mt-2">
+        <div class="flex items-center justify-between text-[11px] font-bold px-1">
           <span class="text-muted-foreground">پیشرفت کل فرآیند</span>
           <span class="text-primary font-mono">{{ Math.round(progress) }}%</span>
         </div>
@@ -146,18 +146,18 @@ const handleActionClick = () => {
       </div>
 
       <!-- Separator -->
-      <Separator class="my-1 bg-border/40" />
+      <Separator class="my-0.5 bg-border/40" />
 
       <!-- Pipeline Stages List -->
-      <div class="flex flex-col gap-4 py-2">
-        <h4 class="text-xs font-extrabold text-muted-foreground mb-1">
+      <div class="flex flex-col gap-3 py-1">
+        <div class="text-xs font-extrabold text-muted-foreground mb-1 mt-0">
           مراحل اجرای عملیات خط لوله:
-        </h4>
+        </div>
 
         <div
           v-for="stage in activeStages"
           :key="stage.id"
-          class="flex items-center gap-3.5 px-2 py-1 rounded-xl transition-all duration-300"
+          class="flex items-center gap-3 px-2 py-1 rounded-xl transition-all duration-300"
           :class="stage.status === 'processing' ? 'bg-primary/[0.02] border border-primary/5 py-2 px-3 shadow-xs' : ''"
         >
           <!-- Stage Icon State -->
@@ -165,22 +165,22 @@ const handleActionClick = () => {
             <!-- Processing Spinner -->
             <Loader2Icon
               v-if="stage.status === 'processing'"
-              class="size-5 text-primary animate-spin"
+              class="size-4.5 text-primary animate-spin"
             />
             <!-- Completed Check -->
             <CheckCircle2Icon
               v-else-if="stage.status === 'completed'"
-              class="size-5 text-green-500 fill-green-500/10"
+              class="size-4.5 text-green-500 fill-green-500/10"
             />
             <!-- Failed X icon -->
             <XCircleIcon
               v-else-if="stage.status === 'failed'"
-              class="size-5 text-destructive fill-destructive/10"
+              class="size-4.5 text-destructive fill-destructive/10"
             />
             <!-- Pending Empty Circle -->
             <CircleIcon
               v-else
-              class="size-5 text-muted-foreground/45"
+              class="size-4.5 text-muted-foreground/45"
             />
           </div>
 
@@ -204,7 +204,7 @@ const handleActionClick = () => {
       <!-- Dialog Footer -->
       <DialogFooter class="flex sm:justify-start gap-2 mt-1">
         <Button
-          class="w-full rounded-2xl py-5 text-xs font-bold transition-all duration-200"
+          class="w-full rounded-xl py-3.5 text-xs font-bold transition-all duration-200 h-10 flex items-center justify-center cursor-pointer shadow-none"
           :disabled="isProcessing"
           @click="handleActionClick"
           variant="default"
