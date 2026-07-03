@@ -19,6 +19,9 @@ import {
   FileTextIcon,
   CheckIcon
 } from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 
 // Component Props definition
 interface Stage {
@@ -50,13 +53,38 @@ const emit = defineEmits<{
   (e: 'action'): void
 }>()
 
+// Dynamic translations based on default prop fallbacks
+const displayTitle = computed(() => {
+  if (!props.title || props.title === 'در حال پردازش داده‌ها') {
+    return languageStore.t('در حال پردازش داده‌ها', 'Processing Data')
+  }
+  return props.title
+})
+
+const displayDescription = computed(() => {
+  if (!props.description || props.description === 'لطفاً تا اتمام فرآیند پردازش و درون‌ریزی، این پنجره را نبندید.') {
+    return languageStore.t(
+      'لطفاً تا اتمام فرآیند پردازش و درون‌ریزی، این پنجره را نبندید.',
+      'Please do not close this window until the processing and import are complete.'
+    )
+  }
+  return props.description
+})
+
+const displayActionButtonText = computed(() => {
+  if (!props.actionButtonText || props.actionButtonText === 'انتقال به تاپیک') {
+    return languageStore.t('انتقال به تاپیک', 'Go to Topic')
+  }
+  return props.actionButtonText
+})
+
 // Default Pipeline Stages if none are passed custom
 const defaultStages = computed<Stage[]>(() => {
   const status = props.currentStatus
   return [
     {
       id: 'upload',
-      label: 'بارگذاری و خواندن فایل یادداشت‌ها',
+      label: languageStore.t('بارگذاری و خواندن فایل یادداشت‌ها', 'Uploading and Reading Notes File'),
       status: status === 'uploading'
         ? 'processing'
         : ['validating', 'importing', 'completed'].includes(status)
@@ -65,7 +93,7 @@ const defaultStages = computed<Stage[]>(() => {
     },
     {
       id: 'validate',
-      label: 'اعتبارسنجی ساختار مارک‌داون و محتوا',
+      label: languageStore.t('اعتبارسنجی ساختار مارک‌داون و محتوا', 'Validating Markdown Structure and Content'),
       status: status === 'validating'
         ? 'processing'
         : ['importing', 'completed'].includes(status)
@@ -74,7 +102,7 @@ const defaultStages = computed<Stage[]>(() => {
     },
     {
       id: 'import',
-      label: 'درون‌ریزی انبوه و همگام‌سازی با ربات‌ها',
+      label: languageStore.t('درون‌ریزی انبوه و همگام‌سازی با ربات‌ها', 'Bulk Importing and Syncing with Bots'),
       status: status === 'importing'
         ? 'processing'
         : status === 'completed'
@@ -83,7 +111,7 @@ const defaultStages = computed<Stage[]>(() => {
     },
     {
       id: 'done',
-      label: 'تکمیل نهایی و ثبت یادداشت‌ها',
+      label: languageStore.t('تکمیل نهایی و ثبت یادداشت‌ها', 'Finalizing and Recording Notes'),
       status: status === 'completed' ? 'completed' : 'pending'
     }
   ]
@@ -117,29 +145,30 @@ const handleActionClick = () => {
 <template>
   <Dialog :open="isOpen" @update:open="(val) => !isProcessing && !val && emit('close')">
     <DialogContent
-      class="sm:max-w-md font-sans text-right rounded-3xl"
-      dir="rtl"
+      class="sm:max-w-md font-sans rounded-3xl"
+      :class="languageStore.isFa ? 'text-right' : 'text-left'"
+      :dir="languageStore.dir"
       :show-close-button="!isProcessing"
       @pointer-down-outside="handleInteractOutside"
       @escape-key-down="handleEscapeKeyDown"
     >
       <!-- Dialog Header -->
-      <DialogHeader class="text-right flex flex-col gap-1">
+      <DialogHeader class="flex flex-col gap-1" :class="languageStore.isFa ? 'text-right' : 'text-left'">
         <DialogTitle class="text-sm font-black text-foreground flex items-center gap-2.5">
           <div class="size-8 rounded-lg bg-primary/[0.04] flex items-center justify-center text-primary shrink-0">
             <FileTextIcon class="size-4.5" />
           </div>
-          <span>{{ title }}</span>
+          <span>{{ displayTitle }}</span>
         </DialogTitle>
         <DialogDescription class="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-          {{ description }}
+          {{ displayDescription }}
         </DialogDescription>
       </DialogHeader>
 
       <!-- Global Progress Section -->
       <div class="flex flex-col gap-1.5 mt-2">
         <div class="flex items-center justify-between text-[11px] font-bold px-1">
-          <span class="text-muted-foreground">پیشرفت کل فرآیند</span>
+          <span class="text-muted-foreground">{{ languageStore.t('پیشرفت کل فرآیند', 'Overall Process Progress') }}</span>
           <span class="text-primary font-mono">{{ Math.round(progress) }}%</span>
         </div>
         <Progress :model-value="progress" class="h-2 rounded-full overflow-hidden bg-muted transition-all duration-300" />
@@ -151,7 +180,7 @@ const handleActionClick = () => {
       <!-- Pipeline Stages List -->
       <div class="flex flex-col gap-3 py-1">
         <div class="text-xs font-extrabold text-muted-foreground mb-1 mt-0">
-          مراحل اجرای عملیات خط لوله:
+          {{ languageStore.t('مراحل اجرای عملیات خط لوله:', 'Pipeline Execution Stages:') }}
         </div>
 
         <div
@@ -209,9 +238,9 @@ const handleActionClick = () => {
           @click="handleActionClick"
           variant="default"
         >
-          <Loader2Icon v-if="isProcessing" class="size-4 animate-spin shrink-0 ml-1.5" />
-          <CheckIcon v-else class="size-4 shrink-0 ml-1.5" />
-          <span>{{ isProcessing ? 'در حال اجرای عملیات...' : actionButtonText }}</span>
+          <Loader2Icon v-if="isProcessing" class="size-4 animate-spin shrink-0" :class="languageStore.isFa ? 'ml-1.5' : 'mr-1.5'" />
+          <CheckIcon v-else class="size-4 shrink-0" :class="languageStore.isFa ? 'ml-1.5' : 'mr-1.5'" />
+          <span>{{ isProcessing ? languageStore.t('در حال اجرای عملیات...', 'Executing Operations...') : displayActionButtonText }}</span>
         </Button>
       </DialogFooter>
     </DialogContent>
