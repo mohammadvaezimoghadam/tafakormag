@@ -2,6 +2,13 @@
 # Native PowerShell script to run the isolated monorepo test suite on Windows.
 # Prevents WSL/bash proxy conflicts by executing Docker commands directly in PowerShell.
 
+# Force Compose to bypass Bake while keeping BuildKit enabled to avoid both the "failed to execute bake" bug and slow build speeds.
+$env:DOCKER_BUILDKIT="1"
+$env:COMPOSE_DOCKER_CLI_BUILD="1"
+$env:COMPOSE_BAKE="0"
+
+
+
 # Ensure directories for artifacts exist
 New-Item -ItemType Directory -Force -Path "tests/results", "tests/artifacts" | Out-Null
 

@@ -8,14 +8,18 @@ WORKDIR /app
 
 # Install project backend dependencies first to leverage Docker build cache
 COPY backend/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt || \
-    (echo "Primary PyPI registry unreachable. Falling back to devneeds mirror..." && \
-     pip install --no-cache-dir -r requirements.txt --index-url https://pypi.devneeds.ir/simple/)
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt || \
+    (echo "Primary PyPI registry failed/unreachable. Trying Tsinghua mirror..." && \
+     pip install --no-cache-dir --default-timeout=1000 -r requirements.txt --index-url https://pypi.tuna.tsinghua.edu.cn/simple/) || \
+    (echo "Tsinghua mirror failed/unreachable. Falling back to devneeds mirror..." && \
+     pip install --no-cache-dir --default-timeout=1000 -r requirements.txt --index-url https://pypi.devneeds.ir/simple/)
 
 # Install test framework dependencies
-RUN pip install --no-cache-dir pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp || \
-    (echo "Primary PyPI registry unreachable. Falling back to devneeds mirror for test packages..." && \
-     pip install --no-cache-dir pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp --index-url https://pypi.devneeds.ir/simple/)
+RUN pip install --no-cache-dir --default-timeout=1000 pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp || \
+    (echo "Primary PyPI registry failed/unreachable. Trying Tsinghua mirror..." && \
+     pip install --no-cache-dir --default-timeout=1000 pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp --index-url https://pypi.tuna.tsinghua.edu.cn/simple/) || \
+    (echo "Tsinghua mirror failed/unreachable. Falling back to devneeds mirror..." && \
+     pip install --no-cache-dir --default-timeout=1000 pytest pytest-django pytest-playwright pytest-asyncio pytest-cov playwright==1.40.0 responses httpx tzdata aiohttp --index-url https://pypi.devneeds.ir/simple/)
 
 # Playwright browsers are already pre-installed in this image. 
 # We just verify and install system dependencies if needed, or ensure they are present.

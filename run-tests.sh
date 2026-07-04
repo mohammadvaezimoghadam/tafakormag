@@ -3,6 +3,13 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Force Compose to bypass Bake while keeping BuildKit enabled to avoid both the "failed to execute bake" bug and slow build speeds.
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+export COMPOSE_BAKE=0
+
+
+
 # Make sure we are in the script directory
 cd "$(dirname "$0")"
 

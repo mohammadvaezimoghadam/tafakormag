@@ -64,10 +64,7 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
     otp_input.fill(str(otp_code))
     print(f"[E2E] Entered OTP code: {otp_code}")
 
-    # Click the submit button to verify
-    submit_otp_button = page.locator('button:has-text("بررسی کد تایید")')
-    expect(submit_otp_button).to_be_visible(timeout=5000)
-    submit_otp_button.click()
+    # OTP is submitted automatically when 4 digits are filled. No need to click submit button manually.
 
 
     # 5. Verify successful authentication and redirection to the root route
@@ -215,10 +212,7 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
     expect(otp_input).to_be_visible(timeout=5000)
     otp_input.fill(str(otp_code))
     
-    # Click the submit button to verify
-    submit_otp_button = page.locator('button:has-text("بررسی کد تایید")')
-    expect(submit_otp_button).to_be_visible(timeout=5000)
-    submit_otp_button.click()
+    # OTP is submitted automatically when 4 digits are filled. No need to click submit button manually.
 
 
     expected_url = frontend_url.replace(":80", "").rstrip('/')
@@ -231,8 +225,8 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
     page.goto(profile_url)
     page.wait_for_url("**/profile")
 
-    # 3. Switch to '🔌 اتصالات پیام‌رسان' Tab
-    connections_tab = page.locator('button:has-text("🔌 اتصالات پیام‌رسان")')
+    # 3. Switch to 'اتصالات' Option
+    connections_tab = page.locator('button:has-text("اتصالات")').first
     expect(connections_tab).to_be_visible(timeout=5000)
     connections_tab.click()
     print("[E2E] Clicked on connections tab.")
