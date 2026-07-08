@@ -15,9 +15,12 @@ import {
   Loader2Icon,
   AlertCircleIcon,
   Maximize2Icon,
-  Minimize2Icon
+  Minimize2Icon,
+  CircleFadingArrowUpIcon,
+  SparklesIcon
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import AIRefinerDrawer from './AIRefinerDrawer.vue'
 
 interface Attachment {
   id: string | number
@@ -34,11 +37,13 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   initialText?: string
   initialAttachments?: Attachment[]
+  isEditMode?: boolean
 }>(), {
   placeholder: 'پیام خود را بنویسید...',
   disabled: false,
   initialText: '',
-  initialAttachments: () => []
+  initialAttachments: () => [],
+  isEditMode: false
 })
 
 const emit = defineEmits<{
@@ -46,6 +51,8 @@ const emit = defineEmits<{
   (e: 'attach'): void
   (e: 'recordVoice'): void
   (e: 'removeAttachment', id: string | number): void
+  (e: 'save', message: { text: string }): void
+  (e: 'cancel-edit'): void
 }>()
 
 // Local state
@@ -58,6 +65,21 @@ let timerInterval: any = null
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showExpanded = ref(false)
 const expandedTextareaRef = ref<HTMLTextAreaElement | null>(null)
+
+const isAiRefinerOpen = ref(false)
+
+const handleApplyRefinedText = (refinedText: string) => {
+  text.value = refinedText
+  isAiRefinerOpen.value = false
+  
+  nextTick(() => {
+    if (showExpanded.value && expandedTextareaRef.value) {
+      expandedTextareaRef.value.focus()
+    } else if (textareaRef.value) {
+      textareaRef.value.focus()
+    }
+  })
+}
 const actualHeight = ref(40)
 
 // Check if line count is more than 4 lines
@@ -81,12 +103,24 @@ const isLongText = computed(() => {
   return false
 })
 
-// Focus the expanded textarea when opened
+// Watch edit mode to automatically trigger expanded modal
+watch(() => props.isEditMode, (newVal) => {
+  if (newVal) {
+    showExpanded.value = true
+  } else {
+    showExpanded.value = false
+  }
+}, { immediate: true })
+
+// Focus the expanded textarea when opened and lock body scroll
 watch(showExpanded, (newVal) => {
   if (newVal) {
+    document.body.style.overflow = 'hidden'
     nextTick(() => {
       expandedTextareaRef.value?.focus()
     })
+  } else {
+    document.body.style.overflow = ''
   }
 })
 
@@ -106,6 +140,7 @@ watch(() => props.initialAttachments, (newVal) => {
 
 onUnmounted(() => {
   stopTimer()
+  document.body.style.overflow = ''
 })
 
 // Timer actions for voice recording
@@ -165,6 +200,13 @@ onMounted(() => {
 const handleSend = () => {
   if (props.disabled) return
   if (!hasContent.value) return
+
+  if (props.isEditMode) {
+    emit('save', {
+      text: text.value.trim()
+    })
+    return
+  }
 
   // Filter out attachments that are still uploading
   const completedAttachments = attachments.value.filter(a => a.status !== 'uploading')
@@ -234,7 +276,7 @@ const handleRemoveAttachment = (id: string | number) => {
 
 // Dynamic classes based on attachment status
 const containerClasses = computed(() => {
-  if (hasAttachments.value || (isLongText.value && !isRecording.value)) {
+  if (hasAttachments.value || (isLongText.value && !isRecording.value) || props.isEditMode) {
     return 'w-full flex flex-col relative bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 rounded-3xl p-1.5 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-white focus-within:dark:bg-muted/25'
   }
   return 'w-full flex flex-col relative transition-all duration-300'
@@ -273,6 +315,8 @@ const languageStore = useLanguageStore()
         <span class="text-[11px] font-bold text-muted-foreground">{{ languageStore.t('شما اجازه ارسال پیام در این تاپیک را ندارید.', 'You do not have permission to send messages in this topic.') }}</span>
       </div>
     </div>
+
+
 
 
 
@@ -343,11 +387,24 @@ const languageStore = useLanguageStore()
     <!-- Main Message Input Row -->
     <div class="w-full flex items-end gap-1.5" :dir="languageStore.dir">
       
-      <!-- Right Element: Attach File Button / Cancel Recording Button -->
+      <!-- Right Element: Attach File Button / Cancel Recording Button / Cancel Edit Button -->
       <transition name="button-pop" mode="out-in">
+        <!-- Cancel Edit Button -->
+        <Button
+          v-if="props.isEditMode"
+          key="cancel-edit-btn"
+          variant="outline"
+          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+          class="group text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-destructive/20 rounded-2xl"
+          :title="languageStore.t('لغو ویرایش', 'Cancel edit')"
+          @click="emit('cancel-edit')"
+        >
+          <XIcon class="transition-transform duration-200 group-hover:scale-110" />
+        </Button>
+
         <!-- Cancel Recording Button -->
         <Button 
-          v-if="isRecording"
+          v-else-if="isRecording"
           key="cancel-record"
           variant="destructive"
           :size="hasAttachments ? 'icon' : 'icon-lg'"
@@ -405,11 +462,25 @@ const languageStore = useLanguageStore()
         </transition>
       </div>
 
-      <!-- Left Element: Send Button / Record Voice Button -->
+      <!-- Left Element: Send Button / Record Voice Button / Save Edit Button -->
       <transition name="button-pop" mode="out-in">
+        <!-- Save Edit Button -->
+        <Button
+          v-if="props.isEditMode"
+          key="save-edit-btn"
+          variant="default"
+          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+          class="group bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all duration-200 rounded-2xl border-none"
+          :disabled="props.disabled || !hasContent"
+          :title="languageStore.t('ذخیره تغییرات', 'Save changes')"
+          @click="handleSend"
+        >
+          <CheckIcon class="transition-transform duration-200 group-hover:scale-110" />
+        </Button>
+
         <!-- Stop/Send Recording Button -->
         <Button 
-          v-if="isRecording"
+          v-else-if="isRecording"
           key="stop-record"
           :size="hasAttachments ? 'icon' : 'icon-lg'"
           class="group bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all duration-200"
@@ -473,6 +544,23 @@ const languageStore = useLanguageStore()
     >
       <Maximize2Icon />
     </Button>
+
+    <!-- AI Refiner Sparkle Button (Positioned directly beneath the Expand button) -->
+    <Button
+      v-if="isLongText && !isRecording"
+      variant="ghost"
+      size="icon-sm"
+      :class="[
+        'absolute z-30 text-zinc-500 dark:text-zinc-400 hover:text-primary transition-all duration-200 cursor-pointer outline-none active:scale-95', 
+        hasAttachments 
+          ? (languageStore.isFa ? 'top-[125px] right-2.5' : 'top-[125px] left-2.5') 
+          : (languageStore.isFa ? 'top-10 right-2.5' : 'top-10 left-2.5')
+      ]"
+      :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
+      @click="isAiRefinerOpen = true"
+    >
+      <SparklesIcon />
+    </Button>
   </div>
 
   <!-- Expand Modal (Bottom Sheet, 80% screen height) -->
@@ -488,7 +576,7 @@ const languageStore = useLanguageStore()
     <transition name="sheet-slide">
       <div 
         v-if="showExpanded" 
-        class="fixed bottom-0 inset-x-0 h-[80vh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[2.5rem] z-55 flex flex-col shadow-2xl transition-transform"
+        class="fixed bottom-0 inset-x-0 h-[80dvh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[2.5rem] z-55 flex flex-col shadow-2xl transition-transform overflow-hidden"
         :dir="languageStore.dir"
         @click.stop
       >
@@ -500,7 +588,7 @@ const languageStore = useLanguageStore()
         <!-- Header -->
         <div class="px-6 pb-4 border-b border-border/10 flex items-center justify-between shrink-0">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-black text-foreground">{{ languageStore.t('ویرایش پیام طولانی', 'Edit Long Message') }}</span>
+            <span class="text-sm font-black text-foreground">{{ props.isEditMode ? languageStore.t('ویرایش پیام', 'Edit Message') : languageStore.t('ویرایش پیام طولانی', 'Edit Long Message') }}</span>
             <span class="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">{{ languageStore.t('نمای بزرگ', 'Expanded View') }}</span>
           </div>
           
@@ -530,29 +618,51 @@ const languageStore = useLanguageStore()
         <div class="px-6 py-4 border-t border-border/10 bg-muted/5 dark:bg-muted/2 flex items-center justify-between shrink-0 rounded-b-none flex-row-reverse">
           <!-- Actions -->
           <div class="flex items-center gap-2">
-            <button
-              type="button"
-              @click="showExpanded = false"
-              class="px-4 h-9 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 transition-all duration-200 cursor-pointer outline-none active:scale-95"
+            <!-- AI Refiner Sparkle Button in Modal Footer -->
+            <Button
+              variant="outline"
+              size="icon"
+              class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
+              :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
+              @click="isAiRefinerOpen = true"
             >
-              {{ languageStore.t('انصراف', 'Cancel') }}
-            </button>
-            <button
-              type="button"
-              @click="handleSendFromModal"
+              <SparklesIcon class="size-5" />
+            </Button>
+
+            <!-- Simplified close/cancel button -->
+            <Button
+              variant="outline"
+              size="icon"
+              class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
+              :title="languageStore.t('انصراف', 'Cancel')"
+              @click="showExpanded = false"
+            >
+              <XIcon class="size-5" />
+            </Button>
+
+            <!-- Simplified send/save button -->
+            <Button 
+              :variant="hasContent ? 'default' : 'outline'"
+              size="icon"
+              class="group rounded-xl active:scale-95 transition-all duration-200 cursor-pointer outline-none disabled:pointer-events-none disabled:opacity-50 shrink-0"
+              :class="[
+                hasContent 
+                  ? 'bg-primary text-primary-foreground border-none' 
+                  : 'border border-border/40 text-muted-foreground'
+              ]"
               :disabled="props.disabled || !hasContent"
-              class="px-4 h-9 rounded-xl text-xs font-black bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/95 transition-all duration-200 cursor-pointer outline-none active:scale-95 disabled:pointer-events-none disabled:opacity-50 flex items-center gap-1.5"
+              :title="props.isEditMode ? languageStore.t('ذخیره تغییرات', 'Save Changes') : languageStore.t('ارسال پیام', 'Send Message')"
+              @click="handleSendFromModal"
             >
               <SendIcon 
-                class="size-3.5 -rotate-45 transition-transform duration-200 group-hover:scale-110" 
+                class="size-5 -rotate-45 transition-transform duration-200 group-hover:scale-110" 
                 :class="[
                   languageStore.isFa 
                     ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
                     : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
                 ]"
               />
-              <span>{{ languageStore.t('ارسال پیام', 'Send Message') }}</span>
-            </button>
+            </Button>
           </div>
 
           <!-- Stats -->
@@ -565,6 +675,13 @@ const languageStore = useLanguageStore()
       </div>
     </transition>
   </teleport>
+
+  <!-- AI Text Refiner Assistant Bottom Sheet -->
+  <AIRefinerDrawer
+    v-model:open="isAiRefinerOpen"
+    :text="text"
+    @apply="handleApplyRefinedText"
+  />
 </template>
 
 <style scoped>

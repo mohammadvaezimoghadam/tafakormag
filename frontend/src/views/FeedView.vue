@@ -482,6 +482,32 @@ const handleGoToConnections = () => {
 const postAttachments = ref<any[]>([])
 const hiddenFileInput = ref<HTMLInputElement | null>(null)
 const selectedAttachmentFile = ref<File | null>(null)
+const editingPost = ref<{ id: string | number; content: string } | null>(null)
+
+const handlePostEdit = (id: string | number) => {
+  const post = postStore.posts.find(p => p.id === id)
+  if (post) {
+    editingPost.value = { id, content: post.content || '' }
+    removePostAttachment()
+  }
+}
+
+const handleSaveEdit = async (message: { text: string }) => {
+  if (!editingPost.value) return
+  const formData = new FormData()
+  formData.append('content', message.text)
+  try {
+    await postStore.updatePost(editingPost.value.id, formData)
+    triggerToast(languageStore.t('یادداشت با موفقیت ویرایش شد.', 'Note edited successfully.'), 'success')
+    handleCancelEdit()
+  } catch (err) {
+    // Error caught globally
+  }
+}
+
+const handleCancelEdit = () => {
+  editingPost.value = null
+}
 
 const isTopicCreator = computed(() => {
   if (!selectedTopic.value || !userProfile.value) return false
@@ -627,6 +653,7 @@ const toggleTheme = useToggle(isDark)
                 @add-comment="handleAddComment"
                 @react="handlePostReact"
                 @delete="handlePostDelete"
+                @edit="handlePostEdit"
               />
               
               <div v-if="filteredCurrentTopicPosts.length === 0" class="text-center py-12 bg-card/20 rounded-xl border border-border/60 text-xs text-muted-foreground font-medium">
@@ -638,7 +665,11 @@ const toggleTheme = useToggle(isDark)
                 <TopicMessageInput 
                   :disabled="!isTopicCreator"
                   :placeholder="languageStore.t('یادداشت خود را بنویسید...', 'Write your note...')"
+                  :isEditMode="!!editingPost"
+                  :initialText="editingPost ? editingPost.content : ''"
                   @send="handleSendPost"
+                  @save="handleSaveEdit"
+                  @cancel-edit="handleCancelEdit"
                   @attach="triggerFileSelect"
                   :initialAttachments="postAttachments"
                   @removeAttachment="removePostAttachment"
