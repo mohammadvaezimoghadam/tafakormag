@@ -562,6 +562,8 @@ const languageStore = useLanguageStore()
 
     </div>
 
+  </div>
+
   <!-- Expand Modal (Bottom Sheet, 80% screen height) -->
   <teleport to="body">
     <transition name="overlay-fade">
