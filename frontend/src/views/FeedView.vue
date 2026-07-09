@@ -19,6 +19,7 @@ import TopicImportView from '@/components/TopicImportView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { Skeleton } from '@/components/ui/skeleton'
 import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon } from '@lucide/vue'
 import {
   Dialog,
@@ -628,33 +629,88 @@ const toggleTheme = useToggle(isDark)
             <div v-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full">
               <!-- Grouped TopicCards Container (Borderless list grouped inside a single glass card wrapper) -->
               <div class="flex flex-col gap-1 w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-2.5 shadow-xs">
-                <TopicCard 
-                  v-for="topic in filteredTopics" 
-                  :key="topic.id"
-                  v-bind="topic"
-                  @click="handleSelectTopic(topic)"
-                />
-                
-                <div v-if="filteredTopics.length === 0" class="text-center py-12 text-xs text-muted-foreground font-medium">
-                  {{ languageStore.t('هیچ تاپیکی مطابق با جستجوی شما یافت نشد.', 'No topics match your search.') }}
-                </div>
+                <!-- Skeleton Loading -->
+                <template v-if="topicStore.loading">
+                  <div 
+                    v-for="i in 4" 
+                    :key="'topic-skeleton-' + i" 
+                    class="w-full flex items-center gap-3.5 p-3 rounded-2xl select-none text-start animate-pulse"
+                  >
+                    <Skeleton class="size-11 rounded-2xl shrink-0" />
+                    <div class="flex-1 flex flex-col gap-2 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <Skeleton class="h-4 w-28 rounded-md" />
+                        <Skeleton class="h-4 w-10 rounded-md" />
+                      </div>
+                      <Skeleton class="h-3 w-40 rounded-md" />
+                    </div>
+                    <div class="flex flex-col items-end shrink-0 gap-2">
+                      <Skeleton class="h-3 w-10 rounded-md" />
+                      <Skeleton class="size-5 rounded-full" />
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Real Content -->
+                <template v-else>
+                  <TopicCard 
+                    v-for="topic in filteredTopics" 
+                    :key="topic.id"
+                    v-bind="topic"
+                    @click="handleSelectTopic(topic)"
+                  />
+                  
+                  <div v-if="filteredTopics.length === 0" class="text-center py-12 text-xs text-muted-foreground font-medium">
+                    {{ languageStore.t('هیچ تاپیکی مطابق با جستجوی شما یافت نشد.', 'No topics match your search.') }}
+                  </div>
+                </template>
               </div>
             </div>
 
             <!-- Detail View: Topic Posts Feed -->
             <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4 w-full pb-20">
-              <!-- Posts belonging to this topic -->
-              <PostCard 
-                v-for="post in filteredCurrentTopicPosts" 
-                :key="post.id"
-                v-bind="post"
-                @like="handlePostLike"
-                @share="handlePostShare"
-                @add-comment="handleAddComment"
-                @react="handlePostReact"
-                @delete="handlePostDelete"
-                @edit="handlePostEdit"
-              />
+              <!-- Skeleton Loading -->
+              <div v-if="postStore.loading" class="flex flex-col gap-4 w-full animate-pulse">
+                <div 
+                  v-for="i in 3" 
+                  :key="'post-skeleton-' + i"
+                  class="w-full bg-background/12 dark:bg-card/10 border border-border/60 rounded-3xl p-5 flex flex-col gap-4 text-start"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <Skeleton class="size-10 rounded-full shrink-0" />
+                      <div class="flex flex-col gap-1.5 text-start">
+                        <Skeleton class="h-4 w-24 rounded-md" />
+                        <Skeleton class="h-3 w-16 rounded-md" />
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Skeleton class="h-4 w-12 rounded-md" />
+                      <Skeleton class="size-7 rounded-full" />
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <Skeleton class="h-4 w-full rounded-md" />
+                    <Skeleton class="h-4 w-[90%] rounded-md" />
+                    <Skeleton class="h-4 w-[60%] rounded-md" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Real Content -->
+              <template v-else>
+                <PostCard 
+                  v-for="post in filteredCurrentTopicPosts" 
+                  :key="post.id"
+                  v-bind="post"
+                  @like="handlePostLike"
+                  @share="handlePostShare"
+                  @add-comment="handleAddComment"
+                  @react="handlePostReact"
+                  @delete="handlePostDelete"
+                  @edit="handlePostEdit"
+                />
+              </template>
               
               <div v-if="filteredCurrentTopicPosts.length === 0" class="text-center py-12 bg-card/20 rounded-xl border border-border/60 text-xs text-muted-foreground font-medium">
                 {{ languageStore.t('هیچ پست یا مطلبی در این تاپیک ثبت نشده است.', 'No posts in this topic yet.') }}

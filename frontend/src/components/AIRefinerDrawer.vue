@@ -176,7 +176,7 @@ const handleApply = () => {
     <SheetContent 
       :showCloseButton="false" 
       side="bottom" 
-      class="h-[75vh] flex flex-col p-0 rounded-t-[2.5rem] gap-0 border-t border-border/40 dark:border-border/10 bg-card z-[60]" 
+      class="h-[75vh] flex flex-col p-0 rounded-t-[2.5rem] gap-0 border-t border-border/40 dark:border-border/10 bg-card z-[60] overflow-hidden" 
       overlayClass="backdrop-blur-sm z-[58] bg-black/40"
       :dir="languageStore.dir"
     >
@@ -290,7 +290,7 @@ const handleApply = () => {
         <div class="flex-1 p-6 overflow-hidden flex flex-col md:flex-row gap-4 min-h-0">
           
           <!-- Source Area -->
-          <div class="flex-1 flex flex-col gap-2 min-h-0 bg-muted/10 border border-border/40 dark:border-border/20 rounded-2xl p-4">
+          <div class="flex-1 flex flex-col gap-2 min-h-0 max-h-[140px] md:max-h-none bg-muted/10 border border-border/40 dark:border-border/20 rounded-2xl p-4">
             <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-start">
               {{ languageStore.t('متن اصلی', 'Original Text') }}
             </div>
@@ -300,7 +300,7 @@ const handleApply = () => {
           </div>
 
           <!-- AI Output Preview Area -->
-          <div class="flex-1 flex flex-col gap-2 min-h-0 bg-muted/5 border border-border/30 dark:border-border/10 rounded-2xl p-4 relative">
+          <div class="flex-1 flex flex-col gap-2 min-h-0 max-h-[200px] md:max-h-none bg-muted/5 border border-border/30 dark:border-border/10 rounded-2xl p-4 relative">
             <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-start">
               {{ languageStore.t('خروجی هوش مصنوعی', 'AI Refined Output') }}
             </div>
@@ -350,7 +350,7 @@ const handleApply = () => {
             <ScrollArea v-else class="flex-1 w-full overflow-hidden animate-in fade-in duration-300">
               <textarea 
                 v-model="previewText"
-                class="w-full min-h-[220px] bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold leading-relaxed text-foreground resize-none select-text pr-2 text-start"
+                class="w-full min-h-[120px] md:min-h-[220px] bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold leading-relaxed text-foreground resize-none select-text pr-2 text-start"
                 placeholder="AI Output will appear here..."
               />
             </ScrollArea>

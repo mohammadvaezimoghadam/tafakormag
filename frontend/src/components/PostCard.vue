@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { 
   HeartIcon, 
   MessageCircleIcon, 
@@ -329,9 +330,18 @@ const handleShare = () => {
   emit('share', props.id)
 }
 
-watch(showComments, (newVal) => {
+const commentsLoading = ref(false)
+
+watch(showComments, async (newVal) => {
   if (newVal) {
-    postStore.fetchComments(props.id)
+    commentsLoading.value = true
+    try {
+      await postStore.fetchComments(props.id)
+    } catch (err) {
+      console.error('Error fetching comments:', err)
+    } finally {
+      commentsLoading.value = false
+    }
   }
 })
 
@@ -687,33 +697,51 @@ const formatTime = (timeInSeconds: number) => {
       >
         <!-- Comments List -->
         <div class="px-5 py-4 flex flex-col gap-3.5 max-h-[250px] overflow-y-auto scrollbar-thin">
-          <div v-if="localComments.length === 0" class="text-center py-4 text-[10.5px] text-muted-foreground font-medium">
-            {{ languageStore.t('هنوز نظری ثبت نشده است. اولین نظر را شما بنویسید!', 'No comments yet. Be the first to comment!') }}
-          </div>
-          <div 
-            v-for="comment in localComments" 
-            :key="comment.id"
-            class="flex items-start gap-3 text-start"
-          >
-            <!-- Commenter Avatar -->
-            <Avatar class="size-8">
-              <AvatarImage :src="comment.authorAvatar || ''" :alt="comment.authorName" />
-              <AvatarFallback class="bg-primary/5 text-primary text-[10px] font-bold">
-                {{ comment.authorName.charAt(0) }}
-              </AvatarFallback>
-            </Avatar>
-
-            <!-- Comment Content Box -->
-            <div class="flex-1 bg-white/5 dark:bg-black/15 rounded-2xl px-3.5 py-2.5 flex flex-col gap-1">
-              <div class="flex justify-between items-center">
-                <span class="text-[11.5px] font-extrabold text-foreground">{{ comment.authorName }}</span>
-                <span class="text-[10px] text-muted-foreground font-semibold">{{ formatTimestamp(comment.timestamp) }}</span>
+          <template v-if="commentsLoading">
+            <div 
+              v-for="i in 2" 
+              :key="'comment-skeleton-' + i"
+              class="flex items-start gap-3 text-start animate-pulse"
+            >
+              <Skeleton class="size-8 rounded-full shrink-0" />
+              <div class="flex-1 flex flex-col gap-1.5 px-3.5 py-2.5 bg-white/5 dark:bg-black/15 rounded-2xl">
+                <div class="flex justify-between items-center">
+                  <Skeleton class="h-3.5 w-16 rounded-md" />
+                  <Skeleton class="h-3 w-8 rounded-md" />
+                </div>
+                <Skeleton class="h-3.5 w-full rounded-md" />
               </div>
-              <p class="text-[12.5px] leading-relaxed text-foreground/90 font-medium text-start" dir="auto">
-                {{ comment.text }}
-              </p>
             </div>
-          </div>
+          </template>
+          <template v-else>
+            <div v-if="localComments.length === 0" class="text-center py-4 text-[10.5px] text-muted-foreground font-medium">
+              {{ languageStore.t('هنوز نظری ثبت نشده است. اولین نظر را شما بنویسید!', 'No comments yet. Be the first to comment!') }}
+            </div>
+            <div 
+              v-for="comment in localComments" 
+              :key="comment.id"
+              class="flex items-start gap-3 text-start"
+            >
+              <!-- Commenter Avatar -->
+              <Avatar class="size-8">
+                <AvatarImage :src="comment.authorAvatar || ''" :alt="comment.authorName" />
+                <AvatarFallback class="bg-primary/5 text-primary text-[10px] font-bold">
+                  {{ comment.authorName.charAt(0) }}
+                </AvatarFallback>
+              </Avatar>
+
+              <!-- Comment Content Box -->
+              <div class="flex-1 bg-white/5 dark:bg-black/15 rounded-2xl px-3.5 py-2.5 flex flex-col gap-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-[11.5px] font-extrabold text-foreground">{{ comment.authorName }}</span>
+                  <span class="text-[10px] text-muted-foreground font-semibold">{{ formatTimestamp(comment.timestamp) }}</span>
+                </div>
+                <p class="text-[12.5px] leading-relaxed text-foreground/90 font-medium text-start" dir="auto">
+                  {{ comment.text }}
+                </p>
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- Add Comment Form Input -->
