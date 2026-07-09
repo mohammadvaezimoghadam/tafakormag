@@ -385,7 +385,11 @@ const languageStore = useLanguageStore()
     </transition>
 
     <!-- Main Message Input Row -->
-    <div class="w-full flex items-end gap-1.5" :dir="languageStore.dir">
+    <div 
+      class="w-full flex items-end gap-1.5 relative" 
+      :class="{ 'pt-10': isLongText && !isRecording }"
+      :dir="languageStore.dir"
+    >
       
       <!-- Right Element: Attach File Button / Cancel Recording Button / Cancel Edit Button -->
       <transition name="button-pop" mode="out-in">
@@ -526,42 +530,37 @@ const languageStore = useLanguageStore()
         </Button>
       </transition>
 
+      <!-- Expand Button (Positioned absolutely at the top of the input row) -->
+      <Button
+        v-if="isLongText && !isRecording"
+        variant="ghost"
+        size="icon-sm"
+        :class="[
+          'absolute z-30 text-zinc-500 dark:text-zinc-400 hover:text-primary transition-all duration-200 cursor-pointer outline-none active:scale-95 top-2', 
+          languageStore.isFa ? 'right-2.5' : 'left-2.5'
+        ]"
+        :title="languageStore.t('ویرایش در نمای بزرگ', 'Edit in expanded view')"
+        @click="showExpanded = true"
+      >
+        <Maximize2Icon />
+      </Button>
+
+      <!-- AI Refiner Sparkle Button (Positioned absolutely next to Expand button) -->
+      <Button
+        v-if="isLongText && !isRecording"
+        variant="ghost"
+        size="icon-sm"
+        :class="[
+          'absolute z-30 text-zinc-500 dark:text-zinc-400 hover:text-primary transition-all duration-200 cursor-pointer outline-none active:scale-95 top-2', 
+          languageStore.isFa ? 'right-10' : 'left-10'
+        ]"
+        :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
+        @click="isAiRefinerOpen = true"
+      >
+        <SparklesIcon />
+      </Button>
+
     </div>
-
-    <!-- Expand Button (Positioned absolutely at the top-right corner of the container, above attachment/content area) -->
-    <Button
-      v-if="isLongText && !isRecording"
-      variant="ghost"
-      size="icon-sm"
-      :class="[
-        'absolute z-30 text-zinc-500 dark:text-zinc-400 hover:text-primary transition-all duration-200 cursor-pointer outline-none active:scale-95', 
-        hasAttachments 
-          ? (languageStore.isFa ? 'top-[90px] right-2.5' : 'top-[90px] left-2.5') 
-          : (languageStore.isFa ? 'top-2.5 right-2.5' : 'top-2.5 left-2.5')
-      ]"
-      :title="languageStore.t('ویرایش در نمای بزرگ', 'Edit in expanded view')"
-      @click="showExpanded = true"
-    >
-      <Maximize2Icon />
-    </Button>
-
-    <!-- AI Refiner Sparkle Button (Positioned directly beneath the Expand button) -->
-    <Button
-      v-if="isLongText && !isRecording"
-      variant="ghost"
-      size="icon-sm"
-      :class="[
-        'absolute z-30 text-zinc-500 dark:text-zinc-400 hover:text-primary transition-all duration-200 cursor-pointer outline-none active:scale-95', 
-        hasAttachments 
-          ? (languageStore.isFa ? 'top-[125px] right-2.5' : 'top-[125px] left-2.5') 
-          : (languageStore.isFa ? 'top-10 right-2.5' : 'top-10 left-2.5')
-      ]"
-      :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
-      @click="isAiRefinerOpen = true"
-    >
-      <SparklesIcon />
-    </Button>
-  </div>
 
   <!-- Expand Modal (Bottom Sheet, 80% screen height) -->
   <teleport to="body">
@@ -576,7 +575,7 @@ const languageStore = useLanguageStore()
     <transition name="sheet-slide">
       <div 
         v-if="showExpanded" 
-        class="fixed bottom-0 inset-x-0 h-[80dvh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[2.5rem] z-55 flex flex-col shadow-2xl transition-transform overflow-hidden"
+        class="fixed bottom-0 inset-x-0 h-[80dvh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[calc(var(--radius)*1.5)] z-55 flex flex-col shadow-2xl transition-transform overflow-hidden"
         :dir="languageStore.dir"
         @click.stop
       >

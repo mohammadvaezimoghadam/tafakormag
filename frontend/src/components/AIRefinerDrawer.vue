@@ -176,7 +176,7 @@ const handleApply = () => {
     <SheetContent 
       :showCloseButton="false" 
       side="bottom" 
-      class="h-[75vh] flex flex-col p-0 rounded-t-[2.5rem] gap-0 border-t border-border/40 dark:border-border/10 bg-card z-[60] overflow-hidden" 
+      class="h-[75vh] flex flex-col p-0 rounded-t-[calc(var(--radius)*1.5)] gap-0 border-t border-border/40 dark:border-border/10 bg-card z-[60] overflow-hidden" 
       overlayClass="backdrop-blur-sm z-[58] bg-black/40"
       :dir="languageStore.dir"
     >
