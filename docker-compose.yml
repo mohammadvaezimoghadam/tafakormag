@@ -22,7 +22,7 @@ services:
       dockerfile: ./backend/Dockerfile
     container_name: tafakor_backend
     entrypoint: []
-    command: [ "sh", "-c", "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py createcachetable && gunicorn note_platform.wsgi:application --bind 0.0.0.0:8000 --workers 3" ]
+    command: [ "sh", "-c", "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py createcachetable && gunicorn note_platform.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 300" ]
     environment:
       - DEBUG=False
       - SECRET_KEY=${SECRET_KEY}

@@ -17,6 +17,7 @@ import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import LoadingDialog from '@/components/LoadingDialog.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -58,11 +59,13 @@ import {
   PlusIcon,
   CopyIcon,
   CheckIcon,
+  Trash2Icon,
+  AlertTriangleIcon,
   UploadCloudIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import'>('profile')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal'>('profile')
 const viewportWidth = ref<'100%' | '768px' | '375px'>('100%')
 const sandboxBg = ref<'default' | 'gradient' | 'grid' | 'image'>('default')
 const activeState = ref<'idle' | 'loading' | 'error' | 'empty' | 'success'>('idle')
@@ -202,6 +205,7 @@ const currentComponentFile = computed(() => {
     case 'topic-connections': return 'TopicConnectionsView.vue'
     case 'loading-dialog': return 'LoadingDialog.vue'
     case 'topic-import': return 'TopicImportView.vue'
+    case 'confirm-modal': return 'ConfirmModal.vue'
     default: return ''
   }
 })
@@ -222,7 +226,7 @@ const copyComponentFile = async () => {
   }
 }
 
-const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import') => {
+const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal') => {
   currentComponent.value = comp
   activeState.value = 'idle'
   logEvent('Component Changed', { component: comp })
@@ -890,6 +894,36 @@ const stopLoadingSimulation = () => {
   simulatorLoadingIsProcessing.value = false
   logEvent('LoadingDialog: Simulation Closed/Reset', {})
 }
+
+// ConfirmModal simulation state
+const simulatorConfirmIsOpen = ref(false)
+const simulatorConfirmTitle = ref('آیا مطمئن هستید؟')
+const simulatorConfirmDescription = ref('این یک توضیحات تستی برای بررسی چیدمان و خوانایی فونت در دیالوگ تایید است.')
+const simulatorConfirmConfirmText = ref('تایید و حذف')
+const simulatorConfirmCancelText = ref('انصراف')
+const simulatorConfirmVariant = ref<'destructive' | 'warning' | 'info'>('destructive')
+
+const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
+  simulatorConfirmVariant.value = variant
+  if (variant === 'destructive') {
+    simulatorConfirmTitle.value = languageStore.isFa ? 'حذف تاپیک تستی؟' : 'Delete Test Topic?'
+    simulatorConfirmDescription.value = languageStore.isFa 
+      ? 'با حذف این تاپیک تمام داده‌های مربوط به آن به صورت دائمی از بین خواهد رفت.' 
+      : 'Deleting this topic will permanently delete all associated data.'
+  } else if (variant === 'warning') {
+    simulatorConfirmTitle.value = languageStore.isFa ? 'خروج از حساب کاربری؟' : 'Logout?'
+    simulatorConfirmDescription.value = languageStore.isFa 
+      ? 'آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟ نشست فعال شما بسته خواهد شد.' 
+      : 'Are you sure you want to log out? Your active session will be terminated.'
+  } else {
+    simulatorConfirmTitle.value = languageStore.isFa ? 'درون‌ریزی مجدد فایل؟' : 'Re-import File?'
+    simulatorConfirmDescription.value = languageStore.isFa 
+      ? 'فایل خروجی قبلاً درون‌ریزی شده است. آیا تمایل به درون‌ریزی مجدد و بازنویسی دارید؟' 
+      : 'The export file has already been imported. Do you want to re-import and overwrite?'
+  }
+  simulatorConfirmIsOpen.value = true
+  logEvent('ConfirmModal: Opened Simulation', { variant })
+}
 </script>
 
 <template>
@@ -1169,6 +1203,21 @@ const stopLoadingSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'topic-import'" class="size-3.5 text-primary" />
               </button>
+              <button 
+                @click="handleComponentChange('confirm-modal')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'confirm-modal' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <AlertTriangleIcon class="size-3.5 text-primary" />
+                  دیالوگ تایید حذف/اقدام (جدید)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'confirm-modal'" class="size-3.5 text-primary" />
+              </button>
             </div>
           </div>
         </div>
@@ -1333,7 +1382,7 @@ const stopLoadingSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -1765,6 +1814,60 @@ const stopLoadingSimulation = () => {
                     class="w-full text-xs font-semibold cursor-pointer h-9.5"
                   >
                     مستندات درون‌ریزی
+                  </Button>
+                </div>
+              </div>
+
+              <!-- ConfirmModal Specific Controls -->
+              <div v-slot v-if="currentComponent === 'confirm-modal'" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">شبیه‌سازی سناریو (نوع دیالوگ):</Label>
+                  <div class="flex gap-2 flex-wrap">
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      @click="openConfirmSimulation('destructive')"
+                      class="text-[10px] font-bold cursor-pointer h-9"
+                    >
+                      مخرب (حذف تاپیک)
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      @click="openConfirmSimulation('warning')"
+                      class="text-[10px] font-bold cursor-pointer h-9 bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      هشدار (خروج)
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      @click="openConfirmSimulation('info')"
+                      class="text-[10px] font-bold cursor-pointer h-9 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      اطلاعات (درون‌ریزی مجدد)
+                    </Button>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 text-start md:col-span-2">
+                  <Label class="text-[9px] text-muted-foreground">مشخصات دیالوگ جاری:</Label>
+                  <div class="text-[10px] text-muted-foreground bg-muted/40 p-2.5 rounded-xl border border-border/40 space-y-1">
+                    <div class="flex justify-between font-bold">
+                      <span>عنوان: {{ simulatorConfirmTitle }}</span>
+                      <Badge size="xs" :variant="simulatorConfirmVariant === 'destructive' ? 'destructive' : 'secondary'">
+                        {{ simulatorConfirmVariant }}
+                      </Badge>
+                    </div>
+                    <div class="text-[9px] truncate">توضیح: {{ simulatorConfirmDescription }}</div>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 text-start">
+                  <Label class="text-[9px] text-muted-foreground">باز کردن مستقیم:</Label>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    @click="simulatorConfirmIsOpen = true"
+                    class="text-[10px] font-bold cursor-pointer h-9 w-full"
+                  >
+                    نمایش مجدد دیالوگ
                   </Button>
                 </div>
               </div>
@@ -2293,6 +2396,44 @@ const stopLoadingSimulation = () => {
                   <TopicImportView 
                     @import-complete="logEvent('TopicImport: Import completed successfully', {})"
                     @import-failed="(err) => logEvent('TopicImport: Import failed', { error: err })"
+                  />
+                </div>
+
+                <!-- ConfirmModal Preview -->
+                <div 
+                  v-else-if="currentComponent === 'confirm-modal'"
+                  class="w-full flex flex-col items-center justify-center py-10"
+                  :dir="languageStore.dir"
+                >
+                  <div class="flex flex-col gap-2">
+                    <Button @click="openConfirmSimulation('destructive')" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs" variant="destructive">
+                      <Trash2Icon class="size-4" />
+                      شبیه‌سازی دیالوگ تایید حذف (Destructive)
+                    </Button>
+                    <Button @click="openConfirmSimulation('warning')" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs bg-amber-600 hover:bg-amber-700 text-white" variant="default">
+                      <AlertTriangleIcon class="size-4" />
+                      شبیه‌سازی دیالوگ تایید خروج (Warning)
+                    </Button>
+                    <Button @click="openConfirmSimulation('info')" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white" variant="default">
+                      <InfoIcon class="size-4" />
+                      شبیه‌سازی دیالوگ تایید درون‌ریزی (Info)
+                    </Button>
+                  </div>
+                  
+                  <p class="text-[10px] text-muted-foreground text-center mt-4 max-w-xs leading-relaxed">
+                    با کلیک بر روی دکمه‌های بالا، سناریوهای تایید مختلف باز می‌شوند. رویدادهای «تایید» و «انصراف» در کنسول زیر لاگ خواهند شد.
+                  </p>
+                  
+                  <!-- ConfirmModal Component -->
+                  <ConfirmModal
+                    v-model:is-open="simulatorConfirmIsOpen"
+                    :title="simulatorConfirmTitle"
+                    :description="simulatorConfirmDescription"
+                    :confirm-text="simulatorConfirmConfirmText"
+                    :cancel-text="simulatorConfirmCancelText"
+                    :variant="simulatorConfirmVariant"
+                    @confirm="logEvent('ConfirmModal: Confirmed', { variant: simulatorConfirmVariant })"
+                    @cancel="logEvent('ConfirmModal: Cancelled', { variant: simulatorConfirmVariant })"
                   />
                 </div>
 

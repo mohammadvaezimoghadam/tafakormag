@@ -175,6 +175,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ==============================================================================
 # آپلود فایل (افزایش سقف حجم فایل برای تصاویر پروفایل و تاپیک‌ها)
 # ==============================================================================
-DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2147483648  # 2 GB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
 

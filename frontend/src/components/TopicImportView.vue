@@ -7,7 +7,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { importHistory, getImportStatus } from '@/api'
 import {
   UploadCloudIcon,
-  FileJsonIcon,
+  FileArchiveIcon,
   InfoIcon,
   Trash2Icon
 } from '@lucide/vue'
@@ -35,15 +35,15 @@ const globalProgress = ref(0)
 const currentStatus = ref<'idle' | 'uploading' | 'validating' | 'importing' | 'completed' | 'failed'>('idle')
 const isProcessing = ref(false)
 
-// File selection handlers
+// File selection handlers — فقط فایل ZIP مجاز است
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files.length > 0) {
     const file = target.files[0]
-    if (file && file.name.endsWith('.json')) {
+    if (file && file.name.toLowerCase().endsWith('.zip')) {
       selectedFile.value = file
     } else {
-      alert(languageStore.isFa ? 'فقط فایل‌های JSON مجاز هستند.' : 'Only JSON files are allowed.')
+      alert(languageStore.isFa ? 'فقط فایل‌های فشرده ZIP مجاز هستند.' : 'Only ZIP compressed archives are allowed.')
     }
   }
 }
@@ -52,10 +52,10 @@ const handleFileDrop = (event: DragEvent) => {
   isDragActive.value = false
   if (event.dataTransfer && event.dataTransfer.files.length > 0) {
     const file = event.dataTransfer.files[0]
-    if (file && file.name.endsWith('.json')) {
+    if (file && file.name.toLowerCase().endsWith('.zip')) {
       selectedFile.value = file
     } else {
-      alert(languageStore.isFa ? 'فقط فایل‌های JSON مجاز هستند.' : 'Only JSON files are allowed.')
+      alert(languageStore.isFa ? 'فقط فایل‌های فشرده ZIP مجاز هستند.' : 'Only ZIP compressed archives are allowed.')
     }
   }
 }
@@ -178,14 +178,14 @@ onUnmounted(() => {
       
       <!-- Info Banner -->
       <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed text-start">
-        {{ languageStore.t('💡 پیام‌های کانال تلگرام خود را با بارگذاری فایل خروجی JSON به راحتی وارد این تاپیک کنید تا با ربات‌های فعال همگام‌سازی شوند.', '💡 Import your Telegram channel messages into this topic by uploading the JSON export file to sync with active bots.') }}
+        {{ languageStore.t('💡 پیام‌ها و مدیاهای کانال تلگرام خود را با بارگذاری پوشه بک‌آپ به شکل فایل فشرده ZIP وارد این تاپیک کنید تا ساختار چت بازیابی شود.', '💡 Import your Telegram channel messages and media assets into this topic by uploading the compressed ZIP backup archive.') }}
       </div>
 
       <!-- File Dropzone Section -->
       <div class="flex flex-col gap-3">
         <div class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
           <span class="size-2 rounded-full bg-primary shrink-0" />
-          {{ languageStore.t('انتخاب فایل پشتیبان', 'Select Backup File') }}
+          {{ languageStore.t('انتخاب آرشیو پشتیبان', 'Select Backup Archive') }}
         </div>
         
         <!-- Dropzone Box -->
@@ -202,7 +202,7 @@ onUnmounted(() => {
             type="file" 
             ref="fileInput" 
             class="hidden" 
-            accept=".json" 
+            accept=".zip" 
             @change="handleFileSelect" 
           />
           <UploadCloudIcon class="w-8 h-8 mb-2 text-muted-foreground/60" />
@@ -210,7 +210,7 @@ onUnmounted(() => {
             {{ languageStore.t('برای بارگذاری کلیک کنید یا فایل را بکشید', 'Click to upload or drag file here') }}
           </div>
           <div class="text-[9.5px] text-muted-foreground mt-0.5">
-            {{ languageStore.t('فقط فایل result.json تلگرام', 'Only Telegram result.json file allowed') }}
+            {{ languageStore.t('فایل ZIP حاوی result.json و پوشه مدیاها', 'ZIP file containing result.json and media folders') }}
           </div>
         </div>
 
@@ -218,7 +218,7 @@ onUnmounted(() => {
         <div v-else class="flex items-center justify-between p-3.5 border border-border/50 rounded-2xl bg-background/45">
           <div class="flex items-center gap-3 min-w-0">
             <div class="size-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-              <FileJsonIcon class="size-5" />
+              <FileArchiveIcon class="size-5" />
             </div>
             <div class="flex flex-col text-start min-w-0">
               <span class="text-[11px] font-extrabold text-foreground truncate max-w-[190px]" dir="ltr">
@@ -265,7 +265,7 @@ onUnmounted(() => {
           <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
             <span class="font-extrabold text-primary">۳.</span>
             <div class="flex-1">
-              {{ languageStore.t('تیک دانلود عکس‌ها و ویدیوها را بردارید تا فرآیند سبک‌تر انجام شود.', 'Uncheck media options to make the file size smaller.') }}
+              {{ languageStore.t('گزینه‌های عکس‌ها (Photos) و ویدیوها (Videos) را در صورت تمایل فعال بگذارید.', 'Keep Photos and Videos checked if you want to migrate media files.') }}
             </div>
           </div>
           
@@ -279,7 +279,7 @@ onUnmounted(() => {
           <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
             <span class="font-extrabold text-primary">۵.</span>
             <div class="flex-1">
-              {{ languageStore.t('روی دکمه Export کلیک کرده و فایل نهایی را در بخش بالا آپلود نمایید.', 'Click Export and upload the resulting file in the box above.') }}
+              {{ languageStore.t('کل پوشه استخراج شده حاوی result.json و مدیاها را تبدیل به یک فایل فشرده ZIP کرده و بارگذاری نمایید.', 'Compress the entire exported folder containing result.json and media files into a single ZIP archive and upload it above.') }}
             </div>
           </div>
 
@@ -288,8 +288,8 @@ onUnmounted(() => {
             <InfoIcon class="size-4 text-amber-500 shrink-0 mt-0.5" />
             <div class="flex-1">
               {{ languageStore.t(
-                'توجه: فایل‌های دارای فرمت HTML پشتیبانی نشده و بلافاصله در مرحله اعتبارسنجی رد خواهند شد.',
-                'Make sure the exported file format is strictly JSON. HTML formats will be rejected.'
+                'توجه: فایل زیپ آپلود شده باید شامل سند فایل ریشه result.json باشد، در غیر این‌صورت خط لوله معتبرسازی با شکست مواجه خواهد شد.',
+                'Make sure the uploaded ZIP contains the root result.json metadata file, otherwise the validation pipeline will terminate.'
               ) }}
             </div>
           </div>

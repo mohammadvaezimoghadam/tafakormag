@@ -78,13 +78,13 @@ const displayActionButtonText = computed(() => {
   return props.actionButtonText
 })
 
-// Default Pipeline Stages if none are passed custom
+// Default Pipeline Stages — مرحله‌های ZIP import pipeline
 const defaultStages = computed<Stage[]>(() => {
   const status = props.currentStatus
   return [
     {
       id: 'upload',
-      label: languageStore.t('بارگذاری و خواندن فایل یادداشت‌ها', 'Uploading and Reading Notes File'),
+      label: languageStore.t('بارگذاری آرشیو فشرده فایل یادداشت‌ها', 'Uploading Compressed Notes Archive Package'),
       status: status === 'uploading'
         ? 'processing'
         : ['validating', 'importing', 'completed'].includes(status)
@@ -93,7 +93,7 @@ const defaultStages = computed<Stage[]>(() => {
     },
     {
       id: 'validate',
-      label: languageStore.t('اعتبارسنجی ساختار مارک‌داون و محتوا', 'Validating Markdown Structure and Content'),
+      label: languageStore.t('استخراج و اعتبارسنجی سند ساختار result.json', 'Extracting and Validating result.json Schema Structure'),
       status: status === 'validating'
         ? 'processing'
         : ['importing', 'completed'].includes(status)
@@ -102,7 +102,7 @@ const defaultStages = computed<Stage[]>(() => {
     },
     {
       id: 'import',
-      label: languageStore.t('درون‌ریزی انبوه و همگام‌سازی با ربات‌ها', 'Bulk Importing and Syncing with Bots'),
+      label: languageStore.t('درون‌ریزی انبوه متن‌ها و نگاشت باینری تصاویر و ویدیوها', 'Bulk Importing Texts and Mapping Image/Video Binaries'),
       status: status === 'importing'
         ? 'processing'
         : status === 'completed'
@@ -111,7 +111,7 @@ const defaultStages = computed<Stage[]>(() => {
     },
     {
       id: 'done',
-      label: languageStore.t('تکمیل نهایی و ثبت یادداشت‌ها', 'Finalizing and Recording Notes'),
+      label: languageStore.t('تکمیل نهایی و بازنشانی تاریخچه در تاپیک', 'Finalizing and Re-indexing Chat History inside Topic'),
       status: status === 'completed' ? 'completed' : 'pending'
     }
   ]

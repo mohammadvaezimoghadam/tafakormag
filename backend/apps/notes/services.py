@@ -337,3 +337,222 @@ def process_telegram_json_import(task_id: str, temp_filepath: str):
                 logger.info(f"Cleaned up temp import file: {temp_filepath}")
             except Exception as e:
                 logger.warning(f"Failed to remove temp file {temp_filepath}: {str(e)}")
+
+
+def process_telegram_zip_import(task_id: str, zip_filepath: str) -> None:
+    """
+    یک کار پیش‌زمینه غیرمسدودکننده برای درون‌ریزی تاریخچه تلگرام از فایل ZIP.
+    آرشیو ZIP باید شامل result.json و (اختیاری) پوشه‌های مدیا باشد.
+    فایل موقت در نهایت در بلاک finally حذف می‌شود.
+    """
+    import zipfile
+    from django.db import transaction
+    from django.core.files.base import ContentFile
+    from datetime import datetime
+
+    logger.info(f"Starting Telegram ZIP import process for Task ID: {task_id}")
+    task = None
+    try:
+        # ۱. بازیابی تسک
+        task = ImportTask.objects.filter(id=task_id).first()
+        if not task:
+            logger.error(f"ImportTask with ID {task_id} not found.")
+            return
+
+        # Stage 1: اعتبارسنجی آرشیو ZIP
+        task.status = 'EXTRACTING'
+        task.current_stage = 'در حال اعتبارسنجی آرشیو و استخراج result.json...'
+        task.progress = 5
+        task.save()
+
+        if not os.path.exists(zip_filepath):
+            raise FileNotFoundError(f"فایل موقت ZIP یافت نشد: {zip_filepath}")
+
+        if not zipfile.is_zipfile(zip_filepath):
+            raise ValueError("فایل آپلود شده یک آرشیو ZIP معتبر نیست.")
+
+        with zipfile.ZipFile(zip_filepath, 'r') as archive:
+            namelist = archive.namelist()
+
+            # پیدا کردن result.json در هر سطحی از آرشیو
+            json_filename = next((f for f in namelist if f.endswith('result.json')), None)
+            if not json_filename:
+                raise ValueError("فایل result.json در داخل آرشیو ZIP یافت نشد.")
+
+            parent_dir = ""
+            if '/' in json_filename:
+                parent_dir = json_filename.rsplit('/', 1)[0]
+
+            with archive.open(json_filename) as json_file:
+                try:
+                    data = json.load(json_file)
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"فایل result.json داخل آرشیو خراب یا غیرقابل‌خواندن است: {str(e)}")
+
+            raw_messages = data.get('messages', [])
+            if not isinstance(raw_messages, list):
+                raise ValueError("ساختار result.json نامعتبر است. کلید 'messages' باید آرایه باشد.")
+
+            # فیلتر کردن پیام‌های عادی
+            valid_messages = [
+                m for m in raw_messages
+                if isinstance(m, dict) and m.get('type') == 'message' and 'id' in m and 'date' in m
+            ]
+            total_count = len(valid_messages)
+            logger.info(f"ZIP import: {total_count} valid messages found for Task {task_id}")
+
+            if total_count == 0:
+                task.status = 'COMPLETED'
+                task.current_stage = 'هیچ پیامی برای درون‌ریزی یافت نشد.'
+                task.progress = 100
+                task.save()
+                return
+
+            # Stage 2: درون‌ریزی پیام‌ها و مدیا
+            task.status = 'IMPORTING'
+            task.current_stage = 'در حال پردازش متن‌ها و کپی فایل‌های مدیا...'
+            task.save()
+
+            author = task.topic.created_by
+            if not author:
+                from apps.accounts.models import User
+                author = User.objects.filter(is_superuser=True).first() or User.objects.first()
+
+            # خواندن شناسه‌های موجود برای جلوگیری از import مکرر
+            existing_tg_ids = set(
+                Post.objects.filter(topic=task.topic, is_imported=True)
+                .values_list('telegram_message_id', flat=True)
+            )
+
+            batch_size = 500
+            posts_batch = []
+            processed_count = 0
+
+            for msg in valid_messages:
+                tg_id = msg.get('id')
+
+                if tg_id in existing_tg_ids:
+                    processed_count += 1
+                    continue
+
+                # تبدیل تاریخ به Timezone-aware datetime
+                raw_date = msg.get('date', '')
+                dt = parse_datetime(raw_date)
+                if not dt:
+                    try:
+                        dt = datetime.fromisoformat(raw_date)
+                    except (ValueError, TypeError):
+                        dt = None
+                if dt and not is_aware(dt):
+                    dt = make_aware(dt)
+                if not dt:
+                    dt = tz_now()
+
+                # تبدیل متن تلگرام (ساده یا آرایه‌ای)
+                text_entities = msg.get('text', '')
+                if isinstance(text_entities, list):
+                    parts = []
+                    for part in text_entities:
+                        if isinstance(part, dict):
+                            part_text = part.get('text', '')
+                            part_type = part.get('type', '')
+                            if part_type == 'link':
+                                parts.append(f"[{part_text}]({part.get('href', part_text)})")
+                            elif part_type == 'bold':
+                                parts.append(f"**{part_text}**")
+                            elif part_type == 'italic':
+                                parts.append(f"*{part_text}*")
+                            elif part_type == 'code':
+                                parts.append(f"`{part_text}`")
+                            else:
+                                parts.append(part_text)
+                        else:
+                            parts.append(str(part))
+                    text_content = "".join(parts)
+                else:
+                    text_content = str(text_entities)
+
+                post = Post(
+                    topic=task.topic,
+                    author=author,
+                    content=text_content,
+                    media_type='text',
+                    created_at=dt,
+                    is_imported=True,
+                    telegram_message_id=int(tg_id) if tg_id else None,
+                )
+
+                # استخراج مدیا از داخل ZIP (عکس یا ویدیو یا فایل صوتی)
+                relative_media_path = msg.get('file') or msg.get('photo')
+                if relative_media_path:
+                    normalized_path = os.path.normpath(relative_media_path).replace('\\', '/').lstrip('/')
+                    # اگر آرشیو دارای دایرکتوری والد بود، مسیر را به آن متصل می‌کنیم
+                    if parent_dir:
+                        archive_path = f"{parent_dir}/{normalized_path}"
+                    else:
+                        archive_path = normalized_path
+
+                    if archive_path in namelist:
+                        try:
+                            file_bytes = archive.read(archive_path)
+                            base_filename = os.path.basename(archive_path)
+                            post.media_file.save(base_filename, ContentFile(file_bytes), save=False)
+                            # تشخیص نوع مدیا
+                            lower_name = base_filename.lower()
+                            if any(lower_name.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.mkv', '.webm')):
+                                post.media_type = 'video'
+                            elif any(lower_name.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                                post.media_type = 'image'
+                            elif any(lower_name.endswith(ext) for ext in ('.mp3', '.ogg', '.wav', '.m4a', '.aac', '.flac')):
+                                post.media_type = 'audio'
+                        except Exception as media_err:
+                            logger.error(f"ZIP media extraction failed for {archive_path}: {str(media_err)}")
+
+                posts_batch.append(post)
+                processed_count += 1
+
+                # فلاش دسته‌ای برای کاهش مصرف حافظه
+                if len(posts_batch) >= batch_size:
+                    with transaction.atomic():
+                        Post.objects.bulk_create(posts_batch)
+                    posts_batch = []
+                    task.progress = int((processed_count / total_count) * 90) + 5
+                    task.current_stage = f"در حال درون‌ریزی پیام‌ها ({processed_count} از {total_count})..."
+                    task.save()
+
+            # فلاش باقی‌مانده
+            if posts_batch:
+                with transaction.atomic():
+                    Post.objects.bulk_create(posts_batch)
+
+        # آپدیت خلاصه تاپیک
+        try:
+            from .views import update_topic_description
+            update_topic_description(task.topic)
+        except Exception as e:
+            logger.warning(f"Failed to update topic description after ZIP import: {str(e)}")
+
+        # Stage 3: تکمیل
+        task.status = 'COMPLETED'
+        task.current_stage = 'درون‌ریزی آرشیو ZIP با موفقیت به پایان رسید.'
+        task.progress = 100
+        task.save()
+        logger.info(f"ZIP import COMPLETED successfully for Task ID: {task_id}")
+
+    except Exception as e:
+        logger.error(f"Error processing ZIP import for Task: {task_id}. Error: {str(e)}")
+        logger.error(traceback.format_exc())
+        if task:
+            task.status = 'FAILED'
+            task.current_stage = 'خطا در اجرای فرآیند درون‌ریزی ZIP.'
+            task.error_message = f"{str(e)}\n\n{traceback.format_exc()}"
+            task.progress = 100
+            task.save()
+    finally:
+        # پاکسازی فایل موقت ZIP
+        if zip_filepath and os.path.exists(zip_filepath):
+            try:
+                os.remove(zip_filepath)
+                logger.info(f"Cleaned up temp ZIP file: {zip_filepath}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temp ZIP file {zip_filepath}: {str(e)}")

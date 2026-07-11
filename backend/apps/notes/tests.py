@@ -239,3 +239,349 @@ class TelegramImportTests(APITestCase):
         
         # Verify temp file was cleaned up by service finally block
         self.assertFalse(os.path.exists(temp_filepath))
+
+
+import zipfile
+import io
+from apps.notes.services import process_telegram_zip_import
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+
+class TelegramZipImportServiceTests(APITestCase):
+    """تست‌های مستقیم سرویس ZIP import"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(phone="09111111111", password="password")
+        self.client.force_authenticate(user=self.user)
+        self.topic = Topic.objects.create(name="تاپیک ZIP تستی", created_by=self.user)
+
+    def _make_zip_file(self, messages, include_result_json=True, corrupt_json=False, extra_files=None):
+        """ساخت فایل ZIP تستی در حافظه"""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            if include_result_json:
+                if corrupt_json:
+                    zf.writestr('result.json', 'THIS IS NOT JSON {{{')
+                else:
+                    data = {"name": "Test Channel", "type": "public_channel", "messages": messages}
+                    zf.writestr('result.json', json.dumps(data, ensure_ascii=False))
+            if extra_files:
+                for path, content in extra_files.items():
+                    zf.writestr(path, content)
+        buf.seek(0)
+        return buf.read()
+
+    def _create_task_and_write_zip(self, zip_bytes):
+        """ذخیره ZIP روی دیسک و ساخت ImportTask"""
+        import uuid
+        from django.conf import settings
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_imports')
+        os.makedirs(temp_dir, exist_ok=True)
+        filepath = os.path.join(temp_dir, f"test_{uuid.uuid4().hex}.zip")
+        with open(filepath, 'wb') as f:
+            f.write(zip_bytes)
+        task = ImportTask.objects.create(topic=self.topic, status='PENDING', current_stage='pending', progress=0)
+        return task, filepath
+
+    # --- تست ۱: درون‌ریزی موفق پیام‌های متنی ---
+    def test_zip_import_text_messages_success(self):
+        messages = [
+            {"id": 201, "type": "message", "date": "2024-01-15T10:00:00", "text": "پیام اول از ZIP"},
+            {"id": 202, "type": "message", "date": "2024-01-15T10:01:00", "text": [
+                "پیام ",
+                {"type": "bold", "text": "فرمت‌دار"},
+                " از ZIP"
+            ]},
+            {"id": 203, "type": "service", "date": "2024-01-15T10:02:00", "text": "service msg"},  # باید skip شود
+        ]
+        zip_bytes = self._make_zip_file(messages)
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+
+        process_telegram_zip_import(str(task.id), filepath)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'COMPLETED')
+        self.assertEqual(task.progress, 100)
+
+        posts = Post.objects.filter(topic=self.topic, is_imported=True)
+        self.assertEqual(posts.count(), 2)  # service message skip شد
+
+        post1 = posts.filter(telegram_message_id=201).first()
+        self.assertIsNotNone(post1)
+        self.assertEqual(post1.content, "پیام اول از ZIP")
+        self.assertEqual(post1.media_type, 'text')
+
+        post2 = posts.filter(telegram_message_id=202).first()
+        self.assertIsNotNone(post2)
+        self.assertEqual(post2.content, "پیام **فرمت‌دار** از ZIP")
+
+        # فایل ZIP موقت باید پاک شده باشد
+        self.assertFalse(os.path.exists(filepath))
+
+    # --- تست ۲: درون‌ریزی با مدیا (عکس) ---
+    def test_zip_import_with_image_media(self):
+        messages = [
+            {
+                "id": 301,
+                "type": "message",
+                "date": "2024-02-01T09:00:00",
+                "text": "پیام با عکس",
+                "photo": "photos/photo_1.jpg"
+            },
+        ]
+        # ZIP با عکس fake
+        extra_files = {"photos/photo_1.jpg": b"FAKE_JPEG_BINARY_DATA"}
+        zip_bytes = self._make_zip_file(messages, extra_files=extra_files)
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+
+        process_telegram_zip_import(str(task.id), filepath)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'COMPLETED')
+
+        post = Post.objects.filter(topic=self.topic, telegram_message_id=301).first()
+        self.assertIsNotNone(post)
+        self.assertEqual(post.media_type, 'image')
+        self.assertTrue(bool(post.media_file))  # فایل media_file ذخیره شده
+
+    # --- تست ۳: ZIP بدون result.json → FAILED ---
+    def test_zip_import_missing_result_json_fails(self):
+        zip_bytes = self._make_zip_file([], include_result_json=False)
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+
+        process_telegram_zip_import(str(task.id), filepath)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'FAILED')
+        self.assertIn('result.json', task.error_message)
+        self.assertFalse(os.path.exists(filepath))
+
+    # --- تست ۴: result.json خراب → FAILED ---
+    def test_zip_import_corrupt_json_fails(self):
+        zip_bytes = self._make_zip_file([], corrupt_json=True)
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+
+        process_telegram_zip_import(str(task.id), filepath)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'FAILED')
+        self.assertFalse(os.path.exists(filepath))
+
+    # --- تست ۵: ZIP خالی از پیام معتبر → COMPLETED با ۰ پست ---
+    def test_zip_import_zero_valid_messages_completes(self):
+        messages = [
+            {"id": 401, "type": "service", "date": "2024-03-01T00:00:00", "text": "only service"},
+        ]
+        zip_bytes = self._make_zip_file(messages)
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+
+        process_telegram_zip_import(str(task.id), filepath)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'COMPLETED')
+        self.assertEqual(task.progress, 100)
+        self.assertEqual(Post.objects.filter(topic=self.topic, is_imported=True).count(), 0)
+
+    # --- تست ۶: جلوگیری از import مکرر (idempotency) ---
+    def test_zip_import_skips_duplicate_telegram_ids(self):
+        # پست اول از قبل موجود است
+        Post.objects.create(
+            topic=self.topic, author=self.user,
+            content="پیام قدیمی", is_imported=True, telegram_message_id=501
+        )
+        messages = [
+            {"id": 501, "type": "message", "date": "2024-04-01T00:00:00", "text": "تکراری"},
+            {"id": 502, "type": "message", "date": "2024-04-01T00:01:00", "text": "جدید"},
+        ]
+        zip_bytes = self._make_zip_file(messages)
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+
+        process_telegram_zip_import(str(task.id), filepath)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'COMPLETED')
+        # فقط پست ۵۰۲ جدید اضافه شده، ۵۰۱ skip شده
+        self.assertEqual(Post.objects.filter(topic=self.topic, is_imported=True).count(), 2)
+        self.assertIsNone(Post.objects.filter(topic=self.topic, telegram_message_id=501).exclude(content="پیام قدیمی").first())
+
+    # --- تست ۷: درون‌ریزی با مدیا و دایرکتوری والد (پوشه زیپ شده) ---
+    def test_zip_import_with_parent_directory_and_media(self):
+        messages = [
+            {
+                "id": 601,
+                "type": "message",
+                "date": "2024-05-01T09:00:00",
+                "text": "پیام با دایرکتوری والد",
+                "photo": "photos/photo_parent.jpg"
+            },
+        ]
+        # شبیه‌سازی ساختار زیپ شده از یک پوشه اصلی (مثل ChatExport_...)
+        parent = "ChatExport_2026-07-11"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            data = {"name": "Test Channel", "type": "public_channel", "messages": messages}
+            zf.writestr(f"{parent}/result.json", json.dumps(data, ensure_ascii=False))
+            zf.writestr(f"{parent}/photos/photo_parent.jpg", b"FAKE_JPEG_BINARY_DATA")
+        buf.seek(0)
+        zip_bytes = buf.read()
+        
+        task, filepath = self._create_task_and_write_zip(zip_bytes)
+        process_telegram_zip_import(str(task.id), filepath)
+        
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'COMPLETED')
+        
+        post = Post.objects.filter(topic=self.topic, telegram_message_id=601).first()
+        self.assertIsNotNone(post)
+        self.assertEqual(post.media_type, 'image')
+        self.assertTrue(bool(post.media_file))
+
+
+class TelegramImportEndpointRoutingTests(APITestCase):
+    """تست‌های polymorphic routing endpoint import-json"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(phone="09333333333", password="password")
+        self.client.force_authenticate(user=self.user)
+        self.topic = Topic.objects.create(name="تاپیک روتینگ", created_by=self.user)
+        self.url = f"/api/notes/topics/{self.topic.id}/import-json/"
+
+    def _make_minimal_zip(self):
+        """کوچکترین ZIP معتبر حاوی result.json"""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr('result.json', json.dumps({"messages": []}))
+        buf.seek(0)
+        return buf.read()
+
+    def _make_minimal_json(self):
+        return json.dumps({"messages": []}).encode('utf-8')
+
+    # --- تست ۷: ارسال ZIP → 202 و تسک با handler صحیح ---
+    def test_endpoint_accepts_zip_file(self):
+        zip_bytes = self._make_minimal_zip()
+        uploaded = SimpleUploadedFile("export.zip", zip_bytes, content_type="application/zip")
+        response = self.client.post(self.url, {"file": uploaded}, format="multipart")
+        self.assertEqual(response.status_code, 202)
+        self.assertIn('id', response.data)
+        self.assertEqual(response.data['status'], 'PENDING')
+
+    # --- تست ۸: ارسال JSON → 202 (backward compatible) ---
+    def test_endpoint_accepts_json_file_backward_compatible(self):
+        json_bytes = self._make_minimal_json()
+        uploaded = SimpleUploadedFile("result.json", json_bytes, content_type="application/json")
+        response = self.client.post(self.url, {"file": uploaded}, format="multipart")
+        self.assertEqual(response.status_code, 202)
+        self.assertIn('id', response.data)
+
+    # --- تست ۹: پسوند نامعتبر → 400 ---
+    def test_endpoint_rejects_invalid_extension(self):
+        uploaded = SimpleUploadedFile("export.txt", b"some content", content_type="text/plain")
+        response = self.client.post(self.url, {"file": uploaded}, format="multipart")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response.data)
+
+    # --- تست ۱۰: بدون فایل → 400 ---
+    def test_endpoint_rejects_no_file(self):
+        response = self.client.post(self.url, {}, format="multipart")
+        self.assertEqual(response.status_code, 400)
+
+    # --- تست ۱۱: غیر سازنده → 403 ---
+    def test_endpoint_rejects_non_creator(self):
+        other_user = User.objects.create_user(phone="09444444444")
+        self.client.force_authenticate(user=other_user)
+        zip_bytes = self._make_minimal_zip()
+        uploaded = SimpleUploadedFile("export.zip", zip_bytes, content_type="application/zip")
+        response = self.client.post(self.url, {"file": uploaded}, format="multipart")
+        self.assertEqual(response.status_code, 403)
+
+    # --- تست ۱۲: بدون احراز هویت → 401 یا 403 ---
+    def test_endpoint_requires_authentication(self):
+        self.client.force_authenticate(user=None)
+        zip_bytes = self._make_minimal_zip()
+        uploaded = SimpleUploadedFile("export.zip", zip_bytes, content_type="application/zip")
+        response = self.client.post(self.url, {"file": uploaded}, format="multipart")
+        # DRF برمی‌گرداند 401 اگر WWW-Authenticate header وجود داشته باشد،
+        # در غیر این صورت 403 — هر دو نشان‌دهنده عدم دسترسی هستند
+        self.assertIn(response.status_code, [401, 403])
+
+
+class FileCleanupSignalTests(APITestCase):
+    """تست‌های بررسی حذف خودکار فایل‌های فیزیکی پس از حذف/تغییر رکوردها"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(phone="09121234567", password="password")
+        self.topic = Topic.objects.create(name="تاپیک تست سیگنال", created_by=self.user)
+        
+        # ساخت فایل‌های تستی فیزیکی
+        from django.core.files.base import ContentFile
+        
+        self.topic_image_content = ContentFile(b"FAKE_IMAGE_DATA")
+        self.topic.image.save("test_topic_image.jpg", self.topic_image_content, save=True)
+        
+        self.post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست تست سیگنال",
+            media_type="image"
+        )
+        self.post_file_content = ContentFile(b"FAKE_POST_FILE_DATA")
+        self.post.media_file.save("test_post_file.jpg", self.post_file_content, save=True)
+
+    def test_delete_post_removes_physical_file(self):
+        """تست اینکه با حذف پست، فایل فیزیکی آن نیز پاک می‌شود"""
+        filepath = self.post.media_file.path
+        self.assertTrue(os.path.exists(filepath))
+        
+        self.post.delete()
+        self.assertFalse(os.path.exists(filepath))
+
+    def test_delete_topic_removes_physical_image(self):
+        """تست اینکه با حذف تاپیک، تصویر آن نیز پاک می‌شود"""
+        image_path = self.topic.image.path
+        self.assertTrue(os.path.exists(image_path))
+        
+        self.topic.delete()
+        self.assertFalse(os.path.exists(image_path))
+
+    def test_update_post_removes_old_physical_file(self):
+        """تست اینکه با تغییر فایل پست، فایل قبلی پاک می‌شود"""
+        old_filepath = self.post.media_file.path
+        self.assertTrue(os.path.exists(old_filepath))
+        
+        # آپلود فایل جدید برای پست
+        from django.core.files.base import ContentFile
+        new_file_content = ContentFile(b"FAKE_NEW_POST_FILE_DATA")
+        self.post.media_file.save("test_post_file_new.jpg", new_file_content, save=True)
+        
+        # بررسی اینکه فایل قدیمی حذف و فایل جدید موجود است
+        self.assertFalse(os.path.exists(old_filepath))
+        self.assertTrue(os.path.exists(self.post.media_file.path))
+
+    def test_update_topic_removes_old_physical_image(self):
+        """تست اینکه با تغییر تصویر تاپیک، تصویر قبلی پاک می‌شود"""
+        old_image_path = self.topic.image.path
+        self.assertTrue(os.path.exists(old_image_path))
+        
+        # آپلود تصویر جدید برای تاپیک
+        from django.core.files.base import ContentFile
+        new_image_content = ContentFile(b"FAKE_NEW_IMAGE_DATA")
+        self.topic.image.save("test_topic_image_new.jpg", new_image_content, save=True)
+        
+        # بررسی اینکه تصویر قدیمی حذف و تصویر جدید موجود است
+        self.assertFalse(os.path.exists(old_image_path))
+        self.assertTrue(os.path.exists(self.topic.image.path))
+
+    def test_cascade_delete_removes_post_physical_files(self):
+        """تست اینکه با حذف تاپیک، تمامی فایل‌های پست‌های آن به صورت آبشاری پاک می‌شوند"""
+        post_filepath = self.post.media_file.path
+        topic_image_path = self.topic.image.path
+        
+        self.assertTrue(os.path.exists(post_filepath))
+        self.assertTrue(os.path.exists(topic_image_path))
+        
+        self.topic.delete()
+        
+        self.assertFalse(os.path.exists(post_filepath))
+        self.assertFalse(os.path.exists(topic_image_path))
+

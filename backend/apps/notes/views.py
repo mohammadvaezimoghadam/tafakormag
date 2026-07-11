@@ -58,22 +58,35 @@ class TopicViewSet(viewsets.ModelViewSet):
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
             return Response({"error": "هیچ فایلی ارسال نشده است."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        if not uploaded_file.name.endswith('.json'):
-            return Response({"error": "فقط فایل با پسوند .json مجاز است."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # ذخیره فایل به صورت موقت در media/temp_imports/
-        import uuid
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_imports')
-        os.makedirs(temp_dir, exist_ok=True)
         
-        temp_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
-        temp_filepath = os.path.join(temp_dir, temp_filename)
+        filename_lower = uploaded_file.name.lower()
         
-        # نوشتن فایل روی دیسک
-        with open(temp_filepath, 'wb+') as destination:
-            for chunk in uploaded_file.chunks():
-                destination.write(chunk)
+        # تشخیص نوع فایل برای routing به handler مناسب
+        if filename_lower.endswith('.json'):
+            file_type = 'json'
+        elif filename_lower.endswith('.zip'):
+            file_type = 'zip'
+        else:
+            return Response(
+                {"error": "فرمت فایل پشتیبانی نمی‌شود. فقط فایل‌های .json یا .zip مجاز هستند."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # ذخیره فایل به صورت موقت در media/temp_imports/
+            import uuid
+            temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_imports')
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            temp_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
+            temp_filepath = os.path.join(temp_dir, temp_filename)
+            
+            # نوشتن فایل روی دیسک
+            with open(temp_filepath, 'wb+') as destination:
+                for chunk in uploaded_file.chunks():
+                    destination.write(chunk)
+        except Exception as e:
+            return Response({"error": f"خطا در ذخیره‌سازی فایل موقت: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
                 
         # ایجاد تسک وضعیت درون‌ریزی
         task = ImportTask.objects.create(
@@ -83,12 +96,18 @@ class TopicViewSet(viewsets.ModelViewSet):
             progress=0
         )
         
-        # اجرای ناهمگام تسک در پس‌زمینه (Non-blocking Thread)
+        # اجرای ناهمگام تسک در پس‌زمینه بر اساس نوع فایل
         import threading
-        from .services import process_telegram_json_import
+        
+        if file_type == 'zip':
+            from .services import process_telegram_zip_import
+            target_func = process_telegram_zip_import
+        else:
+            from .services import process_telegram_json_import
+            target_func = process_telegram_json_import
         
         thread = threading.Thread(
-            target=process_telegram_json_import,
+            target=target_func,
             args=(str(task.id), temp_filepath)
         )
         thread.daemon = True

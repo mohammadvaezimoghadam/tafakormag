@@ -12,6 +12,7 @@ import ProfileCard from '@/components/ProfileCard.vue'
 import ProfileOptionCard from '@/components/ProfileOptionCard.vue'
 import CreateTopicModal from '@/components/CreateTopicModal.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
@@ -261,6 +262,11 @@ const searchQuery = ref('')
 const isCreateModalOpen = ref(false)
 const isEditProfileOpen = ref(false)
 
+// Confirm Modals State
+const isDeletePostOpen = ref(false)
+const postToDeleteId = ref<string | number | null>(null)
+const isDeleteTopicOpen = ref(false)
+
 const dataURLtoFile = (dataurl: string, filename: string) => {
   const arr = dataurl.split(',')
   const mimeMatch = arr[0] ? arr[0].match(/:(.*?);/) : null
@@ -392,15 +398,21 @@ const handlePostReact = async (postId: string | number, emoji: string) => {
   }
 }
 
-const handlePostDelete = async (postId: string | number) => {
-  if (window.confirm(languageStore.t('پست حذف شود؟ (با حذف این پست، پیام‌های مرتبط در پیام‌رسان‌ها نیز حذف خواهند شد)', 'Delete post? (Deleting this post will also delete related messages in messengers)'))) {
-    try {
-      await postStore.deletePost(postId)
-      await topicStore.loadTopics()
-      triggerToast(languageStore.t('پست با موفقیت حذف شد.', 'Post deleted successfully.'))
-    } catch (err) {
-      //
-    }
+const handlePostDelete = (postId: string | number) => {
+  postToDeleteId.value = postId
+  isDeletePostOpen.value = true
+}
+
+const confirmPostDelete = async () => {
+  if (postToDeleteId.value === null) return
+  try {
+    await postStore.deletePost(postToDeleteId.value)
+    await topicStore.loadTopics()
+    triggerToast(languageStore.t('پست با موفقیت حذف شد.', 'Post deleted successfully.'))
+  } catch (err) {
+    //
+  } finally {
+    postToDeleteId.value = null
   }
 }
 
@@ -419,16 +431,19 @@ const handleEditTopic = () => {
   activeTopicSubView.value = 'edit'
 }
 
-const handleDeleteTopic = async () => {
+const handleDeleteTopic = () => {
+  if (!selectedTopic.value) return
+  isDeleteTopicOpen.value = true
+}
+
+const confirmTopicDelete = async () => {
   if (!selectedTopic.value) return
   const title = selectedTopic.value.title
-  if (window.confirm(languageStore.t('آیا مطمئن هستید که می‌خواهید تاپیک «' + title + '» را به همراه تمام پیام‌های آن حذف کنید؟', 'Are you sure you want to delete topic "' + title + '" along with all its messages?'))) {
-    try {
-      await topicStore.deleteTopic(selectedTopic.value.id)
-      triggerToast(languageStore.t('تاپیک «' + title + '» با موفقیت حذف شد.', 'Topic "' + title + '" deleted successfully.'))
-    } catch (err) {
-      //
-    }
+  try {
+    await topicStore.deleteTopic(selectedTopic.value.id)
+    triggerToast(languageStore.t('تاپیک «' + title + '» با موفقیت حذف شد.', 'Topic "' + title + '" deleted successfully.'))
+  } catch (err) {
+    //
   }
 }
 
@@ -993,6 +1008,22 @@ const toggleTheme = useToggle(isDark)
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Delete Post Confirmation Modal -->
+    <ConfirmModal
+      v-model:is-open="isDeletePostOpen"
+      :title="languageStore.t('پست حذف شود؟', 'Delete Post?')"
+      :description="languageStore.t('با حذف این پست، پیام‌های مرتبط در پیام‌رسان‌ها نیز حذف خواهند شد.', 'Deleting this post will also delete related messages in messengers.')"
+      @confirm="confirmPostDelete"
+    />
+
+    <!-- Delete Topic Confirmation Modal -->
+    <ConfirmModal
+      v-model:is-open="isDeleteTopicOpen"
+      :title="languageStore.t('حذف تاپیک و تمامی پیام‌ها؟', 'Delete Topic and all its messages?')"
+      :description="languageStore.t('آیا مطمئن هستید که می‌خواهید این تاپیک را به همراه تمام پیام‌های آن حذف کنید؟ این عمل غیرقابل بازگشت است.', 'Are you sure you want to delete this topic along with all its messages? This action cannot be undone.')"
+      @confirm="confirmTopicDelete"
+    />
 
   </div>
 </template>
