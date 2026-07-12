@@ -139,10 +139,15 @@ export const fetchProfile = () =>
 export const updateProfile = (data: FormData) => 
   instance.patch('/api/auth/profile/', data, getMultipartConfig(data))
 
-export const importHistory = (topicId: number | string, data: FormData) =>
+export const importHistory = (
+  topicId: number | string, 
+  data: FormData, 
+  onUploadProgress?: (progressEvent: any) => void
+) =>
   instance.post(`/api/notes/topics/${topicId}/import-json/`, data, {
     ...getMultipartConfig(data),
-    timeout: 0
+    timeout: 0,
+    onUploadProgress
   })
 
 export const getImportStatus = (taskId: string) =>

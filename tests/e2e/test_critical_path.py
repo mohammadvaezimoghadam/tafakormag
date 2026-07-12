@@ -162,11 +162,14 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
     delete_option = page.locator('button:has-text("حذف پست")').first
     expect(delete_option).to_be_visible(timeout=5000)
     
-    # Register alert dialog accept handler
-    page.once("dialog", lambda dialog: dialog.accept())
-    
     delete_option.click()
-    print("[E2E] Clicked delete post option and accepted confirm dialog")
+    print("[E2E] Clicked delete post option to open confirm modal")
+    
+    # Click the confirm button in the custom confirm modal
+    confirm_button = page.locator('button:has-text("تایید و حذف")')
+    expect(confirm_button).to_be_visible(timeout=5000)
+    confirm_button.click()
+    print("[E2E] Clicked 'تایید و حذف' in custom confirm modal")
     
     # Wait for the post to disappear
     expect(page.locator(f'p:has-text("{post_text}")')).not_to_be_visible(timeout=5000)

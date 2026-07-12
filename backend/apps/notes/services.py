@@ -305,6 +305,10 @@ def process_telegram_json_import(task_id: str, temp_filepath: str):
             task.current_stage = f"در حال درون‌ریزی پیام‌ها ({min(i + batch_size, total_posts)} از {total_posts})..."
             task.save()
 
+        task.progress = 95
+        task.current_stage = "در حال نهایی‌سازی و بازنشانی تاریخچه..."
+        task.save()
+
         # آپدیت فیلد توضیحات تاپیک (Topic Description) بر اساس آخرین پیام
         try:
             # درون‌ریزی داینامیک برای جلوگیری از مشکلات چرخه وارداتی (circular imports)
@@ -346,6 +350,7 @@ def process_telegram_zip_import(task_id: str, zip_filepath: str) -> None:
     فایل موقت در نهایت در بلاک finally حذف می‌شود.
     """
     import zipfile
+    import time
     from django.db import transaction
     from django.core.files.base import ContentFile
     from datetime import datetime
@@ -424,9 +429,10 @@ def process_telegram_zip_import(task_id: str, zip_filepath: str) -> None:
                 .values_list('telegram_message_id', flat=True)
             )
 
-            batch_size = 500
+            batch_size = 100
             posts_batch = []
             processed_count = 0
+            last_db_update = time.time()
 
             for msg in valid_messages:
                 tg_id = msg.get('id')
@@ -511,19 +517,28 @@ def process_telegram_zip_import(task_id: str, zip_filepath: str) -> None:
                 posts_batch.append(post)
                 processed_count += 1
 
-                # فلاش دسته‌ای برای کاهش مصرف حافظه
-                if len(posts_batch) >= batch_size:
-                    with transaction.atomic():
-                        Post.objects.bulk_create(posts_batch)
-                    posts_batch = []
+                # فلاش دسته‌ای برای کاهش مصرف حافظه یا به‌روزرسانی پیشرفت زمانی
+                current_time = time.time()
+                should_update_db = (current_time - last_db_update >= 1.5)
+
+                if len(posts_batch) >= batch_size or should_update_db:
+                    if posts_batch:
+                        with transaction.atomic():
+                            Post.objects.bulk_create(posts_batch)
+                        posts_batch = []
                     task.progress = int((processed_count / total_count) * 90) + 5
                     task.current_stage = f"در حال درون‌ریزی پیام‌ها ({processed_count} از {total_count})..."
                     task.save()
+                    last_db_update = current_time
 
-            # فلاش باقی‌مانده
+            # فلاش باقی‌مانده و به‌روزرسانی نهایی پیشرفت درون‌ریزی
             if posts_batch:
                 with transaction.atomic():
                     Post.objects.bulk_create(posts_batch)
+
+            task.progress = 95
+            task.current_stage = "در حال نهایی‌سازی و بازنشانی تاریخچه..."
+            task.save()
 
         # آپدیت خلاصه تاپیک
         try:

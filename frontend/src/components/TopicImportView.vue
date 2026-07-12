@@ -86,7 +86,8 @@ const startStatusPolling = (taskId: string) => {
       const res = await getImportStatus(taskId)
       const taskData = res.data
       
-      globalProgress.value = taskData.progress
+      // Scale backend progress (0-100) to range (25-100)
+      globalProgress.value = 25 + Math.round((taskData.progress || 0) * 0.75)
       
       // Map backend status to loading dialog stage status codes
       const statusMap: Record<string, typeof currentStatus.value> = {
@@ -127,8 +128,14 @@ const startImportPipeline = async () => {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
     
-    // Call Django API multipart upload
-    const res = await importHistory(props.topicId, formData)
+    // Call Django API multipart upload with progress tracking
+    const res = await importHistory(props.topicId, formData, (progressEvent) => {
+      if (progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        // Map upload progress (0-100) to global progress (0-25)
+        globalProgress.value = Math.round(percentCompleted * 0.25)
+      }
+    })
     const taskId = res.data.id
     
     // Start tracking background process status
