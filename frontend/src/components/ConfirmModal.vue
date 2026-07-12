@@ -9,8 +9,9 @@ import {
   DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { AlertTriangleIcon, Trash2Icon, InfoIcon } from '@lucide/vue'
+import { AlertTriangleIcon, Trash2Icon, InfoIcon, XIcon } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
+import { cn } from '@/lib/utils'
 
 const languageStore = useLanguageStore()
 
@@ -61,15 +62,21 @@ const iconComponent = computed(() => {
 
 // Header Icon colors based on variant
 const iconBgClass = computed(() => {
-  if (props.variant === 'warning') return 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
-  if (props.variant === 'info') return 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
-  return 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+  if (props.variant === 'warning') return 'bg-amber-500/10 text-amber-500'
+  if (props.variant === 'info') return 'bg-blue-500/10 text-blue-500'
+  return 'bg-destructive/10 text-destructive'
+})
+
+// Header gradient background based on variant
+const headerBgClass = computed(() => {
+  if (props.variant === 'warning') return 'bg-gradient-to-br from-amber-500/10 to-amber-500/5'
+  if (props.variant === 'info') return 'bg-gradient-to-br from-blue-500/10 to-blue-500/5'
+  return 'bg-gradient-to-br from-destructive/10 to-destructive/5'
 })
 
 const confirmButtonVariant = computed(() => {
-  if (props.variant === 'warning') return 'default'
-  if (props.variant === 'info') return 'default'
-  return 'destructive'
+  if (props.variant === 'destructive') return 'destructive'
+  return 'default'
 })
 
 const defaultConfirmText = computed(() => {
@@ -85,40 +92,45 @@ const defaultCancelText = computed(() => {
 
 <template>
   <Dialog v-model:open="localIsOpen">
-    <DialogContent class="sm:max-w-[425px] overflow-hidden rounded-2xl border border-border/50 bg-background/95 backdrop-blur-lg p-6 shadow-2xl">
-      
-      <!-- Premium Top Accent Glow -->
-      <div 
-        class="absolute top-0 left-0 right-0 h-1"
-        :class="{
-          'bg-red-500': variant === 'destructive',
-          'bg-amber-500': variant === 'warning',
-          'bg-blue-500': variant === 'info'
-        }"
-      />
-
-      <div class="flex flex-col items-center text-center space-y-4 pt-2">
-        <!-- Icon Badge -->
-        <div :class="['p-3 rounded-full', iconBgClass, 'transition-transform duration-300 hover:scale-110']">
-          <component :is="iconComponent" class="size-6" />
-        </div>
-
-        <DialogHeader class="space-y-2">
-          <DialogTitle class="text-base font-extrabold text-foreground tracking-tight">
+    <DialogContent 
+      :show-close-button="false" 
+      class="max-w-[380px] p-0 overflow-hidden flex flex-col text-start font-sans" 
+      :dir="languageStore.dir"
+    >
+      <!-- Header -->
+      <DialogHeader :class="cn('px-5 py-4 border-b border-border/40 flex flex-row items-center justify-between', headerBgClass)">
+        <div class="flex items-center gap-2">
+          <div :class="cn('size-8 rounded-full flex items-center justify-center shadow-xs', iconBgClass)">
+            <component :is="iconComponent" class="size-4" />
+          </div>
+          <DialogTitle class="text-xs font-black text-foreground">
             {{ title }}
           </DialogTitle>
-          <DialogDescription class="text-xs text-muted-foreground/90 leading-relaxed font-medium">
-            {{ description }}
-          </DialogDescription>
-        </DialogHeader>
+        </div>
+        
+        <button 
+          @click="handleCancel"
+          class="size-6.5 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer border-0 outline-none"
+          :title="defaultCancelText"
+        >
+          <XIcon class="size-3.5" />
+        </button>
+      </DialogHeader>
+
+      <!-- Body -->
+      <div class="p-5">
+        <DialogDescription class="text-xs text-muted-foreground leading-relaxed font-medium block">
+          {{ description }}
+        </DialogDescription>
       </div>
 
-      <!-- Action Buttons -->
-      <DialogFooter class="grid grid-cols-2 gap-3 mt-6 sm:justify-start">
+      <!-- Footer Actions -->
+      <DialogFooter class="px-5 py-3.5 bg-muted/20 border-t border-border/40 flex justify-end gap-2">
         <Button 
           type="button" 
           variant="outline" 
-          class="rounded-xl border border-border/60 hover:bg-muted font-bold text-xs h-10 transition-all duration-200" 
+          size="sm" 
+          class="text-xs font-bold rounded-2xl cursor-pointer" 
           @click="handleCancel"
         >
           {{ defaultCancelText }}
@@ -126,12 +138,15 @@ const defaultCancelText = computed(() => {
         <Button 
           type="button" 
           :variant="confirmButtonVariant" 
-          class="rounded-xl font-bold text-xs h-10 shadow-lg shadow-primary/15 transition-all duration-200 hover:shadow-none" 
+          size="sm" 
+          class="text-xs font-bold rounded-2xl cursor-pointer" 
           @click="handleConfirm"
         >
+          <component :is="iconComponent" data-icon="inline-start" />
           {{ defaultConfirmText }}
         </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
 </template>
+

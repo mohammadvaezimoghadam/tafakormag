@@ -897,10 +897,10 @@ const stopLoadingSimulation = () => {
 
 // ConfirmModal simulation state
 const simulatorConfirmIsOpen = ref(false)
-const simulatorConfirmTitle = ref('آیا مطمئن هستید؟')
-const simulatorConfirmDescription = ref('این یک توضیحات تستی برای بررسی چیدمان و خوانایی فونت در دیالوگ تایید است.')
-const simulatorConfirmConfirmText = ref('تایید و حذف')
-const simulatorConfirmCancelText = ref('انصراف')
+const simulatorConfirmTitle = ref('')
+const simulatorConfirmDescription = ref('')
+const simulatorConfirmConfirmText = ref('')
+const simulatorConfirmCancelText = ref('')
 const simulatorConfirmVariant = ref<'destructive' | 'warning' | 'info'>('destructive')
 
 const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
@@ -910,16 +910,22 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
     simulatorConfirmDescription.value = languageStore.isFa 
       ? 'با حذف این تاپیک تمام داده‌های مربوط به آن به صورت دائمی از بین خواهد رفت.' 
       : 'Deleting this topic will permanently delete all associated data.'
+    simulatorConfirmConfirmText.value = languageStore.isFa ? 'تایید و حذف' : 'Confirm & Delete'
+    simulatorConfirmCancelText.value = languageStore.isFa ? 'انصراف' : 'Cancel'
   } else if (variant === 'warning') {
     simulatorConfirmTitle.value = languageStore.isFa ? 'خروج از حساب کاربری؟' : 'Logout?'
     simulatorConfirmDescription.value = languageStore.isFa 
       ? 'آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟ نشست فعال شما بسته خواهد شد.' 
       : 'Are you sure you want to log out? Your active session will be terminated.'
+    simulatorConfirmConfirmText.value = languageStore.isFa ? 'تایید خروج' : 'Confirm Logout'
+    simulatorConfirmCancelText.value = languageStore.isFa ? 'انصراف' : 'Cancel'
   } else {
     simulatorConfirmTitle.value = languageStore.isFa ? 'درون‌ریزی مجدد فایل؟' : 'Re-import File?'
     simulatorConfirmDescription.value = languageStore.isFa 
       ? 'فایل خروجی قبلاً درون‌ریزی شده است. آیا تمایل به درون‌ریزی مجدد و بازنویسی دارید؟' 
       : 'The export file has already been imported. Do you want to re-import and overwrite?'
+    simulatorConfirmConfirmText.value = languageStore.isFa ? 'درون‌ریزی مجدد' : 'Re-import'
+    simulatorConfirmCancelText.value = languageStore.isFa ? 'انصراف' : 'Cancel'
   }
   simulatorConfirmIsOpen.value = true
   logEvent('ConfirmModal: Opened Simulation', { variant })
@@ -1819,7 +1825,7 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
               </div>
 
               <!-- ConfirmModal Specific Controls -->
-              <div v-slot v-if="currentComponent === 'confirm-modal'" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+              <div v-if="currentComponent === 'confirm-modal'" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                 <div class="flex flex-col gap-1.5 text-start">
                   <Label class="text-[9px] text-muted-foreground">شبیه‌سازی سناریو (نوع دیالوگ):</Label>
                   <div class="flex gap-2 flex-wrap">
@@ -2408,20 +2414,20 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                   <div class="flex flex-col gap-2">
                     <Button @click="openConfirmSimulation('destructive')" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs" variant="destructive">
                       <Trash2Icon class="size-4" />
-                      شبیه‌سازی دیالوگ تایید حذف (Destructive)
+                      {{ languageStore.t('شبیه‌سازی دیالوگ تایید حذف (Destructive)', 'Simulate Delete Dialog (Destructive)') }}
                     </Button>
                     <Button @click="openConfirmSimulation('warning')" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs bg-amber-600 hover:bg-amber-700 text-white" variant="default">
                       <AlertTriangleIcon class="size-4" />
-                      شبیه‌سازی دیالوگ تایید خروج (Warning)
+                      {{ languageStore.t('شبیه‌سازی دیالوگ تایید خروج (Warning)', 'Simulate Logout Dialog (Warning)') }}
                     </Button>
                     <Button @click="openConfirmSimulation('info')" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white" variant="default">
                       <InfoIcon class="size-4" />
-                      شبیه‌سازی دیالوگ تایید درون‌ریزی (Info)
+                      {{ languageStore.t('شبیه‌سازی دیالوگ تایید درون‌ریزی (Info)', 'Simulate Re-import Dialog (Info)') }}
                     </Button>
                   </div>
                   
                   <p class="text-[10px] text-muted-foreground text-center mt-4 max-w-xs leading-relaxed">
-                    با کلیک بر روی دکمه‌های بالا، سناریوهای تایید مختلف باز می‌شوند. رویدادهای «تایید» و «انصراف» در کنسول زیر لاگ خواهند شد.
+                    {{ languageStore.t('با کلیک بر روی دکمه‌های بالا، سناریوهای تایید مختلف باز می‌شوند. رویدادهای «تایید» و «انصراف» در کنسول زیر لاگ خواهند شد.', 'Clicking the buttons above opens different confirmation scenarios. "Confirm" and "Cancel" events will be logged in the console below.') }}
                   </p>
                   
                   <!-- ConfirmModal Component -->
