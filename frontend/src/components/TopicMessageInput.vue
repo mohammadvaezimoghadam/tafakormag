@@ -216,13 +216,32 @@ const handleSend = () => {
     attachments: completedAttachments
   })
 
-  // Clear inputs
   text.value = ''
   attachments.value = []
 
   nextTick(() => {
     adjustHeight()
   })
+}
+
+// Detect if the device is a mobile device to prevent sending message on Enter keypress
+const isMobile = () => {
+  if (typeof window === 'undefined') return false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         ('ontouchstart' in window) || 
+         (navigator.maxTouchPoints > 0)
+}
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    if (isMobile()) {
+      // On mobile, Enter should go to next line (default behavior)
+      return
+    }
+    // On desktop, Enter sends the message
+    event.preventDefault()
+    handleSend()
+  }
 }
 
 // Start Voice Recording
@@ -461,7 +480,7 @@ const languageStore = useLanguageStore()
             rows="1"
             :class="textareaClasses"
             dir="auto"
-            @keydown.enter.exact.prevent="handleSend"
+            @keydown="handleKeydown"
           />
         </transition>
       </div>
