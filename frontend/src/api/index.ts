@@ -86,10 +86,16 @@ export const fetchPosts = (topicId?: number | string) =>
   instance.get('/api/notes/', { params: topicId ? { topic: topicId } : {} })
 
 export const createPost = (data: FormData) => 
-  instance.post('/api/notes/', data, getMultipartConfig(data))
+  instance.post('/api/notes/', data, {
+    ...getMultipartConfig(data),
+    timeout: 0
+  })
 
 export const updatePost = (id: number | string, data: any) => 
-  instance.patch(`/api/notes/${id}/`, data, getMultipartConfig(data))
+  instance.patch(`/api/notes/${id}/`, data, {
+    ...getMultipartConfig(data),
+    timeout: 0
+  })
 
 export const deletePost = (id: number | string) => 
   instance.delete(`/api/notes/${id}/`)
@@ -134,7 +140,10 @@ export const updateProfile = (data: FormData) =>
   instance.patch('/api/auth/profile/', data, getMultipartConfig(data))
 
 export const importHistory = (topicId: number | string, data: FormData) =>
-  instance.post(`/api/notes/topics/${topicId}/import-json/`, data, getMultipartConfig(data))
+  instance.post(`/api/notes/topics/${topicId}/import-json/`, data, {
+    ...getMultipartConfig(data),
+    timeout: 0
+  })
 
 export const getImportStatus = (taskId: string) =>
   instance.get(`/api/notes/import-tasks/${taskId}/status/`)
