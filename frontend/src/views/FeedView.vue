@@ -18,6 +18,7 @@ import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
+import TopicAdminsView from '@/components/TopicAdminsView.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -44,8 +45,8 @@ const currentTab = ref<'home' | 'profile'>('home')
 // Subview connection state
 const showConnections = ref(false)
 
-// Active topic subview ('feed' | 'edit' | 'connections' | 'import')
-const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import'>('feed')
+// Active topic subview ('feed' | 'edit' | 'connections' | 'import' | 'admins')
+const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import' | 'admins'>('feed')
 
 // Initialize Pinia stores
 const botStore = useBotStore()
@@ -261,6 +262,7 @@ const searchQuery = ref('')
 // Create Topic Modal State
 const isCreateModalOpen = ref(false)
 const isEditProfileOpen = ref(false)
+const isAdminsModalOpen = ref(false)
 
 // Confirm Modals State
 const isDeletePostOpen = ref(false)
@@ -525,12 +527,14 @@ const handleCancelEdit = () => {
   editingPost.value = null
 }
 
-const isTopicCreator = computed(() => {
+const isTopicCreator = computed<boolean>(() => {
   if (!selectedTopic.value || !userProfile.value) return false
   if (!selectedTopic.value.created_by) return true
-  return String(selectedTopic.value.created_by) === String(userProfile.value.id) ||
-         (selectedTopic.value.created_by_phone && userProfile.value.phone && 
-          String(selectedTopic.value.created_by_phone) === String(userProfile.value.phone))
+  return Boolean(
+    String(selectedTopic.value.created_by) === String(userProfile.value.id) ||
+    (selectedTopic.value.created_by_phone && userProfile.value.phone && 
+     String(selectedTopic.value.created_by_phone) === String(userProfile.value.phone))
+  )
 })
 
 const triggerFileSelect = () => {
@@ -622,7 +626,8 @@ const toggleTheme = useToggle(isDark)
         :inner-title="headerInnerTitle" 
         :title="headerTitle" 
         :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
-        :show-options-button="!!(currentTab === 'home' && selectedTopic !== null && isTopicCreator)"
+        :show-options-button="!!(currentTab === 'home' && selectedTopic !== null)"
+        :is-owner="isTopicCreator"
         :show-search-button="currentTab === 'home' && selectedTopic === null"
         v-model:search-query="searchQuery"
         @back="handleHeaderBack"
@@ -630,6 +635,7 @@ const toggleTheme = useToggle(isDark)
         @delete-topic="handleDeleteTopic"
         @topic-connections="handleTopicConnections"
         @topic-import="handleTopicImport"
+        @topic-admins="activeTopicSubView = 'admins'"
       />
     </div>
 
@@ -789,6 +795,15 @@ const toggleTheme = useToggle(isDark)
                   }
                 }"
                 @import-failed="activeTopicSubView = 'feed'"
+              />
+            </div>
+
+            <!-- Topic Admins Subview Page -->
+            <div v-else-if="activeTopicSubView === 'admins'" key="admins" class="w-full">
+              <TopicAdminsView 
+                :topic-id="selectedTopic?.id"
+                :is-owner="isTopicCreator"
+                @back="activeTopicSubView = 'feed'"
               />
             </div>
           </transition>

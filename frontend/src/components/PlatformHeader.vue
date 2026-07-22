@@ -23,6 +23,7 @@ const props = withDefaults(defineProps<{
   showOptionsButton?: boolean
   showSearchButton?: boolean
   searchQuery?: string
+  isOwner?: boolean
 }>(), {
   isInnerPage: false,
   title: 'تفکر',
@@ -31,7 +32,8 @@ const props = withDefaults(defineProps<{
   error: false,
   showOptionsButton: true,
   showSearchButton: false,
-  searchQuery: ''
+  searchQuery: '',
+  isOwner: false
 })
 
 const emit = defineEmits<{
@@ -41,8 +43,10 @@ const emit = defineEmits<{
   (e: 'delete-topic'): void
   (e: 'topic-connections'): void
   (e: 'topic-import'): void
+  (e: 'topic-admins'): void
   (e: 'update:searchQuery', val: string): void
 }>()
+
 
 // Timer logic to fade out 'اتصال برقرار است' after 4 seconds
 const showStatus = ref(true)
@@ -268,13 +272,16 @@ watch(() => props.showSearchButton, (newVal) => {
     <TopicSettingsMenu
       :isOpen="isMenuOpen"
       :triggerRect="triggerRect"
+      :isOwner="isOwner"
       @close="isMenuOpen = false"
       @edit="emit('edit-topic')"
       @connections="emit('topic-connections')"
       @import="emit('topic-import')"
+      @admins="emit('topic-admins')"
       @delete="emit('delete-topic')"
     />
   </Teleport>
+
 </template>
 
 <style scoped>

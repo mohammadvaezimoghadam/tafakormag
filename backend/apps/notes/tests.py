@@ -585,3 +585,89 @@ class FileCleanupSignalTests(APITestCase):
         self.assertFalse(os.path.exists(post_filepath))
         self.assertFalse(os.path.exists(topic_image_path))
 
+
+from apps.notes.models import TopicAdmin
+
+
+class TopicAdminTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(phone="09120000001", password="password")
+        self.admin_user = User.objects.create_user(phone="09120000002", password="password")
+        self.regular_user = User.objects.create_user(phone="09120000003", password="password")
+        self.topic = Topic.objects.create(name="تاپیک مدیریت ادمین", created_by=self.owner)
+
+    def test_topic_admin_model_and_str(self):
+        admin_rec = TopicAdmin.objects.create(
+            topic=self.topic,
+            user=self.admin_user,
+            promoted_by=self.owner,
+            custom_title="مدیر بخش"
+        )
+        self.assertEqual(str(admin_rec), f"{self.admin_user.phone} - Admin of {self.topic.name}")
+
+    def test_get_admins_endpoint_public(self):
+        TopicAdmin.objects.create(topic=self.topic, user=self.admin_user, promoted_by=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/admins/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['owner']['phone'], self.owner.phone)
+        self.assertEqual(len(response.data['admins']), 1)
+        self.assertEqual(response.data['admins'][0]['user']['phone'], self.admin_user.phone)
+
+    def test_add_admin_by_owner_success(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/add_admin/"
+        response = self.client.post(url, {"user_id": self.admin_user.id, "custom_title": "Moderator"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(TopicAdmin.objects.filter(topic=self.topic, user=self.admin_user).exists())
+
+    def test_add_admin_by_non_owner_forbidden(self):
+        self.client.force_authenticate(user=self.regular_user)
+        url = f"/api/notes/topics/{self.topic.id}/add_admin/"
+        response = self.client.post(url, {"user_id": self.admin_user.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_add_owner_as_admin_bad_request(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/add_admin/"
+        response = self.client.post(url, {"user_id": self.owner.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_remove_admin_by_owner_success(self):
+        TopicAdmin.objects.create(topic=self.topic, user=self.admin_user, promoted_by=self.owner)
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/remove_admin/{self.admin_user.id}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(TopicAdmin.objects.filter(topic=self.topic, user=self.admin_user).exists())
+
+    def test_appointed_admin_can_create_post(self):
+        TopicAdmin.objects.create(topic=self.topic, user=self.admin_user, promoted_by=self.owner)
+        self.client.force_authenticate(user=self.admin_user)
+        url = "/api/notes/"
+        response = self.client.post(url, {"topic": self.topic.id, "content": "پست توسط ادمین تاپیک"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_regular_user_cannot_create_post_in_topic(self):
+        self.client.force_authenticate(user=self.regular_user)
+        url = "/api/notes/"
+        response = self.client.post(url, {"topic": self.topic.id, "content": "پست غیرمجاز"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_transfer_ownership_by_owner_success(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/transfer_ownership/"
+        response = self.client.post(url, {"new_owner_id": self.admin_user.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.topic.refresh_from_db()
+        self.assertEqual(self.topic.created_by, self.admin_user)
+        # مالک قبلی باید تبدیل به ادمین شده باشد
+        self.assertTrue(TopicAdmin.objects.filter(topic=self.topic, user=self.owner).exists())
+
+    def test_transfer_ownership_by_non_owner_forbidden(self):
+        self.client.force_authenticate(user=self.regular_user)
+        url = f"/api/notes/topics/{self.topic.id}/transfer_ownership/"
+        response = self.client.post(url, {"new_owner_id": self.admin_user.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+

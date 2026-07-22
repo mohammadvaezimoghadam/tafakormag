@@ -142,3 +142,33 @@ class ImportTask(models.Model):
 
     def __str__(self):
         return f"ImportTask {self.id} ({self.status})"
+
+
+class TopicAdmin(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name='admins'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='administered_topics'
+    )
+    promoted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='promoted_admins'
+    )
+    custom_title = models.CharField(max_length=50, default='Admin', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('topic', 'user')
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.user.phone} - Admin of {self.topic.name}"

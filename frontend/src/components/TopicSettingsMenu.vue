@@ -4,22 +4,29 @@ import {
   PencilIcon, 
   LinkIcon, 
   Trash2Icon,
-  UploadCloudIcon
+  UploadCloudIcon,
+  ShieldCheckIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const languageStore = useLanguageStore()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   isOpen: boolean
   triggerRect: DOMRect | null
-}>()
+  isOwner?: boolean
+}>(), {
+  isOpen: false,
+  triggerRect: null,
+  isOwner: false,
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'edit'): void
   (e: 'connections'): void
   (e: 'import'): void
+  (e: 'admins'): void
   (e: 'delete'): void
 }>()
 
@@ -54,13 +61,15 @@ const menuStyle = computed(() => {
   }
 })
 
-const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
+const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'admins') => {
   if (action === 'edit') {
     emit('edit')
   } else if (action === 'connections') {
     emit('connections')
   } else if (action === 'import') {
     emit('import')
+  } else if (action === 'admins') {
+    emit('admins')
   } else if (action === 'delete') {
     emit('delete')
   }
@@ -83,8 +92,18 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
         @click.stop
         :dir="languageStore.dir"
       >
+        <!-- Topic Admins -->
+        <button 
+          @click="handleAction('admins')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+        >
+          <span>{{ isOwner ? languageStore.t('مدیریت ادمین‌ها', 'Manage Admins') : languageStore.t('اطلاعات و ادمین‌ها', 'Admins & Info') }}</span>
+          <ShieldCheckIcon class="size-3.5 text-primary" />
+        </button>
+
         <!-- Edit Topic -->
         <button 
+          v-if="isOwner"
           @click="handleAction('edit')" 
           class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
@@ -94,6 +113,7 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
 
         <!-- Topic Connections -->
         <button 
+          v-if="isOwner"
           @click="handleAction('connections')" 
           class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
@@ -103,6 +123,7 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
 
         <!-- Upload Telegram History -->
         <button 
+          v-if="isOwner"
           @click="handleAction('import')" 
           class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
@@ -111,10 +132,11 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
         </button>
 
         <!-- Divider -->
-        <div class="h-[1px] bg-border/40 my-1" />
+        <div v-if="isOwner" class="h-[1px] bg-border/40 my-1" />
 
         <!-- Delete Topic -->
         <button 
+          v-if="isOwner"
           @click="handleAction('delete')" 
           class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
@@ -125,6 +147,7 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import') => {
     </div>
   </Transition>
 </template>
+
 
 <style scoped>
 /* Animations */

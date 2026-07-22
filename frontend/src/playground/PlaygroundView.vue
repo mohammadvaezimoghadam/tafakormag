@@ -18,6 +18,10 @@ import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import LoadingDialog from '@/components/LoadingDialog.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import TopicAdminsView from '@/components/TopicAdminsView.vue'
+import EditProfileModal from '@/components/EditProfileModal.vue'
+import ChangelogModal from '@/components/ChangelogModal.vue'
+import AIRefinerDrawer from '@/components/AIRefinerDrawer.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -61,14 +65,28 @@ import {
   CheckIcon,
   Trash2Icon,
   AlertTriangleIcon,
-  UploadCloudIcon
+  UploadCloudIcon,
+  ShieldCheckIcon,
+  Wand2Icon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal'>('profile')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer'>('profile')
 const viewportWidth = ref<'100%' | '768px' | '375px'>('100%')
 const sandboxBg = ref<'default' | 'gradient' | 'grid' | 'image'>('default')
 const activeState = ref<'idle' | 'loading' | 'error' | 'empty' | 'success'>('idle')
+
+// Topic Admins simulation state
+const simulatorAdminsIsOpen = ref(false)
+const simulatorAdminsTopicId = ref<string | number | null>(1)
+const simulatorAdminsIsOwner = ref(true)
+const simulatorAdminsForcedState = ref<'default' | 'loading' | 'empty' | 'error'>('default')
+
+// Additional Modals & Drawers simulation state
+const simulatorEditProfileIsOpen = ref(false)
+const simulatorChangelogIsOpen = ref(false)
+const simulatorAIRefinerIsOpen = ref(false)
+const simulatorAIRefinerText = ref('این یک متن نمونه جهت تست دستیار بهبود متن هوش مصنوعی است.')
 
 // Create Topic Modal simulation state
 const simulatorIsModalOpen = ref(false)
@@ -206,6 +224,10 @@ const currentComponentFile = computed(() => {
     case 'loading-dialog': return 'LoadingDialog.vue'
     case 'topic-import': return 'TopicImportView.vue'
     case 'confirm-modal': return 'ConfirmModal.vue'
+    case 'topic-admins': return 'TopicAdminsView.vue'
+    case 'edit-profile-modal': return 'EditProfileModal.vue'
+    case 'changelog-modal': return 'ChangelogModal.vue'
+    case 'ai-refiner-drawer': return 'AIRefinerDrawer.vue'
     default: return ''
   }
 })
@@ -226,7 +248,7 @@ const copyComponentFile = async () => {
   }
 }
 
-const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal') => {
+const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer') => {
   currentComponent.value = comp
   activeState.value = 'idle'
   logEvent('Component Changed', { component: comp })
@@ -1028,6 +1050,66 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                   منوی نویگیشن شناور
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'nav'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('topic-admins')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'topic-admins' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <ShieldCheckIcon class="size-3.5" />
+                  مودال مدیریت ادمین‌ها (TopicAdminsModal)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'topic-admins'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('edit-profile-modal')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'edit-profile-modal' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <UserIcon class="size-3.5" />
+                  مودال ویرایش حساب (EditProfileModal)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'edit-profile-modal'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('changelog-modal')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'changelog-modal' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <SparklesIcon class="size-3.5 text-primary" />
+                  مودال بروزرسانی‌ها (ChangelogModal)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'changelog-modal'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('ai-refiner-drawer')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'ai-refiner-drawer' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <SparklesIcon class="size-3.5 text-amber-500" />
+                  کشوی دستیار هوش مصنوعی (AIRefinerDrawer)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'ai-refiner-drawer'" class="size-3.5 text-primary" />
               </button>
               <button 
                 @click="handleComponentChange('topic')"
@@ -2440,6 +2522,156 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                     :variant="simulatorConfirmVariant"
                     @confirm="logEvent('ConfirmModal: Confirmed', { variant: simulatorConfirmVariant })"
                     @cancel="logEvent('ConfirmModal: Cancelled', { variant: simulatorConfirmVariant })"
+                  />
+                </div>
+
+                <!-- TopicAdminsView Subview Preview -->
+                <div 
+                  v-else-if="currentComponent === 'topic-admins'"
+                  class="w-full flex flex-col gap-4"
+                  :dir="languageStore.dir"
+                >
+                  <!-- Controls Bar -->
+                  <div class="flex flex-wrap items-center justify-between gap-3 bg-muted/30 p-3 rounded-2xl border border-border/60">
+                    <div class="flex items-center gap-2">
+                      <ShieldCheckIcon class="size-4 text-primary" />
+                      <span class="text-xs font-extrabold text-foreground">
+                        {{ languageStore.t('تست و بررسی تمام وضعیت‌های کارت مدیریت ادمین‌ها', 'Test all states of Topic Admins View') }}
+                      </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                      <!-- State Toggles -->
+                      <Button 
+                        @click="simulatorAdminsForcedState = 'default'"
+                        :variant="simulatorAdminsForcedState === 'default' ? 'default' : 'outline'"
+                        size="sm"
+                        class="text-[11px] font-semibold h-7.5 cursor-pointer"
+                      >
+                        {{ languageStore.t('حالت معمولی (دیتا)', 'Normal') }}
+                      </Button>
+
+                      <Button 
+                        @click="simulatorAdminsForcedState = 'loading'"
+                        :variant="simulatorAdminsForcedState === 'loading' ? 'default' : 'outline'"
+                        size="sm"
+                        class="text-[11px] font-semibold h-7.5 cursor-pointer"
+                      >
+                        {{ languageStore.t('بارگذاری (Loading)', 'Loading') }}
+                      </Button>
+
+                      <Button 
+                        @click="simulatorAdminsForcedState = 'empty'"
+                        :variant="simulatorAdminsForcedState === 'empty' ? 'default' : 'outline'"
+                        size="sm"
+                        class="text-[11px] font-semibold h-7.5 cursor-pointer"
+                      >
+                        {{ languageStore.t('لیست خالی (Empty)', 'Empty') }}
+                      </Button>
+
+                      <Button 
+                        @click="simulatorAdminsForcedState = 'error'"
+                        :variant="simulatorAdminsForcedState === 'error' ? 'destructive' : 'outline'"
+                        size="sm"
+                        class="text-[11px] font-semibold h-7.5 cursor-pointer"
+                      >
+                        {{ languageStore.t('نمایش ارور (Error)', 'Error') }}
+                      </Button>
+
+                      <!-- Toggle: Owner vs Public Viewer -->
+                      <Button 
+                        @click="simulatorAdminsIsOwner = !simulatorAdminsIsOwner"
+                        variant="outline"
+                        size="sm"
+                        class="text-[11px] font-semibold h-7.5 cursor-pointer border-primary/30"
+                      >
+                        {{ simulatorAdminsIsOwner 
+                          ? languageStore.t('نقش: مالک (Owner)', 'Role: Owner') 
+                          : languageStore.t('نقش: بیننده (Viewer)', 'Role: Viewer') 
+                        }}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <!-- Render Subview Page Component -->
+                  <TopicAdminsView
+                    :topic-id="simulatorAdminsTopicId"
+                    :is-owner="simulatorAdminsIsOwner"
+                    :forced-state="simulatorAdminsForcedState"
+                    @back="logEvent('TopicAdminsView: Back button clicked', {})"
+                  />
+                </div>
+
+                <!-- EditProfileModal Preview -->
+                <div 
+                  v-else-if="currentComponent === 'edit-profile-modal'"
+                  class="w-full flex flex-col items-center justify-center py-10 gap-4 text-center"
+                  :dir="languageStore.dir"
+                >
+                  <Button 
+                    @click="simulatorEditProfileIsOpen = true" 
+                    class="cursor-pointer flex items-center gap-2 h-10 px-6 font-bold text-xs shadow-md"
+                  >
+                    <UserIcon class="size-4" />
+                    {{ languageStore.t('باز کردن مودال ویرایش حساب', 'Open Edit Profile Modal') }}
+                  </Button>
+
+                  <p class="text-[10px] text-muted-foreground text-center max-w-xs leading-relaxed">
+                    {{ languageStore.t('تست و بررسی ویرایش تصویر، نام و نام خانوادگی حساب کاربری.', 'Test editing user image, first name, and last name.') }}
+                  </p>
+
+                  <EditProfileModal
+                    :is-open="simulatorEditProfileIsOpen"
+                    :user-profile="{ name: 'شایان مهدوی', first_name: 'شایان', last_name: 'مهدوی', phone: '09123456789' }"
+                    @close="simulatorEditProfileIsOpen = false"
+                    @update="(data) => { logEvent('EditProfileModal: Updated', data); simulatorEditProfileIsOpen = false; }"
+                  />
+                </div>
+
+                <!-- ChangelogModal Preview -->
+                <div 
+                  v-else-if="currentComponent === 'changelog-modal'"
+                  class="w-full flex flex-col items-center justify-center py-10 gap-4 text-center"
+                  :dir="languageStore.dir"
+                >
+                  <Button 
+                    @click="simulatorChangelogIsOpen = true" 
+                    class="cursor-pointer flex items-center gap-2 h-10 px-6 font-bold text-xs shadow-md"
+                  >
+                    <SparklesIcon class="size-4 text-primary" />
+                    {{ languageStore.t('باز کردن دیالوگ بروزرسانی‌ها (Changelog)', 'Open Changelog Modal') }}
+                  </Button>
+
+                  <p class="text-[10px] text-muted-foreground text-center max-w-xs leading-relaxed">
+                    {{ languageStore.t('تست و بررسی لیست آکاردئونی تغییرات و نسخه جدید پلتفرم.', 'Test accordion updates list and new platform release notes.') }}
+                  </p>
+
+                  <ChangelogModal />
+                </div>
+
+                <!-- AIRefinerDrawer Preview -->
+                <div 
+                  v-else-if="currentComponent === 'ai-refiner-drawer'"
+                  class="w-full flex flex-col items-center justify-center py-10 gap-4 text-center"
+                  :dir="languageStore.dir"
+                >
+                  <Button 
+                    @click="simulatorAIRefinerIsOpen = true" 
+                    class="cursor-pointer flex items-center gap-2 h-10 px-6 font-bold text-xs shadow-md bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <Wand2Icon class="size-4" />
+                    {{ languageStore.t('باز کردن کشوی دستیار هوش مصنوعی', 'Open AI Refiner Drawer') }}
+                  </Button>
+
+                  <p class="text-[10px] text-muted-foreground text-center max-w-xs leading-relaxed">
+                    {{ languageStore.t('تست و بررسی بهبود متن، ترجمه و تغییر لحن پیام در کشوی هوش مصنوعی.', 'Test text refinement, translation, and tone shifts in AI drawer.') }}
+                  </p>
+
+                  <AIRefinerDrawer
+                    :open="simulatorAIRefinerIsOpen"
+                    :text="simulatorAIRefinerText"
+                    @update:open="(val) => simulatorAIRefinerIsOpen = val"
+                    @apply="(text) => { logEvent('AIRefinerDrawer: Refined Text Applied', { text }); simulatorAIRefinerText = text; }"
                   />
                 </div>
 

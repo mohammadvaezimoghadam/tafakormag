@@ -153,4 +153,40 @@ export const importHistory = (
 export const getImportStatus = (taskId: string) =>
   instance.get(`/api/notes/import-tasks/${taskId}/status/`)
 
+// --- Topic Admins API ---
+export interface UserSimple {
+  id: string | number
+  phone: string
+  first_name?: string
+  last_name?: string
+  profile_image?: string | null
+}
+
+export interface TopicAdmin {
+  id: string
+  user: UserSimple
+  custom_title: string
+  promoted_by?: UserSimple | null
+  created_at: string
+}
+
+export const getTopicAdmins = (topicId: string | number) =>
+  instance.get<{ owner: UserSimple | null; admins: TopicAdmin[] }>(`/api/notes/topics/${topicId}/admins/`)
+
+export const addTopicAdmin = (
+  topicId: string | number,
+  payload: { user_id: string | number; custom_title?: string }
+) =>
+  instance.post<TopicAdmin>(`/api/notes/topics/${topicId}/add_admin/`, payload)
+
+export const removeTopicAdmin = (topicId: string | number, userId: string | number) =>
+  instance.delete<{ message: string }>(`/api/notes/topics/${topicId}/remove_admin/${userId}/`)
+
+export const transferTopicOwnership = (
+  topicId: string | number,
+  payload: { new_owner_id: string | number }
+) =>
+  instance.post<{ message: string; owner: UserSimple }>(`/api/notes/topics/${topicId}/transfer_ownership/`, payload)
+
 export default instance
+

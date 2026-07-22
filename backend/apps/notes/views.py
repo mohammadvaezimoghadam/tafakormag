@@ -1,13 +1,19 @@
 import os
 from django.db.models import Q, Count
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from .models import Topic, Post, PostReaction, PostComment, ImportTask
-from .serializers import TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer
+from apps.accounts.models import User
+from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin
+from .serializers import (
+    TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer,
+    TopicAdminSerializer, UserSimpleSerializer
+)
+from .permissions import IsTopicOwnerOrAdmin
 from .services import create_bot_tasks
 
 
@@ -23,6 +29,7 @@ def update_topic_description(topic):
 
 class TopicViewSet(viewsets.ModelViewSet):
     serializer_class = TopicSerializer
+    permission_classes = [IsTopicOwnerOrAdmin]
 
     def get_queryset(self):
         # شمارش پست‌ها برای هر تاپیک و مرتب‌سازی بر اساس آخرین تاپیک‌های ایجاد شده
@@ -38,14 +45,180 @@ class TopicViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = self.get_object()
-        if instance.created_by and instance.created_by != self.request.user and not self.request.user.is_superuser:
+        is_owner = (instance.created_by == self.request.user) if instance.created_by else False
+        is_admin = instance.admins.filter(user=self.request.user).exists()
+        if not (is_owner or is_admin or self.request.user.is_superuser):
             raise PermissionDenied("شما اجازه ویرایش این تاپیک را ندارید.")
         serializer.save()
 
     def perform_destroy(self, instance):
-        if instance.created_by and instance.created_by != self.request.user and not self.request.user.is_superuser:
-            raise PermissionDenied("شما اجازه حذف این تاپیک را ندارید.")
+        is_owner = (instance.created_by == self.request.user) if instance.created_by else False
+        if not (is_owner or self.request.user.is_superuser):
+            raise PermissionDenied("فقط سازنده تاپیک مجاز به حذف آن است.")
         instance.delete()
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def admins(self, request, pk=None):
+        """
+        GET /api/topics/{id}/admins/
+        Public endpoint: Returns the Topic Owner details along with a list of active Admins.
+        """
+        topic = self.get_object()
+        admins = topic.admins.select_related('user', 'promoted_by').all()
+        admin_serializer = TopicAdminSerializer(admins, many=True)
+
+        owner_data = UserSimpleSerializer(topic.created_by).data if topic.created_by else None
+
+        return Response({
+            "owner": owner_data,
+            "admins": admin_serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='add_admin', permission_classes=[permissions.IsAuthenticated])
+    def add_admin(self, request, pk=None):
+        """
+        POST /api/topics/{id}/add_admin/
+        Restricted to Topic Owner only: Grants admin access to a specified user.
+        Payload: { "user_id": "<uuid_or_id>", "custom_title": "Moderator" }
+        """
+        topic = self.get_object()
+
+        if topic.created_by != request.user and not request.user.is_superuser:
+            return Response(
+                {"error": "Only the topic owner can appoint new administrators."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        target_user_id = str(request.data.get('user_id', '')).strip()
+        custom_title = request.data.get('custom_title', 'Admin')
+
+        if not target_user_id:
+            return Response(
+                {"error": "وارد کردن شناسه کاربر یا شماره موبایل الزامی است."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # جستجو بر اساس ID یا شماره موبایل
+        user_query = User.objects.filter(Q(id=target_user_id) | Q(phone=target_user_id)) if target_user_id.isdigit() else User.objects.filter(phone=target_user_id)
+        target_user = user_query.first()
+
+        if not target_user:
+            return Response(
+                {"error": "کاربری با این شناسه یا شماره موبایل یافت نشد."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if topic.created_by and topic.created_by == target_user:
+            return Response(
+                {"error": "سازنده تاپیک مالک اصلی است و نمی‌تواند به عنوان ادمین مجدد ثبت شود."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        topic_admin, created = TopicAdmin.objects.get_or_create(
+            topic=topic,
+            user=target_user,
+            defaults={
+                'promoted_by': request.user,
+                'custom_title': customTitle if (customTitle := str(custom_title).strip()) else 'Admin'
+            }
+        )
+
+        if not created:
+            return Response(
+                {"error": "این کاربر از قبل ادمین این تاپیک می‌باشد."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = TopicAdminSerializer(topic_admin)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['delete'], url_path=r'remove_admin/(?P<user_id>[^/]+)', permission_classes=[permissions.IsAuthenticated])
+    def remove_admin(self, request, pk=None, user_id=None):
+        """
+        DELETE /api/topics/{id}/remove_admin/{user_id}/
+        Restricted to Topic Owner only: Revokes administrator rights from a user.
+        """
+        topic = self.get_object()
+
+        if topic.created_by != request.user and not request.user.is_superuser:
+            return Response(
+                {"error": "فقط سازنده تاپیک مجاز به حذف ادمین‌ها است."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        admin_record = TopicAdmin.objects.filter(
+            Q(topic=topic) & (Q(user_id=user_id) | Q(user__phone=user_id))
+        ).first()
+
+        if admin_record:
+            admin_record.delete()
+            return Response({"message": "دسترسی ادمین با موفقیت حذف شد."}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "کاربر مورد نظر در لیست ادمین‌های این تاپیک یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'], url_path='transfer_ownership', permission_classes=[permissions.IsAuthenticated])
+    def transfer_ownership(self, request, pk=None):
+        """
+        POST /api/topics/{id}/transfer_ownership/
+        Restricted to Topic Owner only: Transfers topic ownership to another user.
+        Payload: { "new_owner_id": "<user_id_or_phone>" }
+        """
+        topic = self.get_object()
+
+        if topic.created_by != request.user and not request.user.is_superuser:
+            return Response(
+                {"error": "فقط سازنده فعلی تاپیک مجاز به انتقال مالکیت است."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        new_owner_id = str(request.data.get('new_owner_id', '')).strip()
+
+        if not new_owner_id:
+            return Response(
+                {"error": "وارد کردن شناسه مالک جدید یا شماره موبایل الزامی است."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user_query = User.objects.filter(Q(id=new_owner_id) | Q(phone=new_owner_id)) if new_owner_id.isdigit() else User.objects.filter(phone=new_owner_id)
+        new_owner = user_query.first()
+
+        if not new_owner:
+            return Response(
+                {"error": "کاربری با این شناسه یا شماره موبایل یافت نشد."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if topic.created_by == new_owner:
+            return Response(
+                {"error": "شما در حال حاضر مالک این تاپیک هستید."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        previous_owner = topic.created_by
+
+        # حذف از لیست ادمین‌ها در صورت وجود
+        TopicAdmin.objects.filter(topic=topic, user=new_owner).delete()
+
+        # انتقال مالکیت
+        topic.created_by = new_owner
+        topic.save()
+
+        # تبدیل مالک قبلی به ادمین تاپیک جهت حفظ دسترسی دست‌اندرکاران
+        if previous_owner:
+            TopicAdmin.objects.get_or_create(
+                topic=topic,
+                user=previous_owner,
+                defaults={
+                    'promoted_by': new_owner,
+                    'custom_title': 'مالک قبلی'
+                }
+            )
+
+        owner_data = UserSimpleSerializer(new_owner).data
+        return Response({
+            "message": "مالکیت تاپیک با موفقیت منتقل شد.",
+            "owner": owner_data
+        }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='import-json', permission_classes=[permissions.IsAuthenticated])
     def import_json(self, request, pk=None):
@@ -135,8 +308,11 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         topic = serializer.validated_data.get('topic')
-        if topic and (topic.created_by != self.request.user) and not self.request.user.is_superuser:
-            raise PermissionDenied("فقط سازنده تاپیک مجاز به ارسال پیام در آن است.")
+        if topic:
+            is_owner = (topic.created_by == self.request.user) if topic.created_by else False
+            is_admin = topic.admins.filter(user=self.request.user).exists()
+            if not (is_owner or is_admin or self.request.user.is_superuser):
+                raise PermissionDenied("فقط سازنده تاپیک و ادمین‌های آن مجاز به ارسال پیام در آن هستند.")
 
         post = serializer.save(author=self.request.user)
         
@@ -148,7 +324,11 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         old_post = self.get_object()
-        if old_post.author != self.request.user and not self.request.user.is_superuser:
+        topic = old_post.topic
+        is_owner = (topic.created_by == self.request.user) if topic and topic.created_by else False
+        is_admin = topic.admins.filter(user=self.request.user).exists() if topic else False
+        is_author = (old_post.author == self.request.user)
+        if not (is_author or is_owner or is_admin or self.request.user.is_superuser):
             raise PermissionDenied("شما اجازه ویرایش این پست را ندارید.")
         
         post = serializer.save()
@@ -158,15 +338,19 @@ class PostViewSet(viewsets.ModelViewSet):
         update_topic_description(post.topic)
 
     def perform_destroy(self, instance):
-        if instance.author != self.request.user and not self.request.user.is_superuser:
+        topic = instance.topic
+        is_owner = (topic.created_by == self.request.user) if topic and topic.created_by else False
+        is_admin = topic.admins.filter(user=self.request.user).exists() if topic else False
+        is_author = (instance.author == self.request.user)
+        if not (is_author or is_owner or is_admin or self.request.user.is_superuser):
             raise PermissionDenied("شما اجازه حذف این پست را ندارید.")
         
-        topic = instance.topic
         create_bot_tasks(instance, is_delete=True)
         instance.delete()
         
         # به‌روزرسانی خلاصه تاپیک پس از حذف
         update_topic_description(topic)
+
 
     @action(methods=['get'], detail=False, url_path='search')
     def search(self, request):

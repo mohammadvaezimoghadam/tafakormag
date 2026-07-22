@@ -1,6 +1,25 @@
 from rest_framework import serializers
-from .models import Topic, Post, PostReaction, PostComment, ImportTask
+from django.contrib.auth import get_user_model
+from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin
 from apps.accounts.models import MessagingTarget
+
+User = get_user_model()
+
+
+class UserSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'phone', 'first_name', 'last_name', 'profile_image']
+
+
+class TopicAdminSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer(read_only=True)
+    promoted_by = UserSimpleSerializer(read_only=True)
+
+    class Meta:
+        model = TopicAdmin
+        fields = ['id', 'user', 'custom_title', 'promoted_by', 'created_at']
+
 
 
 
