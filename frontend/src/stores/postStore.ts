@@ -36,6 +36,9 @@ export interface Post {
   comments?: Comment[]
   liked?: boolean
   reactions?: PostReaction[]
+  telegramMessageIds?: Record<string, any>
+  baleMessageIds?: Record<string, any>
+  publishedPlatforms?: string[]
 }
 
 export const usePostStore = defineStore('post', () => {
@@ -107,7 +110,10 @@ export const usePostStore = defineStore('post', () => {
       likesCount,
       liked,
       reactions,
-      comments: []
+      comments: [],
+      telegramMessageIds: p.telegram_message_ids || {},
+      baleMessageIds: p.bale_message_ids || {},
+      publishedPlatforms: p.published_platforms || []
     }
   }
 
@@ -168,6 +174,36 @@ export const usePostStore = defineStore('post', () => {
       posts.value = posts.value.filter(p => p.id !== id)
     } catch (err) {
       console.error('Error deleting post:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const selectiveDeletePost = async (
+    id: string | number,
+    options: { delete_from_telegram: boolean; delete_from_bale: boolean; delete_from_db: boolean }
+  ) => {
+    loading.value = true
+    try {
+      await api.selectiveDeletePost(id, options)
+      if (options.delete_from_db) {
+        posts.value = posts.value.filter(p => p.id !== id)
+      } else {
+        const post = posts.value.find(p => p.id === id)
+        if (post) {
+          if (options.delete_from_telegram) {
+            post.telegramMessageIds = {}
+            post.publishedPlatforms = post.publishedPlatforms?.filter(plat => plat !== 'telegram')
+          }
+          if (options.delete_from_bale) {
+            post.baleMessageIds = {}
+            post.publishedPlatforms = post.publishedPlatforms?.filter(plat => plat !== 'bale')
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error selective deleting post:', err)
       throw err
     } finally {
       loading.value = false
@@ -259,6 +295,7 @@ export const usePostStore = defineStore('post', () => {
     createPost,
     updatePost,
     deletePost,
+    selectiveDeletePost,
     reactToPost,
     likePost,
     fetchComments,

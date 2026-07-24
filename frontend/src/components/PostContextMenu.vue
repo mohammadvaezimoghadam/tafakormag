@@ -6,7 +6,8 @@ const languageStore = useLanguageStore()
 import { 
   PencilIcon, 
   CopyIcon, 
-  Trash2Icon 
+  Trash2Icon,
+  SendIcon
 } from '@lucide/vue'
 
 const props = withDefaults(defineProps<{
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'edit', id: string | number): void
   (e: 'delete', id: string | number): void
+  (e: 'publication-status', id: string | number): void
   (e: 'pin', id: string | number): void
   (e: 'react', id: string | number, emoji: string): void
   (e: 'copy', id: string | number): void
@@ -32,8 +34,9 @@ const emit = defineEmits<{
 // Calculate dynamic styles for the floating menu based on touch position or trigger card
 const menuWidth = 224 // w-56 is 224px
 const menuHeight = computed(() => {
-  const optionsHeight = props.isOwner ? 128 : 40
-  return optionsHeight
+  const baseHeight = 76 // Copy + Publication Status
+  const ownerExtra = props.isOwner ? 80 : 0 // Edit + Delete + Divider
+  return baseHeight + ownerExtra
 })
 
 const menuStyle = computed(() => {
@@ -126,7 +129,7 @@ const copyToClipboard = async (text: string) => {
   }
 }
 
-const handleAction = async (action: 'edit' | 'delete' | 'copy') => {
+const handleAction = async (action: 'edit' | 'delete' | 'copy' | 'publication-status') => {
   if (action === 'copy') {
     if (props.postText) {
       await copyToClipboard(props.postText)
@@ -136,6 +139,8 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy') => {
     emit('edit', props.postId)
   } else if (action === 'delete') {
     emit('delete', props.postId)
+  } else if (action === 'publication-status') {
+    emit('publication-status', props.postId)
   }
   emit('close')
 }
@@ -167,6 +172,15 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy') => {
           >
             <span>{{ languageStore.t('کپی متن پست', 'Copy Post Text') }}</span>
             <CopyIcon class="size-3.5 text-muted-foreground" />
+          </button>
+
+          <!-- Publication Status -->
+          <button 
+            @click="handleAction('publication-status')" 
+            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          >
+            <span>{{ languageStore.t('وضعیت انتشار', 'Publication Status') }}</span>
+            <SendIcon class="size-3.5 text-primary" />
           </button>
 
           <template v-if="isOwner">

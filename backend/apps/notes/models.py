@@ -1,7 +1,9 @@
+import hashlib
+import re
+import uuid
 from django.db import models
 from django.utils import timezone
 from apps.accounts.models import User, MessagingTarget
-import uuid
 
 
 class Topic(models.Model):
@@ -30,6 +32,31 @@ class Topic(models.Model):
         return self.name
 
 
+def normalize_persian_text(text: str) -> str:
+    """
+    Normalizes Persian/Arabic characters and whitespace for accurate hash matching.
+    """
+    if not text:
+        return ""
+
+    replacements = {
+        'ك': 'ک',
+        'ي': 'ی',
+        'ئ': 'ی',
+        'إ': 'ا',
+        'أ': 'ا',
+        'آ': 'ا',
+        '\u200c': ' ',  # Zero-Width Non-Joiner
+    }
+
+    text = text.strip().lower()
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = re.sub(r'\s+', ' ', text)
+    return text
+
+
 class Post(models.Model):
     MEDIA_CHOICES = [
         ("text", "text"),
@@ -45,7 +72,7 @@ class Post(models.Model):
     media_type = models.CharField(max_length=20, choices=MEDIA_CHOICES, default="text")
     media_file = models.FileField(upload_to='post_media/', null=True, blank=True)
 
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # شناسه‌های پیام ارسال شده در پیام‌رسان‌ها (chat_id: message_id)
@@ -55,8 +82,36 @@ class Post(models.Model):
     is_imported = models.BooleanField(default=False)
     telegram_message_id = models.IntegerField(null=True, blank=True)
 
+    # Deduplication & Audit tracking fields
+    content_hash = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    published_platforms = models.JSONField(default=list, blank=True)
+
     class Meta:
         ordering = ['created_at', 'telegram_message_id']
+        indexes = [
+            models.Index(fields=['topic', 'created_at']),
+            models.Index(fields=['topic', 'content_hash']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.content or self.media_file:
+            self.content_hash = self.compute_content_hash()
+        super().save(*args, **kwargs)
+
+    def compute_content_hash(self) -> str:
+        hasher = hashlib.sha256()
+        
+        normalized_text = normalize_persian_text(self.content or "")
+        hasher.update(normalized_text.encode('utf-8'))
+        
+        if self.media_file:
+            try:
+                if hasattr(self.media_file, 'size'):
+                    hasher.update(str(self.media_file.size).encode('utf-8'))
+            except (ValueError, FileNotFoundError):
+                pass
+                
+        return hasher.hexdigest()
 
     def __str__(self):
         return f"Post by {self.author.phone} in {self.topic.name} at {self.created_at}"

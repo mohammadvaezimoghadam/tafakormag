@@ -79,9 +79,13 @@ class PostSerializer(serializers.ModelSerializer):
             'id', 'topic', 'author', 'author_phone', 'author_name', 'author_avatar', 'content',
             'media_type', 'media_file', 'created_at', 'updated_at',
             'reactions_summary', 'user_reaction', 'comments_count',
-            'telegram_message_ids', 'bale_message_ids'
+            'telegram_message_ids', 'bale_message_ids',
+            'content_hash', 'published_platforms'
         ]
-        read_only_fields = ['id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids']
+        read_only_fields = [
+            'id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids',
+            'content_hash', 'published_platforms'
+        ]
 
     def get_author_phone(self, obj):
         return obj.author.phone

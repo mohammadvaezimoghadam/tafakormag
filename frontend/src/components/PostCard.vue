@@ -61,6 +61,9 @@ interface Props {
   liked?: boolean
   reactions?: PostReaction[]
   isPinned?: boolean
+  publishedPlatforms?: string[]
+  telegramMessageIds?: Record<string, any>
+  baleMessageIds?: Record<string, any>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -68,7 +71,10 @@ const props = withDefaults(defineProps<Props>(), {
   comments: () => [],
   liked: false,
   reactions: () => [],
-  isPinned: false
+  isPinned: false,
+  publishedPlatforms: () => [],
+  telegramMessageIds: () => ({}),
+  baleMessageIds: () => ({})
 })
 
 const emit = defineEmits<{
@@ -77,6 +83,7 @@ const emit = defineEmits<{
   (e: 'add-comment', postId: string | number, comment: Comment): void
   (e: 'edit', id: string | number): void
   (e: 'delete', id: string | number): void
+  (e: 'publication-status', id: string | number): void
   (e: 'pin', id: string | number): void
   (e: 'react', id: string | number, emoji: string, currentReactions: PostReaction[]): void
   (e: 'copy', id: string | number): void
@@ -129,11 +136,18 @@ watch(() => props.reactions, (newVal) => { localReactions.value = [...newVal] },
 
 // PostContextMenu State and Logic
 import PostContextMenu from './PostContextMenu.vue'
+import PublicationStatusModal from './PublicationStatusModal.vue'
 import { usePostStore } from '@/stores/postStore'
 import { useUserStore } from '@/stores/userStore'
 
 const postStore = usePostStore()
 const userStore = useUserStore()
+const isPublicationStatusOpen = ref(false)
+
+const handlePublicationStatus = () => {
+  isPublicationStatusOpen.value = true
+  emit('publication-status', props.id)
+}
 
 const isPostOwner = computed(() => {
   if (!userStore.isAuthenticated || !userStore.userProfile) return false
@@ -788,11 +802,22 @@ const formatTime = (timeInSeconds: number) => {
       @close="isContextMenuOpen = false"
       @edit="handleEditStart"
       @delete="emit('delete', id)"
+      @publication-status="handlePublicationStatus"
       @pin="emit('pin', id)"
       @react="(postId, emoji) => handleReactionClick(emoji)"
       @copy="emit('copy', id)"
     />
   </Teleport>
+
+  <!-- Publication Status Modal -->
+  <PublicationStatusModal
+    v-model:is-open="isPublicationStatusOpen"
+    :published-platforms="publishedPlatforms"
+    :telegram-message-ids="telegramMessageIds"
+    :bale-message-ids="baleMessageIds"
+    :created-at="timestamp"
+    @close="isPublicationStatusOpen = false"
+  />
 
   <!-- Teleported Edit Textarea Context Menu (Removed) -->
 </template>

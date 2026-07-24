@@ -14,7 +14,7 @@ from .serializers import (
     TopicAdminSerializer, UserSimpleSerializer
 )
 from .permissions import IsTopicOwnerOrAdmin
-from .services import create_bot_tasks
+from .services import create_bot_tasks, execute_external_platform_deletion, check_duplicate_message
 
 
 def update_topic_description(topic):
@@ -296,13 +296,13 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Post.objects.select_related('author', 'topic').all().order_by('-created_at')
-        topic_id = self.request.query_params.get('topic')
+        topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
         return queryset
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'react']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'react', 'selective_delete', 'check_duplicate']:
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
@@ -423,6 +423,57 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         serializer = PostCommentSerializer(comment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='selective-delete')
+    def selective_delete(self, request, pk=None):
+        post = self.get_object()
+        
+        delete_telegram = request.data.get('delete_from_telegram', False)
+        delete_bale = request.data.get('delete_from_bale', False)
+        delete_db = request.data.get('delete_from_db', False)
+
+        # Validation Guard
+        if delete_telegram and not post.telegram_message_ids:
+            return Response({"error": "Post is not published on Telegram."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if delete_bale and not post.bale_message_ids:
+            return Response({"error": "Post is not published on Bale."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Offload background deletion thread
+        import threading
+        threading.Thread(
+            target=execute_external_platform_deletion,
+            args=(post.id, delete_telegram, delete_bale, delete_db),
+            daemon=True
+        ).start()
+
+        return Response(
+            {"message": "Deletion request accepted."}, 
+            status=status.HTTP_202_ACCEPTED
+        )
+
+    @action(detail=False, methods=['post'], url_path='check-duplicate')
+    def check_duplicate(self, request):
+        topic_id = request.data.get('topic_id') or request.data.get('topic')
+        content = request.data.get('content', '')
+        
+        if not topic_id:
+            return Response({"error": "Field 'topic_id' or 'topic' is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        temp_post = Post(content=content)
+        content_hash = temp_post.compute_content_hash()
+
+        is_dup, existing_post = check_duplicate_message(topic_id, content_hash)
+
+        if is_dup and existing_post:
+            return Response({
+                "is_duplicate": True,
+                "existing_post_id": existing_post.id,
+                "created_at": existing_post.created_at,
+                "published_platforms": existing_post.published_platforms
+            }, status=status.HTTP_200_OK)
+
+        return Response({"is_duplicate": False}, status=status.HTTP_200_OK)
 
 
 class ImportTaskViewSet(viewsets.ReadOnlyModelViewSet):

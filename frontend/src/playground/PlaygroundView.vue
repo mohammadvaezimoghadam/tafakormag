@@ -18,6 +18,7 @@ import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import LoadingDialog from '@/components/LoadingDialog.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import DuplicateWarningDialog from '@/components/DuplicateWarningDialog.vue'
 import TopicAdminsView from '@/components/TopicAdminsView.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ChangelogModal from '@/components/ChangelogModal.vue'
@@ -71,7 +72,7 @@ import {
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer'>('profile')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer'>('profile')
 const viewportWidth = ref<'100%' | '768px' | '375px'>('100%')
 const sandboxBg = ref<'default' | 'gradient' | 'grid' | 'image'>('default')
 const activeState = ref<'idle' | 'loading' | 'error' | 'empty' | 'success'>('idle')
@@ -224,6 +225,7 @@ const currentComponentFile = computed(() => {
     case 'loading-dialog': return 'LoadingDialog.vue'
     case 'topic-import': return 'TopicImportView.vue'
     case 'confirm-modal': return 'ConfirmModal.vue'
+    case 'duplicate-warning-dialog': return 'DuplicateWarningDialog.vue'
     case 'topic-admins': return 'TopicAdminsView.vue'
     case 'edit-profile-modal': return 'EditProfileModal.vue'
     case 'changelog-modal': return 'ChangelogModal.vue'
@@ -248,7 +250,7 @@ const copyComponentFile = async () => {
   }
 }
 
-const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer') => {
+const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer') => {
   currentComponent.value = comp
   activeState.value = 'idle'
   logEvent('Component Changed', { component: comp })
@@ -924,8 +926,10 @@ const simulatorConfirmDescription = ref('')
 const simulatorConfirmConfirmText = ref('')
 const simulatorConfirmCancelText = ref('')
 const simulatorConfirmVariant = ref<'destructive' | 'warning' | 'info'>('destructive')
+const simulatorConfirmPost = ref<any | null>(null)
 
 const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
+  simulatorConfirmPost.value = null
   simulatorConfirmVariant.value = variant
   if (variant === 'destructive') {
     simulatorConfirmTitle.value = languageStore.isFa ? 'حذف تاپیک تستی؟' : 'Delete Test Topic?'
@@ -951,6 +955,39 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
   }
   simulatorConfirmIsOpen.value = true
   logEvent('ConfirmModal: Opened Simulation', { variant })
+}
+
+const openSelectiveDeleteSimulation = () => {
+  simulatorConfirmVariant.value = 'destructive'
+  simulatorConfirmTitle.value = languageStore.isFa ? 'حذف انتخابی پست از پلتفرم‌ها' : 'Selective Post Deletion'
+  simulatorConfirmDescription.value = languageStore.isFa
+    ? 'پست انتخابی در تلگرام منتشر شده است. مشخص کنید پیام از کدام سیستم‌ها پاک شود:'
+    : 'Selected post is published on Telegram. Specify which platforms it should be deleted from:'
+  simulatorConfirmConfirmText.value = languageStore.isFa ? 'ثبت درخواست حذف' : 'Confirm Selective Deletion'
+  simulatorConfirmCancelText.value = languageStore.isFa ? 'انصراف' : 'Cancel'
+  simulatorConfirmPost.value = {
+    id: 101,
+    published_platforms: ['telegram'],
+    telegram_message_ids: { chat_123: '456' },
+    bale_message_ids: {}
+  }
+  simulatorConfirmIsOpen.value = true
+  logEvent('ConfirmModal: Opened Selective Delete Simulation', { post: simulatorConfirmPost.value })
+}
+
+// Duplicate Warning Dialog simulation state
+const simulatorDuplicateIsOpen = ref(false)
+const simulatorDuplicatePostId = ref<string | number | null>(105)
+const simulatorDuplicateCreatedAt = ref('۱۴:۳۲ - ۲۷ خرداد ۱۴۰۵')
+const simulatorDuplicatePlatforms = ref<string[]>(['telegram', 'bale'])
+
+const openDuplicateWarningSimulation = () => {
+  simulatorDuplicateIsOpen.value = true
+  logEvent('DuplicateWarningDialog: Opened Simulation', {
+    postId: simulatorDuplicatePostId.value,
+    createdAt: simulatorDuplicateCreatedAt.value,
+    platforms: simulatorDuplicatePlatforms.value
+  })
 }
 </script>
 
@@ -1305,6 +1342,21 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                   دیالوگ تایید حذف/اقدام (جدید)
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'confirm-modal'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('duplicate-warning-dialog')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'duplicate-warning-dialog' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <AlertTriangleIcon class="size-3.5 text-amber-500" />
+                  هشدار پیام تکراری (جدید)
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'duplicate-warning-dialog'" class="size-3.5 text-primary" />
               </button>
             </div>
           </div>
@@ -2506,6 +2558,10 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                       <InfoIcon class="size-4" />
                       {{ languageStore.t('شبیه‌سازی دیالوگ تایید درون‌ریزی (Info)', 'Simulate Re-import Dialog (Info)') }}
                     </Button>
+                    <Button @click="openSelectiveDeleteSimulation" class="cursor-pointer flex items-center gap-1.5 justify-center h-10 w-64 font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white" variant="default">
+                      <Trash2Icon class="size-4" />
+                      {{ languageStore.t('شبیه‌سازی حذف انتخابی پست (Selective)', 'Simulate Selective Post Delete') }}
+                    </Button>
                   </div>
                   
                   <p class="text-[10px] text-muted-foreground text-center mt-4 max-w-xs leading-relaxed">
@@ -2515,12 +2571,13 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                   <!-- ConfirmModal Component -->
                   <ConfirmModal
                     v-model:is-open="simulatorConfirmIsOpen"
+                    :post="simulatorConfirmPost"
                     :title="simulatorConfirmTitle"
                     :description="simulatorConfirmDescription"
                     :confirm-text="simulatorConfirmConfirmText"
                     :cancel-text="simulatorConfirmCancelText"
                     :variant="simulatorConfirmVariant"
-                    @confirm="logEvent('ConfirmModal: Confirmed', { variant: simulatorConfirmVariant })"
+                    @confirm="(opts) => logEvent('ConfirmModal: Confirmed', { variant: simulatorConfirmVariant, options: opts })"
                     @cancel="logEvent('ConfirmModal: Cancelled', { variant: simulatorConfirmVariant })"
                   />
                 </div>
@@ -2672,6 +2729,35 @@ const openConfirmSimulation = (variant: 'destructive' | 'warning' | 'info') => {
                     :text="simulatorAIRefinerText"
                     @update:open="(val) => simulatorAIRefinerIsOpen = val"
                     @apply="(text) => { logEvent('AIRefinerDrawer: Refined Text Applied', { text }); simulatorAIRefinerText = text; }"
+                  />
+                </div>
+
+                <!-- DuplicateWarningDialog Preview -->
+                <div 
+                  v-else-if="currentComponent === 'duplicate-warning-dialog'"
+                  class="w-full flex flex-col items-center justify-center py-10 gap-4 text-center"
+                  :dir="languageStore.dir"
+                >
+                  <Button 
+                    @click="openDuplicateWarningSimulation" 
+                    class="cursor-pointer flex items-center gap-2 h-10 px-6 font-bold text-xs shadow-md bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    <AlertTriangleIcon class="size-4" />
+                    {{ languageStore.t('شبیه‌سازی هشدار پیام تکراری (Duplicate Warning)', 'Simulate Duplicate Warning Dialog') }}
+                  </Button>
+
+                  <p class="text-[10px] text-muted-foreground text-center max-w-xs leading-relaxed">
+                    {{ languageStore.t('تست و بررسی دیالوگ هشدار هوشمند ارسال پیام تکراری قبل از ثبت نهایی.', 'Test smart duplicate content warning dialog before final post creation.') }}
+                  </p>
+
+                  <DuplicateWarningDialog
+                    v-model:is-open="simulatorDuplicateIsOpen"
+                    :existing-post-id="simulatorDuplicatePostId"
+                    :created-at="simulatorDuplicateCreatedAt"
+                    :published-platforms="simulatorDuplicatePlatforms"
+                    @go-to-existing="(id) => logEvent('DuplicateWarningDialog: Go To Existing Post Emitted', { postId: id })"
+                    @force-submit="logEvent('DuplicateWarningDialog: Force Submit Emitted', {})"
+                    @cancel="logEvent('DuplicateWarningDialog: Cancelled Emitted', {})"
                   />
                 </div>
 

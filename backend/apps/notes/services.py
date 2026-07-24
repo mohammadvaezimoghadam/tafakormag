@@ -6,13 +6,109 @@ import logging
 import os
 import traceback
 from typing import Optional
+from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware, is_aware, now as tz_now
-
+from django.db import close_old_connections
 from apps.accounts.models import MessagingTarget
 from .models import BotTask, Post, ImportTask
 
 logger = logging.getLogger("notes.services")
+
+
+def safe_close_old_connections():
+    """Closes old DB connections safely without breaking active test suite transactions."""
+    if not getattr(settings, 'TESTING', False) and 'pytest' not in sys.modules and 'test' not in sys.argv:
+        try:
+            close_old_connections()
+        except Exception:
+            pass
+
+
+def check_duplicate_message(topic_id: str | int, content_hash: str) -> tuple[bool, Optional[Post]]:
+    """
+    Checks if a message with an identical content hash has already been published 
+    in the specified topic in O(1) time complexity.
+    """
+    if not content_hash or not topic_id:
+        return False, None
+
+    existing_post = Post.objects.filter(
+        topic_id=topic_id,
+        content_hash=content_hash
+    ).first()
+
+    if existing_post:
+        logger.warning(f"Duplicate content detected for Topic {topic_id}. Existing Post ID: {existing_post.id}")
+        return True, existing_post
+
+    return False, None
+
+
+def execute_external_platform_deletion(
+    post_id: int | str,
+    delete_telegram: bool,
+    delete_bale: bool,
+    delete_database: bool
+) -> None:
+    """
+    Background worker process executing platform deletions safely with DB connection cleanup
+    and dispatching BotTask records for Telegram and Bale.
+    """
+    safe_close_old_connections()
+    try:
+        post = Post.objects.get(id=post_id)
+
+        # 1. Dispatch Bot Tasks for Telegram Deletion across registered chats
+        if delete_telegram and post.telegram_message_ids:
+            bot_token = getattr(post.author, 'telegram_bot_token', '')
+            for chat_id, msg_id in list(post.telegram_message_ids.items()):
+                if msg_id and chat_id:
+                    BotTask.objects.create(
+                        action="delete",
+                        platform="telegram",
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+            post.telegram_message_ids = {}
+            if "telegram" in post.published_platforms:
+                post.published_platforms.remove("telegram")
+
+        # 2. Dispatch Bot Tasks for Bale Deletion across registered chats
+        if delete_bale and post.bale_message_ids:
+            bot_token = getattr(post.author, 'bale_bot_token', '')
+            for chat_id, msg_id in list(post.bale_message_ids.items()):
+                if msg_id and chat_id:
+                    BotTask.objects.create(
+                        action="delete",
+                        platform="bale",
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+            post.bale_message_ids = {}
+            if "bale" in post.published_platforms:
+                post.published_platforms.remove("bale")
+
+        # 3. Handle DB Persistence or Destruction
+        if delete_database:
+            post.delete()
+            logger.info(f"Post {post_id} permanently removed from DB.")
+        else:
+            post.save()
+            logger.info(f"Post {post_id} platform references cleared.")
+
+    except Post.DoesNotExist:
+        logger.error(f"Post {post_id} not found during async deletion execution.")
+    except Exception as e:
+        logger.error(f"Error executing async deletion for Post {post_id}: {str(e)}")
+    finally:
+        safe_close_old_connections()
 
 
 def get_message_ids(post: Post, platform: str) -> dict[str, str]:

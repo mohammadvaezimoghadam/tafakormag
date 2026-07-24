@@ -100,6 +100,12 @@ export const updatePost = (id: number | string, data: any) =>
 export const deletePost = (id: number | string) => 
   instance.delete(`/api/notes/${id}/`)
 
+export const selectiveDeletePost = (id: number | string, payload: { delete_from_telegram: boolean; delete_from_bale: boolean; delete_from_db: boolean }) => 
+  instance.post(`/api/notes/${id}/selective-delete/`, payload)
+
+export const checkDuplicatePost = (topicId: number | string, content: string) => 
+  instance.post('/api/notes/posts/check-duplicate/', { topic: topicId, content })
+
 export const searchPosts = (query: string) => 
   instance.get('/api/notes/search/', { params: { q: query } })
 

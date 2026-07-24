@@ -671,3 +671,118 @@ class TopicAdminTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+from apps.notes.models import normalize_persian_text
+from apps.notes.services import check_duplicate_message, execute_external_platform_deletion
+
+
+class Phase2DeduplicationAndAsyncDeletionTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(phone="09129998877", password="password")
+        self.topic = Topic.objects.create(name="تاپیک فاز ۲", created_by=self.user)
+
+    def test_persian_text_normalization(self):
+        text1 = "سلام  علیكم\u200c دوست   عزیز"
+        text2 = "سلام علیکم دوست عزیز"
+        self.assertEqual(normalize_persian_text(text1), normalize_persian_text(text2))
+
+    def test_content_hash_deduplication(self):
+        post1 = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست تستی با  حروف  عربی علیكم"
+        )
+        self.assertIsNotNone(post1.content_hash)
+
+        # Check duplicate using normalized text
+        post_temp = Post(content="پست تستی با حروف عربی علیکم")
+        is_dup, existing_post = check_duplicate_message(self.topic.id, post_temp.compute_content_hash())
+        self.assertTrue(is_dup)
+        self.assertEqual(existing_post, post1)
+
+    def test_execute_external_platform_deletion(self):
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای حذف ناهمگام",
+            telegram_message_ids={"chat_100": "999"},
+            bale_message_ids={"chat_200": "888"},
+            published_platforms=["telegram", "bale"]
+        )
+
+        execute_external_platform_deletion(
+            post_id=post.id,
+            delete_telegram=True,
+            delete_bale=False,
+            delete_database=False
+        )
+
+        post.refresh_from_db()
+        # Telegram IDs cleared, Bale IDs untouched
+        self.assertEqual(post.telegram_message_ids, {})
+        self.assertEqual(post.bale_message_ids, {"chat_200": "888"})
+        self.assertNotIn("telegram", post.published_platforms)
+        self.assertIn("bale", post.published_platforms)
+
+        # BotTask created for Telegram deletion
+        task = BotTask.objects.filter(post_id=post, platform="telegram", action="delete").first()
+        self.assertIsNotNone(task)
+        self.assertEqual(task.chat_id, "chat_100")
+        self.assertEqual(task.message_id, "999")
+
+
+class Phase3ApiEndpointsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(phone="09127776655", password="password")
+        self.client.force_authenticate(user=self.user)
+        self.topic = Topic.objects.create(name="تاپیک فاز ۳", created_by=self.user)
+        self.post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای تست اندپوینت‌ها",
+            telegram_message_ids={"chat_123": "456"},
+            published_platforms=["telegram"]
+        )
+
+    def test_check_duplicate_endpoint_found(self):
+        url = "/api/notes/check-duplicate/"
+        response = self.client.post(url, {
+            "topic_id": self.topic.id,
+            "content": "پست برای تست اندپوینت‌ها"
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_duplicate"])
+        self.assertEqual(response.data["existing_post_id"], self.post.id)
+
+    def test_check_duplicate_endpoint_not_found(self):
+        url = "/api/notes/check-duplicate/"
+        response = self.client.post(url, {
+            "topic_id": self.topic.id,
+            "content": "متن غیرتکراری جدید"
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["is_duplicate"])
+
+    def test_selective_delete_endpoint_success(self):
+        url = f"/api/notes/{self.post.id}/selective-delete/"
+        response = self.client.post(url, {
+            "delete_from_telegram": True,
+            "delete_from_bale": False,
+            "delete_from_db": False
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data["message"], "Deletion request accepted.")
+
+    def test_selective_delete_validation_error(self):
+        url = f"/api/notes/{self.post.id}/selective-delete/"
+        # Request deletion from Bale when post has no bale_message_ids
+        response = self.client.post(url, {
+            "delete_from_telegram": False,
+            "delete_from_bale": True,
+            "delete_from_db": False
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+
+
+

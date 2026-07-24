@@ -267,6 +267,7 @@ const isAdminsModalOpen = ref(false)
 // Confirm Modals State
 const isDeletePostOpen = ref(false)
 const postToDeleteId = ref<string | number | null>(null)
+const postToDelete = ref<any | null>(null)
 const isDeleteTopicOpen = ref(false)
 
 const dataURLtoFile = (dataurl: string, filename: string) => {
@@ -402,19 +403,25 @@ const handlePostReact = async (postId: string | number, emoji: string) => {
 
 const handlePostDelete = (postId: string | number) => {
   postToDeleteId.value = postId
+  postToDelete.value = posts.value.find(p => p.id === postId) || null
   isDeletePostOpen.value = true
 }
 
-const confirmPostDelete = async () => {
+const confirmPostDelete = async (options?: { delete_from_telegram: boolean; delete_from_bale: boolean; delete_from_db: boolean }) => {
   if (postToDeleteId.value === null) return
   try {
-    await postStore.deletePost(postToDeleteId.value)
+    if (options) {
+      await postStore.selectiveDeletePost(postToDeleteId.value, options)
+    } else {
+      await postStore.deletePost(postToDeleteId.value)
+    }
     await topicStore.loadTopics()
-    triggerToast(languageStore.t('پست با موفقیت حذف شد.', 'Post deleted successfully.'))
+    triggerToast(languageStore.t('درخواست حذف پست ثبت شد.', 'Post deletion request submitted.'))
   } catch (err) {
     //
   } finally {
     postToDeleteId.value = null
+    postToDelete.value = null
   }
 }
 
@@ -1027,8 +1034,9 @@ const toggleTheme = useToggle(isDark)
     <!-- Delete Post Confirmation Modal -->
     <ConfirmModal
       v-model:is-open="isDeletePostOpen"
-      :title="languageStore.t('پست حذف شود؟', 'Delete Post?')"
-      :description="languageStore.t('با حذف این پست، پیام‌های مرتبط در پیام‌رسان‌ها نیز حذف خواهند شد.', 'Deleting this post will also delete related messages in messengers.')"
+      :post="postToDelete"
+      :title="languageStore.t('حذف انتخابی پست', 'Selective Post Deletion')"
+      :description="languageStore.t('انتخاب کنید پیام این پست از کدام پلتفرم‌ها حذف شود:', 'Select which platforms this post should be deleted from:')"
       @confirm="confirmPostDelete"
     />
 
