@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useDark, useToggle } from '@vueuse/core'
@@ -13,6 +13,8 @@ import ProfileOptionCard from '@/components/ProfileOptionCard.vue'
 import CreateTopicModal from '@/components/CreateTopicModal.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import DuplicateWarningDialog from '@/components/DuplicateWarningDialog.vue'
+import { checkDuplicatePost } from '@/api'
 import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
@@ -269,6 +271,13 @@ const isDeletePostOpen = ref(false)
 const postToDeleteId = ref<string | number | null>(null)
 const postToDelete = ref<any | null>(null)
 const isDeleteTopicOpen = ref(false)
+
+// Duplicate Warning State
+const isDuplicateWarningOpen = ref(false)
+const duplicatePostId = ref<string | number | null>(null)
+const duplicateCreatedAt = ref<string | null>(null)
+const duplicatePlatforms = ref<string[]>([])
+const pendingPostMessage = ref<{ text: string } | null>(null)
 
 const dataURLtoFile = (dataurl: string, filename: string) => {
   const arr = dataurl.split(',')
@@ -578,9 +587,26 @@ const removePostAttachment = () => {
   if (hiddenFileInput.value) hiddenFileInput.value.value = ''
 }
 
-const handleSendPost = async (message: { text: string }) => {
+const handleSendPost = async (message: { text: string }, forceSubmit = false) => {
   if (!selectedTopic.value) return
-  
+
+  // 1. Check for duplicates if text is present and forceSubmit is false
+  if (!forceSubmit && message.text && message.text.trim()) {
+    try {
+      const res = await checkDuplicatePost(selectedTopic.value.id, message.text.trim())
+      if (res.data && res.data.is_duplicate) {
+        duplicatePostId.value = res.data.existing_post_id
+        duplicateCreatedAt.value = res.data.created_at
+        duplicatePlatforms.value = res.data.published_platforms || []
+        pendingPostMessage.value = message
+        isDuplicateWarningOpen.value = true
+        return
+      }
+    } catch (err) {
+      // If duplicate check endpoint fails, proceed with posting
+    }
+  }
+
   const formData = new FormData()
   formData.append('topic', String(selectedTopic.value.id))
   formData.append('content', message.text)
@@ -601,9 +627,26 @@ const handleSendPost = async (message: { text: string }) => {
     await topicStore.loadTopics()
     triggerToast(languageStore.t('پست جدید ارسال و در کانال‌های فعال بازنشر شد', 'New post sent and republished in active channels'), 'success')
     removePostAttachment()
+    pendingPostMessage.value = null
+    isDuplicateWarningOpen.value = false
   } catch (err) {
     //
   }
+}
+
+const handleGoToExistingPost = (postId: string | number | null) => {
+  if (!postId) return
+  isDuplicateWarningOpen.value = false
+  nextTick(() => {
+    const el = document.getElementById(`post-${postId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('ring-2', 'ring-amber-500', 'transition-all', 'rounded-2xl')
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-amber-500', 'transition-all', 'rounded-2xl')
+      }, 3000)
+    }
+  })
 }
 
 // Dark/Light theme manager via VueUse for global synchronization
@@ -727,17 +770,22 @@ const toggleTheme = useToggle(isDark)
 
               <!-- Real Content -->
               <template v-else>
-                <PostCard 
+                <div 
                   v-for="post in filteredCurrentTopicPosts" 
                   :key="post.id"
-                  v-bind="post"
-                  @like="handlePostLike"
-                  @share="handlePostShare"
-                  @add-comment="handleAddComment"
-                  @react="handlePostReact"
-                  @delete="handlePostDelete"
-                  @edit="handlePostEdit"
-                />
+                  :id="'post-' + post.id"
+                  class="w-full"
+                >
+                  <PostCard 
+                    v-bind="post"
+                    @like="handlePostLike"
+                    @share="handlePostShare"
+                    @add-comment="handleAddComment"
+                    @react="handlePostReact"
+                    @delete="handlePostDelete"
+                    @edit="handlePostEdit"
+                  />
+                </div>
               </template>
               
               <div v-if="filteredCurrentTopicPosts.length === 0" class="text-center py-12 bg-card/20 rounded-xl border border-border/60 text-xs text-muted-foreground font-medium">
@@ -1035,6 +1083,7 @@ const toggleTheme = useToggle(isDark)
     <ConfirmModal
       v-model:is-open="isDeletePostOpen"
       :post="postToDelete"
+      :is-selective-delete="true"
       :title="languageStore.t('حذف انتخابی پست', 'Selective Post Deletion')"
       :description="languageStore.t('انتخاب کنید پیام این پست از کدام پلتفرم‌ها حذف شود:', 'Select which platforms this post should be deleted from:')"
       @confirm="confirmPostDelete"
@@ -1046,6 +1095,17 @@ const toggleTheme = useToggle(isDark)
       :title="languageStore.t('حذف تاپیک و تمامی پیام‌ها؟', 'Delete Topic and all its messages?')"
       :description="languageStore.t('آیا مطمئن هستید که می‌خواهید این تاپیک را به همراه تمام پیام‌های آن حذف کنید؟ این عمل غیرقابل بازگشت است.', 'Are you sure you want to delete this topic along with all its messages? This action cannot be undone.')"
       @confirm="confirmTopicDelete"
+    />
+
+    <!-- Duplicate Post Warning Dialog -->
+    <DuplicateWarningDialog
+      v-model:is-open="isDuplicateWarningOpen"
+      :existing-post-id="duplicatePostId"
+      :created-at="duplicateCreatedAt"
+      :published-platforms="duplicatePlatforms"
+      @force-submit="() => pendingPostMessage && handleSendPost(pendingPostMessage, true)"
+      @go-to-existing="handleGoToExistingPost"
+      @cancel="() => { isDuplicateWarningOpen = false; pendingPostMessage = null }"
     />
 
   </div>

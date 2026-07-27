@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import traceback
 from typing import Optional
 from django.conf import settings
@@ -121,13 +122,29 @@ def get_message_ids(post: Post, platform: str) -> dict[str, str]:
 
 
 def set_message_ids(post: Post, platform: str, message_ids: dict[str, str]):
-    """ذخیره شناسه‌های پیام"""
+    """ذخیره شناسه‌های پیام و به‌روزرسانی پلتفرم‌های منتشر شده"""
+    current_platforms = list(post.published_platforms or [])
+    if message_ids:
+        if platform not in current_platforms:
+            current_platforms.append(platform)
+    else:
+        if platform in current_platforms:
+            current_platforms.remove(platform)
+
+    post.published_platforms = current_platforms
+
     if platform == "telegram":
         post.telegram_message_ids = message_ids
-        Post.objects.filter(id=post.id).update(telegram_message_ids=message_ids)
+        Post.objects.filter(id=post.id).update(
+            telegram_message_ids=message_ids,
+            published_platforms=current_platforms
+        )
     elif platform == "bale":
         post.bale_message_ids = message_ids
-        Post.objects.filter(id=post.id).update(bale_message_ids=message_ids)
+        Post.objects.filter(id=post.id).update(
+            bale_message_ids=message_ids,
+            published_platforms=current_platforms
+        )
 
 
 def _post_markdown_text(post: Post) -> str:

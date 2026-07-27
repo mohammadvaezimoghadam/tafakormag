@@ -812,6 +812,7 @@ const formatTime = (timeInSeconds: number) => {
   <!-- Publication Status Modal -->
   <PublicationStatusModal
     v-model:is-open="isPublicationStatusOpen"
+    :post-id="id"
     :published-platforms="publishedPlatforms"
     :telegram-message-ids="telegramMessageIds"
     :bale-message-ids="baleMessageIds"

@@ -433,10 +433,12 @@ class PostViewSet(viewsets.ModelViewSet):
         delete_db = request.data.get('delete_from_db', False)
 
         # Validation Guard
-        if delete_telegram and not post.telegram_message_ids:
+        has_tg = bool(post.telegram_message_ids) or "telegram" in (post.published_platforms or [])
+        if delete_telegram and not has_tg:
             return Response({"error": "Post is not published on Telegram."}, status=status.HTTP_400_BAD_REQUEST)
             
-        if delete_bale and not post.bale_message_ids:
+        has_bale = bool(post.bale_message_ids) or "bale" in (post.published_platforms or [])
+        if delete_bale and not has_bale:
             return Response({"error": "Post is not published on Bale."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Offload background deletion thread

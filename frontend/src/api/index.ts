@@ -85,6 +85,9 @@ export const deleteTopic = (id: number | string) =>
 export const fetchPosts = (topicId?: number | string) => 
   instance.get('/api/notes/', { params: topicId ? { topic: topicId } : {} })
 
+export const fetchPostDetails = (id: number | string) =>
+  instance.get(`/api/notes/${id}/`)
+
 export const createPost = (data: FormData) => 
   instance.post('/api/notes/', data, {
     ...getMultipartConfig(data),
@@ -104,7 +107,7 @@ export const selectiveDeletePost = (id: number | string, payload: { delete_from_
   instance.post(`/api/notes/${id}/selective-delete/`, payload)
 
 export const checkDuplicatePost = (topicId: number | string, content: string) => 
-  instance.post('/api/notes/posts/check-duplicate/', { topic: topicId, content })
+  instance.post('/api/notes/check-duplicate/', { topic: topicId, content })
 
 export const searchPosts = (query: string) => 
   instance.get('/api/notes/search/', { params: { q: query } })

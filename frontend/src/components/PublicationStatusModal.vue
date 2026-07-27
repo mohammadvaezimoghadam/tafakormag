@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   Dialog,
   DialogContent,
@@ -18,11 +18,13 @@ import {
   LayersIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
+import * as api from '@/api'
 
 const languageStore = useLanguageStore()
 
 interface Props {
   isOpen: boolean
+  postId?: number | string
   post?: any
   publishedPlatforms?: string[]
   telegramMessageIds?: Record<string, any>
@@ -32,6 +34,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   isOpen: false,
+  postId: undefined,
   post: null,
   publishedPlatforms: () => [],
   telegramMessageIds: () => ({}),
@@ -49,24 +52,56 @@ const localIsOpen = computed({
   set: (val) => emit('update:isOpen', val)
 })
 
-// Ultra-safe platform list extraction with array checks
+const fetchedPostDetails = ref<any>(null)
+
+const fetchFreshStatus = async () => {
+  const targetId = props.postId || props.post?.id
+  if (!targetId) return
+  try {
+    const res = await api.fetchPostDetails(targetId)
+    if (res.data) {
+      fetchedPostDetails.value = res.data
+    }
+  } catch (e) {
+    // Fallback to local props if fetch fails
+  }
+}
+
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    fetchFreshStatus()
+  }
+}, { immediate: true })
+
+// Ultra-safe platform list extraction with array & string checks
 const effectivePlatforms = computed<string[]>(() => {
-  if (Array.isArray(props.publishedPlatforms) && props.publishedPlatforms.length > 0) return props.publishedPlatforms
-  if (props.post?.publishedPlatforms && Array.isArray(props.post.publishedPlatforms)) return props.post.publishedPlatforms
-  if (props.post?.published_platforms && Array.isArray(props.post.published_platforms)) return props.post.published_platforms
+  if (fetchedPostDetails.value?.published_platforms && Array.isArray(fetchedPostDetails.value.published_platforms)) {
+    return fetchedPostDetails.value.published_platforms
+  }
+  let platforms: any = props.publishedPlatforms || props.post?.publishedPlatforms || props.post?.published_platforms
+  if (typeof platforms === 'string') {
+    try { platforms = JSON.parse(platforms) } catch (e) { platforms = [platforms] }
+  }
+  if (Array.isArray(platforms)) return platforms as string[]
   return []
 })
 
 // Safe null/undefined object extraction for telegram_message_ids
 const effectiveTelegramMessageIds = computed<Record<string, any>>(() => {
-  const ids = props.telegramMessageIds || props.post?.telegramMessageIds || props.post?.telegram_message_ids
+  let ids = fetchedPostDetails.value?.telegram_message_ids || props.telegramMessageIds || props.post?.telegramMessageIds || props.post?.telegram_message_ids
+  if (typeof ids === 'string') {
+    try { ids = JSON.parse(ids) } catch (e) {}
+  }
   if (ids && typeof ids === 'object' && !Array.isArray(ids)) return ids
   return {}
 })
 
 // Safe null/undefined object extraction for bale_message_ids
 const effectiveBaleMessageIds = computed<Record<string, any>>(() => {
-  const ids = props.baleMessageIds || props.post?.baleMessageIds || props.post?.bale_message_ids
+  let ids = fetchedPostDetails.value?.bale_message_ids || props.baleMessageIds || props.post?.baleMessageIds || props.post?.bale_message_ids
+  if (typeof ids === 'string') {
+    try { ids = JSON.parse(ids) } catch (e) {}
+  }
   if (ids && typeof ids === 'object' && !Array.isArray(ids)) return ids
   return {}
 })

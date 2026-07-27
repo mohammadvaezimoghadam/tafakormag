@@ -65,20 +65,37 @@ const localIsOpen = computed({
 
 // Effective platforms & message IDs evaluation
 const effectivePublishedPlatforms = computed<string[]>(() => {
-  if (Array.isArray(props.publishedPlatforms) && props.publishedPlatforms.length > 0) return props.publishedPlatforms
-  if (props.post?.publishedPlatforms && Array.isArray(props.post.publishedPlatforms)) return props.post.publishedPlatforms
-  if (props.post?.published_platforms && Array.isArray(props.post.published_platforms)) return props.post.published_platforms
+  let platforms = props.publishedPlatforms
+  if (!platforms || platforms.length === 0) {
+    platforms = props.post?.publishedPlatforms || props.post?.published_platforms
+  }
+  if (typeof platforms === 'string') {
+    try { platforms = JSON.parse(platforms) } catch (e) { platforms = [] }
+  }
+  if (Array.isArray(platforms)) return platforms
   return []
 })
 
 const effectiveTelegramMessageIds = computed<Record<string, any>>(() => {
-  const ids = props.telegramMessageIds || props.post?.telegramMessageIds || props.post?.telegram_message_ids
+  let ids = props.telegramMessageIds
+  if (!ids || Object.keys(ids).length === 0) {
+    ids = props.post?.telegramMessageIds || props.post?.telegram_message_ids
+  }
+  if (typeof ids === 'string') {
+    try { ids = JSON.parse(ids) } catch (e) { ids = {} }
+  }
   if (ids && typeof ids === 'object' && !Array.isArray(ids)) return ids
   return {}
 })
 
 const effectiveBaleMessageIds = computed<Record<string, any>>(() => {
-  const ids = props.baleMessageIds || props.post?.baleMessageIds || props.post?.bale_message_ids
+  let ids = props.baleMessageIds
+  if (!ids || Object.keys(ids).length === 0) {
+    ids = props.post?.baleMessageIds || props.post?.bale_message_ids
+  }
+  if (typeof ids === 'string') {
+    try { ids = JSON.parse(ids) } catch (e) { ids = {} }
+  }
   if (ids && typeof ids === 'object' && !Array.isArray(ids)) return ids
   return {}
 })
@@ -97,6 +114,7 @@ const hasBale = computed(() => {
 
 const isSelectiveMode = computed(() => {
   if (props.isSelectiveDelete !== undefined) return props.isSelectiveDelete
+  if (props.post) return true
   return hasTelegram.value || hasBale.value
 })
 

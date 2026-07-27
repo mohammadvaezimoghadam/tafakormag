@@ -79,8 +79,8 @@ const loadConnectionsData = async () => {
     // 1. Fetch current profile to verify bot connection statuses
     const profileRes = await api.fetchProfile()
     if (profileRes.data) {
-      telegramConnected.value = !!profileRes.data.telegram_token
-      baleConnected.value = !!profileRes.data.bale_token
+      telegramConnected.value = !!(profileRes.data.is_telegram_bot_connected ?? (profileRes.data.telegram_bot_token || profileRes.data.telegram_token))
+      baleConnected.value = !!(profileRes.data.is_bale_bot_connected ?? (profileRes.data.bale_bot_token || profileRes.data.bale_token))
     }
   } catch (err) {
     console.error('Failed to load connections configuration from API:', err)
