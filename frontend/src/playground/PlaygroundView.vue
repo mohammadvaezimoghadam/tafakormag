@@ -841,7 +841,7 @@ const simulateNewPost = () => {
     comments: [],
     reactions: []
   }
-  mockPosts.value.unshift(newPost)
+  mockPosts.value.push(newPost)
   logEvent('Post: Simulated New Post Received', newPost)
 
   // Update topic description with content of new post

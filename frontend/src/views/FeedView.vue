@@ -124,6 +124,17 @@ watch(currentTab, (newTab) => {
   }
 })
 
+const scrollToBottom = (smooth = true) => {
+  nextTick(() => {
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      })
+    }, 50)
+  })
+}
+
 watch(selectedTopic, async (newTopic) => {
   if (newTopic) {
     const targetPath = `/topic/${newTopic.id}`
@@ -132,6 +143,7 @@ watch(selectedTopic, async (newTopic) => {
     }
     try {
       await postStore.loadPosts(newTopic.id)
+      scrollToBottom(false)
     } catch (err) {
       //
     }
@@ -461,6 +473,7 @@ const handleSelectTopic = async (topic: any) => {
   activeTopicSubView.value = 'feed'
   try {
     await postStore.loadPosts(topic.id)
+    scrollToBottom(false)
   } catch (err) {
     //
   }
@@ -651,6 +664,7 @@ const handleSendPost = async (message: { text: string }, forceSubmit = false) =>
     removePostAttachment()
     pendingPostMessage.value = null
     isDuplicateWarningOpen.value = false
+    scrollToBottom(true)
   } catch (err) {
     //
   }
@@ -896,6 +910,7 @@ const toggleTheme = useToggle(isDark)
                   await topicStore.loadTopics();
                   if (selectedTopic) {
                     await postStore.loadPosts(selectedTopic.id);
+                    scrollToBottom(false);
                   }
                 }"
                 @import-failed="activeTopicSubView = 'feed'"

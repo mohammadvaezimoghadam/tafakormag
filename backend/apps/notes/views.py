@@ -303,7 +303,7 @@ class PostViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        queryset = Post.objects.select_related('author', 'topic').all().order_by('-created_at')
+        queryset = Post.objects.select_related('author', 'topic').all().order_by('created_at')
         topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)

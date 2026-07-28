@@ -175,7 +175,7 @@ export const usePostStore = defineStore('post', () => {
     try {
       const res = await api.createPost(formData)
       const newPost = mapPost(res.data)
-      posts.value.unshift(newPost)
+      posts.value.push(newPost)
       return newPost
     } catch (err) {
       console.error('Error creating post:', err)
