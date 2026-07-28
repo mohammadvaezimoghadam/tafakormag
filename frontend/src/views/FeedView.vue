@@ -125,15 +125,27 @@ watch(currentTab, (newTab) => {
 })
 
 const scrollToBottom = (smooth = true) => {
+  const doScroll = () => {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto'
+    })
+  }
   nextTick(() => {
-    setTimeout(() => {
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: smooth ? 'smooth' : 'auto'
-      })
-    }, 50)
+    doScroll()
+    requestAnimationFrame(() => {
+      doScroll()
+      setTimeout(doScroll, 100)
+      setTimeout(doScroll, 350)
+    })
   })
 }
+
+watch(() => postStore.loading, (isLoading) => {
+  if (!isLoading && activeTopicSubView.value === 'feed' && selectedTopic.value) {
+    scrollToBottom(false)
+  }
+})
 
 watch(selectedTopic, async (newTopic) => {
   if (newTopic) {
@@ -166,20 +178,23 @@ watch(() => topics.value, () => {
   }
 }, { deep: true })
 
-const handleLoadMorePosts = () => {
-  if (selectedTopic.value && postStore.hasMore && !postStore.loadingMore && !postStore.loading) {
-    postStore.loadNextPage(selectedTopic.value.id)
-  }
-}
-
-const handleFeedScroll = () => {
+const handleFeedScroll = async () => {
   if (activeTopicSubView.value !== 'feed' || !selectedTopic.value) return
   if (!postStore.hasMore || postStore.loadingMore || postStore.loading) return
 
-  const scrollPosition = window.innerHeight + window.scrollY
-  const threshold = document.documentElement.scrollHeight - 500
-  if (scrollPosition >= threshold) {
-    handleLoadMorePosts()
+  // When scrolling near top (<= 300px), load older messages and preserve scroll offset
+  if (window.scrollY <= 300) {
+    const oldScrollHeight = document.documentElement.scrollHeight
+    const oldScrollY = window.scrollY
+    await postStore.loadNextPage(selectedTopic.value.id)
+    nextTick(() => {
+      const newScrollHeight = document.documentElement.scrollHeight
+      const heightDiff = newScrollHeight - oldScrollHeight
+      window.scrollTo({
+        top: oldScrollY + heightDiff,
+        behavior: 'auto'
+      })
+    })
   }
 }
 
@@ -806,25 +821,8 @@ const toggleTheme = useToggle(isDark)
 
               <!-- Real Content -->
               <template v-else>
-                <div 
-                  v-for="post in filteredCurrentTopicPosts" 
-                  :key="post.id"
-                  :id="'post-' + post.id"
-                  class="w-full"
-                >
-                  <PostCard 
-                    v-bind="post"
-                    @like="handlePostLike"
-                    @share="handlePostShare"
-                    @add-comment="handleAddComment"
-                    @react="handlePostReact"
-                    @delete="handlePostDelete"
-                    @edit="handlePostEdit"
-                  />
-                </div>
-
-                <!-- Skeleton Loading for additional posts when scrolling -->
-                <div v-if="postStore.loadingMore" class="flex flex-col gap-4 w-full animate-pulse mt-2">
+                <!-- Skeleton Loading for additional older posts when scrolling up -->
+                <div v-if="postStore.loadingMore" class="flex flex-col gap-4 w-full animate-pulse mb-2">
                   <div 
                     v-for="i in 2" 
                     :key="'post-more-skeleton-' + i"
@@ -848,6 +846,23 @@ const toggleTheme = useToggle(isDark)
                       <Skeleton class="h-4 w-[85%] rounded-md" />
                     </div>
                   </div>
+                </div>
+
+                <div 
+                  v-for="post in filteredCurrentTopicPosts" 
+                  :key="post.id"
+                  :id="'post-' + post.id"
+                  class="w-full"
+                >
+                  <PostCard 
+                    v-bind="post"
+                    @like="handlePostLike"
+                    @share="handlePostShare"
+                    @add-comment="handleAddComment"
+                    @react="handlePostReact"
+                    @delete="handlePostDelete"
+                    @edit="handlePostEdit"
+                  />
                 </div>
               </template>
               

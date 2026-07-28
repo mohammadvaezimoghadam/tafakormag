@@ -147,9 +147,10 @@ export const usePostStore = defineStore('post', () => {
       }
 
       const mapped = rawResults.map(mapPost)
+      mapped.reverse()
 
       if (append) {
-        posts.value = [...posts.value, ...mapped]
+        posts.value = [...mapped, ...posts.value]
       } else {
         posts.value = mapped
       }
