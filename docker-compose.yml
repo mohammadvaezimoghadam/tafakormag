@@ -86,6 +86,9 @@ services:
   bot_runner:
     build: ./bot_runner
     container_name: tafakor_bot
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - PYTHONUNBUFFERED=1
       - BALE_BOT_TOKEN=${BALE_BOT_TOKEN}
@@ -126,6 +129,9 @@ services:
   telegram_proxy:
     build: ./telegram_proxy
     container_name: tafakor_telegram_proxy
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - GAS_URL=${GAS_URL}
       - RELAY_TOKEN=${RELAY_TOKEN}

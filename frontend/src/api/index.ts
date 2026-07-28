@@ -82,8 +82,14 @@ export const deleteTopic = (id: number | string) =>
   instance.delete(`/api/notes/topics/${id}/`)
 
 // --- Posts API ---
-export const fetchPosts = (topicId?: number | string) => 
-  instance.get('/api/notes/', { params: topicId ? { topic: topicId } : {} })
+export const fetchPosts = (topicId?: number | string, page: number = 1, pageSize: number = 20) => 
+  instance.get('/api/notes/', { 
+    params: { 
+      ...(topicId ? { topic: topicId } : {}),
+      page,
+      page_size: pageSize
+    } 
+  })
 
 export const fetchPostDetails = (id: number | string) =>
   instance.get(`/api/notes/${id}/`)

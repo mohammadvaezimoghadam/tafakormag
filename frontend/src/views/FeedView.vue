@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useDark, useToggle } from '@vueuse/core'
@@ -24,7 +24,7 @@ import TopicAdminsView from '@/components/TopicAdminsView.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon } from '@lucide/vue'
+import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
 import {
   Dialog,
   DialogContent,
@@ -154,8 +154,26 @@ watch(() => topics.value, () => {
   }
 }, { deep: true })
 
+const handleLoadMorePosts = () => {
+  if (selectedTopic.value && postStore.hasMore && !postStore.loadingMore && !postStore.loading) {
+    postStore.loadNextPage(selectedTopic.value.id)
+  }
+}
+
+const handleFeedScroll = () => {
+  if (activeTopicSubView.value !== 'feed' || !selectedTopic.value) return
+  if (!postStore.hasMore || postStore.loadingMore || postStore.loading) return
+
+  const scrollPosition = window.innerHeight + window.scrollY
+  const threshold = document.documentElement.scrollHeight - 500
+  if (scrollPosition >= threshold) {
+    handleLoadMorePosts()
+  }
+}
+
 // Fetch data on mount
 onMounted(async () => {
+  window.addEventListener('scroll', handleFeedScroll)
   try {
     await userStore.loadProfile()
     await topicStore.loadTopics()
@@ -163,6 +181,10 @@ onMounted(async () => {
   } catch (err) {
     console.error('Error on FeedView mount:', err)
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleFeedScroll)
 })
 
 // Header computed states for platform and connections view
@@ -786,6 +808,33 @@ const toggleTheme = useToggle(isDark)
                     @edit="handlePostEdit"
                   />
                 </div>
+
+                <!-- Skeleton Loading for additional posts when scrolling -->
+                <div v-if="postStore.loadingMore" class="flex flex-col gap-4 w-full animate-pulse mt-2">
+                  <div 
+                    v-for="i in 2" 
+                    :key="'post-more-skeleton-' + i"
+                    class="w-full bg-background/12 dark:bg-card/10 border border-border/60 rounded-3xl p-5 flex flex-col gap-4 text-start"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <Skeleton class="size-10 rounded-full shrink-0" />
+                        <div class="flex flex-col gap-1.5 text-start">
+                          <Skeleton class="h-4 w-24 rounded-md" />
+                          <Skeleton class="h-3 w-16 rounded-md" />
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <Skeleton class="h-4 w-12 rounded-md" />
+                        <Skeleton class="size-7 rounded-full" />
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                      <Skeleton class="h-4 w-full rounded-md" />
+                      <Skeleton class="h-4 w-[85%] rounded-md" />
+                    </div>
+                  </div>
+                </div>
               </template>
               
               <div v-if="filteredCurrentTopicPosts.length === 0" class="text-center py-12 bg-card/20 rounded-xl border border-border/60 text-xs text-muted-foreground font-medium">
@@ -999,7 +1048,7 @@ const toggleTheme = useToggle(isDark)
       :is-open="isEditProfileOpen"
       :userProfile="userProfile"
       @close="isEditProfileOpen = false"
-      @save="handleProfileSave"
+      @update="handleProfileSave"
     />
 
     <!-- Language Switcher Dialog -->

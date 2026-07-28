@@ -839,6 +839,8 @@ async def handle_task_failure(http_client, base_url, bot_token, platform, task, 
     if status_code == 403:
         reason = "ربات از گروه/کانال حذف شده یا دسترسی ارسال پیام ندارد."
         should_unregister = True
+    elif status_code == 401:
+        reason = "توکن ربات نامعتبر یا لغو شده است."
     elif status_code == 400:
         reason = "مشخصات مقصد نادرست است، متن پیام بیش از حد مجاز است، یا ربات دسترسی ادمین ندارد."
     elif status_code == 404:
@@ -974,7 +976,7 @@ async def task_processor():
                                         msg_id = str(res.json().get("result", {}).get("message_id", ""))
                                     else:
                                         logger.error(f"send media failed for task {tid}: {res.text}")
-                                        if res.status_code in (400, 403, 404):
+                                        if res.status_code in (400, 401, 403, 404):
                                             logger.warning(f"Non-recoverable error for send media task {tid}. Completing to avoid queue blockage.")
                                             await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                             success = True
@@ -989,7 +991,7 @@ async def task_processor():
                                         msg_id = str(res.json().get("result", {}).get("message_id", ""))
                                     else:
                                         logger.error(f"fallback send failed for task {tid}: {res.text}")
-                                        if res.status_code in (400, 403, 404):
+                                        if res.status_code in (400, 401, 403, 404):
                                             await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                             success = True
                             else:
@@ -1001,7 +1003,7 @@ async def task_processor():
                                     msg_id = str(res.json().get("result", {}).get("message_id", ""))
                                 else:
                                     logger.error(f"send failed for task {tid}: {res.text}")
-                                    if res.status_code in (400, 403, 404):
+                                    if res.status_code in (400, 401, 403, 404):
                                         logger.warning(f"Non-recoverable error for send task {tid}. Completing to avoid queue blockage.")
                                         await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                         success = True
@@ -1020,7 +1022,7 @@ async def task_processor():
                                 success = True
                             else:
                                 logger.error(f"edit failed for task {tid}: {res.text}")
-                                if res.status_code in (400, 403, 404):
+                                if res.status_code in (400, 401, 403, 404):
                                     logger.warning(f"Non-recoverable error for edit task {tid}. Completing to avoid queue blockage.")
                                     await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                     success = True
@@ -1034,7 +1036,7 @@ async def task_processor():
                                 msg_id = None
                             else:
                                 logger.error(f"delete failed for task {tid}: {res.text}")
-                                if res.status_code in (400, 403, 404):
+                                if res.status_code in (400, 401, 403, 404):
                                     logger.warning(f"Non-recoverable error for delete task {tid}. Completing to avoid queue blockage.")
                                     await handle_task_failure(http_client, base_url, bot_token, platform, task, res.status_code, res.text)
                                     success = True

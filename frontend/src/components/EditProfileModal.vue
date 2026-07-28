@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'update', profile: { firstName: string; lastName: string; avatarUrl?: string }): void
+  (e: 'update', profile: { first_name: string; last_name: string; avatarFile?: File }): void
 }>()
 
 const toastStore = useToastStore()
@@ -31,6 +31,7 @@ const languageStore = useLanguageStore()
 const firstName = ref('')
 const lastName = ref('')
 const avatarPreview = ref('')
+const selectedFile = ref<File | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 watch(() => props.isOpen, (newVal) => {
@@ -38,6 +39,7 @@ watch(() => props.isOpen, (newVal) => {
     firstName.value = props.userProfile.first_name || ''
     lastName.value = props.userProfile.last_name || ''
     avatarPreview.value = props.userProfile.avatar || ''
+    selectedFile.value = null
   }
 })
 
@@ -52,6 +54,7 @@ const handleFileChange = (e: Event) => {
       toastStore.triggerToast(languageStore.t('حجم تصویر باید کمتر از ۲ مگابایت باشد.', 'Image size must be less than 2MB.'), 'error')
       return
     }
+    selectedFile.value = file
     const reader = new FileReader()
     reader.onload = (event) => {
       avatarPreview.value = event.target?.result as string
@@ -71,9 +74,9 @@ const handleSubmit = () => {
   }
 
   emit('update', {
-    firstName: firstName.value.trim(),
-    lastName: lastName.value.trim(),
-    avatarUrl: avatarPreview.value || undefined
+    first_name: firstName.value.trim(),
+    last_name: lastName.value.trim(),
+    avatarFile: selectedFile.value || undefined
   })
 }
 

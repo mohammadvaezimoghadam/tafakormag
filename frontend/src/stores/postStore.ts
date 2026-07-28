@@ -44,6 +44,10 @@ export interface Post {
 export const usePostStore = defineStore('post', () => {
   const posts = ref<Post[]>([])
   const loading = ref(false)
+  const loadingMore = ref(false)
+  const currentPage = ref(1)
+  const hasMore = ref(true)
+  const totalPostsCount = ref(0)
 
   const getImageUrl = (url?: string) => {
     if (!url) return ''
@@ -117,18 +121,53 @@ export const usePostStore = defineStore('post', () => {
     }
   }
 
-  const loadPosts = async (topicId: number | string) => {
-    loading.value = true
+  const loadPosts = async (topicId: number | string, page: number = 1, append: boolean = false) => {
+    if (append) {
+      loadingMore.value = true
+    } else {
+      loading.value = true
+      posts.value = []
+      currentPage.value = 1
+      hasMore.value = true
+    }
+
     try {
-      const res = await api.fetchPosts(topicId)
-      posts.value = (res.data ?? []).map(mapPost)
+      const res = await api.fetchPosts(topicId, page, 20)
+      const data = res.data
+
+      let rawResults: any[] = []
+      if (Array.isArray(data)) {
+        rawResults = data
+        hasMore.value = false
+        totalPostsCount.value = data.length
+      } else if (data && Array.isArray(data.results)) {
+        rawResults = data.results
+        hasMore.value = !!data.next
+        totalPostsCount.value = data.count || 0
+      }
+
+      const mapped = rawResults.map(mapPost)
+
+      if (append) {
+        posts.value = [...posts.value, ...mapped]
+      } else {
+        posts.value = mapped
+      }
+
+      currentPage.value = page
       return posts.value
     } catch (err) {
       console.error('Error loading posts:', err)
       throw err
     } finally {
       loading.value = false
+      loadingMore.value = false
     }
+  }
+
+  const loadNextPage = async (topicId: number | string) => {
+    if (!hasMore.value || loadingMore.value || loading.value) return
+    return loadPosts(topicId, currentPage.value + 1, true)
   }
 
   const createPost = async (formData: FormData) => {
@@ -291,7 +330,12 @@ export const usePostStore = defineStore('post', () => {
   return {
     posts,
     loading,
+    loadingMore,
+    currentPage,
+    hasMore,
+    totalPostsCount,
     loadPosts,
+    loadNextPage,
     createPost,
     updatePost,
     deletePost,

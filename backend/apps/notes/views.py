@@ -3,6 +3,7 @@ from django.db.models import Q, Count
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
@@ -291,8 +292,15 @@ class TopicViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class PostViewSet(viewsets.ModelViewSet):
     serializer_class = PostSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         queryset = Post.objects.select_related('author', 'topic').all().order_by('-created_at')
