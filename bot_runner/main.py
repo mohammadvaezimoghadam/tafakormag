@@ -650,7 +650,7 @@ async def run_single_bot(bot_key: str, token: str, platform: str, user_id: int, 
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_new_chat_members))
     app.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, on_left_chat_member))
     app.add_handler(CallbackQueryHandler(handle_callback_query))
-    app.add_handler(MessageHandler(filters.ALL, handle_any_message_or_post))
+    app.add_handler(MessageHandler(filters.ChatType.CHANNEL | filters.ALL, handle_any_message_or_post))
     
     app.add_error_handler(custom_bot_error_handler)
 

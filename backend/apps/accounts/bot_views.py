@@ -35,22 +35,23 @@ def register_destination(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    has_default = MessagingTarget.objects.filter(
-        user=user, platform=platform, is_default=True
-    ).exists()
-
-    try:
+    existing = MessagingTarget.objects.filter(user=user, platform=platform, chat_id=str(chat_id)).first()
+    if existing:
+        existing.label = label
+        existing.is_active = True
+        existing.save()
+        target = existing
+    else:
+        has_default = MessagingTarget.objects.filter(
+            user=user, platform=platform, is_default=True
+        ).exists()
         target = MessagingTarget.objects.create(
             user=user,
             platform=platform,
             chat_id=str(chat_id),
             label=label,
             is_default=not has_default,
-        )
-    except IntegrityError:
-        return Response(
-            {"error": "Destination already registered for this user and platform"},
-            status=status.HTTP_400_BAD_REQUEST,
+            is_active=True,
         )
 
     return Response(
