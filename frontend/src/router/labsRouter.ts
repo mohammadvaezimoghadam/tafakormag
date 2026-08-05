@@ -17,6 +17,11 @@ const labsRouter = createRouter({
       name: 'playground',
       component: () => import('@/playground/PlaygroundView.vue'),
     },
+    {
+      path: '/playground/donation-card',
+      name: 'donation-card-playground',
+      component: () => import('@/views/playground/DonationCardPlayground.vue'),
+    },
   ],
 })
 

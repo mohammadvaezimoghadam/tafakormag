@@ -1,17 +1,70 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
-import { Skeleton } from '@/components/ui/skeleton'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
-import { Avatar, AvatarFallback, AvatarImage, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
+
+// Import ALL 27 base UI primitives installed in src/components/ui
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { 
+  AlertDialog, 
+  AlertDialogTrigger, 
+  AlertDialogContent, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogAction, 
+  AlertDialogCancel 
+} from '@/components/ui/alert-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogClose 
+} from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
+import { Label } from '@/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { 
+  Select, 
+  SelectTrigger, 
+  SelectValue, 
+  SelectContent, 
+  SelectGroup, 
+  SelectItem, 
+  SelectLabel 
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Sheet, 
+  SheetTrigger, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetDescription, 
+  SheetFooter 
+} from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import { Toggle } from '@/components/ui/toggle'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+
 import { 
   SparklesIcon, 
   Trash2Icon, 
@@ -24,7 +77,6 @@ import {
   LayoutGridIcon,
   RulerIcon,
   TypeIcon,
-  // 20 Popular Lucide Icons
   HomeIcon,
   UserIcon,
   MailIcon,
@@ -44,22 +96,32 @@ import {
   StarIcon,
   ShieldIcon,
   Share2Icon,
-  EyeIcon
+  EyeIcon,
+  BoldIcon,
+  ItalicIcon,
+  UnderlineIcon,
+  SlidersIcon
 } from '@lucide/vue'
 import { getLocalTimeZone, today } from '@internationalized/date'
 
 // Tabs management
 const activeTab = ref<'components' | 'tokens'>('components')
 
-// State for showcase interactive items
+// Interactive state variables
 const inputVal = ref('')
+const textareaVal = ref('')
 const checkboxVal = ref(false)
 const checkboxInteractive = ref(false)
 const checkboxIndeterminate = ref<'indeterminate' | boolean>('indeterminate')
 const switchVal = ref(false)
 const switchSmVal = ref(false)
 const otpVal = ref('')
-const selectVal = ref('')
+const nativeSelectVal = ref('')
+const customSelectVal = ref('')
+const toggleState = ref(false)
+const toggleGroupVal = ref('bold')
+const collapsibleOpen = ref(false)
+const progressVal = ref(65)
 const dateVal = ref<any>(today(getLocalTimeZone()))
 const isPending = ref(false)
 
@@ -101,74 +163,6 @@ const systemBorders = [
   { name: 'Ring', class: 'bg-ring', variable: '--ring', desc: 'حلقه فوکوس' },
 ]
 
-const colorShades = [
-  {
-    name: 'Primary (اصلی)',
-    desc: 'رنگ عملیات‌ها و دکمه‌های اصلی',
-    swatches: [
-      { label: 'Solid', pct: '100%', class: 'bg-primary text-primary-foreground' },
-      { label: '/90', pct: '90%', class: 'bg-primary/90 text-primary-foreground/90' },
-      { label: '/80', pct: '80%', class: 'bg-primary/80 text-primary-foreground/80' },
-      { label: '/50', pct: '50%', class: 'bg-primary/50 text-primary-foreground/50' },
-      { label: '/30', pct: '30%', class: 'bg-primary/30 text-primary-foreground/30' },
-      { label: '/20', pct: '20%', class: 'bg-primary/20 text-primary-foreground/20' },
-      { label: '/10', pct: '10%', class: 'bg-primary/10 text-primary-foreground/10' },
-    ]
-  },
-  {
-    name: 'Secondary (ثانویه)',
-    desc: 'رنگ‌های مکمل و فرعی با کنتراست پایین',
-    swatches: [
-      { label: 'Solid', pct: '100%', class: 'bg-secondary text-secondary-foreground' },
-      { label: '/90', pct: '90%', class: 'bg-secondary/90 text-secondary-foreground/90' },
-      { label: '/80', pct: '80%', class: 'bg-secondary/80 text-secondary-foreground/80' },
-      { label: '/50', pct: '50%', class: 'bg-secondary/50 text-secondary-foreground/50' },
-      { label: '/30', pct: '30%', class: 'bg-secondary/30 text-secondary-foreground/30' },
-      { label: '/20', pct: '20%', class: 'bg-secondary/20 text-secondary-foreground/20' },
-      { label: '/10', pct: '10%', class: 'bg-secondary/10 text-secondary-foreground/10' },
-    ]
-  },
-  {
-    name: 'Accent (برجسته)',
-    desc: 'تینت فوکوس، هاور و عناصر انتخابی',
-    swatches: [
-      { label: 'Solid', pct: '100%', class: 'bg-accent text-accent-foreground' },
-      { label: '/90', pct: '90%', class: 'bg-accent/90 text-accent-foreground/90' },
-      { label: '/80', pct: '80%', class: 'bg-accent/80 text-accent-foreground/80' },
-      { label: '/50', pct: '50%', class: 'bg-accent/50 text-accent-foreground/50' },
-      { label: '/30', pct: '30%', class: 'bg-accent/30 text-accent-foreground/30' },
-      { label: '/20', pct: '20%', class: 'bg-accent/20 text-accent-foreground/20' },
-      { label: '/10', pct: '10%', class: 'bg-accent/10 text-accent-foreground/10' },
-    ]
-  },
-  {
-    name: 'Muted (خاموش)',
-    desc: 'متون کم‌اهمیت و فیلدهای غیرفعال',
-    swatches: [
-      { label: 'Solid', pct: '100%', class: 'bg-muted text-muted-foreground' },
-      { label: '/90', pct: '90%', class: 'bg-muted/90 text-muted-foreground/90' },
-      { label: '/80', pct: '80%', class: 'bg-muted/80 text-muted-foreground/80' },
-      { label: '/50', pct: '50%', class: 'bg-muted/50 text-muted-foreground/50' },
-      { label: '/30', pct: '30%', class: 'bg-muted/30 text-muted-foreground/30' },
-      { label: '/20', pct: '20%', class: 'bg-muted/20 text-muted-foreground/20' },
-      { label: '/10', pct: '10%', class: 'bg-muted/10 text-muted-foreground/10' },
-    ]
-  },
-  {
-    name: 'Destructive (مخرب)',
-    desc: 'پیام‌های خطا، حذف و وضعیت‌های منفی',
-    swatches: [
-      { label: 'Solid', pct: '100%', class: 'bg-destructive text-destructive-foreground' },
-      { label: '/90', pct: '90%', class: 'bg-destructive/90 text-destructive-foreground/90' },
-      { label: '/80', pct: '80%', class: 'bg-destructive/80 text-destructive-foreground/80' },
-      { label: '/50', pct: '50%', class: 'bg-destructive/50 text-destructive-foreground/50' },
-      { label: '/30', pct: '30%', class: 'bg-destructive/30 text-destructive-foreground/30' },
-      { label: '/20', pct: '20%', class: 'bg-destructive/20 text-destructive-foreground/20' },
-      { label: '/10', pct: '10%', class: 'bg-destructive/10 text-destructive-foreground/10' },
-    ]
-  },
-]
-
 // Font Sizes Scale data
 const fontSizes = [
   { name: 'text-xs', size: '0.75rem', px: '12px', class: 'text-xs' },
@@ -190,25 +184,9 @@ const borderRadii = [
   { name: 'radius-xl', value: 'calc(var(--radius) * 1.4)', px: '11.2px', class: 'rounded-xl' },
   { name: 'radius-2xl', value: 'calc(var(--radius) * 1.8)', px: '14.4px', class: 'rounded-2xl' },
   { name: 'radius-3xl', value: 'calc(var(--radius) * 2.2)', px: '17.6px', class: 'rounded-3xl' },
-  { name: 'radius-4xl', value: 'calc(var(--radius) * 2.6)', px: '20.8px', class: 'rounded-4xl' },
 ]
 
-// Custom Typography Utilities data
-const customTypography = [
-  { class: 'text-lead', desc: 'متن لید (بزرگتر و خواناتر برای شروع مقالات)', example: 'این یک متن لید برای شروع یک مقاله یا بخش مهم در پلتفرم است.' },
-  { class: 'text-large', desc: 'متن برجسته و بزرگ برای عناوین فرعی و مهم داخل کارتها', example: 'عناوین داخل کارت‌ها یا موارد مهم آماری' },
-  { class: 'text-small', desc: 'متن بدنه کوچک با ضخامت متوسط برای برچسب‌ها و متون کمکی', example: 'برچسب فیلدها یا اعتبارسنجی فرم‌ها' },
-  { class: 'text-muted-custom', desc: 'متن کوچک خاموش برای توضیحات فرعی، پاورقی‌ها و زمان انتشار', example: 'بروزرسانی شده در ۵ دقیقه پیش' },
-]
-
-// Layout Utilities data
-const layoutUtilities = [
-  { class: 'form-group-layout', desc: 'چیدمان گرید فرم با فواصل gap-4 استاندارد شدسن', use: 'برای فرم‌های ثبت‌نام، تماس یا تنظیمات' },
-  { class: 'form-actions-layout', desc: 'چیدمان دکمه‌های کنترلی فرم (تایید و انصراف) با چیدمان فلکس و gap-3', use: 'در انتهای فرم‌ها یا پاپ‌آپ‌ها' },
-  { class: 'section-padding', desc: 'پدینگ داینامیک و واکنش‌گرا برای بخش‌های اصلی (p-4 تا lg:p-8)', use: 'کانتینر اصلی داشبورد یا صفحات فرود' },
-]
-
-// 20 Popular Lucide Icons
+// Popular Lucide Icons
 const baseIcons = [
   { name: 'Home', icon: HomeIcon },
   { name: 'User', icon: UserIcon },
@@ -237,328 +215,178 @@ const baseIcons = [
   { name: 'Share2', icon: Share2Icon },
   { name: 'Eye', icon: EyeIcon },
 ]
-
 </script>
 
 <template>
-  <div class="w-full flex justify-center" dir="rtl">
-    <div class="w-full max-w-6xl py-10 px-6 flex flex-col gap-12">
+  <div class="w-full flex justify-center dir-rtl text-right">
+    <div class="w-full max-w-6xl py-10 px-4 sm:px-6 flex flex-col gap-8 sm:gap-12">
       
-      <!-- Header (Centered alignment) -->
+      <!-- Header -->
       <div class="border-b border-border/60 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6 w-full text-right">
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2 text-primary justify-start">
             <SparklesIcon class="size-4" />
-            <span class="text-[10px] font-bold uppercase tracking-wider text-primary/80">محیط ۲ - نمایشگاه دیزاین سیستم</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-primary/80">نمایشگاه دیزاین سیستم پلتفرم</span>
           </div>
-          <h1 class="text-xl font-extrabold tracking-tight text-foreground">آلبوم ویژگی‌ها و متغیرها (Showcase)</h1>
-          <p class="text-muted-foreground text-xs mt-0.5">تست تم رنگی، تایپوگرافی فونت متغیر، فواصل و کامپوننت‌های پایه.</p>
+          <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">آلبوم کامپوننت‌های پایه (Primitives Showcase)</h1>
+          <p class="text-muted-foreground text-xs mt-0.5">تست تمامی ۲۷ کامپوننت پایه نصبی شدسن (shadcn-vue)، تم رنگی، تایپوگرافی و فواصل.</p>
         </div>
 
         <!-- Tab Selectors -->
-        <div class="flex bg-muted/60 p-1 rounded-lg border border-border/40 shrink-0 self-start md:self-auto">
+        <div class="flex bg-muted/60 p-1 rounded-xl border border-border/40 shrink-0 self-start md:self-auto">
           <button 
             @click="activeTab = 'components'"
             :class="[
-              'px-4 py-1.5 rounded-md text-xs font-medium transition-all outline-none cursor-pointer',
-              activeTab === 'components' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+              'px-4 py-1.5 rounded-lg text-xs font-semibold transition-all outline-none cursor-pointer',
+              activeTab === 'components' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
             ]"
           >
-            کامپوننت‌های پایه (Primitives)
+            کامپوننت‌های پایه (۲۷ کامپوننت)
           </button>
           <button 
             @click="activeTab = 'tokens'"
             :class="[
-              'px-4 py-1.5 rounded-md text-xs font-medium transition-all outline-none cursor-pointer',
-              activeTab === 'tokens' ? 'bg-background text-foreground shadow-xs font-bold' : 'text-muted-foreground hover:text-foreground'
+              'px-4 py-1.5 rounded-lg text-xs font-semibold transition-all outline-none cursor-pointer',
+              activeTab === 'tokens' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
             ]"
           >
-            رنگ‌ها، تایپوگرافی و فواصل (Tokens)
+            توکن‌های رنگ، تایپوگرافی و فواصل
           </button>
         </div>
       </div>
 
       <!-- TAB 1: COMPONENTS (PRIMITIVES) -->
-      <div v-if="activeTab === 'components'" class="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full">
+      <div v-if="activeTab === 'components'" class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
         
-        <!-- Buttons Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6">
+        <!-- 1. Buttons & Toggles Panel (Button, Toggle, ToggleGroup) -->
+        <div class="bg-card/30 border border-border/60 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col gap-6">
           <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">دکمه‌ها (Button Variants)</h2>
-            <p class="text-[11px] text-muted-foreground">تست انواع واریانت‌ها و ابعاد مختلف دکمه با انیمیشن‌های ترنزیشن پیش‌فرض.</p>
+            <h2 class="text-sm font-extrabold text-foreground">۱. دکمه‌ها و تایتل‌ها (Button, Toggle, ToggleGroup)</h2>
+            <p class="text-[11px] text-muted-foreground">واریانت‌های مختلف دکمه، وضعیت‌های لودینگ، سوئیچ تک‌حالته و گروه‌های انتخابی.</p>
           </div>
 
-          <div class="flex flex-col gap-6">
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">انواع استایل‌ها (Variants):</h3>
-              <div class="flex flex-wrap gap-3">
-                <Button>پیش‌فرض</Button>
-                <Button variant="secondary">ثانویه</Button>
-                <Button variant="outline">دورخط‌دار</Button>
-                <Button variant="destructive" class="flex items-center gap-1.5">
-                  <Trash2Icon class="size-3.5" data-icon="inline-start" />
+          <div class="flex flex-col gap-5 border-t border-border/40 pt-4">
+            <!-- Buttons -->
+            <div class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">Button Variants:</span>
+              <div class="flex flex-wrap gap-2">
+                <Button size="sm">پیش‌فرض</Button>
+                <Button size="sm" variant="secondary">ثانویه</Button>
+                <Button size="sm" variant="outline">دورخط‌دار</Button>
+                <Button size="sm" variant="destructive" class="gap-1.5">
+                  <Trash2Icon class="size-3.5" />
                   مخرب
                 </Button>
-                <Button variant="ghost">شیشه‌ای</Button>
-                <Button variant="link">لینک</Button>
+                <Button size="sm" variant="ghost">شیشه‌ای</Button>
+                <Button size="sm" variant="link">لینک</Button>
               </div>
             </div>
 
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">سایزها و آیکون‌ها (Sizes & Icons):</h3>
-              <div class="flex flex-wrap items-center gap-3">
-                <Button size="lg" class="flex items-center gap-1.5">
-                  بزرگ (LG)
-                  <SettingsIcon class="size-4" data-icon="inline-end" />
-                </Button>
-                <Button size="default">معمولی</Button>
-                <Button size="sm">کوچک (SM)</Button>
-                <Button size="xs">خیلی کوچک</Button>
-                <Button size="icon" variant="outline">
-                  <PlusIcon class="size-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">وضعیت‌های رفتاری (States):</h3>
-              <div class="flex flex-wrap gap-3">
-                <Button disabled>غیرفعال (Disabled)</Button>
-                <Button variant="outline" disabled>غیرفعال دورخط‌دار</Button>
-                <Button :disabled="isPending" @click="triggerSimulatedPending" class="relative">
+            <!-- Pending / Loading Button -->
+            <div class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">Button States & Pending:</span>
+              <div class="flex flex-wrap gap-2">
+                <Button size="sm" disabled>غیرفعال</Button>
+                <Button size="sm" :disabled="isPending" @click="triggerSimulatedPending">
                   <span v-if="isPending" class="flex items-center gap-1.5">
                     <span class="size-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    در حال ثبت...
+                    در حال بارگذاری...
                   </span>
-                  <span v-else>کلیک برای تست بارگذاری</span>
+                  <span v-else>کلیک برای تست لودینگ</span>
                 </Button>
               </div>
             </div>
+
+            <!-- Toggle & ToggleGroup -->
+            <div class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">Toggle & ToggleGroup:</span>
+              <div class="flex flex-wrap items-center gap-3">
+                <Toggle v-model:pressed="toggleState" variant="outline" size="sm" class="gap-1">
+                  <StarIcon class="size-3.5" :class="toggleState ? 'fill-primary text-primary' : ''" />
+                  <span>تشیخص ستاره</span>
+                </Toggle>
+
+                <ToggleGroup type="single" v-model="toggleGroupVal" variant="outline" size="sm">
+                  <ToggleGroupItem value="bold" aria-label="Bold">
+                    <BoldIcon class="size-3.5" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="italic" aria-label="Italic">
+                    <ItalicIcon class="size-3.5" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="underline" aria-label="Underline">
+                    <UnderlineIcon class="size-3.5" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Inputs Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6">
+        <!-- 2. Form Inputs Panel (Input, Textarea, Select, NativeSelect, Checkbox, Switch, InputOTP) -->
+        <div class="bg-card/30 border border-border/60 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col gap-6">
           <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">فیلدهای ورودی (Inputs)</h2>
-            <p class="text-[11px] text-muted-foreground">نمونه ورودی‌های متنی، پسورد و وضعیت‌های ولیدیشن.</p>
+            <h2 class="text-sm font-extrabold text-foreground">۲. فیلدهای ورودی و فرم‌ها (Input, Textarea, Select, Checkbox, Switch, OTP)</h2>
+            <p class="text-[11px] text-muted-foreground">انواع ورودی‌های متنی، سلکت‌های کشویی، چک‌باکس و کلیدهای روشن/خاموش.</p>
           </div>
 
-          <div class="flex flex-col gap-4">
-            <div class="flex flex-col gap-2">
-              <Label for="inp-def">ورودی متنی پیش‌فرض</Label>
-              <Input id="inp-def" v-model="inputVal" placeholder="متنی بنویسید..." />
-              <span class="text-[10px] text-muted-foreground mt-0.5 block">متن وارد شده: <code class="bg-muted px-1 rounded">{{ inputVal || 'خالی' }}</code></span>
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <Label for="inp-pass" class="flex items-center gap-1.5">
-                <LockIcon class="size-3.5 text-muted-foreground" />
-                رمز عبور (Password)
-              </Label>
-              <Input id="inp-pass" type="password" placeholder="••••••••" />
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div class="flex flex-col gap-2">
-                <Label for="inp-dis" class="text-muted-foreground">غیرفعال (Disabled)</Label>
-                <Input id="inp-dis" disabled placeholder="امکان ویرایش وجود ندارد" />
+          <div class="flex flex-col gap-4 border-t border-border/40 pt-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <Label for="inp-demo" class="text-xs">Input متنی:</Label>
+                <Input id="inp-demo" v-model="inputVal" placeholder="متنی بنویسید..." class="text-xs" />
               </div>
-              <div class="flex flex-col gap-2">
-                <Label for="inp-err" class="text-destructive">فیلد دارای خطا (Error State)</Label>
-                <Input id="inp-err" aria-invalid="true" placeholder="ایمیل نامعتبر است..." class="border-destructive focus-visible:ring-destructive/30" />
-                <p class="text-[10px] text-destructive flex items-center gap-1.5">
-                  <InfoIcon class="size-3.5" />
-                  آدرس ایمیل وارد شده در قالب صحیح نیست.
-                </p>
+
+              <div class="space-y-1">
+                <Label for="sel-native" class="text-xs">NativeSelect بومی:</Label>
+                <NativeSelect id="sel-native" v-model="nativeSelectVal" class="text-xs">
+                  <NativeSelectOption value="">انتخاب کنید...</NativeSelectOption>
+                  <NativeSelectOption value="opt1">گزینه اول</NativeSelectOption>
+                  <NativeSelectOption value="opt2">گزینه دوم</NativeSelectOption>
+                </NativeSelect>
               </div>
             </div>
 
-            <!-- NativeSelect component -->
-            <div class="flex flex-col gap-2">
-              <Label for="select-component">منوی انتخابی کامپوننت (NativeSelect Component)</Label>
-              <NativeSelect id="select-component" v-model="selectVal">
-                <NativeSelectOption value="" disabled>سمت شغلی را انتخاب کنید...</NativeSelectOption>
-                <NativeSelectOption value="admin">مدیر سیستم</NativeSelectOption>
-                <NativeSelectOption value="editor">نویسنده</NativeSelectOption>
-                <NativeSelectOption value="user">کاربر عادی</NativeSelectOption>
-              </NativeSelect>
-              <span class="text-[10px] text-muted-foreground mt-0.5 block">نقش انتخاب شده: <code class="bg-muted px-1 rounded">{{ selectVal || 'هیچکدام' }}</code></span>
+            <!-- Custom Shadcn Select -->
+            <div class="space-y-1">
+              <Label class="text-xs">Select تخصصی shadcn:</Label>
+              <Select v-model="customSelectVal">
+                <SelectTrigger class="w-full text-xs">
+                  <SelectValue placeholder="یک گزینه انتخاب کنید..." />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectGroup>
+                    <SelectLabel class="text-xs font-bold">دسته‌بندی‌ها</SelectLabel>
+                    <SelectItem value="cat-1" class="text-xs">مدرسه و آموزش</SelectItem>
+                    <SelectItem value="cat-2" class="text-xs">مسجد و حسینیه</SelectItem>
+                    <SelectItem value="cat-3" class="text-xs">امور خیریه</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </div>
 
-        <!-- Checkbox & Switch Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 lg:col-span-2">
-          <div class="flex flex-col gap-1 text-right">
-            <h2 class="text-sm font-extrabold text-foreground">چک‌باکس و سوئیچ (Checkbox & Switch)</h2>
-            <p class="text-[11px] text-muted-foreground">نمایش جامع انواع حالت‌ها، سایزها و استاتوس‌های کامپوننت‌های پایه Checkbox و Switch.</p>
-          </div>
+            <!-- Textarea -->
+            <div class="space-y-1">
+              <Label for="txt-demo" class="text-xs">Textarea چند خطی:</Label>
+              <Textarea id="txt-demo" v-model="textareaVal" placeholder="توضیحات تکمیلی را وارد کنید..." rows="2" class="text-xs" />
+            </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-border/40 pt-6 text-right">
-            <!-- Checkbox Section -->
-            <div class="flex flex-col gap-5 text-right">
-              <h3 class="text-xs font-bold text-foreground border-b border-border/40 pb-2 text-right">چک‌باکس‌ها (Checkbox)</h3>
-              
-              <!-- Interactive Example -->
-              <div class="flex flex-col gap-2 bg-background/40 p-4 rounded-xl border border-border/40 text-right">
-                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">نمونه تعاملی:</span>
-                <div class="flex items-center gap-2.5">
-                  <Checkbox id="checkbox-inter" v-model:checked="checkboxInteractive" />
-                  <Label for="checkbox-inter" class="cursor-pointer text-xs">تغییر وضعیت چک‌باکس تعاملی</Label>
-                </div>
-                <div class="text-[10px] text-muted-foreground mt-1">
-                  وضعیت فعلی: <span :class="checkboxInteractive ? 'text-primary font-bold' : 'text-muted-foreground'">{{ checkboxInteractive ? 'تیک‌خورده (Checked)' : 'بدون تیک (Unchecked)' }}</span>
-                </div>
+            <!-- Checkbox & Switch -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+              <div class="flex items-center gap-2">
+                <Checkbox id="chk-demo" v-model:checked="checkboxVal" />
+                <Label for="chk-demo" class="text-xs cursor-pointer">چک‌باکس انتخابی</Label>
               </div>
 
-              <!-- All States Group -->
-              <div class="flex flex-col gap-3">
-                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">انواع وضعیت‌ها (States):</span>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <!-- Checked -->
-                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20">
-                    <Checkbox id="cb-checked" :checked="true" />
-                    <Label for="cb-checked" class="text-xs text-foreground/80">تیک‌خورده (Checked)</Label>
-                  </div>
-
-                  <!-- Unchecked -->
-                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20">
-                    <Checkbox id="cb-unchecked" :checked="false" />
-                    <Label for="cb-unchecked" class="text-xs text-foreground/80">بدون تیک (Unchecked)</Label>
-                  </div>
-
-                  <!-- Indeterminate -->
-                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20">
-                    <Checkbox id="cb-indet" v-model:checked="checkboxIndeterminate" />
-                    <Label for="cb-indet" class="text-xs text-foreground/80">بینابینی (Indeterminate)</Label>
-                  </div>
-
-                  <!-- Invalid / Error -->
-                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-destructive/30">
-                    <Checkbox id="cb-invalid" aria-invalid="true" :checked="false" />
-                    <Label for="cb-invalid" class="text-xs text-destructive">حالت خطا (Invalid)</Label>
-                  </div>
-
-                  <!-- Disabled Unchecked -->
-                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
-                    <Checkbox id="cb-dis-un" :disabled="true" :checked="false" />
-                    <Label for="cb-dis-un" class="text-xs text-muted-foreground">غیرفعال خاموش</Label>
-                  </div>
-
-                  <!-- Disabled Checked -->
-                  <div class="flex items-center gap-2.5 p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
-                    <Checkbox id="cb-dis-ch" :disabled="true" :checked="true" />
-                    <Label for="cb-dis-ch" class="text-xs text-muted-foreground">غیرفعال روشن</Label>
-                  </div>
-                </div>
+              <div class="flex items-center gap-2">
+                <Label for="sw-demo" class="text-xs cursor-pointer">کلید سویچ:</Label>
+                <Switch id="sw-demo" v-model:checked="switchVal" />
               </div>
             </div>
 
-            <!-- Switch Section -->
-            <div class="flex flex-col gap-5 text-right animate-in fade-in-50">
-              <h3 class="text-xs font-bold text-foreground border-b border-border/40 pb-2 text-right">سوئیچ‌ها (Switch)</h3>
-              
-              <!-- Interactive Example -->
-              <div class="flex flex-col gap-2 bg-background/40 p-4 rounded-xl border border-border/40 text-right">
-                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">نمونه تعاملی:</span>
-                <div class="flex items-center justify-between">
-                  <Label for="switch-inter" class="cursor-pointer text-xs">تغییر وضعیت سوئیچ تعاملی</Label>
-                  <Switch id="switch-inter" v-model:checked="switchVal" />
-                </div>
-                <div class="text-[10px] text-muted-foreground mt-1">
-                  وضعیت فعلی: <span :class="switchVal ? 'text-primary font-bold' : 'text-muted-foreground'">{{ switchVal ? 'روشن (On)' : 'خاموش (Off)' }}</span>
-                </div>
-              </div>
-
-              <!-- Sizes & States -->
-              <div class="flex flex-col gap-4">
-                <!-- Sizes -->
-                <div class="flex flex-col gap-2 text-right">
-                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">اندازه‌ها (Sizes):</span>
-                  <div class="flex items-center gap-6 p-2.5 bg-background/20 rounded-lg border border-border/20">
-                    <div class="flex items-center gap-2">
-                      <Switch id="switch-sz-def" :checked="true" size="default" />
-                      <Label for="switch-sz-def" class="text-xs text-foreground/80">پیش‌فرض (Default)</Label>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <Switch id="switch-sz-sm" :checked="true" size="sm" />
-                      <Label for="switch-sz-sm" class="text-xs text-foreground/80">کوچک (Small)</Label>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- States -->
-                <div class="flex flex-col gap-2 text-right">
-                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">وضعیت‌ها (States):</span>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-right">
-                    <!-- Switch Checked -->
-                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20">
-                      <Label class="text-xs text-foreground/80">روشن (On)</Label>
-                      <Switch :checked="true" />
-                    </div>
-
-                    <!-- Switch Unchecked -->
-                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20">
-                      <Label class="text-xs text-foreground/80">خاموش (Off)</Label>
-                      <Switch :checked="false" />
-                    </div>
-
-                    <!-- Switch Invalid -->
-                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-destructive/30">
-                      <Label class="text-xs text-destructive">خطا (Invalid)</Label>
-                      <Switch :checked="false" aria-invalid="true" />
-                    </div>
-
-                    <!-- Switch Disabled Off -->
-                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
-                      <Label class="text-xs text-muted-foreground">غیرفعال خاموش</Label>
-                      <Switch :checked="false" :disabled="true" />
-                    </div>
-
-                    <!-- Switch Disabled On -->
-                    <div class="flex items-center justify-between p-2.5 bg-background/20 rounded-lg border border-border/20 opacity-50">
-                      <Label class="text-xs text-muted-foreground">غیرفعال روشن</Label>
-                      <Switch :checked="true" :disabled="true" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        <!-- Popover, Calendar & OTP Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 lg:col-span-2">
-          <div class="flex flex-col gap-1 text-right">
-            <h2 class="text-sm font-extrabold text-foreground">تقویم، پاپ‌اور و کد تایید (Calendar, Popover & OTP)</h2>
-            <p class="text-[11px] text-muted-foreground">نمونه نمایش پاپ‌اور، تقویم انتخابی و دریافت کد پیامکی.</p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-border/40 pt-6 text-right">
-            <!-- Calendar & Popover -->
-            <div class="flex flex-col items-start gap-2.5 text-right">
-              <Label>انتخاب تاریخ قرار ملاقات:</Label>
-              <Popover>
-                <PopoverTrigger as-child>
-                  <Button variant="outline" class="w-[240px] justify-start text-right font-normal">
-                    <CalendarIcon class="ml-2 size-4 text-muted-foreground" />
-                    <span>{{ dateVal ? dateVal.toString() : 'انتخاب تاریخ...' }}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent class="w-auto p-0" align="start">
-                  <Calendar v-model="dateVal" initial-focus />
-                </PopoverContent>
-              </Popover>
-              <p class="text-[10px] text-muted-foreground">تقویم مورد استفاده منطبق بر کتابخانه هسته reka-ui با پشتیبانی از استایل‌دهی تیره/روشن است.</p>
-            </div>
-
-            <!-- OTP Code -->
-            <div class="flex flex-col gap-3 text-right">
-              <Label class="font-bold text-xs text-right">کد تایید پیامکی (OTP):</Label>
-              <div dir="ltr" class="flex justify-end">
+            <!-- InputOTP -->
+            <div class="space-y-1.5 pt-1">
+              <Label class="text-xs font-semibold">کد تایید پیامکی (InputOTP):</Label>
+              <div dir="ltr" class="flex justify-start">
                 <InputOTP v-model="otpVal" :maxlength="4">
                   <InputOTPGroup>
                     <InputOTPSlot :index="0" />
@@ -568,620 +396,276 @@ const baseIcons = [
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-              <p class="text-[10px] text-muted-foreground text-right" dir="rtl">کد تایید ۴ رقمی پیامک شده. مقدار فعلی: <span class="bg-muted px-1 rounded font-mono">{{ otpVal }}</span></p>
             </div>
           </div>
         </div>
 
-        <!-- Skeleton Loading Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 animate-in fade-in-50">
+        <!-- 3. Data Display & Feedback (Badge, Avatar, Alert, Progress, Skeleton, Card, Separator) -->
+        <div class="bg-card/30 border border-border/60 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col gap-6">
           <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">بارگذاری پیش‌فرض (Skeleton Component)</h2>
-            <p class="text-[11px] text-muted-foreground">بارگذاری پیش‌فرض اجزای مختلف کارت‌ها و متون برای شبیه‌سازی لود اطلاعات.</p>
+            <h2 class="text-sm font-extrabold text-foreground">۳. نمایش داده و بازخورد (Badge, Avatar, Alert, Progress, Skeleton, Card, Separator)</h2>
+            <p class="text-[11px] text-muted-foreground">بج‌ها، آواتارها، هشدارهای اطلاع‌رسانی، نوار پیشرفت و کاردها.</p>
           </div>
 
-          <div class="flex flex-col gap-6 border-t border-border/40 pt-6">
-            <div class="flex items-center gap-4">
-              <Skeleton class="size-12 rounded-full shrink-0" />
-              <div class="flex flex-col gap-2 w-full">
-                <Skeleton class="h-4 w-[60%]" />
-                <Skeleton class="h-3 w-[40%]" />
-              </div>
-            </div>
-            
+          <div class="flex flex-col gap-5 border-t border-border/40 pt-4">
+            <!-- Badges -->
             <div class="flex flex-col gap-2">
-              <Skeleton class="h-3 w-full" />
-              <Skeleton class="h-3 w-[90%]" />
-              <Skeleton class="h-3 w-[75%]" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Native HTML Elements Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 lg:col-span-2 animate-in fade-in-50">
-          <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">المان‌های بومی وب (Native HTML Elements via spacing-radius.css)</h2>
-            <p class="text-[11px] text-muted-foreground">نمونه رندر دکمه‌ها، فیلدها و کانتینرهای بومی وب که بدون نیاز به نوشتن کلاس‌های تیلوند به صورت خودکار استایل سیستم را به ارث می‌برند.</p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-border/40 pt-6">
-            <!-- Native Interactive elements -->
-            <div class="flex flex-col gap-4">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">دکمه‌ها و سلکتورهای بومی:</h3>
-              <div class="flex flex-col gap-3">
-                <button>دکمه بومی &lt;button&gt;</button>
-                <button class="btn bg-secondary text-secondary-foreground border border-border/60 hover:bg-muted/80">دکمه با کلاس .btn</button>
-                <select>
-                  <option>گزینه ۱ (بومی &lt;select&gt;)</option>
-                  <option>گزینه ۲</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Native Inputs -->
-            <div class="flex flex-col gap-4">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">فیلدهای بومی فرم:</h3>
-              <div class="flex flex-col gap-3">
-                <input type="text" placeholder="ورودی متنی بومی..." />
-                <textarea placeholder="فیلد متنی چندخطی بومی..." rows="2" class="h-auto"></textarea>
-              </div>
-            </div>
-
-            <!-- Native Containers -->
-            <div class="flex flex-col gap-4">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">کانتینرهای بومی با کلاس‌های معنایی:</h3>
-              <div class="flex flex-col gap-3">
-                <div class="card text-xs p-4 flex flex-col gap-2">
-                  <span class="font-bold text-foreground">کارت بومی با کلاس .card</span>
-                  <span class="text-muted-foreground text-[10px]">استفاده از افکت سایه و حاشیه پیش‌فرض شدسن.</span>
-                </div>
-                <div class="popover text-xs p-3">
-                  <span class="font-bold text-foreground">پاپ‌اور با کلاس .popover</span>
-                  <span class="text-muted-foreground text-[10px] block mt-1">طراحی شناور با سایه عمیق‌تر.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Typography Native Elements Showcase -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 lg:col-span-2 animate-in fade-in-50">
-          <div class="flex flex-col gap-1">
-            <h2 class="text-sm font-extrabold text-foreground">عناصر بومی تایپوگرافی (Typography Elements via typography.css)</h2>
-            <p class="text-[11px] text-muted-foreground">چیدمان متون طولانی یا کدهای لود شده از دیتابیس (مانند بدنه وبلاگ یا ویکی) که استایل‌های رسمی شدسن را به صورت پیش‌فرض و سازگار با زبان فارسی (RTL) به ارث می‌برند.</p>
-          </div>
-
-          <div class="border-t border-border/40 pt-6 flex flex-col gap-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <!-- Headings -->
-              <div class="flex flex-col gap-4 bg-background/30 p-4 rounded-lg border border-border/30">
-                <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">عناوین و تیترها:</h3>
-                <div class="flex flex-col gap-4">
-                  <h1 class="mt-0 text-4xl lg:text-5xl">تیتر H1: عنوان اصلی پلتفرم</h1>
-                  <h2 class="mt-0 text-3xl">تیتر H2: بخش‌های اصلی متن</h2>
-                  <h3 class="mt-0 text-2xl">تیتر H3: تیترهای فرعی و کوچک</h3>
-                  <h4 class="mt-0 text-xl">تیتر H4: عناوین داخل باکس‌ها</h4>
-                </div>
-              </div>
-
-              <!-- Paragraphs & Quotes -->
-              <div class="flex flex-col gap-4 bg-background/30 p-4 rounded-lg border border-border/30 flex-1">
-                <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">پاراگراف، نقل‌قول و کد درون‌خطی:</h3>
-                <div class="flex flex-col gap-4">
-                  <p class="mt-0 text-foreground/90 leading-7">این یک پاراگراف متنی ساده است. توسعه‌دهنده بدون نوشتن هیچ کلاسی می‌تواند متون طولانی را با فاصله خطوط مناسب و خوانا نمایش دهد. همچنین می‌توان از <code>code درون‌خطی</code> برای نمایش متون فنی استفاده کرد.</p>
-                  <blockquote class="mt-2">
-                    این یک نقل‌قول (Blockquote) است که با جهت راست‌چین (RTL) کاملاً سازگار است و حاشیه آن به سمت راست منتقل می‌شود.
-                  </blockquote>
-                </div>
-              </div>
-            </div>
-
-            <!-- Table & Lists -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <!-- Unordered List -->
-              <div class="flex flex-col gap-4 bg-background/30 p-4 rounded-lg border border-border/30">
-                <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">لیست‌های نشانه‌دار (Unordered):</h3>
-                <ul class="my-0 pr-5 list-disc">
-                  <li>آیتم اول لیست نشانه‌دار</li>
-                  <li>آیتم دوم با فاصله استاندارد</li>
-                  <li>آیتم سوم با توکن‌های فاصله‌گذاری</li>
-                </ul>
-              </div>
-
-              <!-- Ordered List -->
-              <div class="flex flex-col gap-4 bg-background/30 p-4 rounded-lg border border-border/30">
-                <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">لیست‌های عددی (Ordered):</h3>
-                <ol class="my-0 pr-5 list-decimal">
-                  <li>مراحل انجام کار اول</li>
-                  <li>تنظیم کدهای پایه پروژه</li>
-                  <li>تست در محیط‌های آزمایشگاهی</li>
-                </ol>
-              </div>
-
-              <!-- Table -->
-              <div class="flex flex-col gap-4 bg-background/30 p-4 rounded-lg border border-border/30">
-                <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">جدول داده‌ها (Tables):</h3>
-                <div class="overflow-x-auto w-full">
-                  <table class="my-0 w-full text-xs">
-                    <thead>
-                      <tr>
-                        <th>بخش</th>
-                        <th>ردیوس</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>دکمه‌ها</td>
-                        <td>rounded-md</td>
-                      </tr>
-                      <tr>
-                        <td>کارت‌ها</td>
-                        <td>rounded-lg</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Showcase Avatar Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6">
-          <div class="flex flex-col gap-1 text-right">
-            <h2 class="text-sm font-extrabold text-foreground">آواتارها (Avatar Primitives)</h2>
-            <p class="text-[11px] text-muted-foreground">نمایش آواتارهای کاربر در ابعاد مختلف و ترکیب‌های گوناگون به همراه عکس و حروف الفبای جایگزین.</p>
-          </div>
-
-          <div class="flex flex-col gap-6 border-t border-border/40 pt-6">
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 text-right">آواتار تصویری و حروف جایگزین (Image & Fallback):</h3>
-              <div class="flex items-center gap-4">
-                <div class="flex flex-col items-center gap-1">
-                  <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="سارا احمدی" />
-                    <AvatarFallback>س‌ا</AvatarFallback>
-                  </Avatar>
-                  <span class="text-[9px] text-muted-foreground">تصویری</span>
-                </div>
-
-                <div class="flex flex-col items-center gap-1">
-                  <Avatar>
-                    <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs">س‌ا</AvatarFallback>
-                  </Avatar>
-                  <span class="text-[9px] text-muted-foreground">حروف فارسی</span>
-                </div>
-
-                <div class="flex flex-col items-center gap-1">
-                  <Avatar>
-                    <AvatarFallback class="bg-accent/15 text-accent-foreground font-bold text-xs">SA</AvatarFallback>
-                  </Avatar>
-                  <span class="text-[9px] text-muted-foreground">حروف انگلیسی</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 text-right">ابعاد مختلف (Avatar Sizes):</h3>
-              <div class="flex items-end gap-4">
-                <div class="flex flex-col items-center gap-1">
-                  <Avatar size="sm">
-                    <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" />
-                    <AvatarFallback>SM</AvatarFallback>
-                  </Avatar>
-                  <span class="text-[9px] text-muted-foreground">کوچک (SM)</span>
-                </div>
-
-                <div class="flex flex-col items-center gap-1">
-                  <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" />
-                    <AvatarFallback>DF</AvatarFallback>
-                  </Avatar>
-                  <span class="text-[9px] text-muted-foreground">معمولی</span>
-                </div>
-
-                <div class="flex flex-col items-center gap-1">
-                  <Avatar size="lg">
-                    <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" />
-                    <AvatarFallback>LG</AvatarFallback>
-                  </Avatar>
-                  <span class="text-[9px] text-muted-foreground">بزرگ (LG)</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 text-right">گروه آواتارها (Avatar Group):</h3>
-              <div class="flex items-center">
-                <AvatarGroup class="rtl:space-x-reverse">
-                  <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" />
-                    <AvatarFallback>U1</AvatarFallback>
-                  </Avatar>
-                  <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" />
-                    <AvatarFallback>U2</AvatarFallback>
-                  </Avatar>
-                  <Avatar>
-                    <AvatarImage src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" />
-                    <AvatarFallback>U3</AvatarFallback>
-                  </Avatar>
-                  <AvatarGroupCount :count="12" />
-                </AvatarGroup>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Showcase Badge Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6">
-          <div class="flex flex-col gap-1 text-right">
-            <h2 class="text-sm font-extrabold text-foreground">برچسب‌ها (Badge Primitives)</h2>
-            <p class="text-[11px] text-muted-foreground">برچسب‌های وضعیت، آیکون‌دار و شمارش‌گر در واریانت‌های بصری پلتفرم تفکر.</p>
-          </div>
-
-          <div class="flex flex-col gap-6 border-t border-border/40 pt-6">
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 text-right">واریانت‌های رسمی (Badge Styles):</h3>
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">Badges:</span>
               <div class="flex flex-wrap gap-2">
-                <Badge>پیش‌فرض (Primary)</Badge>
-                <Badge variant="secondary">ثانویه (Secondary)</Badge>
-                <Badge variant="destructive">مخرب (Destructive)</Badge>
-                <Badge variant="outline">دورخط‌دار (Outline)</Badge>
-                <Badge variant="ghost">شیشه‌ای (Ghost)</Badge>
+                <Badge variant="default">پیش‌فرض</Badge>
+                <Badge variant="secondary">ثانویه</Badge>
+                <Badge variant="outline">دورخط‌دار</Badge>
+                <Badge variant="destructive">مخرب</Badge>
               </div>
             </div>
 
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 text-right">طراحی با آیکون و شمارنده‌ها (Icons & Counters):</h3>
-              <div class="flex flex-wrap gap-3 items-center">
-                <Badge class="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border-0">
-                  <CheckCircle2Icon class="size-3" />
-                  فعال / تایید شده
-                </Badge>
-                <Badge variant="secondary" class="flex items-center gap-1 font-bold">
-                  <SparklesIcon class="size-2.5 text-primary" />
-                  ویژگی جدید
-                </Badge>
-                <Badge variant="destructive" class="h-4.5 rounded-full px-1.5 text-[9px] font-bold font-mono">
-                  12
-                </Badge>
-                <Badge variant="secondary" class="h-4.5 rounded-full px-1.5 text-[9px] font-bold font-mono">
-                  5 جدید
-                </Badge>
+            <!-- Avatars -->
+            <div class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">Avatars:</span>
+              <div class="flex items-center gap-3">
+                <Avatar class="size-9">
+                  <AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" />
+                  <AvatarFallback>RM</AvatarFallback>
+                </Avatar>
+                <Avatar class="size-9">
+                  <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs">ش‌م</AvatarFallback>
+                </Avatar>
               </div>
             </div>
 
-            <div class="flex flex-col gap-2.5">
-              <h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 text-right">لینک‌های برچسبی (Badge Links):</h3>
-              <div class="flex items-center gap-2">
-                <Badge variant="link" class="cursor-pointer">
-                  مشاهده همه تاپیک‌ها ←
-                </Badge>
+            <!-- Progress Bar -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-muted-foreground">نوار پیشرفت (Progress):</span>
+                <span class="font-bold text-primary">{{ progressVal }}٪</span>
               </div>
+              <Progress :model-value="progressVal" class="h-2 w-full" />
+            </div>
+
+            <!-- Alert Component -->
+            <Alert variant="default" class="bg-muted/30">
+              <InfoIcon class="size-4 text-primary" />
+              <AlertTitle class="text-xs font-bold">اطلاعیه دیزاین سیستم</AlertTitle>
+              <AlertDescription class="text-xs text-muted-foreground">
+                تمام کامپوننت‌های این بخش منطبق بر متغیرهای تم تاریک/روشن پلتفرم هستند.
+              </AlertDescription>
+            </Alert>
+
+            <!-- Skeleton Loading -->
+            <div class="space-y-2">
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">Skeleton Loading:</span>
+              <div class="flex items-center gap-3">
+                <Skeleton class="size-9 rounded-full" />
+                <div class="space-y-1.5 w-full">
+                  <Skeleton class="h-3.5 w-3/4" />
+                  <Skeleton class="h-2.5 w-1/2" />
+                </div>
+              </div>
+            </div>
+
+            <Separator class="bg-border/60" />
+
+            <!-- Simple Card Demo -->
+            <Card class="bg-card/60 p-4 border border-border/60 rounded-xl space-y-1.5">
+              <CardTitle class="text-xs font-bold">نمونه کارت بومی (Card Component)</CardTitle>
+              <CardDescription class="text-[11px] text-muted-foreground">تشکیل شده از CardHeader, CardTitle, CardContent و CardFooter.</CardDescription>
+            </Card>
+          </div>
+        </div>
+
+        <!-- 4. Overlays & Dialogs (Dialog, AlertDialog, Sheet, Popover, DropdownMenu) -->
+        <div class="bg-card/30 border border-border/60 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col gap-6">
+          <div class="flex flex-col gap-1">
+            <h2 class="text-sm font-extrabold text-foreground">۴. لایه‌های شناور و دیالوگ‌ها (Dialog, AlertDialog, Sheet, Popover, DropdownMenu)</h2>
+            <p class="text-[11px] text-muted-foreground">دیالوگ‌های مودال، هشدارهای تایید، کشوهای جانبی و منوهای شناور.</p>
+          </div>
+
+          <div class="flex flex-col gap-4 border-t border-border/40 pt-4">
+            <div class="flex flex-wrap gap-2.5">
+              <!-- Dialog Modal -->
+              <Dialog>
+                <DialogTrigger as-child>
+                  <Button variant="outline" size="sm" class="gap-1.5">
+                    <SparklesIcon class="size-3.5" />
+                    <span>مودال دیالوگ (Dialog)</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent class="sm:max-w-md dir-rtl text-right rounded-2xl">
+                  <DialogHeader>
+                    <DialogTitle class="text-base font-bold">تست دیالوگ عمومی</DialogTitle>
+                    <DialogDescription class="text-xs text-muted-foreground">این یک دیالوگ نمونه از کامپوننت پایه Dialog است.</DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose as-child>
+                      <Button size="sm" variant="outline">بستن</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <!-- AlertDialog -->
+              <AlertDialog>
+                <AlertDialogTrigger as-child>
+                  <Button variant="destructive" size="sm" class="gap-1.5">
+                    <AlertTriangleIcon class="size-3.5" />
+                    <span>دیالوگ هشدار (AlertDialog)</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent class="sm:max-w-md dir-rtl text-right rounded-2xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle class="text-base font-bold">آیا مطمئن هستید؟</AlertDialogTitle>
+                    <AlertDialogDescription class="text-xs text-muted-foreground">این عمل قابل بازگشت نخواهد بود.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter class="flex gap-2">
+                    <AlertDialogCancel as-child>
+                      <Button size="sm" variant="outline">انصراف</Button>
+                    </AlertDialogCancel>
+                    <AlertDialogAction as-child>
+                      <Button size="sm" variant="destructive">حذف کن</Button>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <!-- Sheet Drawer -->
+              <Sheet>
+                <SheetTrigger as-child>
+                  <Button variant="secondary" size="sm" class="gap-1.5">
+                    <MenuIcon class="size-3.5" />
+                    <span>کشوی جانبی (Sheet)</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" class="dir-rtl text-right">
+                  <SheetHeader>
+                    <SheetTitle class="text-base font-bold">پنل تنظیمات جانبی</SheetTitle>
+                    <SheetDescription class="text-xs text-muted-foreground">نمونه کشوی بازشونده جانبی Sheet.</SheetDescription>
+                  </SheetHeader>
+                </SheetContent>
+              </Sheet>
+
+              <!-- Popover -->
+              <Popover>
+                <PopoverTrigger as-child>
+                  <Button variant="outline" size="sm" class="gap-1.5">
+                    <CalendarIcon class="size-3.5" />
+                    <span>پاپ‌اور (Popover)</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent class="w-auto p-0" align="start">
+                  <Calendar v-model="dateVal" initial-focus />
+                </PopoverContent>
+              </Popover>
+
+              <!-- DropdownMenu -->
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="outline" size="sm" class="gap-1.5">
+                    <SlidersIcon class="size-3.5" />
+                    <span>منوی کشویی (DropdownMenu)</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent dir="rtl" class="w-48">
+                  <DropdownMenuItem class="text-xs cursor-pointer">ویرایش پروفایل</DropdownMenuItem>
+                  <DropdownMenuItem class="text-xs cursor-pointer">تنظیمات اعلانات</DropdownMenuItem>
+                  <DropdownMenuItem class="text-xs text-destructive cursor-pointer">خروج از حساب</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Navigation, Layout & Utilities (Tabs, Calendar, Collapsible, ScrollArea) -->
+        <div class="bg-card/30 border border-border/60 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col gap-6 lg:col-span-2">
+          <div class="flex flex-col gap-1">
+            <h2 class="text-sm font-extrabold text-foreground">۵. ناوبری و کانتینرهای چیدمان (Tabs, Calendar, Collapsible, ScrollArea)</h2>
+            <p class="text-[11px] text-muted-foreground">زبانه ها، تقویم جلالی/میلادی، کانتینرهای آکاردئونی بازشونده و محدوده اسکرول سفارشی.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border/40 pt-4">
+            <!-- Tabs & Collapsible -->
+            <div class="space-y-4">
+              <div class="space-y-1.5">
+                <span class="text-[10px] font-bold uppercase text-muted-foreground">Tabs Component:</span>
+                <Tabs default-value="tab1" class="w-full">
+                  <TabsList class="grid w-full grid-cols-2 bg-muted/60 p-0.5 rounded-lg h-8">
+                    <TabsTrigger value="tab1" class="text-xs h-7">زبانه ۱</TabsTrigger>
+                    <TabsTrigger value="tab2" class="text-xs h-7">زبانه ۲</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="tab1" class="p-3 bg-muted/20 rounded-lg text-xs text-muted-foreground mt-2">
+                    محتوای زبانه اول
+                  </TabsContent>
+                  <TabsContent value="tab2" class="p-3 bg-muted/20 rounded-lg text-xs text-muted-foreground mt-2">
+                    محتوای زبانه دوم
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <!-- Collapsible -->
+              <div class="space-y-1.5">
+                <span class="text-[10px] font-bold uppercase text-muted-foreground">Collapsible Component:</span>
+                <Collapsible v-model:open="collapsibleOpen" class="w-full space-y-1 border border-border/50 p-2.5 rounded-xl bg-card/40">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold">توضیحات بیشتر (آکاردئون)</span>
+                    <CollapsibleTrigger as-child>
+                      <Button variant="ghost" size="sm" class="h-6 w-6 p-0">
+                        <ChevronDownIcon class="size-3.5 transition-transform" :class="collapsibleOpen ? 'rotate-180' : ''" />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent class="text-xs text-muted-foreground pt-2">
+                    این محتوا با کلیک بر روی آکاردئون باز و بسته می‌شود.
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </div>
+
+            <!-- ScrollArea -->
+            <div class="space-y-1.5">
+              <span class="text-[10px] font-bold uppercase text-muted-foreground">ScrollArea Component:</span>
+              <ScrollArea class="h-40 w-full rounded-xl border border-border/50 p-3 bg-card/40">
+                <div class="space-y-2 text-xs">
+                  <div v-for="i in 10" :key="i" class="p-2 bg-muted/30 rounded-lg border border-border/30">
+                    آیتم اسکرول‌پذیر شماره {{ i }}
+                  </div>
+                </div>
+              </ScrollArea>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- TAB 2: SYSTEM TOKENS (COLORS, TYPOGRAPHY, SPACING & ICONS) -->
-      <div v-else class="flex flex-col gap-12 w-full">
-        
-        <!-- Theme Colors Grid -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <LayoutGridIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">پالت رنگ‌های سیستم (Theme Colors)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">متغیرهای رسمی استایل‌دهی شدسن بر اساس تیره و روشن (تم رنگ متغیر OKLCH).</p>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-border/40 pt-4">
+      <!-- TAB 2: TOKENS -->
+      <div v-else class="flex flex-col gap-10 w-full">
+        <!-- Colors Grid -->
+        <div class="flex flex-col gap-4">
+          <h2 class="text-sm font-extrabold text-foreground">پالت رنگی پلتفرم (Semantic Theme Tokens)</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div 
-              v-for="color in colors" 
-              :key="color.name" 
-              class="flex items-center gap-3 p-3 bg-background/50 border border-border/40 rounded-lg hover:border-border transition-colors text-right"
+              v-for="c in colors" 
+              :key="c.name"
+              class="p-4 rounded-xl shadow-xs flex flex-col gap-2 justify-between"
+              :class="c.class"
             >
-              <!-- Visual Color Swatch -->
-              <div :class="['size-12 rounded-lg flex items-center justify-center font-bold text-xs shrink-0', color.class]">
-                Aa
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-xs">{{ c.name }}</span>
+                <span class="text-[10px] opacity-75 font-mono">{{ c.variable }}</span>
               </div>
-              <div class="flex flex-col gap-0.5 text-right w-full min-w-0">
-                <div class="flex justify-between items-center gap-2">
-                  <span class="font-bold text-xs text-foreground">{{ color.name }}</span>
-                  <code class="text-[9px] bg-muted/80 px-1 py-0.5 rounded text-muted-foreground font-mono select-all">{{ color.variable }}</code>
-                </div>
-                <p class="text-[10px] text-muted-foreground truncate leading-normal">{{ color.desc }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="border-t border-border/20 pt-4 flex flex-col gap-3">
-            <h3 class="text-[10px] font-bold text-muted-foreground uppercase text-right">رنگ‌های ویژه مرزبندی و فوکوس (Borders & Interaction):</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div 
-                v-for="b in systemBorders" 
-                :key="b.name" 
-                class="flex items-center gap-3 p-2.5 bg-background/30 border border-border/30 rounded-lg text-right"
-              >
-                <div :class="['w-8 h-8 rounded shrink-0 border border-border/50', b.class]" />
-                <div class="flex flex-col text-right">
-                  <p class="font-bold text-xs text-foreground">{{ b.name }}</p>
-                  <code class="text-[9px] text-muted-foreground font-mono">{{ b.variable }}</code>
-                </div>
-              </div>
+              <span class="text-[11px] opacity-85 leading-relaxed">{{ c.desc }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Semantic Tints & Shades -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full animate-in fade-in-50">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <LayoutGridIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">طیف‌های فرعی و غلظت رنگ‌ها (Tints & Shades)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">تست رنگ‌های اصلی سیستم به همراه طیف‌های مختلف شید و تینت با استفاده از ضرایب اپسیتی (Opacity/Alpha modifiers) مرسوم در شدسن.</p>
-          
-          <div class="border-t border-border/40 pt-4 flex flex-col gap-6">
-            <div 
-              v-for="shade in colorShades" 
-              :key="shade.name" 
-              class="flex flex-col gap-3 pb-6 border-b border-border/20 last:border-0 last:pb-0"
-            >
-              <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-1 text-right">
-                <span class="font-bold text-xs text-foreground">{{ shade.name }}</span>
-                <span class="text-[10px] text-muted-foreground">{{ shade.desc }}</span>
-              </div>
-              
-              <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-                <div 
-                  v-for="swatch in shade.swatches" 
-                  :key="swatch.label" 
-                  class="flex flex-col gap-1 p-1 bg-background/50 border border-border/40 rounded-lg"
-                >
-                  <div :class="['h-8 w-full rounded', swatch.class]" />
-                  <div class="flex flex-col text-center font-mono text-[9px] text-muted-foreground leading-normal">
-                    <span class="font-bold text-foreground">{{ swatch.label }}</span>
-                    <span>{{ swatch.pct }}</span>
-                  </div>
-                </div>
-              </div>
+        <!-- Typography Sizes -->
+        <div class="flex flex-col gap-4">
+          <h2 class="text-sm font-extrabold text-foreground">تایپوگرافی و فونت متغیر (Typography Scale)</h2>
+          <div class="flex flex-col gap-2 bg-card/40 border border-border/60 p-4 rounded-xl">
+            <div v-for="f in fontSizes" :key="f.name" class="flex items-center justify-between p-2 border-b border-border/40 last:border-0">
+              <span class="text-xs font-mono text-muted-foreground">{{ f.name }} ({{ f.size }} / {{ f.px }})</span>
+              <span :class="f.class" class="font-bold text-foreground">نمونه متن با سایز {{ f.name }}</span>
             </div>
           </div>
         </div>
-
-        <!-- Typography / Font Sizes Scale -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <TypeIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">مقیاس سایزبندی قلم‌ها (Font Size Scale)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">اندازه‌های مختلف فونت مورد استفاده در طراحی با کلاس‌های استاندارد Tailwind CSS.</p>
-          
-          <div class="border-t border-border/40 pt-4 flex flex-col gap-1 divide-y divide-border/20">
-            <div 
-              v-for="sz in fontSizes" 
-              :key="sz.name" 
-              class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-right"
-            >
-              <div class="w-36 shrink-0 flex flex-col">
-                <span class="font-bold text-xs text-foreground font-mono">{{ sz.name }}</span>
-                <span class="text-muted-foreground text-[9px] font-mono mt-0.5">{{ sz.size }} / {{ sz.px }}</span>
-              </div>
-              <p :class="['text-foreground w-full text-right leading-none', sz.class]">
-                خلاقیت با طراحی مینیمال و هوشمند
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Variable Font weights display -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <TypeIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">وزن‌های فونت متغیر ایران یکان ایکس (IRANYekanX weights)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">بررسی رندر ضخامت و پایداری فونت متغیر طراحی شده در وزن‌های مختلف در مرورگر.</p>
-          
-          <div class="border-t border-border/40 pt-4 flex flex-col gap-1 divide-y divide-border/20">
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 100 (Thin)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 100">خلاقیت با طراحی مینیمال و هوشمند - وزن ۱۰۰</p>
-            </div>
-            
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 300 (Light)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 300">خلاقیت با طراحی مینیمال و هوشمند - وزن ۳۰۰</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 400 (Regular)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 400">خلاقیت با طراحی مینیمال و هوشمند - وزن ۴۰۰</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 500 (Medium)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 500">خلاقیت با طراحی مینیمال و هوشمند - وزن ۵۰۰</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 600 (Semibold)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 600">خلاقیت با طراحی مینیمال و هوشمند - وزن ۶۰۰</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 700 (Bold)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 700">خلاقیت با طراحی مینیمال و هوشمند - وزن ۷۰۰</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 800 (Extra Bold)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 800">خلاقیت با طراحی مینیمال و هوشمند - وزن ۸۰۰</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono">Weight 900 (Black)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-weight: 900">خلاقیت با طراحی مینیمال و هوشمند - وزن ۹۰۰</p>
-            </div>
-
-            <!-- بخش تست محور متغیر نقاط (Dots Axis Tests) -->
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right border-t border-dashed border-border/40 mt-4">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono text-primary">Dots 0 (Default)</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-variation-settings: 'wght' 700, 'dots' 0; font-weight: 700">خلاقیت با طراحی مینیمال و هوشمند - ت ق ی ش پ (Dots 0)</p>
-            </div>
-            
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono text-primary">Dots 1</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-variation-settings: 'wght' 700, 'dots' 1; font-weight: 700">خلاقیت با طراحی مینیمال و هوشمند - ت ق ی ش پ (Dots 1)</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono text-primary">Dots 2</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-variation-settings: 'wght' 700, 'dots' 2; font-weight: 700">خلاقیت با طراحی مینیمال و هوشمند - ت ق ی ش پ (Dots 2)</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono text-primary">Dots 3</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-variation-settings: 'wght' 700, 'dots' 3; font-weight: 700">خلاقیت با طراحی مینیمال و هوشمند - ت ق ی ش پ (Dots 3)</p>
-            </div>
-
-            <div class="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2 text-right">
-              <span class="w-32 shrink-0 text-xs font-bold text-muted-foreground font-mono text-primary">Dots 4</span>
-              <p class="text-lg text-foreground w-full text-right" style="font-variation-settings: 'wght' 700, 'dots' 4; font-weight: 700">خلاقیت با طراحی مینیمال و هوشمند - ت ق ی ش پ (Dots 4)</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Spacing System Scale -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <RulerIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">سیستم فاصله‌گذاری و ابعاد (Spacing System)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">تست مقادیر پیش‌فرض فاصله‌گذاری (Padding / Margin / Gaps) در پلتفرم به صورت پیکسل معادل.</p>
-          
-          <div class="border-t border-border/40 pt-4 flex flex-col gap-4">
-            <div 
-              v-for="space in spacings" 
-              :key="space.value" 
-              class="flex items-center gap-4 text-right"
-            >
-              <!-- Label -->
-              <div class="w-24 shrink-0 flex items-center justify-between text-xs">
-                <span class="font-bold text-foreground font-mono">size-{{ space.value }}</span>
-                <span class="text-muted-foreground text-[10px] font-mono">{{ space.px }}</span>
-              </div>
-              
-              <!-- Spacing Indicator Bar -->
-              <div class="flex-1 bg-muted/40 h-6 rounded border border-border/30 flex items-center px-1 overflow-hidden">
-                <div 
-                  :style="{ width: space.px }" 
-                  class="h-4 bg-primary/20 hover:bg-primary/40 border border-primary/30 rounded transition-colors" 
-                  :title="`size-${space.value}: ${space.px} / ${space.rem}`"
-                />
-              </div>
-              
-              <!-- Details -->
-              <div class="w-16 shrink-0 text-left text-[10px] text-muted-foreground font-mono">
-                {{ space.rem }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Lucide Icons Showcase Grid -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <SettingsIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">مجموعه آیکون‌های پایه (Lucide Icons Showcase)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">۲۶ آیکون پایه و پراستفاده پکیج Lucide که در بخش‌های مختلف پروژه کاربرد دارند.</p>
-          
-          <div class="border-t border-border/40 pt-4">
-            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
-              <div 
-                v-for="item in baseIcons" 
-                :key="item.name" 
-                class="flex flex-col items-center justify-center p-4 bg-background/50 border border-border/40 rounded-lg hover:border-primary/40 hover:bg-primary/5 transition-all group cursor-pointer"
-              >
-                <component :is="item.icon" class="size-6 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
-                <span class="text-[10px] text-foreground font-mono font-semibold">{{ item.name }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Border Radius Scale Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full animate-in fade-in-50">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <RulerIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">مقیاس انحنای لبه‌ها (Border Radius Scale)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">شعاع انحنای لبه‌های سیستم (بر اساس متغیر پایه <code>--radius: 0.5rem</code>) که به صورت متناسب و فرمول‌نویسی ریاضی محاسبه می‌شوند.</p>
-          
-          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 border-t border-border/40 pt-6">
-            <div 
-              v-for="r in borderRadii" 
-              :key="r.name" 
-              class="flex flex-col gap-3 p-3 bg-background/50 border border-border/40 rounded-lg hover:border-border transition-colors text-center relative overflow-hidden"
-            >
-              <!-- Visual Swatch -->
-              <div :class="['w-full h-16 bg-primary/10 border border-primary/30 flex items-center justify-center font-bold text-xs', r.class]">
-                <div class="w-4 h-4 border-t-2 border-r-2 border-primary absolute top-4 right-4" :class="r.class" />
-                <span class="text-primary text-[10px] font-mono">{{ r.px }}</span>
-              </div>
-              <div class="flex flex-col gap-1 text-center w-full">
-                <span class="font-bold text-[11px] text-foreground font-mono">{{ r.name }}</span>
-                <code class="text-[9px] bg-muted/80 px-1 py-0.5 rounded text-muted-foreground font-mono truncate block" :title="r.value">{{ r.value }}</code>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Custom Typography Utilities Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full animate-in fade-in-50">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <TypeIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">کلاس‌های کمکی تایپوگرافی (Custom Typography Utilities)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">کلاس‌های کمکی ویژه که بر اساس ساختار متنی شدسن برای کاربردهای خاص تعریف شده‌اند.</p>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border/40 pt-6">
-            <div 
-              v-for="typo in customTypography" 
-              :key="typo.class" 
-              class="p-4 bg-background/50 border border-border/40 rounded-lg flex flex-col gap-3 text-right"
-            >
-              <div class="flex justify-between items-center border-b border-border/20 pb-2">
-                <span class="font-bold text-xs text-primary font-mono">.{{ typo.class }}</span>
-                <span class="text-[10px] text-muted-foreground">{{ typo.desc }}</span>
-              </div>
-              <p :class="[typo.class, 'mt-0']">{{ typo.example }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Layout Utilities Panel -->
-        <div class="bg-card/30 border border-border/60 rounded-lg p-6 shadow-xs flex flex-col gap-6 w-full animate-in fade-in-50">
-          <div class="flex items-center gap-2 text-foreground justify-start">
-            <LayoutGridIcon class="size-4 text-primary" />
-            <h2 class="text-sm font-extrabold">کلاس‌های چیدمان و لایوت (Layout Utilities)</h2>
-          </div>
-          <p class="text-xs text-muted-foreground">کلاس‌های پرکاربرد جهت فواصل بیرونی، پدینگ‌ها و گرید‌های استاندارد برای انسجام لایوت‌ها.</p>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-border/40 pt-6">
-            <div 
-              v-for="layout in layoutUtilities" 
-              :key="layout.class" 
-              class="p-4 bg-background/50 border border-border/40 rounded-lg flex flex-col gap-3 text-right"
-            >
-              <span class="font-bold text-xs text-primary font-mono">.{{ layout.class }}</span>
-              <p class="text-[11px] text-foreground font-medium leading-relaxed">{{ layout.desc }}</p>
-              <span class="text-[9px] text-muted-foreground mt-auto">کاربرد: {{ layout.use }}</span>
-            </div>
-          </div>
-        </div>
-
       </div>
 
     </div>

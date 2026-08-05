@@ -23,6 +23,9 @@ import TopicAdminsView from '@/components/TopicAdminsView.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ChangelogModal from '@/components/ChangelogModal.vue'
 import AIRefinerDrawer from '@/components/AIRefinerDrawer.vue'
+import DonationCard from '@/components/kindness/DonationCard.vue'
+import DonationModal from '@/components/kindness/DonationModal.vue'
+import type { DonationCampaignProps } from '@/types/kindness'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -72,7 +75,87 @@ import {
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer'>('profile')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card'>('donation-card')
+
+// DonationCard simulation state
+const simulatorDonationModalOpen = ref(false)
+const simulatorDonationCampaign = reactive<DonationCampaignProps>({
+  id: 'cmp-playground-1',
+  title: 'تجهیز و شاداب‌سازی کلاس درس مدرسه ابتدایی در روستای محروم',
+  description: 'این پویش جهت خرید ۲۰ عدد میز و نیمکت استاندارد، یک عدد تخته هوشمند و رنگ‌آمیزی کامل ۲ کلاس درس در منطقه محروم راه‌اندازی شده است.',
+  topicId: 101,
+  topicName: 'مدرسه شهید بهشتی - کانون جهادی',
+  category: 'مدرسه و آموزش',
+  status: 'active',
+  targetAmount: 100000000,
+  collectedAmount: 45000000,
+  donorsCount: 28,
+  mediaGallery: [
+    'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80'
+  ],
+  recentDonors: [
+    { id: 'd-1', name: 'رضا محمدی', amount: 5000000, isAnonymous: false, donatedAt: '۱۰ دقیقه پیش' },
+    { id: 'd-2', name: 'کاربر ناشناس', amount: 10000000, isAnonymous: true, donatedAt: '۱ ساعت پیش' }
+  ]
+})
+
+const handleDonateClick = (id: string | number) => {
+  logEvent('DonationCard: Donate Clicked', { campaignId: id })
+  simulatorDonationModalOpen.value = true
+}
+
+const handleDonationTopicClick = (topicId: string | number) => {
+  logEvent('DonationCard: Topic Clicked', { topicId })
+}
+
+const handleTransparencyClick = (idx: number, url: string) => {
+  logEvent('DonationCard: Transparency Image Clicked', { idx, url })
+}
+
+const handleDonationSubmit = (amount: number, isAnon: boolean) => {
+  logEvent('DonationModal: Donation Submitted', { amount, isAnon })
+  simulatorDonationCampaign.collectedAmount += amount
+  simulatorDonationCampaign.donorsCount++
+  simulatorDonationCampaign.recentDonors.unshift({
+    id: `d-new-${Date.now()}`,
+    name: isAnon ? 'کاربر ناشناس' : 'حامی جدید',
+    amount,
+    isAnonymous: isAnon,
+    donatedAt: 'هم‌اکنون'
+  })
+}
+
+const setDonationState = (status: 'active' | 'completed' | 'executed') => {
+  simulatorDonationCampaign.status = status
+  if (status === 'active') {
+    simulatorDonationCampaign.collectedAmount = 45000000
+    simulatorDonationCampaign.targetAmount = 100000000
+  } else if (status === 'completed') {
+    simulatorDonationCampaign.collectedAmount = 100000000
+    simulatorDonationCampaign.targetAmount = 100000000
+  } else if (status === 'executed') {
+    simulatorDonationCampaign.collectedAmount = 80000000
+    simulatorDonationCampaign.targetAmount = 80000000
+    simulatorDonationCampaign.transparency = {
+      isAvailable: true,
+      executedAt: '۱۴۰۳/۰۵/۱۵',
+      description: 'پویش با موفقیت ۱۰۰٪ به پایان رسید و تمام اقلام تهیه شده و به دست خانواده‌های هدف رسید.',
+      costBreakdown: {
+        'خرید ۱۰۰ بسته لوازم‌التحریر و کیف': 42000000,
+        'خرید اقلام غذایی (برنج، روغن، حبوبات)': 35000000,
+        'هزینه حمل و بسته‌بندی': 3000000
+      },
+      receiptImages: [
+        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=400&q=80'
+      ]
+    }
+  }
+  logEvent('DonationCard: State Changed', { newStatus: status })
+}
 const viewportWidth = ref<'100%' | '768px' | '375px'>('100%')
 const sandboxBg = ref<'default' | 'gradient' | 'grid' | 'image'>('default')
 const activeState = ref<'idle' | 'loading' | 'error' | 'empty' | 'success'>('idle')
@@ -230,6 +313,7 @@ const currentComponentFile = computed(() => {
     case 'edit-profile-modal': return 'EditProfileModal.vue'
     case 'changelog-modal': return 'ChangelogModal.vue'
     case 'ai-refiner-drawer': return 'AIRefinerDrawer.vue'
+    case 'donation-card': return 'DonationCard.vue'
     default: return ''
   }
 })
@@ -1357,6 +1441,21 @@ const openDuplicateWarningSimulation = () => {
                   هشدار پیام تکراری (جدید)
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'duplicate-warning-dialog'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('donation-card')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'donation-card' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <HeartIcon class="size-3.5 text-primary fill-primary/20" />
+                  کارت مهربانی (DonationCard) ✨
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'donation-card'" class="size-3.5 text-primary" />
               </button>
             </div>
           </div>
@@ -2729,6 +2828,51 @@ const openDuplicateWarningSimulation = () => {
                     :text="simulatorAIRefinerText"
                     @update:open="(val) => simulatorAIRefinerIsOpen = val"
                     @apply="(text) => { logEvent('AIRefinerDrawer: Refined Text Applied', { text }); simulatorAIRefinerText = text; }"
+                  />
+                </div>
+
+                <!-- DonationCard Preview -->
+                <div 
+                  v-else-if="currentComponent === 'donation-card'"
+                  class="w-full flex flex-col items-center justify-center py-4 gap-4"
+                  :dir="languageStore.dir"
+                >
+                  <!-- In-place 3-State Testing Controls -->
+                  <div class="flex flex-wrap items-center justify-between w-full max-w-md pb-2 border-b border-border/40 gap-2">
+                    <span class="text-xs font-bold text-foreground">تست وضعیت‌های پویش:</span>
+                    <div class="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/40 text-xs">
+                      <Button
+                        size="xs"
+                        :variant="simulatorDonationCampaign.status === 'active' ? 'default' : 'ghost'"
+                        class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
+                        @click="setDonationState('active')"
+                      >در حال جمع‌آوری</Button>
+                      <Button
+                        size="xs"
+                        :variant="simulatorDonationCampaign.status === 'completed' ? 'default' : 'ghost'"
+                        class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
+                        @click="setDonationState('completed')"
+                      >تکمیل شده</Button>
+                      <Button
+                        size="xs"
+                        :variant="simulatorDonationCampaign.status === 'executed' ? 'default' : 'ghost'"
+                        class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
+                        @click="setDonationState('executed')"
+                      >اجرا شده و شفاف</Button>
+                    </div>
+                  </div>
+
+                  <DonationCard
+                    v-bind="simulatorDonationCampaign"
+                    @donate-click="handleDonateClick"
+                    @topic-click="handleDonationTopicClick"
+                    @transparency-click="handleTransparencyClick"
+                  />
+
+                  <DonationModal
+                    v-model:open="simulatorDonationModalOpen"
+                    :campaign-title="simulatorDonationCampaign.title"
+                    @submit-donation="handleDonationSubmit"
                   />
                 </div>
 
