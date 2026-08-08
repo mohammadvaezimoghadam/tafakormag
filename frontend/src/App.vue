@@ -16,6 +16,7 @@ import LoginCard from '@/components/LoginCard.vue'
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
 
@@ -118,6 +119,7 @@ const handleLoginStateChange = (state: string) => {
           @pointer-down-outside="(e) => e.preventDefault()"
           @escape-key-down="(e) => e.preventDefault()"
         >
+          <DialogTitle class="sr-only">{{ languageStore.t('ورود به حساب کاربری', 'User Login') }}</DialogTitle>
           <DialogDescription class="sr-only">{{ languageStore.t('ورود به حساب کاربری تفکر', 'Tafakor User Login') }}</DialogDescription>
           <LoginCard @stateChange="handleLoginStateChange" />
         </DialogContent>

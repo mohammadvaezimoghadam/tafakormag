@@ -1,7 +1,5 @@
 @layer base {
-  /* اعمال خودکار ردیوس و فواصل استاندارد روی المانهای بومی وب */
-
-  /* اعمال فونت ایران یکان ایکس و فعال‌سازی سراسری اعداد فارسی و نقطه‌های متصل روی تمامی ورودی‌ها و المان‌های تعاملی */
+  /* Persian font features and numeral dot settings for inputs and interactive elements */
   input,
   textarea,
   select,
@@ -11,34 +9,6 @@
     font-family: 'IRANYekanX', var(--font-sans), sans-serif !important;
     font-feature-settings: "ss01" on, "cv11" on !important;
     font-variation-settings: "dots" 3 !important;
-  }
-
-  /* ۱. دکمهها و المانهای تعاملی پایه */
-  button,
-  .btn {
-    @apply rounded-md px-4 py-2 text-sm font-medium transition-all gap-2 inline-flex items-center justify-center;
-  }
-
-  /* ۲. فیلدهای ورودی فرم (Inputs & Textareas) */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  textarea,
-  select {
-    @apply rounded-md border border-input bg-background px-3 py-2 text-sm h-10 w-full;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
-  }
-
-  /* ۳. لبههای ساختارهای بزرگتر مانند کارتها، مودالها و پاپآپها */
-  .card,
-  [role="dialog"] {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm p-6;
-  }
-
-  /* ۴. پاپاورها و منوهای بازشونده کوچک (Dropdowns / Popovers) */
-  .popover,
-  [data-radix-popper-content-wrapper] {
-    @apply rounded-md border bg-popover text-popover-foreground p-4 shadow-md outline-none;
   }
 }
 

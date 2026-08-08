@@ -25,7 +25,7 @@ const emit = defineEmits<{
   (e: 'submit-donation', amount: number, isAnonymous: boolean): void
 }>()
 
-const customAmount = ref<number | null>(50000)
+const customAmount = ref<number | undefined>(50000)
 const presetAmounts = [20000, 50000, 100000, 500000]
 const isAnonymous = ref(false)
 

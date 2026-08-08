@@ -20,11 +20,12 @@ import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
-import TopicAdminsView from '@/components/TopicAdminsView.vue'
+import KindnessTab from '@/components/kindness/KindnessTab.vue'
+import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
+import { ConstructionIcon, SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
 import {
   Dialog,
   DialogContent,
@@ -41,8 +42,8 @@ import { useTopicStore } from '@/stores/topicStore'
 import { usePostStore } from '@/stores/postStore'
 import { useToastStore } from '@/stores/toastStore'
 
-// Tab state ('home' | 'profile')
-const currentTab = ref<'home' | 'profile'>('home')
+// Tab state ('home' | 'donate' | 'profile')
+const currentTab = ref<'home' | 'donate' | 'profile'>('home')
 
 // Subview connection state
 const showConnections = ref(false)
@@ -117,7 +118,7 @@ watch(currentTab, (newTab) => {
     if (route.path !== '/profile') {
       router.push('/profile')
     }
-  } else {
+  } else if (newTab === 'home') {
     if (route.path !== '/' && !route.path.startsWith('/topic/')) {
       router.push('/')
     }
@@ -234,6 +235,9 @@ const headerInnerTitle = computed(() => {
 const headerTitle = computed(() => {
   if (currentTab.value === 'profile') {
     return languageStore.t('پروفایل', 'Profile')
+  }
+  if (currentTab.value === 'donate') {
+    return languageStore.t('پویش‌های اهدا', 'Donation Campaigns')
   }
   return languageStore.t('تفکر', 'Tafakor')
 })
@@ -944,8 +948,28 @@ const toggleTheme = useToggle(isDark)
 
         </div>
 
-        <!-- TAB 2: PROFILE EDIT -->
-        <div v-else key="profile" class="w-full flex flex-col gap-4.5">
+        <!-- TAB 2: DONATE (UNDER DEVELOPMENT FULL CARD VIEW) -->
+        <div v-else-if="currentTab === 'donate'" key="donate" class="w-full flex flex-col items-center justify-center py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
+          <UnderDevelopmentCard
+            title="مهربانی، اهدا و سازندگی"
+            description="این جهان کوه است و فعل ما ندا سوی ما آید نداها را صدا  ( این بخش درحال توسعه است و به زودی فعال میشود)"
+            :icon="ConstructionIcon"
+            eta="نسخه 5 تفکر تابستان 405"
+            :features="[
+              'امکان ساخت کارت اهدا',
+              'پیگیری لحظه ای و شفاف',
+              'ریزهزینهها',
+              'نیازمندان، مساجد، مدرسه و..'
+            ]"
+            :show-back-button="true"
+            back-button-text="بازگشت به خانه "
+            @back="currentTab = 'home'"
+            pattern-speed="fast"
+          />
+        </div>
+
+        <!-- TAB 3: PROFILE -->
+        <div v-else-if="currentTab === 'profile'" key="profile" class="w-full flex flex-col gap-4.5">
           
           <transition name="fade-slide" mode="out-in">
             <!-- Subview: Connections -->

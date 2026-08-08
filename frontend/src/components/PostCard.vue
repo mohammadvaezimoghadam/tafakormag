@@ -573,7 +573,7 @@ const formatTime = (timeInSeconds: number) => {
       <!-- 3. AUDIO POST (Highly customized glassmorphic audio player) -->
       <div 
         v-else-if="type === 'audio' && mediaUrl" 
-        class="w-full bg-white/5 dark:bg-black/10 rounded-2xl p-4 flex flex-col gap-3"
+        class="w-full bg-muted/30 rounded-2xl p-4 flex flex-col gap-3"
       >
         <audio 
           ref="audioRef"
@@ -587,6 +587,7 @@ const formatTime = (timeInSeconds: number) => {
           <!-- Play/Pause Glassmorphic Button -->
           <button 
             @click="toggleAudioPlay"
+            :aria-label="isAudioPlaying ? languageStore.t('توقف صوت', 'Pause audio') : languageStore.t('پخش صوت', 'Play audio')"
             class="size-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xs shrink-0"
           >
             <PlayIcon v-if="!isAudioPlaying" class="size-5 fill-primary ml-0.5" />
@@ -622,7 +623,7 @@ const formatTime = (timeInSeconds: number) => {
           <!-- Mute/Unmute button -->
           <button 
             @click="toggleMute"
-            class="size-8 rounded-full hover:bg-white/10 dark:hover:bg-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+            class="size-8 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
           >
             <Volume2Icon v-if="!isMuted" class="size-4" />
             <VolumeXIcon v-else class="size-4 text-destructive" />
@@ -645,7 +646,7 @@ const formatTime = (timeInSeconds: number) => {
           'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border',
           reaction.reacted
             ? 'bg-primary/10 border-primary/20 text-primary shadow-xs'
-            : 'bg-white/5 dark:bg-white/2 border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10'
+            : 'bg-muted/30 border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
         ]"
       >
         <span>{{ reaction.emoji }}</span>

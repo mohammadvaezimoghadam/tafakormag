@@ -25,9 +25,11 @@ import ChangelogModal from '@/components/ChangelogModal.vue'
 import AIRefinerDrawer from '@/components/AIRefinerDrawer.vue'
 import DonationCard from '@/components/kindness/DonationCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
+import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import type { DonationCampaignProps } from '@/types/kindness'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -71,11 +73,168 @@ import {
   AlertTriangleIcon,
   UploadCloudIcon,
   ShieldCheckIcon,
-  Wand2Icon
+  Wand2Icon,
+  HandHeartIcon,
+  ConstructionIcon,
+  RocketIcon,
+  WrenchIcon,
+  ClockIcon,
+  LayersIcon,
+  EyeIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card'>('donation-card')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'under-dev'>('under-dev')
+
+// UnderDevelopmentCard simulation state
+const simulatorUnderDevTitle = ref('تحلیل هوشمند و آمار پیشرفته')
+const simulatorUnderDevDesc = ref('این بخش به‌زودی با امکانات تحلیلی و گزارش‌های زنده در دسترس قرار می‌گیرد.')
+const simulatorUnderDevBadge = ref('به‌زودی')
+const simulatorUnderDevBadgeVariant = ref<'default' | 'secondary' | 'outline' | 'destructive'>('secondary')
+const simulatorUnderDevEta = ref('نسخه ۲.۵')
+const simulatorUnderDevSpeed = ref<'slow' | 'normal' | 'fast'>('normal')
+const simulatorUnderDevPattern = ref<'stripes' | 'grid' | 'dots'>('stripes')
+const simulatorUnderDevIconName = ref<'construction' | 'sparkles' | 'rocket' | 'wrench' | 'layers'>('construction')
+const simulatorUnderDevShowBack = ref(true)
+const simulatorUnderDevBackText = ref('')
+const simulatorUnderDevActionText = ref('اطلاع‌رسانی هنگام انتشار')
+const simulatorUnderDevFeatures = ref(['آمار زنده تاپیک‌ها', 'پیشنهاد هوشمند محتوا', 'گزارش‌های تحلیلی'])
+const newUnderDevFeatureInput = ref('')
+
+const addUnderDevFeature = () => {
+  if (newUnderDevFeatureInput.value.trim()) {
+    simulatorUnderDevFeatures.value.push(newUnderDevFeatureInput.value.trim())
+    newUnderDevFeatureInput.value = ''
+    logEvent('UnderDevCard: Feature item added', { features: simulatorUnderDevFeatures.value })
+  }
+}
+
+const removeUnderDevFeature = (index: number) => {
+  simulatorUnderDevFeatures.value.splice(index, 1)
+  logEvent('UnderDevCard: Feature item removed', { index })
+}
+
+const currentUnderDevIconComponent = computed(() => {
+  switch (simulatorUnderDevIconName.value) {
+    case 'construction': return ConstructionIcon
+    case 'rocket': return RocketIcon
+    case 'wrench': return WrenchIcon
+    case 'sparkles': return SparklesIcon
+    case 'layers': return LayersIcon
+    default: return ConstructionIcon
+  }
+})
+
+// Dynamic Code Generator for UnderDevelopmentCard
+const underDevCopied = ref(false)
+const underDevActiveTab = ref<'preview' | 'code' | 'presets'>('preview')
+
+const generatedUnderDevCode = computed(() => {
+  const iconMap: Record<string, string> = {
+    construction: 'ConstructionIcon',
+    rocket: 'RocketIcon',
+    wrench: 'WrenchIcon',
+    sparkles: 'SparklesIcon',
+    layers: 'LayersIcon'
+  }
+  const iconName = iconMap[simulatorUnderDevIconName.value] || 'ConstructionIcon'
+  
+  const lines: string[] = ['<UnderDevelopmentCard']
+  if (simulatorUnderDevTitle.value) {
+    lines.push(`  title="${simulatorUnderDevTitle.value}"`)
+  }
+  if (simulatorUnderDevDesc.value) {
+    lines.push(`  description="${simulatorUnderDevDesc.value}"`)
+  }
+  lines.push(`  :icon="${iconName}"`)
+  if (simulatorUnderDevEta.value) {
+    lines.push(`  eta="${simulatorUnderDevEta.value}"`)
+  }
+  if (simulatorUnderDevFeatures.value && simulatorUnderDevFeatures.value.length > 0) {
+    lines.push(`  :features="[\n    ${simulatorUnderDevFeatures.value.map(f => `'${f}'`).join(',\n    ')}\n  ]"`)
+  }
+  if (simulatorUnderDevActionText.value) {
+    lines.push(`  action-text="${simulatorUnderDevActionText.value}"`)
+    lines.push(`  @action="handleNotify"`)
+  }
+  if (simulatorUnderDevShowBack.value) {
+    lines.push(`  :show-back-button="true"`)
+    if (simulatorUnderDevBackText.value) {
+      lines.push(`  back-button-text="${simulatorUnderDevBackText.value}"`)
+    }
+    lines.push(`  @back="handleBack"`)
+  }
+  if (simulatorUnderDevPattern.value !== 'stripes') {
+    lines.push(`  pattern-style="${simulatorUnderDevPattern.value}"`)
+  }
+  if (simulatorUnderDevSpeed.value !== 'normal') {
+    lines.push(`  pattern-speed="${simulatorUnderDevSpeed.value}"`)
+  }
+  lines.push('/>')
+  
+  const templateSnippet = lines.join('\n')
+  const scriptSnippet = `<script setup lang="ts">\nimport UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'\nimport { ${iconName} } from '@lucide/vue'\n\nconst handleNotify = () => {\n  console.log('User clicked notify')\n}\n\nconst handleBack = () => {\n  // Handle back navigation\n}\n<\/script>`
+
+  return `<!-- 1. Script Setup -->\n${scriptSnippet}\n\n<!-- 2. Template Usage -->\n${templateSnippet}`
+})
+
+const copyUnderDevCode = async () => {
+  try {
+    await navigator.clipboard.writeText(generatedUnderDevCode.value)
+    underDevCopied.value = true
+    logEvent('UnderDevCard: Code Copied to Clipboard', { characters: generatedUnderDevCode.value.length })
+    setTimeout(() => {
+      underDevCopied.value = false
+    }, 2500)
+  } catch (err) {
+    console.error('Failed to copy code:', err)
+  }
+}
+
+const applyUnderDevPreset = (preset: 'minimal' | 'full' | 'ai' | 'rocket') => {
+  if (preset === 'minimal') {
+    simulatorUnderDevTitle.value = 'در حال توسعه'
+    simulatorUnderDevDesc.value = 'این بخش به‌زودی در دسترس شما قرار می‌گیرد.'
+    simulatorUnderDevIconName.value = 'construction'
+    simulatorUnderDevPattern.value = 'stripes'
+    simulatorUnderDevSpeed.value = 'normal'
+    simulatorUnderDevFeatures.value = []
+    simulatorUnderDevEta.value = ''
+    simulatorUnderDevActionText.value = ''
+    simulatorUnderDevShowBack.value = true
+  } else if (preset === 'full') {
+    simulatorUnderDevTitle.value = 'تحلیل هوشمند و آمار پیشرفته'
+    simulatorUnderDevDesc.value = 'این بخش به‌زودی با امکانات تحلیلی و گزارش‌های زنده در دسترس قرار می‌گیرد.'
+    simulatorUnderDevIconName.value = 'sparkles'
+    simulatorUnderDevPattern.value = 'grid'
+    simulatorUnderDevSpeed.value = 'normal'
+    simulatorUnderDevFeatures.value = ['آمار زنده تاپیک‌ها', 'پیشنهاد هوشمند محتوا', 'گزارش‌های تحلیلی']
+    simulatorUnderDevEta.value = 'نسخه ۲.۵'
+    simulatorUnderDevActionText.value = 'اطلاع‌رسانی هنگام انتشار'
+    simulatorUnderDevShowBack.value = true
+  } else if (preset === 'ai') {
+    simulatorUnderDevTitle.value = 'دستیار خودکار تولید محتوا'
+    simulatorUnderDevDesc.value = 'تولید هوشمند پیش‌نویس پست‌ها و زمان‌بندی انتشار خودکار.'
+    simulatorUnderDevIconName.value = 'sparkles'
+    simulatorUnderDevPattern.value = 'dots'
+    simulatorUnderDevSpeed.value = 'fast'
+    simulatorUnderDevFeatures.value = ['تولید خودکار پیش‌نویس', 'بررسی لحن نگارش', 'انتشار در ساعات پربازدید']
+    simulatorUnderDevEta.value = 'پاییز ۱۴۰۵'
+    simulatorUnderDevActionText.value = 'ثبت‌نام در لیست انتظار'
+    simulatorUnderDevShowBack.value = false
+  } else if (preset === 'rocket') {
+    simulatorUnderDevTitle.value = 'یکپارچه‌سازی با وب‌هوک‌ها'
+    simulatorUnderDevDesc.value = 'اتصال مستقیم به پیام‌رسان‌ها و سرویس‌های خارجی از طریق API.'
+    simulatorUnderDevIconName.value = 'rocket'
+    simulatorUnderDevPattern.value = 'stripes'
+    simulatorUnderDevSpeed.value = 'fast'
+    simulatorUnderDevFeatures.value = ['پشتیبانی از Webhook', 'ارسال به کانال‌های چندگانه']
+    simulatorUnderDevEta.value = 'نسخه ۳.۰'
+    simulatorUnderDevActionText.value = 'مشاهده مستندات API'
+    simulatorUnderDevShowBack.value = true
+  }
+  logEvent('UnderDevCard: Preset Applied', { preset })
+}
 
 // DonationCard simulation state
 const simulatorDonationModalOpen = ref(false)
@@ -314,6 +473,7 @@ const currentComponentFile = computed(() => {
     case 'changelog-modal': return 'ChangelogModal.vue'
     case 'ai-refiner-drawer': return 'AIRefinerDrawer.vue'
     case 'donation-card': return 'DonationCard.vue'
+    case 'under-dev': return 'UnderDevelopmentCard.vue'
     default: return ''
   }
 })
@@ -334,7 +494,7 @@ const copyComponentFile = async () => {
   }
 }
 
-const handleComponentChange = (comp: 'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer') => {
+const handleComponentChange = (comp: typeof currentComponent.value) => {
   currentComponent.value = comp
   activeState.value = 'idle'
   logEvent('Component Changed', { component: comp })
@@ -523,9 +683,9 @@ const getImageUrl = (image: string | File | null | undefined): string => {
 }
 
 // Platform Navigation simulation variables
-const simulatorActiveTab = ref<'home' | 'profile'>('home')
+const simulatorActiveTab = ref<'home' | 'donate' | 'profile'>('home')
 
-const handleNavChange = (tab: 'home' | 'profile') => {
+const handleNavChange = (tab: 'home' | 'donate' | 'profile') => {
   logEvent('Nav: Active Tab Changed', { tab })
 }
 
@@ -1457,6 +1617,21 @@ const openDuplicateWarningSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'donation-card'" class="size-3.5 text-primary" />
               </button>
+              <button 
+                @click="handleComponentChange('under-dev')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'under-dev' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <ConstructionIcon class="size-3.5 text-primary" />
+                  کارت در حال توسعه (UnderDevelopment) 🚀
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'under-dev'" class="size-3.5 text-primary" />
+              </button>
             </div>
           </div>
         </div>
@@ -1466,9 +1641,29 @@ const openDuplicateWarningSimulation = () => {
           
           <!-- Horizontal Settings Panel -->
           <div class="w-full bg-card/30 border border-border/60 rounded-xl p-5 shadow-xs flex flex-col gap-5">
-            <div class="flex items-center justify-between border-b border-border/40 pb-3">
-              <h2 class="text-xs font-extrabold border-r-4 border-primary pr-2 leading-none text-foreground/90">تنظیمات و وضعیت شبیه‌ساز</h2>
-              <Badge variant="secondary" class="text-[9px] px-2 py-0.5 border border-border/50 text-muted-foreground font-mono">Simulator Controls</Badge>
+            <div class="flex items-center justify-between border-b border-border/40 pb-3 flex-wrap gap-3">
+              <div class="flex items-center gap-2">
+                <h2 class="text-xs font-extrabold border-r-4 border-primary pr-2 leading-none text-foreground/90">تنظیمات و وضعیت شبیه‌ساز</h2>
+                <Badge variant="secondary" class="text-[9px] px-2 py-0.5 border border-border/50 text-muted-foreground font-mono">Simulator Controls</Badge>
+              </div>
+
+              <!-- UnderDevelopmentCard Mode Tabs directly in header -->
+              <Tabs v-if="currentComponent === 'under-dev'" v-model="underDevActiveTab" class="w-full sm:w-auto">
+                <TabsList class="grid grid-cols-3 bg-muted/60 p-1 rounded-xl h-8 w-full sm:w-80">
+                  <TabsTrigger value="preview" class="text-[11px] font-bold px-2.5 rounded-lg flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+                    <EyeIcon class="size-3" />
+                    <span>{{ languageStore.t('پیش‌نمایش زنده', 'Live Preview') }}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="code" class="text-[11px] font-bold px-2.5 rounded-lg flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+                    <TerminalIcon class="size-3" />
+                    <span>{{ languageStore.t('کد آماده (Vue)', 'Copy Code') }}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="presets" class="text-[11px] font-bold px-2.5 rounded-lg flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+                    <SparklesIcon class="size-3" />
+                    <span>{{ languageStore.t('قالب‌های آماده', 'Presets') }}</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
 
             <!-- Global Configurations (Horizontal Grid) -->
@@ -1621,10 +1816,213 @@ const openDuplicateWarningSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
+              
+              <!-- UnderDevelopmentCard Specific Controls -->
+              <div v-if="currentComponent === 'under-dev'" class="flex flex-col gap-4">
+                <!-- Pattern style & speed (Shadcn Tabs with rounded-lg active pill) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="flex flex-col gap-1.5">
+                    <Label class="text-[10px] text-muted-foreground">سبک پترن متحرک:</Label>
+                    <Tabs v-model="simulatorUnderDevPattern" class="w-full">
+                      <TabsList class="grid grid-cols-3 w-full bg-muted/60 p-1 rounded-xl h-8">
+                        <TabsTrigger value="stripes" class="text-[11px] rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                          خطوط مورب
+                        </TabsTrigger>
+                        <TabsTrigger value="grid" class="text-[11px] rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                          شبکه گرید
+                        </TabsTrigger>
+                        <TabsTrigger value="dots" class="text-[11px] rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                          ماتریکس نقطه‌ای
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+
+                  <div class="flex flex-col gap-1.5">
+                    <Label class="text-[10px] text-muted-foreground">سرعت حرکت پترن:</Label>
+                    <Tabs v-model="simulatorUnderDevSpeed" class="w-full">
+                      <TabsList class="grid grid-cols-3 w-full bg-muted/60 p-1 rounded-xl h-8">
+                        <TabsTrigger value="slow" class="text-[11px] rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                          آرام
+                        </TabsTrigger>
+                        <TabsTrigger value="normal" class="text-[11px] rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                          معمولی
+                        </TabsTrigger>
+                        <TabsTrigger value="fast" class="text-[11px] rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs">
+                          سریع
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                </div>
+
+                <!-- Icon Switcher (Shadcn rounded pill grid) -->
+                <div class="flex flex-col gap-1.5">
+                  <Label class="text-[10px] text-muted-foreground">انتخاب آیکون لوسید اختصاصی:</Label>
+                  <div class="grid grid-cols-2 md:grid-cols-5 gap-1.5 bg-muted/60 p-1 rounded-xl border border-border/40 text-xs">
+                    <button
+                      @click="simulatorUnderDevIconName = 'construction'"
+                      :class="[
+                        'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg transition-all cursor-pointer text-[11px]',
+                        simulatorUnderDevIconName === 'construction' ? 'bg-background text-primary font-bold shadow-xs border border-border/40' : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      <ConstructionIcon class="size-3.5" />
+                      <span>ساخت‌و‌ساز</span>
+                    </button>
+                    <button
+                      @click="simulatorUnderDevIconName = 'rocket'"
+                      :class="[
+                        'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg transition-all cursor-pointer text-[11px]',
+                        simulatorUnderDevIconName === 'rocket' ? 'bg-background text-primary font-bold shadow-xs border border-border/40' : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      <RocketIcon class="size-3.5" />
+                      <span>موشک / پرتاب</span>
+                    </button>
+                    <button
+                      @click="simulatorUnderDevIconName = 'wrench'"
+                      :class="[
+                        'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg transition-all cursor-pointer text-[11px]',
+                        simulatorUnderDevIconName === 'wrench' ? 'bg-background text-primary font-bold shadow-xs border border-border/40' : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      <WrenchIcon class="size-3.5" />
+                      <span>ابزار / آچار</span>
+                    </button>
+                    <button
+                      @click="simulatorUnderDevIconName = 'sparkles'"
+                      :class="[
+                        'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg transition-all cursor-pointer text-[11px]',
+                        simulatorUnderDevIconName === 'sparkles' ? 'bg-background text-primary font-bold shadow-xs border border-border/40' : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      <SparklesIcon class="size-3.5" />
+                      <span>درخشش AI</span>
+                    </button>
+                    <button
+                      @click="simulatorUnderDevIconName = 'layers'"
+                      :class="[
+                        'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg transition-all cursor-pointer text-[11px]',
+                        simulatorUnderDevIconName === 'layers' ? 'bg-background text-primary font-bold shadow-xs border border-border/40' : 'text-muted-foreground hover:text-foreground'
+                      ]"
+                    >
+                      <LayersIcon class="size-3.5" />
+                      <span>لایه‌ها</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Text Controls in Live Inputs (Full Copywriting & Content Editor) -->
+                <div class="rounded-xl border border-border/50 bg-background/30 p-3.5 flex flex-col gap-3">
+                  <div class="flex items-center justify-between">
+                    <Label class="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <PencilIcon class="size-3.5 text-primary" />
+                      <span>ویرایش آنلاین متون و محتوا (همگام با کد خروجی):</span>
+                    </Label>
+                    <span class="text-[9.5px] text-muted-foreground font-mono">Realtime Code Sync</span>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                      <Label class="text-[10px] text-muted-foreground">عنوان کارت (title):</Label>
+                      <Input v-model="simulatorUnderDevTitle" placeholder="مثال: در حال توسعه" class="h-8 text-xs bg-background/50" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <Label class="text-[10px] text-muted-foreground">تخمین نسخه یا زمان (eta):</Label>
+                      <Input v-model="simulatorUnderDevEta" placeholder="مثال: نسخه ۲.۵ یا پاییز ۱۴۰۵" class="h-8 text-xs bg-background/50" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[10px] text-muted-foreground">توضیحات کارت (description):</Label>
+                    <Input v-model="simulatorUnderDevDesc" placeholder="توضیح کوتاه درباره این قابلیت..." class="h-8 text-xs bg-background/50" />
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                      <Label class="text-[10px] text-muted-foreground">متن دکمه اقدام (action-text):</Label>
+                      <Input v-model="simulatorUnderDevActionText" placeholder="مثال: اطلاع‌رسانی هنگام انتشار (خالی = بدون دکمه)" class="h-8 text-xs bg-background/50" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <Label class="text-[10px] text-muted-foreground">متن دکمه بازگشت (back-button-text):</Label>
+                      <Input v-model="simulatorUnderDevBackText" placeholder="پیش‌فرض: بازگشت" class="h-8 text-xs bg-background/50" />
+                    </div>
+                  </div>
+
+                  <!-- Feature Tags Editor -->
+                  <div class="flex flex-col gap-1.5 pt-1 border-t border-border/30">
+                    <div class="flex items-center justify-between">
+                      <Label class="text-[10px] text-muted-foreground">آیتم‌های چک‌لیست ویژگی‌ها (features):</Label>
+                      <span class="text-[9px] text-muted-foreground">{{ simulatorUnderDevFeatures.length }} مورد</span>
+                    </div>
+
+                    <!-- Tags list -->
+                    <div class="flex flex-wrap gap-1.5 items-center min-h-7">
+                      <div 
+                        v-for="(feat, fIdx) in simulatorUnderDevFeatures" 
+                        :key="fIdx"
+                        class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-primary/10 border border-primary/20 text-foreground text-[10.5px] font-medium"
+                      >
+                        <span>{{ feat }}</span>
+                        <button 
+                          @click="removeUnderDevFeature(fIdx)" 
+                          class="hover:text-destructive text-muted-foreground transition-colors cursor-pointer text-xs leading-none"
+                          title="حذف"
+                        >×</button>
+                      </div>
+                      <span v-if="simulatorUnderDevFeatures.length === 0" class="text-[10px] text-muted-foreground italic">
+                        چک‌لیستی فعال نیست.
+                      </span>
+                    </div>
+
+                    <!-- Add Tag Input -->
+                    <div class="flex items-center gap-2 mt-1">
+                      <Input 
+                        v-model="newUnderDevFeatureInput" 
+                        @keydown.enter.prevent="addUnderDevFeature"
+                        placeholder="افزودن ویژگی جدید (اینتر بزنید)..." 
+                        class="h-7 text-[11px] bg-background/50 flex-1" 
+                      />
+                      <Button 
+                        @click="addUnderDevFeature" 
+                        size="xs" 
+                        variant="secondary" 
+                        class="h-7 px-3 text-[10.5px] font-semibold cursor-pointer rounded-lg shadow-2xs"
+                      >
+                        افزودن
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Buttons & Options Toggle -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <button
+                    @click="simulatorUnderDevShowBack = !simulatorUnderDevShowBack"
+                    class="w-full text-right px-3 py-2 text-xs rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
+                  >
+                    <span>نمایش دکمه بازگشت</span>
+                    <Badge :variant="simulatorUnderDevShowBack ? 'default' : 'outline'" class="text-[9px] px-1.5 h-4">
+                      {{ simulatorUnderDevShowBack ? 'نمایش' : 'مخفی' }}
+                    </Badge>
+                  </button>
+
+                  <button
+                    @click="simulatorUnderDevFeatures = simulatorUnderDevFeatures.length > 0 ? [] : ['آمار زنده تاپیک‌ها', 'پیشنهاد هوشمند محتوا', 'گزارش‌های تحلیلی']"
+                    class="w-full text-right px-3 py-2 text-xs rounded-lg border transition-all flex items-center justify-between bg-background/20 border-border/40 text-foreground hover:bg-muted/40 cursor-pointer"
+                  >
+                    <span>باکس ویژگی‌ها</span>
+                    <Badge :variant="simulatorUnderDevFeatures.length > 0 ? 'secondary' : 'outline'" class="text-[9px] px-1.5 h-4">
+                      {{ simulatorUnderDevFeatures.length > 0 ? 'فعال' : 'مخفی' }}
+                    </Badge>
+                  </button>
+                </div>
+              </div>
               
               <!-- Header Specific Controls -->
               <div v-if="currentComponent === 'header'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1655,7 +2053,7 @@ const openDuplicateWarningSimulation = () => {
               </div>
 
               <!-- Navigation Specific Controls -->
-              <div v-if="currentComponent === 'nav'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-if="currentComponent === 'nav'" class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <button 
                   @click="simulatorActiveTab = 'home'; logEvent('Nav: Toggled via Sidebar', { tab: 'home' })"
                   :class="[
@@ -1667,6 +2065,18 @@ const openDuplicateWarningSimulation = () => {
                 >
                   <span>صفحه خانه (خانه)</span>
                   <HomeIcon class="size-3.5 text-muted-foreground" />
+                </button>
+                <button 
+                  @click="simulatorActiveTab = 'donate'; logEvent('Nav: Toggled via Sidebar', { tab: 'donate' })"
+                  :class="[
+                    'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                    simulatorActiveTab === 'donate' 
+                      ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                      : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                  ]"
+                >
+                  <span>صفحه اهدا (نیکوکاری)</span>
+                  <HandHeartIcon class="size-3.5 text-muted-foreground" />
                 </button>
                 <button 
                   @click="simulatorActiveTab = 'profile'; logEvent('Nav: Toggled via Sidebar', { tab: 'profile' })"
@@ -2263,7 +2673,7 @@ const openDuplicateWarningSimulation = () => {
                 >
                   <div class="flex-1 p-6 flex flex-col items-center justify-center text-center">
                     <transition name="fade-slide" mode="out-in">
-                      <div v-if="simulatorActiveTab === 'home'" class="flex flex-col items-center gap-2">
+                      <div v-if="simulatorActiveTab === 'home'" key="home" class="flex flex-col items-center gap-2">
                         <div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                           <HomeIcon class="size-5" />
                         </div>
@@ -2272,7 +2682,16 @@ const openDuplicateWarningSimulation = () => {
                           به بخش کاربری تفکر خوش آمدید. نویگیشن بار شناور در پایین صفحه قرار گرفته و به شما اجازه جابجایی می‌دهد.
                         </p>
                       </div>
-                      <div v-else class="flex flex-col items-center gap-2">
+                      <div v-else-if="simulatorActiveTab === 'donate'" key="donate" class="flex flex-col items-center gap-2">
+                        <div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <HandHeartIcon class="size-5" />
+                        </div>
+                        <h4 class="text-xs font-extrabold text-foreground mt-1">بخش پویش‌های اهدا و مهربانی (صفحه اهدا)</h4>
+                        <p class="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
+                          در این بخش می‌توانید پویش‌های فعال نیکوکاری و حمایت‌های مالی را مشاهده و مبالغ دلخواه را اهدا نمایید.
+                        </p>
+                      </div>
+                      <div v-else key="profile" class="flex flex-col items-center gap-2">
                         <div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                           <UserIcon class="size-5" />
                         </div>
@@ -2784,6 +3203,109 @@ const openDuplicateWarningSimulation = () => {
                   />
                 </div>
 
+                <!-- UnderDevelopmentCard Sandbox Content (Driven by top Simulator Header Tabs) -->
+                <div 
+                  v-else-if="currentComponent === 'under-dev'"
+                  class="w-full max-w-2xl mx-auto flex flex-col gap-4"
+                  :dir="languageStore.dir"
+                >
+                  <!-- 1. Live Preview Content -->
+                  <div v-if="underDevActiveTab === 'preview'" class="w-full flex justify-center py-2">
+                    <UnderDevelopmentCard
+                      :title="simulatorUnderDevTitle"
+                      :description="simulatorUnderDevDesc"
+                      :icon="currentUnderDevIconComponent"
+                      :eta="simulatorUnderDevEta"
+                      :features="simulatorUnderDevFeatures"
+                      :action-text="simulatorUnderDevActionText"
+                      :show-back-button="simulatorUnderDevShowBack"
+                      :back-button-text="simulatorUnderDevBackText"
+                      :pattern-speed="simulatorUnderDevSpeed"
+                      :pattern-style="simulatorUnderDevPattern"
+                      @action="logEvent('UnderDevCard: Action Clicked (Notify/Interest)', { title: simulatorUnderDevTitle })"
+                      @back="logEvent('UnderDevCard: Back Button Clicked', {})"
+                    />
+                  </div>
+
+                  <!-- 2. Code Snippet Content -->
+                  <div v-else-if="underDevActiveTab === 'code'" class="w-full">
+                    <div class="relative rounded-2xl bg-card/60 dark:bg-black/40 border border-border/60 p-4 shadow-sm backdrop-blur-md">
+                      <!-- Code header -->
+                      <div class="flex items-center justify-between border-b border-border/40 pb-2.5 mb-3" dir="ltr">
+                        <div class="flex items-center gap-2">
+                          <span class="size-2.5 rounded-full bg-rose-500/80 inline-block" />
+                          <span class="size-2.5 rounded-full bg-amber-500/80 inline-block" />
+                          <span class="size-2.5 rounded-full bg-emerald-500/80 inline-block" />
+                          <span class="text-[11px] font-mono font-bold text-muted-foreground ml-2">UnderDevelopmentCard.vue</span>
+                        </div>
+                        
+                        <Button
+                          @click="copyUnderDevCode"
+                          size="xs"
+                          :variant="underDevCopied ? 'default' : 'secondary'"
+                          class="h-7 text-[11px] font-semibold gap-1.5 cursor-pointer rounded-lg shadow-xs"
+                        >
+                          <CheckIcon v-if="underDevCopied" class="size-3" />
+                          <CopyIcon v-else class="size-3" />
+                          <span>{{ underDevCopied ? 'کپی شد!' : 'کپی تمپلیت' }}</span>
+                        </Button>
+                      </div>
+
+                      <!-- Code display -->
+                      <pre class="text-[11px] font-mono text-foreground/90 overflow-x-auto p-2 leading-relaxed select-all" dir="ltr"><code>{{ generatedUnderDevCode }}</code></pre>
+                    </div>
+                  </div>
+
+                  <!-- 3. Presets Content -->
+                  <div v-else-if="underDevActiveTab === 'presets'" class="w-full">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        @click="applyUnderDevPreset('minimal')"
+                        class="p-4 rounded-xl border border-border/40 bg-card/40 hover:bg-muted/40 hover:border-primary/30 transition-all text-start flex flex-col gap-1.5 cursor-pointer"
+                      >
+                        <div class="flex items-center justify-between w-full">
+                          <span class="text-xs font-bold text-foreground">حالت مینیمال (ساده)</span>
+                          <Badge variant="outline" class="text-[9px]">Minimal</Badge>
+                        </div>
+                        <span class="text-[11px] text-muted-foreground">فقط آیکون ساخت و ساز، عنوان، توضیح و دکمه بازگشت</span>
+                      </button>
+
+                      <button
+                        @click="applyUnderDevPreset('full')"
+                        class="p-4 rounded-xl border border-border/40 bg-card/40 hover:bg-muted/40 hover:border-primary/30 transition-all text-start flex flex-col gap-1.5 cursor-pointer"
+                      >
+                        <div class="flex items-center justify-between w-full">
+                          <span class="text-xs font-bold text-foreground">حالت کامل (Full Featured)</span>
+                          <Badge variant="secondary" class="text-[9px]">Full</Badge>
+                        </div>
+                        <span class="text-[11px] text-muted-foreground">شامل ویژگی‌ها، زمان تقریبی، پترن گرید و دکمه‌های اکشن</span>
+                      </button>
+
+                      <button
+                        @click="applyUnderDevPreset('ai')"
+                        class="p-4 rounded-xl border border-border/40 bg-card/40 hover:bg-muted/40 hover:border-primary/30 transition-all text-start flex flex-col gap-1.5 cursor-pointer"
+                      >
+                        <div class="flex items-center justify-between w-full">
+                          <span class="text-xs font-bold text-foreground">حالت هوش مصنوعی (AI Assistant)</span>
+                          <Badge variant="default" class="text-[9px]">AI Beta</Badge>
+                        </div>
+                        <span class="text-[11px] text-muted-foreground">آیکون Sparkles با پترن نقطه‌ای و لیست انتظار</span>
+                      </button>
+
+                      <button
+                        @click="applyUnderDevPreset('rocket')"
+                        class="p-4 rounded-xl border border-border/40 bg-card/40 hover:bg-muted/40 hover:border-primary/30 transition-all text-start flex flex-col gap-1.5 cursor-pointer"
+                      >
+                        <div class="flex items-center justify-between w-full">
+                          <span class="text-xs font-bold text-foreground">حالت پرتاب و API (Rocket)</span>
+                          <Badge variant="secondary" class="text-[9px]">v3.0</Badge>
+                        </div>
+                        <span class="text-[11px] text-muted-foreground">آیکون موشک با پترن پرسرعت و مشاهده مستندات</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- ChangelogModal Preview -->
                 <div 
                   v-else-if="currentComponent === 'changelog-modal'"
@@ -2902,6 +3424,29 @@ const openDuplicateWarningSimulation = () => {
                     @go-to-existing="(id) => logEvent('DuplicateWarningDialog: Go To Existing Post Emitted', { postId: id })"
                     @force-submit="logEvent('DuplicateWarningDialog: Force Submit Emitted', {})"
                     @cancel="logEvent('DuplicateWarningDialog: Cancelled Emitted', {})"
+                  />
+                </div>
+
+                <!-- UnderDevelopmentCard Preview -->
+                <div 
+                  v-else-if="currentComponent === 'under-dev'"
+                  class="w-full max-w-xl mx-auto flex flex-col items-center justify-center py-4 gap-4"
+                  :dir="languageStore.dir"
+                >
+                  <UnderDevelopmentCard
+                    :title="simulatorUnderDevTitle"
+                    :description="simulatorUnderDevDesc"
+                    :icon="currentUnderDevIconComponent"
+                    :badge-text="simulatorUnderDevBadge"
+                    :badge-variant="simulatorUnderDevBadgeVariant"
+                    :eta="simulatorUnderDevEta"
+                    :features="simulatorUnderDevFeatures"
+                    :action-text="simulatorUnderDevActionText"
+                    :show-back-button="simulatorUnderDevShowBack"
+                    :pattern-speed="simulatorUnderDevSpeed"
+                    :pattern-style="simulatorUnderDevPattern"
+                    @action="logEvent('UnderDevCard: Action Clicked (Notify/Interest)', { title: simulatorUnderDevTitle })"
+                    @back="logEvent('UnderDevCard: Back Button Clicked', {})"
                   />
                 </div>
 
