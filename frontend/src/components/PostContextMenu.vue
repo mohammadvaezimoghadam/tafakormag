@@ -1,32 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useLanguageStore } from '@/stores/languageStore'
+
+const languageStore = useLanguageStore()
 import { 
   PencilIcon, 
   CopyIcon, 
   Trash2Icon,
   SendIcon
 } from '@lucide/vue'
-import {
-  DropdownMenuRoot,
-  DropdownMenuPortal,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from 'reka-ui'
-
-const languageStore = useLanguageStore()
 
 const props = withDefaults(defineProps<{
   isOpen: boolean
-  triggerRect?: DOMRect | null
-  touchPos?: { x: number; y: number } | null
+  triggerRect: DOMRect | null
+  touchPos: { x: number; y: number } | null
   postId: string | number
   postText?: string
   isOwner?: boolean
 }>(), {
-  isOpen: false,
-  triggerRect: null,
-  touchPos: null,
   isOwner: false
 })
 
@@ -39,6 +30,68 @@ const emit = defineEmits<{
   (e: 'react', id: string | number, emoji: string): void
   (e: 'copy', id: string | number): void
 }>()
+
+// Calculate dynamic styles for the floating menu based on touch position or trigger card
+const menuWidth = 224 // w-56 is 224px
+const menuHeight = computed(() => {
+  const baseHeight = 76 // Copy + Publication Status
+  const ownerExtra = props.isOwner ? 80 : 0 // Edit + Delete + Divider
+  return baseHeight + ownerExtra
+})
+
+const menuStyle = computed(() => {
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  if (!props.touchPos || (props.touchPos.x === 0 && props.touchPos.y === 0)) {
+    if (!props.triggerRect) {
+      return {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      }
+    }
+
+    const rect = props.triggerRect
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    let top = 0
+    if (spaceBelow > menuHeight.value + 20) {
+      top = rect.bottom + 8
+    } else if (spaceAbove > menuHeight.value + 20) {
+      top = rect.top - menuHeight.value - 8
+    } else {
+      top = Math.max(16, rect.top + (rect.height - menuHeight.value) / 2)
+    }
+
+    let left = rect.left + (rect.width - menuWidth) / 2
+    left = Math.max(16, Math.min(viewportWidth - menuWidth - 16, left))
+
+    return {
+      top: `${top}px`,
+      left: `${left}px`,
+      position: 'fixed' as const
+    }
+  }
+
+  const { x, y } = props.touchPos
+  let left = x - menuWidth / 2
+  let top = y + 8 // offset menu below touch point
+
+  if (y + menuHeight.value + 24 > viewportHeight) {
+    top = y - menuHeight.value - 8 // position above touch point if overflowing below
+  }
+
+  left = Math.max(16, Math.min(viewportWidth - menuWidth - 16, left))
+  top = Math.max(16, Math.min(viewportHeight - menuHeight.value - 16, top))
+
+  return {
+    top: `${top}px`,
+    left: `${left}px`,
+    position: 'fixed' as const
+  }
+})
 
 const copyToClipboard = async (text: string) => {
   if (navigator.clipboard && window.isSecureContext) {
@@ -94,55 +147,108 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy' | 'publication-st
 </script>
 
 <template>
-  <DropdownMenuRoot :open="isOpen" @update:open="(val: boolean) => { if (!val) emit('close') }">
-    <DropdownMenuPortal>
-      <DropdownMenuContent
-        :dir="languageStore.dir"
-        :side-offset="6"
-        align="end"
-        class="bg-popover/90 backdrop-blur-xl border border-border/60 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-56 z-50 animate-in fade-in-0 zoom-in-95 duration-100 outline-none select-none text-start"
+  <Transition name="fade">
+    <div 
+      v-if="isOpen" 
+      class="fixed inset-0 z-50 bg-black/35 dark:bg-black/55 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
+      @click="emit('close')"
+      @contextmenu.prevent="emit('close')"
+    >
+      <!-- Floating Menu Wrapper -->
+      <div 
+        class="flex flex-col gap-2 pointer-events-auto select-none scale-up text-start w-56 animate-menu-pop"
+        :style="menuStyle"
+        @click.stop
       >
-        <!-- Copy Text -->
-        <DropdownMenuItem
-          @click="handleAction('copy')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
+        <!-- Vertical Dropdown Menu Options -->
+        <div 
+          class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-full"
+          :dir="languageStore.dir"
         >
-          <span>{{ languageStore.t('کپی متن پست', 'Copy Post Text') }}</span>
-          <CopyIcon class="size-3.5 text-muted-foreground" />
-        </DropdownMenuItem>
-
-        <!-- Publication Status -->
-        <DropdownMenuItem
-          @click="handleAction('publication-status')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
-        >
-          <span>{{ languageStore.t('وضعیت انتشار', 'Publication Status') }}</span>
-          <SendIcon class="size-3.5 text-primary" />
-        </DropdownMenuItem>
-
-        <template v-if="isOwner">
-          <!-- Edit Post -->
-          <DropdownMenuItem
-            @click="handleAction('edit')"
-            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
+          <!-- Copy Text -->
+          <button 
+            @click="handleAction('copy')" 
+            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
           >
-            <span>{{ languageStore.t('ویرایش پست', 'Edit Post') }}</span>
-            <PencilIcon class="size-3.5 text-muted-foreground" />
-          </DropdownMenuItem>
+            <span>{{ languageStore.t('کپی متن پست', 'Copy Post Text') }}</span>
+            <CopyIcon class="size-3.5 text-muted-foreground" />
+          </button>
 
-          <!-- Divider -->
-          <DropdownMenuSeparator class="h-px bg-border/40 my-1" />
-
-          <!-- Delete Post -->
-          <DropdownMenuItem
-            @click="handleAction('delete')"
-            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all outline-none"
+          <!-- Publication Status -->
+          <button 
+            @click="handleAction('publication-status')" 
+            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
           >
-            <span>{{ languageStore.t('حذف پست', 'Delete Post') }}</span>
-            <Trash2Icon class="size-3.5 text-destructive" />
-          </DropdownMenuItem>
-        </template>
-      </DropdownMenuContent>
-    </DropdownMenuPortal>
-  </DropdownMenuRoot>
+            <span>{{ languageStore.t('وضعیت انتشار', 'Publication Status') }}</span>
+            <SendIcon class="size-3.5 text-primary" />
+          </button>
+
+          <template v-if="isOwner">
+            <!-- Edit Post -->
+            <button 
+              @click="handleAction('edit')" 
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            >
+              <span>{{ languageStore.t('ویرایش پست', 'Edit Post') }}</span>
+              <PencilIcon class="size-3.5 text-muted-foreground" />
+            </button>
+
+            <!-- Divider -->
+            <div class="h-[1px] bg-border/40 my-1" />
+
+            <!-- Delete Post -->
+            <button 
+              @click="handleAction('delete')" 
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            >
+              <span>{{ languageStore.t('حذف پست', 'Delete Post') }}</span>
+              <Trash2Icon class="size-3.5 text-destructive" />
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </Transition>
 </template>
+
+<style scoped>
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.scale-up {
+  transform-origin: top right;
+}
+
+@keyframes menuPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-menu-pop {
+  animation: menuPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+</style>

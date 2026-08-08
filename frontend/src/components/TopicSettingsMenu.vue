@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { 
   PencilIcon, 
   LinkIcon, 
@@ -6,20 +7,13 @@ import {
   UploadCloudIcon,
   ShieldCheckIcon
 } from '@lucide/vue'
-import {
-  DropdownMenuRoot,
-  DropdownMenuPortal,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from 'reka-ui'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const languageStore = useLanguageStore()
 
 const props = withDefaults(defineProps<{
   isOpen: boolean
-  triggerRect?: DOMRect | null
+  triggerRect: DOMRect | null
   isOwner?: boolean
 }>(), {
   isOpen: false,
@@ -35,6 +29,37 @@ const emit = defineEmits<{
   (e: 'admins'): void
   (e: 'delete'): void
 }>()
+
+const menuWidth = 224 // w-56
+
+// Calculate position of the dropdown relative to the detachable options button
+const menuStyle = computed(() => {
+  if (!props.triggerRect) {
+    return {
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+    }
+  }
+
+  const rect = props.triggerRect
+  const viewportWidth = window.innerWidth
+
+  // Place it directly below the options button
+  const top = rect.bottom + 8
+
+  // Align it near the options button, making sure it stays inside screen boundaries
+  let left = rect.left
+  
+  // Bound check to keep it inside the screen viewport with a 16px safety margin
+  left = Math.max(16, Math.min(viewportWidth - menuWidth - 16, left))
+
+  return {
+    top: `${top}px`,
+    left: `${left}px`,
+    position: 'fixed' as const
+  }
+})
 
 const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'admins') => {
   if (action === 'edit') {
@@ -53,66 +78,98 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
 </script>
 
 <template>
-  <DropdownMenuRoot :open="isOpen" @update:open="(val: boolean) => { if (!val) emit('close') }">
-    <DropdownMenuPortal>
-      <DropdownMenuContent
+  <Transition name="fade">
+    <div 
+      v-if="isOpen" 
+      class="fixed inset-0 z-50 bg-black/35 dark:bg-black/55 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
+      @click="emit('close')"
+      @contextmenu.prevent="emit('close')"
+    >
+      <!-- Floating Menu Wrapper -->
+      <div 
+        class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-56 pointer-events-auto select-none scale-up text-start animate-menu-pop"
+        :style="menuStyle"
+        @click.stop
         :dir="languageStore.dir"
-        :side-offset="8"
-        align="end"
-        class="bg-popover/90 backdrop-blur-xl border border-border/60 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-56 z-50 animate-in fade-in-0 zoom-in-95 duration-100 outline-none select-none"
       >
         <!-- Topic Admins -->
-        <DropdownMenuItem
-          @click="handleAction('admins')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
+        <button 
+          @click="handleAction('admins')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ isOwner ? languageStore.t('مدیریت ادمین‌ها', 'Manage Admins') : languageStore.t('اطلاعات و ادمین‌ها', 'Admins & Info') }}</span>
           <ShieldCheckIcon class="size-3.5 text-primary" />
-        </DropdownMenuItem>
+        </button>
 
         <!-- Edit Topic -->
-        <DropdownMenuItem
+        <button 
           v-if="isOwner"
-          @click="handleAction('edit')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
+          @click="handleAction('edit')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('ویرایش مشخصات تاپیک', 'Edit Topic Info') }}</span>
           <PencilIcon class="size-3.5 text-muted-foreground" />
-        </DropdownMenuItem>
+        </button>
 
         <!-- Topic Connections -->
-        <DropdownMenuItem
+        <button 
           v-if="isOwner"
-          @click="handleAction('connections')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
+          @click="handleAction('connections')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('تنظیمات اتصالات تاپیک', 'Topic Connections Settings') }}</span>
           <LinkIcon class="size-3.5 text-muted-foreground" />
-        </DropdownMenuItem>
+        </button>
 
         <!-- Upload Telegram History -->
-        <DropdownMenuItem
+        <button 
           v-if="isOwner"
-          @click="handleAction('import')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all outline-none"
+          @click="handleAction('import')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('آپلود تاریخچه تلگرام', 'Upload Telegram History') }}</span>
           <UploadCloudIcon class="size-3.5 text-muted-foreground" />
-        </DropdownMenuItem>
+        </button>
 
         <!-- Divider -->
-        <DropdownMenuSeparator v-if="isOwner" class="h-px bg-border/40 my-1" />
+        <div v-if="isOwner" class="h-[1px] bg-border/40 my-1" />
 
         <!-- Delete Topic -->
-        <DropdownMenuItem
+        <button 
           v-if="isOwner"
-          @click="handleAction('delete')"
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all outline-none"
+          @click="handleAction('delete')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('حذف تاپیک', 'Delete Topic') }}</span>
           <Trash2Icon class="size-3.5 text-destructive" />
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenuPortal>
-  </DropdownMenuRoot>
+        </button>
+      </div>
+    </div>
+  </Transition>
 </template>
+
+<style scoped>
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.scale-up {
+  transform-origin: top right;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.96); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-menu-pop {
+  animation: pop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+</style>
