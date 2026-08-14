@@ -6,8 +6,7 @@ import type { DonationCampaignProps, CampaignStatus } from '@/types/kindness'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SunIcon, MoonIcon, PlayIcon, CheckCircleIcon, SparklesIcon, Trash2Icon } from '@lucide/vue'
+import { SunIcon, MoonIcon, PlayIcon, CheckCircleIcon, HeartHandshakeIcon, Trash2Icon } from '@lucide/vue'
 
 // Dark mode state
 const isDarkMode = ref(false)
@@ -204,6 +203,10 @@ const handleTransparencyClick = (index: number, url: string) => {
   addLog('transparency-click', { index, url })
 }
 
+const handleShareClick = (campaignId: string | number) => {
+  addLog('share-click', { campaignId })
+}
+
 const handleDonationSubmit = (amount: number, isAnon: boolean) => {
   addLog('submit-donation', { amount, isAnon })
   currentCampaign.collectedAmount += amount
@@ -229,7 +232,7 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
           <h1 class="text-2xl font-bold flex items-center gap-2 text-foreground">
-            <SparklesIcon class="size-6 text-primary" />
+            <HeartHandshakeIcon class="size-6 text-primary" />
             <span>محیط تست کارت مهربانی (DonationCard Playground)</span>
           </h1>
           <p class="text-xs text-muted-foreground mt-1">
@@ -341,7 +344,7 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
                 <input 
                   type="number" 
                   v-model.number="currentCampaign.collectedAmount"
-                  class="w-full p-2 rounded-md border border-border bg-background text-foreground text-left dir-ltr"
+                  class="w-full p-2 rounded-md border border-border bg-background text-foreground text-start placeholder:text-start"
                 />
               </div>
 
@@ -350,7 +353,7 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
                 <input 
                   type="number" 
                   v-model.number="currentCampaign.targetAmount"
-                  class="w-full p-2 rounded-md border border-border bg-background text-foreground text-left dir-ltr"
+                  class="w-full p-2 rounded-md border border-border bg-background text-foreground text-start placeholder:text-start"
                 />
               </div>
             </CardContent>
@@ -401,6 +404,7 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
             @donate-click="handleDonateClick"
             @topic-click="handleTopicClick"
             @transparency-click="handleTransparencyClick"
+            @share-click="handleShareClick"
           />
         </div>
 

@@ -163,6 +163,26 @@
     transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
   }
 
+  /* Directional Text & Placeholder Alignment */
+  input, textarea {
+    text-align: start;
+  }
+  input::placeholder, textarea::placeholder {
+    text-align: start;
+  }
+  [dir="rtl"] input,
+  [dir="rtl"] textarea,
+  [dir="rtl"] input::placeholder,
+  [dir="rtl"] textarea::placeholder {
+    text-align: right;
+  }
+  [dir="ltr"] input,
+  [dir="ltr"] textarea,
+  [dir="ltr"] input::placeholder,
+  [dir="ltr"] textarea::placeholder {
+    text-align: left;
+  }
+
   /* Smooth theme transitions for typical components */
   .bg-background,
   .bg-card,

@@ -13,13 +13,13 @@ const props = withDefaults(defineProps<{
   statusVariant?: 'success' | 'warning' | 'info' | 'muted'
   topicsCount?: number
   postsCount?: number
-  connectionsCount?: number
+  donationsCount?: number
 }>(), {
   statusText: 'فعال',
   statusVariant: 'success',
-  topicsCount: 3,
-  postsCount: 15,
-  connectionsCount: 1
+  topicsCount: 0,
+  postsCount: 0,
+  donationsCount: 0
 })
 
 const emit = defineEmits<{
@@ -143,7 +143,7 @@ const statusBgGlow = computed(() => {
       </span>
     </div>
 
-    <!-- Statistics Section (Topics, Posts, Connections) -->
+    <!-- Statistics Section (Topics, Posts, Donations) -->
     <div class="grid grid-cols-3 gap-2 w-full mt-6 pt-5 px-6 border-t border-border/40 text-center">
       <div class="flex flex-col gap-0.5">
         <span class="text-sm font-black text-foreground">{{ formatNumber(topicsCount) }}</span>
@@ -158,9 +158,9 @@ const statusBgGlow = computed(() => {
         </span>
       </div>
       <div class="flex flex-col gap-0.5">
-        <span class="text-sm font-black text-foreground">{{ formatNumber(connectionsCount) }}</span>
+        <span class="text-sm font-black text-foreground">{{ formatNumber(donationsCount) }}</span>
         <span class="text-[9.5px] font-medium text-muted-foreground">
-          {{ languageStore.t('اتصال‌ها', 'Connections') }}
+          {{ languageStore.t('اهداها', 'Donations') }}
         </span>
       </div>
     </div>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { 
-  SparklesIcon, 
   LanguagesIcon, 
   Wand2Icon, 
   CheckIcon, 
@@ -196,7 +195,7 @@ const handleApply = () => {
       <!-- Header -->
       <SheetHeader class="px-6 pt-5 pb-3 border-b border-border/10 shrink-0 text-start pr-12 pl-12">
         <div class="flex items-center gap-2">
-          <SparklesIcon class="size-5 text-primary" />
+          <Wand2Icon class="size-5 text-primary" />
           <SheetTitle class="text-base font-bold text-foreground">
             {{ languageStore.t('دستیار بهبود متن', 'AI Text Refiner Assistant') }}
           </SheetTitle>
@@ -337,7 +336,7 @@ const handleApply = () => {
 
             <!-- Empty state with subtle pulse transition -->
             <div v-else-if="!hasGenerated && !previewText" class="flex-1 flex flex-col items-center justify-center gap-3 text-center px-4 animate-in fade-in-0 duration-300">
-              <SparklesIcon class="size-8 text-muted-foreground/30 animate-pulse" />
+              <Wand2Icon class="size-8 text-muted-foreground/30 animate-pulse" />
               <div class="text-xs font-bold text-muted-foreground">
                 {{ languageStore.t('آماده برای بهبود متن', 'Ready to Refine') }}
               </div>

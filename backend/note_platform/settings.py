@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.accounts',
     'apps.notes',
+    'apps.donations',
 ]
 
 # ==============================================================================
@@ -177,4 +178,26 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ==============================================================================
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2147483648  # 2 GB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
+}
+
 

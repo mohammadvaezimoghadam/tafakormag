@@ -11,6 +11,7 @@ export interface UserProfile {
   avatar?: string
   statusText?: string
   statusVariant?: 'success' | 'warning' | 'info' | 'muted'
+  donations_count?: number
   
   // Custom bot states
   is_telegram_bot_connected?: boolean
@@ -68,6 +69,7 @@ export const useUserStore = defineStore('user', () => {
       avatar: getImageUrl(data.profile_image),
       statusText: data.is_telegram_bot_connected || data.is_bale_bot_connected ? 'متصل' : 'فعال',
       statusVariant: 'success',
+      donations_count: typeof data.donations_count === 'number' ? data.donations_count : 0,
       is_telegram_bot_connected: data.is_telegram_bot_connected,
       telegram_bot_username: data.telegram_bot_username,
       telegram_bot_disconnect_reason: data.telegram_bot_disconnect_reason,

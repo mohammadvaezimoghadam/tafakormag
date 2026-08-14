@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { 
-  SparklesIcon, 
+  HistoryIcon, 
   CheckIcon, 
   ChevronLeftIcon, 
   ChevronRightIcon, 
@@ -140,7 +140,7 @@ const formatChange = (change: string) => {
       <DialogHeader class="px-6 py-5 border-b border-border/40 flex flex-row items-center justify-between bg-gradient-to-br from-primary/10 to-primary/5 space-y-0">
         <div class="flex items-center gap-2">
           <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-xs">
-            <SparklesIcon class="size-4 animate-pulse" />
+            <HistoryIcon class="size-4" />
           </div>
           <DialogTitle class="text-xs font-black text-foreground">{{ languageStore.t('آخرین بروزرسانی‌های تفکر', 'Tafakor Latest Updates') }}</DialogTitle>
         </div>

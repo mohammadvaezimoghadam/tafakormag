@@ -5,8 +5,7 @@ import {
   SunIcon, 
   MoonIcon, 
   PaletteIcon, 
-  FlaskConicalIcon,
-  SparklesIcon
+  FlaskConicalIcon
 } from '@lucide/vue'
 
 // Dark/Light theme manager via VueUse
@@ -30,7 +29,7 @@ const toggleDark = useToggle(isDark)
           <!-- Logo & Brand -->
           <div class="flex items-center gap-2">
             <div class="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-sm animate-pulse">
-              <SparklesIcon class="size-4 text-amber-400" />
+              <FlaskConicalIcon class="size-4 text-primary-foreground" />
             </div>
             <div>
               <span class="font-extrabold tracking-tight text-sm">آزمایشگاه طراحی AVA (Design Labs)</span>

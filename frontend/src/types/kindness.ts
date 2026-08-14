@@ -1,5 +1,7 @@
 export type CampaignStatus = 'active' | 'completed' | 'executed';
 
+export type CampaignCategory = 'mosque' | 'school' | 'health' | 'livelihood' | 'construction' | 'other';
+
 export interface Donor {
   id: string;
   name: string;
@@ -31,4 +33,39 @@ export interface DonationCampaignProps {
   recentDonors: Donor[];
   mediaGallery: string[];
   transparency?: TransparencyReport;
+  authorName?: string;
+  authorAvatar?: string;
+  creatorId?: string | number;
+  creatorPhone?: string;
+  canEdit?: boolean;
+  timestamp?: string;
+  isEmbedded?: boolean;
+}
+
+export interface CreateDonationMediaFile {
+  id: string;
+  file: File;
+  previewUrl: string;
+  isVideo: boolean;
+}
+
+export interface CreateDonationFormState {
+  title: string;
+  category: CampaignCategory;
+  targetAmount: number | null; // Raw numeric amount in Tomans
+  description: string;
+  mediaFiles: CreateDonationMediaFile[];
+  autoPin: boolean;
+  deadline?: string | null;
+}
+
+export interface CreateDonationPayload {
+  topic_id: string | number;
+  title: string;
+  category: CampaignCategory;
+  target_amount: number;
+  description: string;
+  media_files: File[];
+  auto_pin: boolean;
+  deadline?: string | null;
 }

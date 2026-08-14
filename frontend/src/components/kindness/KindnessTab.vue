@@ -12,7 +12,6 @@ import {
   HeartIcon, 
   SearchIcon, 
   FilterIcon, 
-  SparklesIcon, 
   PlusCircleIcon,
   CheckCircle2Icon
 } from '@lucide/vue'

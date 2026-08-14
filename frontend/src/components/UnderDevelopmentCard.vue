@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { 
   ConstructionIcon, 
-  SparklesIcon, 
+  ZapIcon, 
   ClockIcon, 
   ChevronRightIcon, 
   ChevronLeftIcon,
@@ -157,7 +157,7 @@ const displayBackText = computed(() => {
           size="sm"
           class="h-9 px-4 text-xs font-bold rounded-xl shadow-xs hover:scale-101 active:scale-98 transition-all cursor-pointer flex items-center gap-2"
         >
-          <SparklesIcon class="size-3.5" />
+          <ZapIcon class="size-3.5" />
           <span>{{ actionText }}</span>
         </Button>
 

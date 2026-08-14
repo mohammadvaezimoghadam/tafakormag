@@ -72,6 +72,7 @@ class PostSerializer(serializers.ModelSerializer):
     reactions_summary = serializers.SerializerMethodField(read_only=True)
     user_reaction = serializers.SerializerMethodField(read_only=True)
     comments_count = serializers.SerializerMethodField(read_only=True)
+    donation_campaign = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Post
@@ -80,11 +81,11 @@ class PostSerializer(serializers.ModelSerializer):
             'media_type', 'media_file', 'created_at', 'updated_at',
             'reactions_summary', 'user_reaction', 'comments_count',
             'telegram_message_ids', 'bale_message_ids',
-            'content_hash', 'published_platforms'
+            'content_hash', 'published_platforms', 'donation_campaign'
         ]
         read_only_fields = [
             'id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids',
-            'content_hash', 'published_platforms'
+            'content_hash', 'published_platforms', 'donation_campaign'
         ]
 
     def get_author_phone(self, obj):
@@ -118,6 +119,27 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_comments_count(self, obj):
         return obj.comments.count()
+
+    def get_donation_campaign(self, obj):
+        campaign = getattr(obj, 'donation_campaign', None)
+        if campaign:
+            request = self.context.get('request')
+            cover_url = campaign.cover_image.url if campaign.cover_image else None
+            if cover_url and request:
+                cover_url = request.build_absolute_uri(cover_url)
+            return {
+                'id': str(campaign.id),
+                'title': campaign.title,
+                'description': campaign.description,
+                'category': campaign.category,
+                'target_amount': campaign.target_amount,
+                'collected_amount': campaign.collected_amount,
+                'donors_count': campaign.donors_count,
+                'status': campaign.status,
+                'cover_image': cover_url,
+                'deadline': campaign.deadline.isoformat() if campaign.deadline else None,
+            }
+        return None
 
 
 class ImportTaskStatusSerializer(serializers.ModelSerializer):

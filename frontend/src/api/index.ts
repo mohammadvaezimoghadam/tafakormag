@@ -203,5 +203,25 @@ export const transferTopicOwnership = (
 ) =>
   instance.post<{ message: string; owner: UserSimple }>(`/api/notes/topics/${topicId}/transfer_ownership/`, payload)
 
+// --- Donations API ---
+export const fetchDonationCampaigns = (params?: { category?: string; status?: string; topic?: string | number; search?: string }) =>
+  instance.get('/api/v1/donations/campaigns/', { params })
+
+export const fetchDonationCampaign = (id: string | number) =>
+  instance.get(`/api/v1/donations/campaigns/${id}/`)
+
+export const createDonationCampaign = (data: FormData) =>
+  instance.post('/api/v1/donations/campaigns/', data, getMultipartConfig(data))
+
+export const updateDonationCampaign = (id: string | number, data: FormData | Record<string, any>) =>
+  instance.patch(`/api/v1/donations/campaigns/${id}/`, data, data instanceof FormData ? getMultipartConfig(data) : undefined)
+
+export const deleteDonationCampaign = (id: string | number) =>
+  instance.delete(`/api/v1/donations/campaigns/${id}/`)
+
+export const donateToCampaign = (campaignId: string | number, payload: { amount: number; is_anonymous?: boolean }) =>
+  instance.post(`/api/v1/donations/campaigns/${campaignId}/donate/`, payload)
+
 export default instance
+
 

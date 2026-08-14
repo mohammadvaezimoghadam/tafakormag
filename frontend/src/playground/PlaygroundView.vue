@@ -25,8 +25,10 @@ import ChangelogModal from '@/components/ChangelogModal.vue'
 import AIRefinerDrawer from '@/components/AIRefinerDrawer.vue'
 import DonationCard from '@/components/kindness/DonationCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
+import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
+import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
-import type { DonationCampaignProps } from '@/types/kindness'
+import type { DonationCampaignProps, CreateDonationPayload, CampaignCategory } from '@/types/kindness'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -62,6 +64,7 @@ import {
   ArrowRightIcon,
   SettingsIcon,
   LinkIcon,
+  HistoryIcon,
   SparklesIcon,
   PencilIcon,
   MessageCircleIcon,
@@ -75,6 +78,7 @@ import {
   ShieldCheckIcon,
   Wand2Icon,
   HandHeartIcon,
+  HeartIcon,
   ConstructionIcon,
   RocketIcon,
   WrenchIcon,
@@ -84,7 +88,29 @@ import {
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'under-dev'>('under-dev')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'under-dev'>('create-donation-dialog')
+
+// DonationChatCard (In-Topic Message Card) simulation state
+const simulatorChatCardTitle = ref('تجهیز و شاداب‌سازی مدرسه ابتدایی روستا')
+const simulatorChatCardCategory = ref<CampaignCategory>('school')
+const simulatorChatCardTargetAmount = ref<number>(30000000)
+const simulatorChatCardCollectedAmount = ref<number>(18500000)
+const simulatorChatCardDesc = ref('این پویش جهت خرید میز، نیمکت و سیستم گرمایشی برای دانش‌آموزان این منطقه راه‌اندازی شده است.')
+const simulatorChatCardHasMedia = ref(true)
+const simulatorChatCardMediaUrl = ref('https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80')
+const simulatorChatCardMediaType = ref<'image' | 'video'>('image')
+const simulatorChatCardMediaCount = ref(3)
+const simulatorChatCardAutoPin = ref(true)
+const simulatorChatCardDeadline = ref('۱۰ روز آینده')
+const simulatorChatCardTopicName = ref('کانون جهادی و فرهنگی')
+const simulatorChatCardAuthorName = ref('مدیر گروه جهادی')
+const simulatorChatCardIsPreview = ref(false)
+
+// CreateDonationDialog simulation state
+const isSimulatorCreateDonationOpen = ref(false)
+const simulatorCreateDonationTopicName = ref('کانون جهادی و فرهنگی امام رضا (ع)')
+const simulatorCreateDonationAuthorName = ref('مسئول گروه جهادی')
+const simulatorLastCreatedDonation = ref<CreateDonationPayload | null>(null)
 
 // UnderDevelopmentCard simulation state
 const simulatorUnderDevTitle = ref('تحلیل هوشمند و آمار پیشرفته')
@@ -473,6 +499,8 @@ const currentComponentFile = computed(() => {
     case 'changelog-modal': return 'ChangelogModal.vue'
     case 'ai-refiner-drawer': return 'AIRefinerDrawer.vue'
     case 'donation-card': return 'DonationCard.vue'
+    case 'donation-chat-card': return 'DonationChatCard.vue'
+    case 'create-donation-dialog': return 'CreateDonationDialog.vue'
     case 'under-dev': return 'UnderDevelopmentCard.vue'
     default: return ''
   }
@@ -497,6 +525,9 @@ const copyComponentFile = async () => {
 const handleComponentChange = (comp: typeof currentComponent.value) => {
   currentComponent.value = comp
   activeState.value = 'idle'
+  if (comp === 'create-donation-dialog') {
+    isSimulatorCreateDonationOpen.value = true
+  }
   logEvent('Component Changed', { component: comp })
 }
 
@@ -1372,7 +1403,7 @@ const openDuplicateWarningSimulation = () => {
                 ]"
               >
                 <span class="flex items-center gap-2">
-                  <SparklesIcon class="size-3.5 text-primary" />
+                  <HistoryIcon class="size-3.5 text-primary" />
                   مودال بروزرسانی‌ها (ChangelogModal)
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'changelog-modal'" class="size-3.5 text-primary" />
@@ -1387,7 +1418,7 @@ const openDuplicateWarningSimulation = () => {
                 ]"
               >
                 <span class="flex items-center gap-2">
-                  <SparklesIcon class="size-3.5 text-amber-500" />
+                  <Wand2Icon class="size-3.5 text-amber-500" />
                   کشوی دستیار هوش مصنوعی (AIRefinerDrawer)
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'ai-refiner-drawer'" class="size-3.5 text-primary" />
@@ -1613,9 +1644,39 @@ const openDuplicateWarningSimulation = () => {
               >
                 <span class="flex items-center gap-2">
                   <HeartIcon class="size-3.5 text-primary fill-primary/20" />
-                  کارت مهربانی (DonationCard) ✨
+                  کارت مهربانی (DonationCard - تب مهربانی) ✨
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'donation-card'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('donation-chat-card')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'donation-chat-card' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <MessageCircleIcon class="size-3.5 text-emerald-500" />
+                  کارت پویش داخل تاپیک (DonationChatCard) 💬
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'donation-chat-card'" class="size-3.5 text-primary" />
+              </button>
+              <button 
+                @click="handleComponentChange('create-donation-dialog')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'create-donation-dialog' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <HeartIcon class="size-3.5 text-rose-500 fill-rose-500/20" />
+                  دیالوگ ایجاد پویش (CreateDonationDialog) 🚀
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'create-donation-dialog'" class="size-3.5 text-primary" />
               </button>
               <button 
                 @click="handleComponentChange('under-dev')"
@@ -1816,7 +1877,7 @@ const openDuplicateWarningSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -2520,6 +2581,89 @@ const openDuplicateWarningSimulation = () => {
                   </Button>
                 </div>
               </div>
+
+              <!-- DonationChatCard Specific Controls -->
+              <div v-if="currentComponent === 'donation-chat-card'" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-start">
+                <div class="flex flex-col gap-1">
+                  <Label class="text-[9px] text-muted-foreground">دسته‌بندی پویش:</Label>
+                  <select 
+                    v-model="simulatorChatCardCategory"
+                    class="h-8 rounded-lg border border-border/60 bg-background text-xs px-2 font-medium"
+                  >
+                    <option value="mosque">مسجد</option>
+                    <option value="school">مدرسه و آموزش</option>
+                    <option value="health">درمانی و سلامت</option>
+                    <option value="livelihood">نیازمندان و معیشت</option>
+                    <option value="construction">عمرانی و تجهیزات</option>
+                    <option value="other">متفرقه</option>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Label class="text-[9px] text-muted-foreground">جمع‌آوری شده (تومان):</Label>
+                  <Input 
+                    type="number"
+                    v-model.number="simulatorChatCardCollectedAmount"
+                    class="h-8 text-xs font-bold font-mono"
+                  />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Label class="text-[9px] text-muted-foreground">مبلغ هدف (تومان):</Label>
+                  <Input 
+                    type="number"
+                    v-model.number="simulatorChatCardTargetAmount"
+                    class="h-8 text-xs font-bold font-mono"
+                  />
+                </div>
+                <div class="flex items-center gap-1.5 pt-4">
+                  <button 
+                    @click="simulatorChatCardAutoPin = !simulatorChatCardAutoPin"
+                    class="px-2 py-1 text-[10px] rounded-lg border font-semibold cursor-pointer"
+                    :class="simulatorChatCardAutoPin ? 'bg-primary/10 border-primary text-primary font-bold' : 'border-border/60 bg-muted/20 text-muted-foreground'"
+                  >
+                    {{ simulatorChatCardAutoPin ? 'پین‌شده' : 'عادی' }}
+                  </button>
+                  <button 
+                    @click="simulatorChatCardHasMedia = !simulatorChatCardHasMedia"
+                    class="px-2 py-1 text-[10px] rounded-lg border font-semibold cursor-pointer"
+                    :class="simulatorChatCardHasMedia ? 'bg-primary/10 border-primary text-primary font-bold' : 'border-border/60 bg-muted/20 text-muted-foreground'"
+                  >
+                    {{ simulatorChatCardHasMedia ? 'تصویر' : 'بدون مدیا' }}
+                  </button>
+                  <button 
+                    @click="simulatorChatCardIsPreview = !simulatorChatCardIsPreview"
+                    class="px-2 py-1 text-[10px] rounded-lg border font-semibold cursor-pointer"
+                    :class="simulatorChatCardIsPreview ? 'bg-amber-500/10 border-amber-500 text-amber-600 font-bold' : 'border-border/60 bg-muted/20 text-muted-foreground'"
+                  >
+                    پیش‌نمایش
+                  </button>
+                </div>
+              </div>
+
+              <!-- CreateDonationDialog Specific Controls -->
+              <div v-if="currentComponent === 'create-donation-dialog'" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-start items-end">
+                <div class="flex flex-col gap-1">
+                  <Label class="text-[9px] text-muted-foreground">نام تاپیک شبیه‌سازی:</Label>
+                  <Input 
+                    v-model="simulatorCreateDonationTopicName"
+                    class="h-8 text-xs font-medium"
+                  />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Label class="text-[9px] text-muted-foreground">نام ایجادکننده:</Label>
+                  <Input 
+                    v-model="simulatorCreateDonationAuthorName"
+                    class="h-8 text-xs font-medium"
+                  />
+                </div>
+                <Button 
+                  size="sm"
+                  class="h-8 text-xs font-bold gap-1.5 rounded-lg"
+                  @click="isSimulatorCreateDonationOpen = true"
+                >
+                  <HeartIcon class="size-3.5 fill-current" data-icon="inline-start" />
+                  <span>اجرای دیالوگ ساخت پویش</span>
+                </Button>
+              </div>
             </div>
             
             <!-- Dev Note & Quick Template Buttons (Horizontal flex) -->
@@ -2972,6 +3116,10 @@ const openDuplicateWarningSimulation = () => {
                     :initialText="simulatorInputText"
                     :initialAttachments="simulatorInputAttachments"
                     @send="handleInputSend"
+                    @attach="simulateAddAttachment('image')"
+                    @plus="logEvent('TopicMessageInput: Plus Button Clicked -> Opened Action Sheet', {})"
+                    @create-donation="isSimulatorCreateDonationOpen = true; logEvent('TopicMessageInput: Create Donation Clicked -> Opened CreateDonationDialog', {})"
+                    @recordVoice="logEvent('TopicMessageInput: Voice Recording Started', {})"
                     @removeAttachment="handleInputRemoveAttachment"
                   />
                 </div>
@@ -3398,6 +3546,86 @@ const openDuplicateWarningSimulation = () => {
                   />
                 </div>
 
+                <!-- DonationChatCard Preview (In-Topic Message Bubble) -->
+                <div 
+                  v-else-if="currentComponent === 'donation-chat-card'"
+                  class="w-full flex flex-col items-center justify-center py-6 gap-4"
+                  :dir="languageStore.dir"
+                >
+                  <div class="w-full max-w-md flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-xs text-muted-foreground px-1">
+                      <span class="font-bold text-foreground">کارت فشرده پویش (داخل چت تاپیک):</span>
+                      <Badge variant="outline" class="text-[10px] text-primary border-primary/30">DonationChatCard</Badge>
+                    </div>
+                    <DonationChatCard 
+                      :title="simulatorChatCardTitle"
+                      :category="simulatorChatCardCategory"
+                      :target-amount="simulatorChatCardTargetAmount"
+                      :collected-amount="simulatorChatCardCollectedAmount"
+                      :description="simulatorChatCardDesc"
+                      :media-url="simulatorChatCardHasMedia ? simulatorChatCardMediaUrl : undefined"
+                      :media-type="simulatorChatCardMediaType"
+                      :media-count="simulatorChatCardMediaCount"
+                      :auto-pin="simulatorChatCardAutoPin"
+                      :deadline="simulatorChatCardDeadline"
+                      :topic-name="simulatorChatCardTopicName"
+                      :author-name="simulatorChatCardAuthorName"
+                      :is-preview="simulatorChatCardIsPreview"
+                      @donate-click="logEvent('DonationChatCard: Donate Clicked', { title: simulatorChatCardTitle })"
+                      @card-click="logEvent('DonationChatCard: Card Clicked', { title: simulatorChatCardTitle })"
+                      @edit-click="(c) => {
+                        logEvent('DonationChatCard: Edit Clicked -> Opening CreateDonationDialog in Edit Mode', c)
+                        isSimulatorCreateDonationOpen = true
+                      }"
+                    />
+                  </div>
+                </div>
+
+                <!-- CreateDonationDialog Preview -->
+                <div 
+                  v-else-if="currentComponent === 'create-donation-dialog'"
+                  class="w-full flex flex-col items-center justify-center py-6 gap-5"
+                  :dir="languageStore.dir"
+                >
+                  <!-- Direct Inline CreateDonationDialog Preview -->
+                  <div class="w-full flex justify-center">
+                    <CreateDonationDialog 
+                      :is-inline="true"
+                      :topic-id="'topic-simulator'"
+                      :topic-name="simulatorCreateDonationTopicName"
+                      :author-name="simulatorCreateDonationAuthorName"
+                      @created="(payload) => {
+                        simulatorLastCreatedDonation = payload
+                        logEvent('CreateDonationDialog: Campaign Created (Inline)', payload)
+                      }"
+                    />
+                  </div>
+
+                  <!-- Live Chat Card Result if Created -->
+                  <div v-if="simulatorLastCreatedDonation" class="flex flex-col items-center gap-3 w-full max-w-md animate-in fade-in-50 duration-300">
+                    <div class="flex items-center gap-2 w-full justify-between px-1">
+                      <span class="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <SparklesIcon class="size-3.5 text-primary" />
+                        آخرین پویش ایجاد شده (کارت در چت):
+                      </span>
+                      <Badge variant="outline" class="text-[10px] text-primary border-primary/30">
+                        خروجی زنده
+                      </Badge>
+                    </div>
+                    <DonationChatCard 
+                      :title="simulatorLastCreatedDonation.title"
+                      :category="simulatorLastCreatedDonation.category"
+                      :target-amount="simulatorLastCreatedDonation.target_amount"
+                      :collected-amount="0"
+                      :description="simulatorLastCreatedDonation.description"
+                      :auto-pin="simulatorLastCreatedDonation.auto_pin"
+                      :deadline="simulatorLastCreatedDonation.deadline"
+                      :topic-name="simulatorCreateDonationTopicName"
+                      :author-name="simulatorCreateDonationAuthorName"
+                    />
+                  </div>
+                </div>
+
                 <!-- DuplicateWarningDialog Preview -->
                 <div 
                   v-else-if="currentComponent === 'duplicate-warning-dialog'"
@@ -3565,6 +3793,18 @@ const openDuplicateWarningSimulation = () => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- CreateDonationDialog Simulator Instance -->
+    <CreateDonationDialog 
+      v-model:open="isSimulatorCreateDonationOpen"
+      :topic-id="simulatorTopicData.id"
+      :topic-name="simulatorCreateDonationTopicName"
+      :author-name="simulatorCreateDonationAuthorName"
+      @created="(payload) => {
+        logEvent('CreateDonationDialog: Campaign Created', payload)
+        simulatorLastCreatedDonation = payload
+      }"
+    />
 
     </div>
   </div>

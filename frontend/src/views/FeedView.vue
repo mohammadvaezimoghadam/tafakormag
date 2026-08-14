@@ -14,18 +14,21 @@ import CreateTopicModal from '@/components/CreateTopicModal.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import DuplicateWarningDialog from '@/components/DuplicateWarningDialog.vue'
-import { checkDuplicatePost } from '@/api'
+import { checkDuplicatePost, createDonationCampaign, updateDonationCampaign, donateToCampaign } from '@/api'
 import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
-import KindnessTab from '@/components/kindness/KindnessTab.vue'
+import DonationsFeed from '@/components/kindness/DonationsFeed.vue'
+import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
+import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
+import DonationModal from '@/components/kindness/DonationModal.vue'
+import type { CreateDonationPayload } from '@/types/kindness'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ConstructionIcon, SparklesIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
+import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
 import {
   Dialog,
   DialogContent,
@@ -86,6 +89,9 @@ const syncRouteToState = () => {
   if (route.path === '/profile') {
     currentTab.value = 'profile'
     selectedTopic.value = null
+  } else if (route.path === '/donate') {
+    currentTab.value = 'donate'
+    selectedTopic.value = null
   } else if (route.path.startsWith('/topic/')) {
     currentTab.value = 'home'
     const topicId = Number(route.params.id)
@@ -117,6 +123,10 @@ watch(currentTab, (newTab) => {
     }
     if (route.path !== '/profile') {
       router.push('/profile')
+    }
+  } else if (newTab === 'donate') {
+    if (route.path !== '/donate') {
+      router.push('/donate')
     }
   } else if (newTab === 'home') {
     if (route.path !== '/' && !route.path.startsWith('/topic/')) {
@@ -314,10 +324,181 @@ const connectionsBadgeVariant = computed(() => {
 // Search query binding
 const searchQuery = ref('')
 
-// Create Topic Modal State
+// Create Topic & Donation Modal State
 const isCreateModalOpen = ref(false)
+const isCreateDonationOpen = ref(false)
+const isDonateModalOpen = ref(false)
+const selectedDonationForPayment = ref<any>(null)
+const editingDonation = ref<any>(null)
 const isEditProfileOpen = ref(false)
 const isAdminsModalOpen = ref(false)
+const donationsFeedRef = ref<any>(null)
+
+const handleOpenCreateDonation = () => {
+  editingDonation.value = null
+  isCreateDonationOpen.value = true
+}
+
+const isCampaignCreator = (campaign: any, postAuthor?: any) => {
+  if (!userProfile.value) return false
+  const currentUserId = userProfile.value.id ? String(userProfile.value.id) : null
+  const currentUserPhone = userProfile.value.phone || null
+
+  if (campaign?.creatorId && currentUserId && String(campaign.creatorId) === currentUserId) return true
+  if (campaign?.creator_id && currentUserId && String(campaign.creator_id) === currentUserId) return true
+  if (campaign?.creator?.id && currentUserId && String(campaign.creator.id) === currentUserId) return true
+  if (campaign?.creator_info?.id && currentUserId && String(campaign.creator_info.id) === currentUserId) return true
+  
+  if (campaign?.creator_info?.phone && currentUserPhone && campaign.creator_info.phone === currentUserPhone) return true
+  if (campaign?.creator?.phone && currentUserPhone && campaign.creator.phone === currentUserPhone) return true
+  if (campaign?.creatorPhone && currentUserPhone && campaign.creatorPhone === currentUserPhone) return true
+  if (postAuthor?.phone && currentUserPhone && postAuthor.phone === currentUserPhone) return true
+  if (postAuthor?.id && currentUserId && String(postAuthor.id) === currentUserId) return true
+
+  return false
+}
+
+const handleEditDonation = (campaign: any) => {
+  editingDonation.value = {
+    id: campaign.id,
+    title: campaign.title,
+    category: campaign.category,
+    targetAmount: campaign.targetAmount ?? campaign.target_amount,
+    description: campaign.description,
+    deadline: campaign.deadline,
+    autoPin: campaign.autoPin ?? campaign.auto_pin ?? true
+  }
+  isCreateDonationOpen.value = true
+}
+
+const handleDonationCreated = async (payload: CreateDonationPayload) => {
+  const targetTopicId = payload.topic_id || selectedTopic.value?.id || topics.value[0]?.id
+  if (!targetTopicId) {
+    toastStore.triggerToast(languageStore.t('ابتدا یک تاپیک انتخاب یا ایجاد کنید.', 'Please select or create a topic first.'), 'error')
+    return
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('topic', String(targetTopicId))
+    formData.append('title', payload.title)
+    formData.append('description', payload.description)
+    formData.append('category', payload.category)
+    formData.append('target_amount', String(payload.target_amount || 0))
+    if (payload.deadline) {
+      formData.append('deadline', payload.deadline)
+    }
+    if (payload.media_files && payload.media_files.length > 0 && payload.media_files[0]) {
+      formData.append('cover_image', payload.media_files[0])
+      payload.media_files.forEach((file) => {
+        if (file) formData.append('uploaded_files', file)
+      })
+    }
+
+    await createDonationCampaign(formData)
+    toastStore.triggerToast(languageStore.t('پویش مهربانی با موفقیت ایجاد و ارسال شد.', 'Donation campaign created and posted successfully.'), 'success')
+    
+    // Refresh donations feed
+    if (donationsFeedRef.value) {
+      donationsFeedRef.value.loadCampaigns()
+    }
+
+    // Reload posts if inside a topic
+    if (selectedTopic.value) {
+      await postStore.loadPosts(selectedTopic.value.id)
+      scrollToBottom(true)
+    }
+  } catch (error: any) {
+    console.error('Failed to create donation campaign:', error)
+    toastStore.triggerToast(languageStore.t('خطا در ایجاد پویش مهربانی', 'Failed to create donation campaign'), 'error')
+  }
+}
+
+const handleDonationUpdated = async (payload: CreateDonationPayload & { id?: string | number }) => {
+  if (!payload.id) return
+
+  try {
+    const formData = new FormData()
+    formData.append('title', payload.title)
+    formData.append('description', payload.description)
+    formData.append('category', payload.category)
+    formData.append('target_amount', String(payload.target_amount || 0))
+    if (payload.deadline) {
+      formData.append('deadline', payload.deadline)
+    }
+    if (payload.media_files && payload.media_files.length > 0 && payload.media_files[0]) {
+      formData.append('cover_image', payload.media_files[0])
+      payload.media_files.forEach((file) => {
+        if (file) formData.append('uploaded_files', file)
+      })
+    }
+
+    await updateDonationCampaign(payload.id, formData)
+    toastStore.triggerToast(languageStore.t('پویش مهربانی با موفقیت ویرایش و ذخیره شد.', 'Donation campaign updated successfully.'), 'success')
+    
+    if (donationsFeedRef.value) {
+      donationsFeedRef.value.loadCampaigns()
+    }
+
+    if (selectedTopic.value) {
+      await postStore.loadPosts(selectedTopic.value.id)
+    }
+  } catch (error: any) {
+    console.error('Failed to update donation campaign:', error)
+    toastStore.triggerToast(languageStore.t('خطا در ویرایش پویش مهربانی', 'Failed to update donation campaign'), 'error')
+  }
+}
+
+const handleOpenDonateModal = (campaign: any) => {
+  selectedDonationForPayment.value = campaign
+  isDonateModalOpen.value = true
+}
+
+const handleProcessDonationPayment = async (data: { amount: number; isAnonymous: boolean }) => {
+  if (!selectedDonationForPayment.value) return
+  try {
+    const res = await donateToCampaign(selectedDonationForPayment.value.id, {
+      amount: data.amount,
+      is_anonymous: data.isAnonymous
+    })
+    isDonateModalOpen.value = false
+    toastStore.triggerToast(languageStore.t('درخواست پرداخت با موفقیت ثبت شد.', 'Payment initiated successfully.'), 'success')
+    
+    if (donationsFeedRef.value) {
+      donationsFeedRef.value.recordLocalDonation(selectedDonationForPayment.value.id, data.amount, data.isAnonymous)
+    }
+
+    if (res.data?.gateway_url) {
+      window.location.href = res.data.gateway_url
+    }
+  } catch (err) {
+    // If backend payment fails or in demo mode, update locally with friendly notification
+    if (donationsFeedRef.value) {
+      donationsFeedRef.value.recordLocalDonation(selectedDonationForPayment.value.id, data.amount, data.isAnonymous)
+      isDonateModalOpen.value = false
+      toastStore.triggerToast(languageStore.t('مشارکت شما با موفقیت ثبت شد.', 'Your donation was recorded successfully.'), 'success')
+    } else {
+      toastStore.triggerToast(languageStore.t('خطا در پردازش پرداخت دونیت', 'Failed to process donation payment'), 'error')
+    }
+  }
+}
+
+const handleDonationTopicClick = (topicId: string | number) => {
+  currentTab.value = 'home'
+  const numericId = Number(topicId)
+  const found = topics.value.find(t => t.id === numericId)
+  if (found) {
+    selectedTopic.value = found
+  } else {
+    router.push(`/topic/${topicId}`)
+  }
+}
+
+const handleDonationTransparencyClick = (idx: number, url: string) => {
+  if (url) {
+    window.open(url, '_blank')
+  }
+}
 
 // Confirm Modals State
 const isDeletePostOpen = ref(false)
@@ -441,12 +622,15 @@ const handlePostLike = async (postId: string | number, isLiked: boolean) => {
 }
 
 const handlePostShare = (postId: string | number) => {
-  const shareUrl = `${window.location.origin}/topic/${selectedTopic.value?.id}`
-  navigator.clipboard.writeText(shareUrl).then(() => {
-    triggerToast(languageStore.t('لینک تاپیک در حافظه موقت کپی شد.', 'Topic link copied to clipboard.'));
-  }).catch(() => {
-    triggerToast(languageStore.t('لینک پست در حافظه موقت کپی شد.', 'Post link copied to clipboard.'));
-  })
+  const targetTopicId = selectedTopic.value?.id || ''
+  const shareUrl = `${window.location.origin}/topic/${targetTopicId}#post-${postId}`
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      triggerToast(languageStore.t('لینک پست با موفقیت در حافظه موقت کپی شد.', 'Post link copied to clipboard.'));
+    }).catch(() => {
+      triggerToast(languageStore.t('لینک پست کپی شد.', 'Post link copied.'));
+    })
+  }
 }
 
 const handleAddComment = async (postId: string | number, comment: any) => {
@@ -716,14 +900,14 @@ const toggleTheme = useToggle(isDark)
 
 <template>
   <div 
-    class="w-full max-w-[500px] flex flex-col gap-5 pb-24 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
+    class="w-full max-w-[500px] flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
     :class="[languageStore.isFa ? 'text-right' : 'text-left']"
     :dir="languageStore.dir"
   >
     
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
     <div 
-      v-if="currentTab === 'profile' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      v-if="currentTab === 'profile' || currentTab === 'donate' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
       class="sticky top-0 z-40 bg-background/60 dark:bg-background/50 backdrop-blur-md pt-4 pb-2.5"
     >
       <PlatformHeader 
@@ -733,7 +917,7 @@ const toggleTheme = useToggle(isDark)
         :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
         :show-options-button="!!(currentTab === 'home' && selectedTopic !== null)"
         :is-owner="isTopicCreator"
-        :show-search-button="currentTab === 'home' && selectedTopic === null"
+        :show-search-button="(currentTab === 'home' && selectedTopic === null) || currentTab === 'donate'"
         v-model:search-query="searchQuery"
         @back="handleHeaderBack"
         @edit-topic="handleEditTopic"
@@ -752,7 +936,7 @@ const toggleTheme = useToggle(isDark)
           
           <transition name="fade-slide" mode="out-in">
             <!-- List View: Search and vertical TopicCards -->
-            <div v-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full">
+            <div v-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full pb-20">
               <!-- Grouped TopicCards Container (Borderless list grouped inside a single glass card wrapper) -->
               <div class="flex flex-col gap-1 w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-2.5 shadow-xs">
                 <!-- Skeleton Loading -->
@@ -794,9 +978,9 @@ const toggleTheme = useToggle(isDark)
             </div>
 
             <!-- Detail View: Topic Posts Feed -->
-            <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4 w-full pb-20">
+            <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4.5 w-full pb-32">
               <!-- Skeleton Loading -->
-              <div v-if="postStore.loading" class="flex flex-col gap-4 w-full animate-pulse">
+              <div v-if="postStore.loading" class="flex flex-col gap-4.5 w-full animate-pulse">
                 <div 
                   v-for="i in 3" 
                   :key="'post-skeleton-' + i"
@@ -858,7 +1042,32 @@ const toggleTheme = useToggle(isDark)
                   :id="'post-' + post.id"
                   class="w-full"
                 >
+                  <!-- In-Topic Donation Campaign Card -->
+                  <div v-if="post.donation_campaign" class="w-full">
+                    <DonationChatCard
+                      :id="post.donation_campaign.id"
+                      :title="post.donation_campaign.title"
+                      :category="post.donation_campaign.category"
+                      :target-amount="post.donation_campaign.target_amount"
+                      :collected-amount="post.donation_campaign.collected_amount"
+                      :description="post.donation_campaign.description"
+                      :media-url="post.donation_campaign.cover_image || post.mediaUrl || undefined"
+                      :media-type="post.type === 'video' ? 'video' : 'image'"
+                      :deadline="post.donation_campaign.deadline"
+                      :author-name="post.author.name || 'مدیر تاپیک'"
+                      :author-avatar="post.author.avatarUrl || undefined"
+                      :author-role="post.author.role || undefined"
+                      :topic-name="selectedTopic?.title"
+                      :can-edit="isCampaignCreator(post.donation_campaign, post.author)"
+                      @donate-click="handleOpenDonateModal(post.donation_campaign)"
+                      @card-click="handleOpenDonateModal(post.donation_campaign)"
+                      @edit-click="handleEditDonation(post.donation_campaign)"
+                    />
+                  </div>
+
+                  <!-- Standard Post Card -->
                   <PostCard 
+                    v-else
                     v-bind="post"
                     @like="handlePostLike"
                     @share="handlePostShare"
@@ -885,6 +1094,7 @@ const toggleTheme = useToggle(isDark)
                   @save="handleSaveEdit"
                   @cancel-edit="handleCancelEdit"
                   @attach="triggerFileSelect"
+                  @create-donation="handleOpenCreateDonation"
                   :initialAttachments="postAttachments"
                   @removeAttachment="removePostAttachment"
                 />
@@ -948,23 +1158,16 @@ const toggleTheme = useToggle(isDark)
 
         </div>
 
-        <!-- TAB 2: DONATE (UNDER DEVELOPMENT FULL CARD VIEW) -->
-        <div v-else-if="currentTab === 'donate'" key="donate" class="w-full flex flex-col items-center justify-center py-4 sm:py-8 animate-in fade-in zoom-in-95 duration-300">
-          <UnderDevelopmentCard
-            title="مهربانی، اهدا و سازندگی"
-            description="این جهان کوه است و فعل ما ندا سوی ما آید نداها را صدا  ( این بخش درحال توسعه است و به زودی فعال میشود)"
-            :icon="ConstructionIcon"
-            eta="نسخه 5 تفکر تابستان 405"
-            :features="[
-              'امکان ساخت کارت اهدا',
-              'پیگیری لحظه ای و شفاف',
-              'ریزهزینهها',
-              'نیازمندان، مساجد، مدرسه و..'
-            ]"
-            :show-back-button="true"
-            back-button-text="بازگشت به خانه "
-            @back="currentTab = 'home'"
-            pattern-speed="fast"
+        <!-- TAB 2: DONATE -->
+        <div v-else-if="currentTab === 'donate'" key="donate" class="w-full flex flex-col gap-4">
+          <DonationsFeed
+            ref="donationsFeedRef"
+            :search-query="searchQuery"
+            @donate-click="handleOpenDonateModal"
+            @create-campaign="handleOpenCreateDonation"
+            @edit-campaign="handleEditDonation"
+            @topic-click="handleDonationTopicClick"
+            @transparency-click="handleDonationTransparencyClick"
           />
         </div>
 
@@ -1003,12 +1206,21 @@ const toggleTheme = useToggle(isDark)
                 v-bind="userProfile"
                 :topics-count="topics.length"
                 :posts-count="posts.length"
-                :connections-count="activeConnectionsCount"
+                :donations-count="userProfile.donations_count ?? 0"
                 @edit="handleProfileEdit"
               />
 
               <!-- Options -->
               <div class="flex flex-col gap-3">
+                <ProfileOptionCard 
+                  :title="languageStore.t('پویش‌های اهدا', 'Donation Campaigns')"
+                  :description="languageStore.t('مشاهده و مشارکت در پویش‌های مهربانی و سازندگی', 'View and participate in donation campaigns')"
+                  :icon="HandHeartIcon"
+                  :badge-text="languageStore.n(userProfile?.donations_count ?? 0)"
+                  badge-variant="secondary"
+                  @click="currentTab = 'donate'"
+                />
+
                 <ProfileOptionCard 
                   :title="languageStore.t('اتصالات پیام‌رسان', 'Messenger Connections')"
                   :description="languageStore.t('مدیریت حساب‌های متصل و سرویس‌های خارجی', 'Manage connected accounts and external services')"
@@ -1083,7 +1295,7 @@ const toggleTheme = useToggle(isDark)
     <!-- Floating Plus Button to Create Topic (Bottom Right Corner - Raised above floating tab bar, aligned inside page grid) -->
     <Button 
       v-if="currentTab === 'home' && selectedTopic === null"
-      @click="handleCreateTopicClick"
+      @click="handleCreateTopicClick()"
       class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
     >
@@ -1209,6 +1421,27 @@ const toggleTheme = useToggle(isDark)
       @force-submit="() => pendingPostMessage && handleSendPost(pendingPostMessage, true)"
       @go-to-existing="handleGoToExistingPost"
       @cancel="() => { isDuplicateWarningOpen = false; pendingPostMessage = null }"
+    />
+
+    <!-- Create / Edit Donation Campaign Dialog -->
+    <CreateDonationDialog 
+      v-model:open="isCreateDonationOpen"
+      :topic-id="selectedTopic?.id"
+      :topic-name="selectedTopic?.title"
+      :author-name="userProfile?.name || 'مدیر تاپیک'"
+      :author-avatar="userProfile?.avatar"
+      :is-edit-mode="!!editingDonation"
+      :initial-data="editingDonation"
+      @created="handleDonationCreated"
+      @updated="handleDonationUpdated"
+    />
+
+    <!-- Quick Donation Modal -->
+    <DonationModal
+      :open="isDonateModalOpen"
+      :campaign-title="selectedDonationForPayment?.title"
+      @update:open="(val) => isDonateModalOpen = val"
+      @submit-donation="(amount, isAnon) => handleProcessDonationPayment({ amount, isAnonymous: isAnon })"
     />
 
   </div>

@@ -24,6 +24,8 @@ urlpatterns = [
     path('api/auth/', include('apps.accounts.urls')),
     path('api/notes/', include('apps.notes.urls')),
     path('api/bot/', include('apps.notes.bot_urls')),
+    path('api/v1/donations/', include('apps.donations.urls')),
+    path('api/donations/', include('apps.donations.urls')),
     
     # سرو فایل‌های آپلود شده بدون وابستگی به DEBUG
     re_path(r'^media/(?P<path>.*)$', serve, {

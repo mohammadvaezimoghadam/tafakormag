@@ -43,7 +43,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         data-slot="dialog-close"
         as-child
       >
-        <Button variant="ghost" class="absolute top-4 right-4 bg-secondary" size="icon-sm">
+        <Button variant="ghost" class="absolute top-4 end-4 rtl:left-4 rtl:right-auto ltr:right-4 ltr:left-auto bg-secondary rounded-full cursor-pointer hover:opacity-100 transition-opacity" size="icon-sm">
           <XIcon />
           <span class="sr-only">Close</span>
         </Button>

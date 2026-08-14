@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { 
   PaperclipIcon, 
+  PlusIcon,
   SendIcon, 
   MicIcon, 
   XIcon, 
@@ -17,9 +18,21 @@ import {
   Maximize2Icon,
   Minimize2Icon,
   CircleFadingArrowUpIcon,
-  SparklesIcon
+  Wand2Icon,
+  HeartIcon,
+  BarChart3Icon,
+  CalendarDaysIcon
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogClose
+} from '@/components/ui/dialog'
 import AIRefinerDrawer from './AIRefinerDrawer.vue'
 
 interface Attachment {
@@ -49,6 +62,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'send', message: { text: string; attachments: Attachment[] }): void
   (e: 'attach'): void
+  (e: 'plus'): void
+  (e: 'create-donation'): void
   (e: 'recordVoice'): void
   (e: 'removeAttachment', id: string | number): void
   (e: 'save', message: { text: string }): void
@@ -288,6 +303,19 @@ const handleAttachClick = () => {
   emit('attach')
 }
 
+const isActionSheetOpen = ref(false)
+
+const handlePlusClick = () => {
+  if (props.disabled) return
+  isActionSheetOpen.value = true
+  emit('plus')
+}
+
+const handleSelectDonation = () => {
+  isActionSheetOpen.value = false
+  emit('create-donation')
+}
+
 const handleRemoveAttachment = (id: string | number) => {
   attachments.value = attachments.value.filter(a => a.id !== id)
   emit('removeAttachment', id)
@@ -410,7 +438,7 @@ const languageStore = useLanguageStore()
       :dir="languageStore.dir"
     >
       
-      <!-- Right Element: Attach File Button / Cancel Recording Button / Cancel Edit Button -->
+      <!-- Right Element: Attach File Button / Plus Menu Button / Cancel Recording Button / Cancel Edit Button -->
       <transition name="button-pop" mode="out-in">
         <!-- Cancel Edit Button -->
         <Button
@@ -438,19 +466,38 @@ const languageStore = useLanguageStore()
           <Trash2Icon class="transition-transform duration-200 group-hover:scale-110" />
         </Button>
 
-        <!-- Normal Attach Button -->
-        <Button 
-          v-else
-          key="attach-file"
-          variant="outline"
-          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
-          :disabled="props.disabled"
-          :title="languageStore.t('افزودن فایل پیوست', 'Attach file')"
-          @click="handleAttachClick"
+        <!-- Action Buttons (Attach & Plus) -->
+        <div 
+          v-else 
+          key="action-buttons" 
+          class="flex items-center gap-1.5 shrink-0"
         >
-          <PaperclipIcon class="transition-transform duration-200 group-hover:rotate-12 group-hover:scale-105" />
-        </Button>
+          <!-- Plus / More Actions Button -->
+          <Button 
+            key="plus-btn"
+            variant="outline"
+            :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+            class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
+            :disabled="props.disabled"
+            :title="languageStore.t('گزینه‌های بیشتر', 'More options')"
+            @click="handlePlusClick"
+          >
+            <PlusIcon class="transition-transform duration-200 group-hover:scale-110" />
+          </Button>
+
+          <!-- Normal Attach Button -->
+          <Button 
+            key="attach-file"
+            variant="outline"
+            :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+            class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
+            :disabled="props.disabled"
+            :title="languageStore.t('افزودن فایل پیوست', 'Attach file')"
+            @click="handleAttachClick"
+          >
+            <PaperclipIcon class="transition-transform duration-200 group-hover:rotate-12 group-hover:scale-105" />
+          </Button>
+        </div>
       </transition>
 
       <!-- Center Element: Text Input / Recording Info Display -->
@@ -576,7 +623,7 @@ const languageStore = useLanguageStore()
         :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
         @click="isAiRefinerOpen = true"
       >
-        <SparklesIcon />
+        <Wand2Icon />
       </Button>
 
     </div>
@@ -646,7 +693,7 @@ const languageStore = useLanguageStore()
               :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
               @click="isAiRefinerOpen = true"
             >
-              <SparklesIcon class="size-5" />
+              <Wand2Icon class="size-5" />
             </Button>
 
             <!-- Simplified close/cancel button -->
@@ -702,6 +749,78 @@ const languageStore = useLanguageStore()
     :text="text"
     @apply="handleApplyRefinedText"
   />
+
+  <!-- Plus Action Modal (Centered Dialog with 3 Square Cards in 1 Row) -->
+  <Dialog :open="isActionSheetOpen" @update:open="(val: boolean) => isActionSheetOpen = val">
+    <DialogContent 
+      :show-close-button="true"
+      class="max-w-[420px] w-[calc(100%-2rem)] rounded-3xl border border-border/70 bg-card p-5 sm:p-6 flex flex-col gap-4 text-start font-sans shadow-2xl z-[60]"
+      :dir="languageStore.dir"
+    >
+      <!-- Header -->
+      <DialogHeader class="p-0 space-y-1 text-start">
+        <DialogTitle class="text-sm sm:text-base font-bold text-foreground">
+          {{ languageStore.t('امکانات ویژه تاپیک', 'Topic Features') }}
+        </DialogTitle>
+        <DialogDescription class="text-xs text-muted-foreground">
+          {{ languageStore.t('یک گزینه را جهت ایجاد و انتشار انتخاب نمایید', 'Select an option to create and post') }}
+        </DialogDescription>
+      </DialogHeader>
+
+      <!-- 3 Square Action Items in 1 Row -->
+      <div class="grid grid-cols-3 gap-2.5 pt-1">
+        <!-- 1. Kindness / Donation Campaign (Active) -->
+        <button
+          type="button"
+          class="group relative aspect-square rounded-2xl border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/60 flex flex-col items-center justify-center gap-2 p-2 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 text-center select-none"
+          @click="handleSelectDonation"
+        >
+          <div class="size-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+            <HeartIcon class="size-5 fill-primary/20" />
+          </div>
+          <span class="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+            {{ languageStore.t('ایجاد اهدا', 'Donation') }}
+          </span>
+        </button>
+
+        <!-- 2. Poll / Survey (Coming Soon with Blur & Badge) -->
+        <div
+          class="relative aspect-square rounded-2xl border border-border/40 bg-muted/20 flex flex-col items-center justify-center gap-2 p-2 opacity-60 backdrop-blur-sm cursor-not-allowed select-none text-center overflow-hidden"
+        >
+          <Badge 
+            variant="secondary" 
+            class="absolute top-1.5 right-1.5 text-[8px] font-bold px-1.5 h-4 rounded-full border border-border/40 shadow-xs"
+          >
+            {{ languageStore.t('به‌زودی', 'Soon') }}
+          </Badge>
+          <div class="size-10 rounded-xl bg-muted/40 text-muted-foreground flex items-center justify-center shadow-xs">
+            <BarChart3Icon class="size-5" />
+          </div>
+          <span class="text-xs font-semibold text-muted-foreground">
+            {{ languageStore.t('نظرسنجی', 'Poll') }}
+          </span>
+        </div>
+
+        <!-- 3. Event / Meeting (Coming Soon with Blur & Badge) -->
+        <div
+          class="relative aspect-square rounded-2xl border border-border/40 bg-muted/20 flex flex-col items-center justify-center gap-2 p-2 opacity-60 backdrop-blur-sm cursor-not-allowed select-none text-center overflow-hidden"
+        >
+          <Badge 
+            variant="secondary" 
+            class="absolute top-1.5 right-1.5 text-[8px] font-bold px-1.5 h-4 rounded-full border border-border/40 shadow-xs"
+          >
+            {{ languageStore.t('به‌زودی', 'Soon') }}
+          </Badge>
+          <div class="size-10 rounded-xl bg-muted/40 text-muted-foreground flex items-center justify-center shadow-xs">
+            <CalendarDaysIcon class="size-5" />
+          </div>
+          <span class="text-xs font-semibold text-muted-foreground">
+            {{ languageStore.t('رویداد', 'Event') }}
+          </span>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <style scoped>

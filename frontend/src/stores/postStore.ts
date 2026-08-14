@@ -39,6 +39,18 @@ export interface Post {
   telegramMessageIds?: Record<string, any>
   baleMessageIds?: Record<string, any>
   publishedPlatforms?: string[]
+  donation_campaign?: {
+    id: string
+    title: string
+    description: string
+    category: any
+    target_amount: number
+    collected_amount: number
+    donors_count: number
+    status: string
+    cover_image?: string
+    deadline?: string | null
+  }
 }
 
 export const usePostStore = defineStore('post', () => {
@@ -117,7 +129,11 @@ export const usePostStore = defineStore('post', () => {
       comments: [],
       telegramMessageIds: p.telegram_message_ids || {},
       baleMessageIds: p.bale_message_ids || {},
-      publishedPlatforms: p.published_platforms || []
+      publishedPlatforms: p.published_platforms || [],
+      donation_campaign: p.donation_campaign ? {
+        ...p.donation_campaign,
+        cover_image: p.donation_campaign.cover_image ? getImageUrl(p.donation_campaign.cover_image) : undefined
+      } : undefined
     }
   }
 

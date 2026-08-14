@@ -27,9 +27,19 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/donate',
+      name: 'donate',
+      component: () => import('@/views/FeedView.vue')
+    },
+    {
       path: '/playground/donation-card',
       name: 'donation-card-playground',
       component: () => import('@/views/playground/DonationCardPlayground.vue')
+    },
+    {
+      path: '/playground/create-donation',
+      name: 'create-donation-playground',
+      component: () => import('@/views/playground/CreateDonationPlayground.vue')
     },
     {
       path: '/:pathMatch(.*)*',

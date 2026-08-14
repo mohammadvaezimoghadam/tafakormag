@@ -116,7 +116,7 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
 
     # 9. Type a post and submit it
     post_text = "این اولین پست تستی من در این تاپیک است! #تفکر"
-    post_input = page.locator('textarea[placeholder="یادداشت خود را بنویسید..."]')
+    post_input = page.locator('textarea').first
     expect(post_input).to_be_visible(timeout=5000)
     post_input.fill(post_text)
     print(f"[E2E] Filled post content: {post_text}")
@@ -177,6 +177,38 @@ def test_critical_path_login_flow(page: Page, frontend_url: str):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_donate_navigation_flow(page: Page, frontend_url: str):
+    """
+    E2E test that validates the Donate page navigation and category chips including 'توسط من'.
+    """
+    expected_url = frontend_url.replace(":80", "").rstrip('/')
+    donate_url = f"{expected_url}/donate"
+    print(f"\n[E2E] Navigating to Donate page: {donate_url}")
+    page.goto(donate_url)
+    page.wait_for_url("**/donate")
+
+    # Close Changelog modal if it appears
+    try:
+        page.locator('button:has-text("متوجه شدم")').click(timeout=2000)
+    except Exception:
+        pass
+
+    # Verify 'توسط من' chip is visible
+    by_me_chip = page.locator('button:has-text("توسط من")')
+    expect(by_me_chip).to_be_visible(timeout=5000)
+    print("[E2E] Verified 'توسط من' category chip is visible.")
+
+    # Click on 'توسط من' chip
+    by_me_chip.click()
+    print("[E2E] Clicked 'توسط من' category chip.")
+
+    # Verify 'همه' chip is also visible
+    all_chip = page.locator('button:has-text("همه")').first
+    expect(all_chip).to_be_visible(timeout=5000)
+    print("[E2E] Verified Donate category chips.")
+
+
+@pytest.mark.django_db(transaction=True)
 def test_custom_bot_registration(page: Page, frontend_url: str):
     """
     E2E test that verifies the custom bot registration workflow in the user's profile connections tab.
@@ -214,9 +246,6 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
     otp_input = page.locator('input[inputmode="numeric"]')
     expect(otp_input).to_be_visible(timeout=5000)
     otp_input.fill(str(otp_code))
-    
-    # OTP is submitted automatically when 4 digits are filled. No need to click submit button manually.
-
 
     expected_url = frontend_url.replace(":80", "").rstrip('/')
     page.wait_for_url(f"{expected_url}/")
@@ -246,7 +275,6 @@ def test_custom_bot_registration(page: Page, frontend_url: str):
     expect(submit_bot_btn).to_be_visible(timeout=5000)
     submit_bot_btn.click()
     print("[E2E] Clicked 'ذخیره و اتصال' button.")
-
 
     # 6. Verify that it connects successfully and shows the bot username badge
     expected_username = f"@{mock_token}_bot"

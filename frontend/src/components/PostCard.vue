@@ -464,10 +464,10 @@ const formatTime = (timeInSeconds: number) => {
   <div 
     ref="cardRef"
     :class="[
-      'w-full bg-background/12 dark:bg-card/10 backdrop-blur-md border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-start',
+      'w-full bg-card text-card-foreground border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-start',
       props.isPinned ? 'border-primary/45 bg-primary/[0.01]' : '',
       isEditing ? 'select-text' : 'select-none',
-      isPressing ? 'scale-[0.96] shadow-inner bg-background/5 dark:bg-card/5 border-border/30 brightness-95' : 'scale-100'
+      isPressing ? 'scale-[0.96] shadow-inner bg-card/80 border-border/30 brightness-95' : 'scale-100'
     ]"
     :dir="languageStore.dir"
     @mousedown="handleMouseDown"
