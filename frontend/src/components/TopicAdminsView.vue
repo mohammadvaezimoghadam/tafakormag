@@ -395,7 +395,7 @@ const getUserDisplayName = (user: UserSimple) => {
         </div>
 
         <!-- Navigation Tabs (Owner Only) -->
-        <Tabs v-model="activeTab" class="w-full">
+        <Tabs v-model="activeTab" default-value="list" class="w-full">
           
           <!-- Pure Original shadcn TabsList -->
           <TabsList v-if="isOwner" class="grid w-full grid-cols-2 bg-muted/60 dark:bg-muted/30 p-1 rounded-2xl mb-4">
