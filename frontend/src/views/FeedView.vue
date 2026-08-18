@@ -30,7 +30,7 @@ import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
+import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon, LayersIcon } from '@lucide/vue'
 import {
   Dialog,
   DialogContent,
@@ -47,8 +47,8 @@ import { useTopicStore } from '@/stores/topicStore'
 import { usePostStore } from '@/stores/postStore'
 import { useToastStore } from '@/stores/toastStore'
 
-// Tab state ('home' | 'donate' | 'profile')
-const currentTab = ref<'home' | 'donate' | 'profile'>('home')
+// Tab state ('home' | 'donate' | 'marketplace' | 'profile')
+const currentTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
 
 // Subview connection state
 const showConnections = ref(false)
@@ -94,6 +94,9 @@ const syncRouteToState = () => {
   } else if (route.path === '/donate') {
     currentTab.value = 'donate'
     selectedTopic.value = null
+  } else if (route.path === '/marketplace') {
+    currentTab.value = 'marketplace'
+    selectedTopic.value = null
   } else if (route.path.startsWith('/topic/')) {
     currentTab.value = 'home'
     const topicId = Number(route.params.id)
@@ -129,6 +132,10 @@ watch(currentTab, (newTab) => {
   } else if (newTab === 'donate') {
     if (route.path !== '/donate') {
       router.push('/donate')
+    }
+  } else if (newTab === 'marketplace') {
+    if (route.path !== '/marketplace') {
+      router.push('/marketplace')
     }
   } else if (newTab === 'home') {
     if (route.path !== '/' && !route.path.startsWith('/topic/')) {
@@ -250,6 +257,9 @@ const headerTitle = computed(() => {
   }
   if (currentTab.value === 'donate') {
     return languageStore.t('پویش‌های اهدا', 'Donation Campaigns')
+  }
+  if (currentTab.value === 'marketplace') {
+    return languageStore.t('بازارچه', 'Marketplace')
   }
   return languageStore.t('تفکر', 'Tafakor')
 })
@@ -1176,6 +1186,26 @@ const toggleTheme = useToggle(isDark)
             @edit-campaign="handleEditDonation"
             @topic-click="handleDonationTopicClick"
             @transparency-click="handleDonationTransparencyClick"
+          />
+        </div>
+
+        <!-- TAB 3: MARKETPLACE -->
+        <div v-else-if="currentTab === 'marketplace'" key="marketplace" class="w-full flex flex-col gap-4">
+          <UnderDevelopmentCard
+            :title="languageStore.t('بازارچه نصب افزونه تفکر', 'Tafakor Plugin Marketplace')"
+            :description="languageStore.t('افزونه های دلخواه را نصب کنید و در تاپیک خود اضافه کنید', 'Install custom plugins and add them to your topics')"
+            :icon="LayersIcon"
+            :eta="languageStore.t('نسخه 6 شهریور ماه 405', 'Version 6 - Shahrivar 1405')"
+            :features="[
+              languageStore.t('افزونه قرآن کریم', 'Holy Quran Plugin'),
+              languageStore.t('بهرمندی از آیه ها', 'Access to Verses'),
+              languageStore.t('بهرمندی از سوره ها', 'Access to Surahs'),
+              languageStore.t('بهرمندی از صوت قرآن کریم', 'Holy Quran Recitation Audio')
+            ]"
+            :action-text="languageStore.t('صفحه خانه', 'Home Page')"
+            @action="currentTab = 'home'"
+            :show-back-button="true"
+            @back="currentTab = 'home'"
           />
         </div>
 

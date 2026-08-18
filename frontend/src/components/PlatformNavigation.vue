@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { HomeIcon, HandHeartIcon, UserIcon } from '@lucide/vue'
+import { HomeIcon, HandHeartIcon, UserIcon, LayersIcon } from '@lucide/vue'
 import { Badge } from '@/components/ui/badge'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const languageStore = useLanguageStore()
 
-// V-model active tab binding ('home' | 'donate' | 'profile')
-const activeTab = defineModel<'home' | 'donate' | 'profile'>({ default: 'home' })
+// V-model active tab binding ('home' | 'donate' | 'marketplace' | 'profile')
+const activeTab = defineModel<'home' | 'donate' | 'marketplace' | 'profile'>({ default: 'home' })
 
 const emit = defineEmits<{
-  (e: 'change', tab: 'home' | 'donate' | 'profile'): void
+  (e: 'change', tab: 'home' | 'donate' | 'marketplace' | 'profile'): void
 }>()
 
-const selectTab = (tab: 'home' | 'donate' | 'profile') => {
+const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
   activeTab.value = tab
   emit('change', tab)
 }
@@ -39,7 +39,7 @@ const selectTab = (tab: 'home' | 'donate' | 'profile') => {
       <span>{{ languageStore.t('خانه', 'Home') }}</span>
     </button>
 
-    <!-- Donate Tab (Middle) -->
+    <!-- Donate Tab -->
     <button
       @click="selectTab('donate')"
       :class="[
@@ -52,6 +52,24 @@ const selectTab = (tab: 'home' | 'donate' | 'profile') => {
     >
       <HandHeartIcon class="size-3.5 shrink-0" />
       <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
+    </button>
+
+    <!-- Marketplace Tab (New) -->
+    <button
+      @click="selectTab('marketplace')"
+      :class="[
+        'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent relative',
+        activeTab === 'marketplace'
+          ? 'bg-primary/10 text-primary font-bold shadow-xs'
+          : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+      ]"
+      :title="languageStore.t('بازارچه', 'Marketplace')"
+    >
+      <LayersIcon class="size-3.5 shrink-0" />
+      <span>{{ languageStore.t('بازارچه', 'Marketplace') }}</span>
+      <span class="text-[9px] px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/25 text-amber-600 dark:text-amber-400 font-bold rounded-md leading-none">
+        {{ languageStore.t('به‌زودی', 'Soon') }}
+      </span>
     </button>
 
     <!-- Profile Tab -->

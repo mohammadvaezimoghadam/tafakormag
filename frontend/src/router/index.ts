@@ -32,6 +32,11 @@ const router = createRouter({
       component: () => import('@/views/FeedView.vue')
     },
     {
+      path: '/marketplace',
+      name: 'marketplace',
+      component: () => import('@/views/FeedView.vue')
+    },
+    {
       path: '/playground/donation-card',
       name: 'donation-card-playground',
       component: () => import('@/views/playground/DonationCardPlayground.vue')
