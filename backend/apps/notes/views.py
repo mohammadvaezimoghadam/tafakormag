@@ -56,6 +56,17 @@ class TopicViewSet(viewsets.ModelViewSet):
         is_owner = (instance.created_by == self.request.user) if instance.created_by else False
         if not (is_owner or self.request.user.is_superuser):
             raise PermissionDenied("فقط سازنده تاپیک مجاز به حذف آن است.")
+        
+        # پاکسازی صریح پویش‌های اهدا و تراکنش‌های مربوطه قبل از حذف تاپیک
+        try:
+            from apps.donations.models import DonationCampaign, DonationTransaction
+            campaign_ids = list(instance.donation_campaigns.values_list('id', flat=True))
+            if campaign_ids:
+                DonationTransaction.objects.filter(campaign_id__in=campaign_ids).delete()
+                instance.donation_campaigns.all().delete()
+        except Exception:
+            pass
+
         instance.delete()
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
