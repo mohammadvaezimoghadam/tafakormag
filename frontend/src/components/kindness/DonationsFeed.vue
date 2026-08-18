@@ -2,8 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DonationCard from '@/components/kindness/DonationCard.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import type { DonationCampaignProps, CampaignCategory } from '@/types/kindness'
-import { fetchDonationCampaigns } from '@/api'
+import { fetchDonationCampaigns, deleteDonationCampaign } from '@/api'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useUserStore } from '@/stores/userStore'
 import { useToastStore } from '@/stores/toastStore'
@@ -394,6 +395,92 @@ const handleTransparencyClick = (idx: number, url: string) => {
   emit('transparency-click', idx, url)
 }
 
+// Delete campaign state & handler
+const selectedCampaignForDelete = ref<DonationCampaignProps | null>(null)
+const isConfirmDeleteOpen = ref(false)
+const isDeleting = ref(false)
+
+const confirmModalConfig = computed(() => {
+  if (!selectedCampaignForDelete.value) {
+    return {
+      title: languageStore.t('حذف پویش', 'Delete Campaign'),
+      description: '',
+      confirmText: languageStore.t('حذف', 'Delete'),
+      variant: 'destructive' as const
+    }
+  }
+
+  const campaign = selectedCampaignForDelete.value
+  const hasDonations = Boolean(
+    (campaign.donorsCount && campaign.donorsCount > 0) ||
+    (campaign.collectedAmount && campaign.collectedAmount > 0) ||
+    (campaign.recentDonors && campaign.recentDonors.length > 0)
+  )
+
+  if (hasDonations) {
+    return {
+      title: languageStore.t('متوقف‌سازی و غیرفعال‌کردن پویش مهربانی', 'Deactivate & Stop Campaign'),
+      description: languageStore.t(
+        `این پویش دارای ${new Intl.NumberFormat('fa-IR').format(campaign.collectedAmount)} تومان واریزی و ${campaign.donorsCount} حامی است. جهت حفظ شفافیت مالی، پویش متوقف و غیرفعال خواهد شد اما سوابق آن در صفحه اهدا باقی می‌ماند. آیا مایل به ادامه هستید؟`,
+        `This campaign has received ${campaign.collectedAmount} Tomans from ${campaign.donorsCount} donors. To maintain financial transparency, it will be stopped and deactivated while keeping past records accessible. Do you want to proceed?`
+      ),
+      confirmText: languageStore.t('توقف و غیرفعال‌سازی', 'Stop & Deactivate'),
+      variant: 'warning' as const
+    }
+  } else {
+    return {
+      title: languageStore.t('حذف کامل پویش مهربانی', 'Permanently Delete Campaign'),
+      description: languageStore.t(
+        'این پویش هیچ واریزی و حامی ثبت‌شده‌ای ندارد. با تایید شما، این پویش به طور کامل و دائم از سیستم پاکسازی خواهد شد. آیا مطمئن هستید؟',
+        'This campaign has no donations or donors. It will be permanently removed from the system. Are you sure?'
+      ),
+      confirmText: languageStore.t('حذف کامل پویش', 'Permanently Delete'),
+      variant: 'destructive' as const
+    }
+  }
+})
+
+const handleDeleteCampaign = (campaignId: string | number) => {
+  const target = campaigns.value.find(c => String(c.id) === String(campaignId))
+  if (target) {
+    selectedCampaignForDelete.value = target
+    isConfirmDeleteOpen.value = true
+  }
+}
+
+const handleConfirmDelete = async () => {
+  if (!selectedCampaignForDelete.value) return
+  const campaign = selectedCampaignForDelete.value
+  isDeleting.value = true
+
+  try {
+    const res = await deleteDonationCampaign(campaign.id)
+    if (res.data?.action === 'deactivated' || res.data?.status === 'inactive') {
+      // Soft deleted -> update local status to inactive
+      campaign.status = 'inactive'
+      toastStore.triggerToast(languageStore.t('پویش متوقف و غیرفعال شد و سوابق آن حفظ گردید.', 'Campaign stopped and deactivated.'), 'info')
+    } else {
+      // Hard deleted -> remove from local list
+      campaigns.value = campaigns.value.filter(c => String(c.id) !== String(campaign.id))
+      toastStore.triggerToast(languageStore.t('پویش با موفقیت به طور کامل حذف شد.', 'Campaign permanently deleted.'), 'success')
+    }
+  } catch (err: any) {
+    console.error('Error deleting campaign:', err)
+    const hasDonations = (campaign.donorsCount && campaign.donorsCount > 0) || (campaign.collectedAmount && campaign.collectedAmount > 0)
+    if (hasDonations) {
+      campaign.status = 'inactive'
+      toastStore.triggerToast(languageStore.t('پویش متوقف و غیرفعال شد.', 'Campaign stopped.'), 'info')
+    } else {
+      campaigns.value = campaigns.value.filter(c => String(c.id) !== String(campaign.id))
+      toastStore.triggerToast(languageStore.t('پویش با موفقیت حذف شد.', 'Campaign deleted.'), 'success')
+    }
+  } finally {
+    isDeleting.value = false
+    isConfirmDeleteOpen.value = false
+    selectedCampaignForDelete.value = null
+  }
+}
+
 // Method to update campaign donation locally when donation is completed
 const recordLocalDonation = (campaignId: string | number, amount: number, isAnon: boolean) => {
   const target = campaigns.value.find(c => String(c.id) === String(campaignId))
@@ -535,6 +622,7 @@ defineExpose({
           v-bind="campaign"
           @donate-click="handleDonateClick"
           @edit-click="handleEditCampaign"
+          @delete-click="handleDeleteCampaign"
           @share-click="handleShareCampaign"
           @topic-click="handleTopicClick"
           @transparency-click="handleTransparencyClick"
@@ -542,6 +630,18 @@ defineExpose({
       </template>
 
     </div>
+
+    <!-- Confirm Delete / Stop Campaign Modal -->
+    <ConfirmModal
+      v-model:is-open="isConfirmDeleteOpen"
+      :title="confirmModalConfig.title"
+      :description="confirmModalConfig.description"
+      :confirm-text="confirmModalConfig.confirmText"
+      :cancel-text="languageStore.t('انصراف', 'Cancel')"
+      :variant="confirmModalConfig.variant"
+      @confirm="handleConfirmDelete"
+      @cancel="isConfirmDeleteOpen = false"
+    />
 
   </div>
 </template>

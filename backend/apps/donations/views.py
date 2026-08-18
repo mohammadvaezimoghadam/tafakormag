@@ -154,12 +154,46 @@ class DonationCampaignDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(detail_serializer.data, status=status.HTTP_200_OK)
 
     def perform_destroy(self, instance):
-        if instance.creator != self.request.user and not self.request.user.is_staff:
+        pass
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.creator != self.request.user and not (self.request.user.is_staff or self.request.user.is_superuser):
             raise PermissionDenied('شما مجاز به حذف این پویش نیستید.')
+
+        has_donations = (
+            (instance.donors_count and instance.donors_count > 0) or
+            (instance.collected_amount and instance.collected_amount > 0) or
+            instance.transactions.filter(status=DonationTransaction.PaymentStatus.SUCCESSFUL).exists()
+        )
+
         with transaction.atomic():
-            if instance.post:
-                instance.post.delete()
-            instance.delete()
+            if has_donations:
+                # Soft delete: Mark campaign status as inactive so financial records & transparency remain accessible
+                instance.status = DonationCampaign.StatusChoices.INACTIVE
+                instance.save(update_fields=['status', 'updated_at'])
+
+                # Update linked topic chat message
+                if instance.post:
+                    instance.post.content = f"🛑 **[پویش متوقف شد]** {instance.title}\n\n{instance.description}"
+                    instance.post.save(update_fields=['content', 'updated_at'])
+
+                serializer = DonationCampaignDetailSerializer(instance, context={'request': request})
+                return Response({
+                    'detail': 'پویش به دلیل داشتن واریزی متوقف و غیرفعال شد و سوابق آن جهت شفافیت حفظ گردید.',
+                    'action': 'deactivated',
+                    'campaign': serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                # Hard delete: Completely purge campaign, attachments, unfulfilled transactions and linked post
+                if instance.post:
+                    instance.post.delete()
+                instance.transactions.all().delete()
+                instance.delete()
+                return Response({
+                    'detail': 'پویش با موفقیت به طور کامل حذف شد.',
+                    'action': 'deleted'
+                }, status=status.HTTP_200_OK)
 
 
 class DonationInitiateView(APIView):

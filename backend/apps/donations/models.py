@@ -30,6 +30,7 @@ class DonationCampaign(models.Model):
         COMPLETED = 'completed', 'تکمیل‌شده'
         EXPIRED = 'expired', 'منقضی‌شده'
         PAUSED = 'paused', 'متوقف/در حال بررسی'
+        INACTIVE = 'inactive', 'متوقف و غیرفعال‌شده'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     topic = models.ForeignKey('notes.Topic', on_delete=models.CASCADE, related_name='donation_campaigns')
