@@ -14,7 +14,7 @@ import CreateTopicModal from '@/components/CreateTopicModal.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import DuplicateWarningDialog from '@/components/DuplicateWarningDialog.vue'
-import { checkDuplicatePost, createDonationCampaign, updateDonationCampaign, donateToCampaign } from '@/api'
+import { checkDuplicatePost, createDonationCampaign, updateDonationCampaign, deleteDonationCampaign, donateToCampaign } from '@/api'
 import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
@@ -509,6 +509,90 @@ const handleDonationTopicClick = (topicId: string | number) => {
 const handleDonationTransparencyClick = (idx: number, url: string) => {
   if (url) {
     window.open(url, '_blank')
+  }
+}
+
+// Donation Campaign Delete State (from In-Topic Chat)
+const selectedDonationForDelete = ref<any | null>(null)
+const isConfirmDeleteDonationOpen = ref(false)
+const isDeletingDonation = ref(false)
+
+const confirmDonationDeleteConfig = computed(() => {
+  if (!selectedDonationForDelete.value) {
+    return {
+      title: languageStore.t('حذف پویش', 'Delete Campaign'),
+      description: '',
+      confirmText: languageStore.t('حذف', 'Delete'),
+      variant: 'destructive' as const
+    }
+  }
+
+  const campaign = selectedDonationForDelete.value
+  const hasDonations = Boolean(
+    (campaign.donors_count && campaign.donors_count > 0) ||
+    (campaign.collected_amount && campaign.collected_amount > 0) ||
+    (campaign.donorsCount && campaign.donorsCount > 0) ||
+    (campaign.collectedAmount && campaign.collectedAmount > 0)
+  )
+
+  const amount = campaign.collected_amount || campaign.collectedAmount || 0
+  const donorsCount = campaign.donors_count || campaign.donorsCount || 0
+
+  if (hasDonations) {
+    return {
+      title: languageStore.t('متوقف‌سازی و غیرفعال‌کردن پویش مهربانی', 'Deactivate & Stop Campaign'),
+      description: languageStore.t(
+        `این پویش دارای ${new Intl.NumberFormat('fa-IR').format(amount)} تومان واریزی و ${donorsCount} حامی است. جهت حفظ شفافیت مالی، پویش متوقف و غیرفعال خواهد شد اما سوابق آن باقی می‌ماند. آیا مایل به ادامه هستید؟`,
+        `This campaign has received ${amount} Tomans from ${donorsCount} donors. To maintain financial transparency, it will be stopped and deactivated while keeping past records accessible. Do you want to proceed?`
+      ),
+      confirmText: languageStore.t('توقف و غیرفعال‌سازی', 'Stop & Deactivate'),
+      variant: 'warning' as const
+    }
+  } else {
+    return {
+      title: languageStore.t('حذف کامل پویش مهربانی', 'Permanently Delete Campaign'),
+      description: languageStore.t(
+        'این پویش هیچ واریزی و حامی ثبت‌شده‌ای ندارد. با تایید شما، این پویش به طور کامل و دائم از سیستم پاکسازی خواهد شد. آیا مطمئن هستید؟',
+        'This campaign has no donations or donors. It will be permanently removed from the system. Are you sure?'
+      ),
+      confirmText: languageStore.t('حذف کامل پویش', 'Permanently Delete'),
+      variant: 'destructive' as const
+    }
+  }
+})
+
+const handleDeleteDonationFromChat = (campaign: any) => {
+  if (!campaign) return
+  selectedDonationForDelete.value = campaign
+  isConfirmDeleteDonationOpen.value = true
+}
+
+const handleConfirmDeleteDonation = async () => {
+  if (!selectedDonationForDelete.value?.id) return
+  const campaign = selectedDonationForDelete.value
+  isDeletingDonation.value = true
+
+  try {
+    const res = await deleteDonationCampaign(campaign.id)
+    if (res.data?.action === 'deactivated' || res.data?.status === 'inactive') {
+      toastStore.triggerToast(languageStore.t('پویش متوقف و غیرفعال شد و سوابق آن حفظ گردید.', 'Campaign stopped and deactivated.'), 'info')
+    } else {
+      toastStore.triggerToast(languageStore.t('پویش با موفقیت به طور کامل حذف شد.', 'Campaign permanently deleted.'), 'success')
+    }
+
+    if (donationsFeedRef.value) {
+      donationsFeedRef.value.loadCampaigns()
+    }
+    if (selectedTopic.value) {
+      await postStore.loadPosts(selectedTopic.value.id)
+    }
+  } catch (err) {
+    console.error('Error deleting donation campaign:', err)
+    toastStore.triggerToast(languageStore.t('خطا در حذف یا متوقف‌سازی پویش', 'Failed to delete or deactivate campaign'), 'error')
+  } finally {
+    isDeletingDonation.value = false
+    isConfirmDeleteDonationOpen.value = false
+    selectedDonationForDelete.value = null
   }
 }
 
@@ -1063,6 +1147,7 @@ const toggleTheme = useToggle(isDark)
                       :id="post.donation_campaign.id"
                       :title="post.donation_campaign.title"
                       :category="post.donation_campaign.category"
+                      :status="(post.donation_campaign.status as any)"
                       :target-amount="post.donation_campaign.target_amount"
                       :collected-amount="post.donation_campaign.collected_amount"
                       :description="post.donation_campaign.description"
@@ -1077,6 +1162,7 @@ const toggleTheme = useToggle(isDark)
                       @donate-click="handleOpenDonateModal(post.donation_campaign)"
                       @card-click="handleOpenDonateModal(post.donation_campaign)"
                       @edit-click="handleEditDonation(post.donation_campaign)"
+                      @delete-click="handleDeleteDonationFromChat(post.donation_campaign)"
                     />
                   </div>
 
@@ -1480,6 +1566,18 @@ const toggleTheme = useToggle(isDark)
       :campaign-title="selectedDonationForPayment?.title"
       @update:open="(val) => isDonateModalOpen = val"
       @submit-donation="(amount, isAnon) => handleProcessDonationPayment({ amount, isAnonymous: isAnon })"
+    />
+
+    <!-- Confirm Delete / Stop Donation Campaign Modal (Topic Chat) -->
+    <ConfirmModal
+      v-model:is-open="isConfirmDeleteDonationOpen"
+      :title="confirmDonationDeleteConfig.title"
+      :description="confirmDonationDeleteConfig.description"
+      :confirm-text="confirmDonationDeleteConfig.confirmText"
+      :cancel-text="languageStore.t('انصراف', 'Cancel')"
+      :variant="confirmDonationDeleteConfig.variant"
+      @confirm="handleConfirmDeleteDonation"
+      @cancel="isConfirmDeleteDonationOpen = false"
     />
 
   </div>

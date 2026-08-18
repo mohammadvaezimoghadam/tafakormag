@@ -42,7 +42,7 @@ const router = useRouter()
 
 // Category definitions matching CreateDonationDialog
 interface CategoryChip {
-  id: 'my_campaigns' | 'all' | CampaignCategory
+  id: 'my_campaigns' | 'all' | 'inactive' | CampaignCategory
   labelFa: string
   labelEn: string
 }
@@ -50,6 +50,7 @@ interface CategoryChip {
 const CATEGORIES: CategoryChip[] = [
   { id: 'my_campaigns', labelFa: 'توسط من', labelEn: 'By Me' },
   { id: 'all', labelFa: 'همه', labelEn: 'All' },
+  { id: 'inactive', labelFa: 'غیرفعال', labelEn: 'Inactive' },
   { id: 'mosque', labelFa: 'مسجد و اماکن مذهبی', labelEn: 'Mosque' },
   { id: 'school', labelFa: 'مدرسه و آموزش', labelEn: 'School' },
   { id: 'health', labelFa: 'درمانی و سلامت', labelEn: 'Health' },
@@ -58,7 +59,7 @@ const CATEGORIES: CategoryChip[] = [
   { id: 'other', labelFa: 'متفرقه و عمومی', labelEn: 'Other' }
 ]
 
-const selectedCategory = ref<'my_campaigns' | 'all' | CampaignCategory>('all')
+const selectedCategory = ref<'my_campaigns' | 'all' | 'inactive' | CampaignCategory>('all')
 const loading = ref(true)
 const campaigns = ref<DonationCampaignProps[]>([])
 
@@ -328,10 +329,12 @@ const filteredCampaigns = computed(() => {
         (currentUserId && item.creatorId && String(item.creatorId) === currentUserId) ||
         (currentUserPhone && item.creatorPhone && item.creatorPhone === currentUserPhone)
       )
+    } else if (selectedCategory.value === 'inactive') {
+      matchesCategory = item.status === 'inactive'
     } else if (selectedCategory.value === 'all') {
-      matchesCategory = true
+      matchesCategory = item.status !== 'inactive'
     } else {
-      matchesCategory = normalizeCategory(item.category) === selectedCategory.value
+      matchesCategory = (normalizeCategory(item.category) === selectedCategory.value) && item.status !== 'inactive'
     }
 
     // 2. Search query filter
@@ -347,7 +350,7 @@ const filteredCampaigns = computed(() => {
 })
 
 // Count of items per category for nice chip badges
-const getCategoryCount = (categoryId: 'my_campaigns' | 'all' | CampaignCategory): number => {
+const getCategoryCount = (categoryId: 'my_campaigns' | 'all' | 'inactive' | CampaignCategory): number => {
   if (categoryId === 'my_campaigns') {
     const currentUserId = userStore.userProfile?.id ? String(userStore.userProfile.id) : null
     const currentUserPhone = userStore.userProfile?.phone || null
@@ -357,8 +360,13 @@ const getCategoryCount = (categoryId: 'my_campaigns' | 'all' | CampaignCategory)
       (currentUserPhone && c.creatorPhone && c.creatorPhone === currentUserPhone)
     ).length
   }
-  if (categoryId === 'all') return campaigns.value.length
-  return campaigns.value.filter(c => normalizeCategory(c.category) === categoryId).length
+  if (categoryId === 'inactive') {
+    return campaigns.value.filter(c => c.status === 'inactive').length
+  }
+  if (categoryId === 'all') {
+    return campaigns.value.filter(c => c.status !== 'inactive').length
+  }
+  return campaigns.value.filter(c => normalizeCategory(c.category) === categoryId && c.status !== 'inactive').length
 }
 
 const handleDonateClick = (campaignId: string | number) => {

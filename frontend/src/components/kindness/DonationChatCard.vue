@@ -19,9 +19,12 @@ import {
   MoreVerticalIcon,
   PencilIcon,
   CopyIcon,
-  Share2Icon
+  Share2Icon,
+  Trash2Icon,
+  BanIcon
 } from '@lucide/vue'
 import { useToastStore } from '@/stores/toastStore'
+import type { CampaignStatus } from '@/types/kindness'
 
 const toastStore = useToastStore()
 
@@ -29,6 +32,7 @@ export interface DonationChatCardProps {
   id?: string | number
   title: string
   category: CampaignCategory
+  status?: CampaignStatus
   targetAmount: number | null
   collectedAmount?: number
   description: string
@@ -47,6 +51,7 @@ export interface DonationChatCardProps {
 
 const props = withDefaults(defineProps<DonationChatCardProps>(), {
   id: undefined,
+  status: 'active',
   collectedAmount: 0,
   mediaUrl: undefined,
   mediaType: 'image',
@@ -65,6 +70,7 @@ const emit = defineEmits<{
   (e: 'donate-click'): void
   (e: 'card-click'): void
   (e: 'edit-click', campaign: DonationChatCardProps): void
+  (e: 'delete-click', campaign: DonationChatCardProps): void
 }>()
 
 const isMenuOpen = ref(false)
@@ -83,6 +89,30 @@ const handleEditAction = (e: Event) => {
     id: props.id,
     title: props.title,
     category: props.category,
+    status: props.status,
+    targetAmount: props.targetAmount,
+    collectedAmount: props.collectedAmount,
+    description: props.description,
+    mediaUrl: props.mediaUrl,
+    mediaType: props.mediaType,
+    mediaCount: props.mediaCount,
+    autoPin: props.autoPin,
+    deadline: props.deadline,
+    authorName: props.authorName,
+    authorAvatar: props.authorAvatar,
+    authorRole: props.authorRole,
+    topicName: props.topicName
+  })
+}
+
+const handleDeleteAction = (e: Event) => {
+  e.stopPropagation()
+  isMenuOpen.value = false
+  emit('delete-click', {
+    id: props.id,
+    title: props.title,
+    category: props.category,
+    status: props.status,
     targetAmount: props.targetAmount,
     collectedAmount: props.collectedAmount,
     description: props.description,
@@ -271,7 +301,11 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
 
     <!-- Footer: Deadline info and participate action button -->
     <CardFooter class="px-4 pb-3.5 pt-0 flex items-center justify-between gap-2">
-      <div v-if="deadline" class="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+      <div v-if="status === 'inactive'" class="flex items-center gap-1.5 text-xs text-destructive font-medium">
+        <BanIcon class="size-3.5 text-destructive" />
+        <span>پویش متوقف و غیرفعال شد</span>
+      </div>
+      <div v-else-if="deadline" class="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
         <CalendarIcon class="size-3.5 text-muted-foreground/80" />
         <span>مهلت: {{ deadline }}</span>
       </div>
@@ -281,12 +315,32 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
       </div>
 
       <Button 
+        v-if="status === 'active'"
         size="sm" 
         class="rounded-xl font-bold text-xs h-8 px-3.5 cursor-pointer shadow-none hover:shadow-none"
         @click.stop="emit('donate-click')"
       >
         <HeartIcon class="fill-current" data-icon="inline-start" />
         <span>مشارکت در پویش</span>
+      </Button>
+      <Button 
+        v-else-if="status === 'inactive'"
+        size="sm" 
+        variant="secondary"
+        disabled
+        class="rounded-xl font-bold text-xs h-8 px-3.5 opacity-70 bg-muted text-muted-foreground"
+      >
+        <BanIcon class="size-3.5" data-icon="inline-start" />
+        <span>متوقف شده</span>
+      </Button>
+      <Button 
+        v-else
+        size="sm" 
+        variant="secondary"
+        disabled
+        class="rounded-xl font-bold text-xs h-8 px-3.5 opacity-90"
+      >
+        <span>تکمیل شده</span>
       </Button>
     </CardFooter>
   </Card>
@@ -323,16 +377,26 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
             <CopyIcon class="size-3.5 text-muted-foreground" />
           </button>
 
-          <!-- Edit Campaign (Strictly For Creator) -->
+          <!-- Edit & Delete Campaign (Strictly For Creator) -->
           <template v-if="canEdit">
             <div class="h-[1px] bg-border/40 my-0.5" />
 
             <button 
+              v-if="status !== 'inactive'"
               @click="handleEditAction" 
               class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-primary hover:bg-primary/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
               <span>ویرایش پویش</span>
               <PencilIcon class="size-3.5 text-primary" />
+            </button>
+
+            <button 
+              v-if="status !== 'inactive'"
+              @click="handleDeleteAction" 
+              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            >
+              <span>پاکسازی و حذف پویش</span>
+              <Trash2Icon class="size-3.5 text-destructive" />
             </button>
           </template>
         </div>
