@@ -714,9 +714,9 @@ const getImageUrl = (image: string | File | null | undefined): string => {
 }
 
 // Platform Navigation simulation variables
-const simulatorActiveTab = ref<'home' | 'donate' | 'profile'>('home')
+const simulatorActiveTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
 
-const handleNavChange = (tab: 'home' | 'donate' | 'profile') => {
+const handleNavChange = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
   logEvent('Nav: Active Tab Changed', { tab })
 }
 
@@ -2114,7 +2114,7 @@ const openDuplicateWarningSimulation = () => {
               </div>
 
               <!-- Navigation Specific Controls -->
-              <div v-if="currentComponent === 'nav'" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div v-if="currentComponent === 'nav'" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 <button 
                   @click="simulatorActiveTab = 'home'; logEvent('Nav: Toggled via Sidebar', { tab: 'home' })"
                   :class="[
@@ -2138,6 +2138,18 @@ const openDuplicateWarningSimulation = () => {
                 >
                   <span>صفحه اهدا (نیکوکاری)</span>
                   <HandHeartIcon class="size-3.5 text-muted-foreground" />
+                </button>
+                <button 
+                  @click="simulatorActiveTab = 'marketplace'; logEvent('Nav: Toggled via Sidebar', { tab: 'marketplace' })"
+                  :class="[
+                    'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                    simulatorActiveTab === 'marketplace' 
+                      ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                      : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                  ]"
+                >
+                  <span>بازارچه افزونه‌ها</span>
+                  <LayersIcon class="size-3.5 text-muted-foreground" />
                 </button>
                 <button 
                   @click="simulatorActiveTab = 'profile'; logEvent('Nav: Toggled via Sidebar', { tab: 'profile' })"
@@ -2833,6 +2845,15 @@ const openDuplicateWarningSimulation = () => {
                         <h4 class="text-xs font-extrabold text-foreground mt-1">بخش پویش‌های اهدا و مهربانی (صفحه اهدا)</h4>
                         <p class="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
                           در این بخش می‌توانید پویش‌های فعال نیکوکاری و حمایت‌های مالی را مشاهده و مبالغ دلخواه را اهدا نمایید.
+                        </p>
+                      </div>
+                      <div v-else-if="simulatorActiveTab === 'marketplace'" key="marketplace" class="flex flex-col items-center gap-2">
+                        <div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <LayersIcon class="size-5" />
+                        </div>
+                        <h4 class="text-xs font-extrabold text-foreground mt-1">بازارچه افزونه‌های تفکر</h4>
+                        <p class="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
+                          در این بخش می‌توانید افزونه‌های دلخواه خود را نصب کرده و به تاپیک‌ها متصل نمایید.
                         </p>
                       </div>
                       <div v-else key="profile" class="flex flex-col items-center gap-2">
