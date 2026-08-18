@@ -58,18 +58,20 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
     <button
       @click="selectTab('marketplace')"
       :class="[
-        'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent relative',
+        'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent relative',
         activeTab === 'marketplace'
           ? 'bg-primary/10 text-primary font-bold shadow-xs'
           : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
       ]"
       :title="languageStore.t('بازارچه', 'Marketplace')"
     >
-      <LayersIcon class="size-3.5 shrink-0" />
-      <span>{{ languageStore.t('بازارچه', 'Marketplace') }}</span>
-      <span class="text-[9px] px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/25 text-amber-600 dark:text-amber-400 font-bold rounded-md leading-none">
+      <!-- Floating 'Soon' Badge on Top -->
+      <span class="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] px-1.5 py-0.2 bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold rounded-full shadow-2xs backdrop-blur-xs whitespace-nowrap pointer-events-none leading-tight">
         {{ languageStore.t('به‌زودی', 'Soon') }}
       </span>
+
+      <LayersIcon class="size-3.5 shrink-0" />
+      <span>{{ languageStore.t('بازارچه', 'Marketplace') }}</span>
     </button>
 
     <!-- Profile Tab -->
