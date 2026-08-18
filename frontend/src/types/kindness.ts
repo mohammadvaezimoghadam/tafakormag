@@ -1,4 +1,4 @@
-export type CampaignStatus = 'active' | 'completed' | 'executed';
+export type CampaignStatus = 'active' | 'completed' | 'executed' | 'inactive';
 
 export type CampaignCategory = 'mosque' | 'school' | 'health' | 'livelihood' | 'construction' | 'other';
 

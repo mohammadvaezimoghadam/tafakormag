@@ -2,11 +2,12 @@
 import { ref, reactive, computed } from 'vue'
 import DonationCard from '@/components/kindness/DonationCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import type { DonationCampaignProps, CampaignStatus } from '@/types/kindness'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { SunIcon, MoonIcon, PlayIcon, CheckCircleIcon, HeartHandshakeIcon, Trash2Icon } from '@lucide/vue'
+import { SunIcon, MoonIcon, PlayIcon, CheckCircleIcon, HeartHandshakeIcon, Trash2Icon, RefreshCwIcon } from '@lucide/vue'
 
 // Dark mode state
 const isDarkMode = ref(false)
@@ -19,8 +20,10 @@ const toggleDarkMode = () => {
   }
 }
 
-// Modal State
+// Modal States
 const isModalOpen = ref(false)
+const isConfirmDeleteOpen = ref(false)
+const isDeletedCompletely = ref(false)
 
 // Active Preset State (A, B, C, D)
 const selectedState = ref<'stateA' | 'stateB' | 'stateC' | 'stateD'>('stateA')
@@ -178,6 +181,7 @@ const currentCampaign = reactive<DonationCampaignProps>({ ...mockStateA })
 
 const loadPreset = (state: 'stateA' | 'stateB' | 'stateC' | 'stateD') => {
   selectedState.value = state
+  isDeletedCompletely.value = false
   let preset: DonationCampaignProps
   if (state === 'stateA') preset = mockStateA
   else if (state === 'stateB') preset = mockStateB
@@ -212,6 +216,33 @@ const clearLogs = () => {
   logs.value = []
 }
 
+// Dynamic Confirm Modal Config based on whether the campaign has donations
+const confirmModalConfig = computed(() => {
+  const hasDonations = Boolean(
+    (currentCampaign.donorsCount && currentCampaign.donorsCount > 0) || 
+    (currentCampaign.collectedAmount && currentCampaign.collectedAmount > 0) || 
+    (currentCampaign.recentDonors && currentCampaign.recentDonors.length > 0)
+  )
+
+  if (hasDonations) {
+    return {
+      title: 'متوقف‌سازی و غیرفعال‌کردن پویش مهربانی',
+      description: `این پویش دارای ${new Intl.NumberFormat('fa-IR').format(currentCampaign.collectedAmount)} تومان واریزی و ${currentCampaign.donorsCount} حامی است. جهت حفظ شفافیت مالی، پویش متوقف و غیرفعال می‌شود اما سوابق آن در صفحه اهدا باقی می‌ماند. آیا مایل به ادامه هستید؟`,
+      confirmText: 'توقف و غیرفعال‌سازی',
+      variant: 'warning' as const,
+      isSoftDelete: true
+    }
+  } else {
+    return {
+      title: 'حذف کامل پویش مهربانی',
+      description: 'این پویش هیچ واریزی و حامی ثبت‌شده‌ای ندارد. با تایید شما، این پویش به طور کامل و دائم از سیستم پاکسازی خواهد شد. آیا مطمئن هستید؟',
+      confirmText: 'حذف کامل پویش',
+      variant: 'destructive' as const,
+      isSoftDelete: false
+    }
+  }
+})
+
 // Event Handlers
 const handleDonateClick = (campaignId: string | number) => {
   addLog('donate-click', { campaignId })
@@ -236,11 +267,25 @@ const handleEditClick = (campaignId: string | number) => {
 }
 
 const handleDeleteClick = (campaignId: string | number) => {
-  addLog('delete-click', { campaignId })
-  if (confirm(`آیا از پاکسازی و حذف پویش «${currentCampaign.title}» اطمینان دارید؟`)) {
-    addLog('delete-confirmed', { campaignId })
-    alert(`پویش با شناسه ${campaignId} با موفقیت پاکسازی شد.`)
+  addLog('delete-click (open-modal)', { campaignId })
+  isConfirmDeleteOpen.value = true
+}
+
+const handleConfirmDelete = () => {
+  isConfirmDeleteOpen.value = false
+  if (confirmModalConfig.value.isSoftDelete) {
+    currentCampaign.status = 'inactive'
+    addLog('campaign-stopped (status=inactive)', { id: currentCampaign.id })
+  } else {
+    isDeletedCompletely.value = true
+    addLog('campaign-hard-purged', { id: currentCampaign.id })
   }
+}
+
+const resetDeletedCampaign = () => {
+  isDeletedCompletely.value = false
+  loadPreset(selectedState.value)
+  addLog('campaign-restored', { id: currentCampaign.id })
 }
 
 const handleDonationSubmit = (amount: number, isAnon: boolean) => {
@@ -466,13 +511,34 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
         <div class="lg:col-span-7 flex flex-col items-center justify-center space-y-4">
           <div class="w-full flex items-center justify-between">
             <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">پیش‌نمایش مولفه</span>
-            <Badge variant="outline" class="text-xs">
+            <Badge :variant="currentCampaign.status === 'inactive' ? 'destructive' : 'outline'" class="text-xs">
               {{ currentCampaign.status }}
             </Badge>
           </div>
 
+          <!-- Hard-deleted Placeholder State -->
+          <div 
+            v-if="isDeletedCompletely" 
+            class="w-full py-12 px-6 rounded-3xl border border-dashed border-destructive/40 bg-destructive/5 flex flex-col items-center justify-center text-center gap-3"
+          >
+            <div class="size-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+              <Trash2Icon class="size-6" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <h3 class="text-sm font-bold text-foreground">پویش به طور کامل و دائم حذف گردید</h3>
+              <p class="text-xs text-muted-foreground max-w-sm">
+                این پویش هیچ واریزی نداشت و به صورت کامل از پایگاه داده و رابط کاربری حذف شد.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" class="gap-1.5 mt-2 rounded-xl" @click="resetDeletedCampaign">
+              <RefreshCwIcon class="size-3.5" />
+              <span>بارگذاری مجدد پویش جهت تست</span>
+            </Button>
+          </div>
+
           <!-- DonationCard Component Under Test -->
           <DonationCard
+            v-else
             v-bind="currentCampaign"
             @donate-click="handleDonateClick"
             @topic-click="handleTopicClick"
@@ -490,6 +556,18 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
         v-model:open="isModalOpen"
         :campaign-title="currentCampaign.title"
         @submit-donation="handleDonationSubmit"
+      />
+
+      <!-- Confirm Delete / Stop Modal -->
+      <ConfirmModal
+        v-model:is-open="isConfirmDeleteOpen"
+        :title="confirmModalConfig.title"
+        :description="confirmModalConfig.description"
+        :confirm-text="confirmModalConfig.confirmText"
+        cancel-text="انصراف"
+        :variant="confirmModalConfig.variant"
+        @confirm="handleConfirmDelete"
+        @cancel="isConfirmDeleteOpen = false"
       />
 
     </div>

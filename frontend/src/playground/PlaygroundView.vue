@@ -302,12 +302,59 @@ const handleTransparencyClick = (idx: number, url: string) => {
   logEvent('DonationCard: Transparency Image Clicked', { idx, url })
 }
 
+// Confirm Delete Modal for DonationCard in Playground
+const simulatorDonationConfirmDeleteOpen = ref(false)
+const simulatorDonationDeleted = ref(false)
+
+const simulatorDonationConfirmConfig = computed(() => {
+  const hasDonations = Boolean(
+    (simulatorDonationCampaign.donorsCount && simulatorDonationCampaign.donorsCount > 0) ||
+    (simulatorDonationCampaign.collectedAmount && simulatorDonationCampaign.collectedAmount > 0)
+  )
+
+  if (hasDonations) {
+    return {
+      title: 'متوقف‌سازی و غیرفعال‌کردن پویش مهربانی',
+      description: `این پویش دارای ${new Intl.NumberFormat('fa-IR').format(simulatorDonationCampaign.collectedAmount)} تومان واریزی و ${simulatorDonationCampaign.donorsCount} حامی است. جهت حفظ شفافیت مالی، پویش متوقف و غیرفعال می‌شود اما سوابق آن باقی می‌ماند. آیا مایل به ادامه هستید؟`,
+      confirmText: 'توقف و غیرفعال‌سازی',
+      variant: 'warning' as const,
+      isSoftDelete: true
+    }
+  } else {
+    return {
+      title: 'حذف کامل پویش مهربانی',
+      description: 'این پویش هیچ واریزی و حامی ثبت‌شده‌ای ندارد. با تایید شما، این پویش به طور کامل و دائم از سیستم پاکسازی خواهد شد. آیا مطمئن هستید؟',
+      confirmText: 'حذف کامل پویش',
+      variant: 'destructive' as const,
+      isSoftDelete: false
+    }
+  }
+})
+
 const handleDonationEditClick = (campaignId: string | number) => {
   logEvent('DonationCard: Edit Clicked', { campaignId })
 }
 
 const handleDonationDeleteClick = (campaignId: string | number) => {
-  logEvent('DonationCard: Delete Clicked', { campaignId })
+  logEvent('DonationCard: Delete Clicked (Open Confirm Modal)', { campaignId })
+  simulatorDonationConfirmDeleteOpen.value = true
+}
+
+const handleConfirmDonationDelete = () => {
+  simulatorDonationConfirmDeleteOpen.value = false
+  if (simulatorDonationConfirmConfig.value.isSoftDelete) {
+    simulatorDonationCampaign.status = 'inactive'
+    logEvent('DonationCard: Campaign Stopped (status=inactive)', { id: simulatorDonationCampaign.id })
+  } else {
+    simulatorDonationDeleted.value = true
+    logEvent('DonationCard: Campaign Hard Purged', { id: simulatorDonationCampaign.id })
+  }
+}
+
+const resetSimulatorDonation = () => {
+  simulatorDonationDeleted.value = false
+  setDonationState('active')
+  logEvent('DonationCard: Campaign Reset', { id: simulatorDonationCampaign.id })
 }
 
 const handleDonationSubmit = (amount: number, isAnon: boolean) => {
@@ -323,13 +370,19 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
   })
 }
 
-const setDonationState = (status: 'active' | 'completed' | 'executed' | 'zero') => {
+const setDonationState = (status: 'active' | 'completed' | 'executed' | 'inactive' | 'zero') => {
+  simulatorDonationDeleted.value = false
   if (status === 'zero') {
     simulatorDonationCampaign.status = 'active'
     simulatorDonationCampaign.collectedAmount = 0
     simulatorDonationCampaign.donorsCount = 0
     simulatorDonationCampaign.recentDonors = []
     logEvent('DonationCard: State Changed', { newStatus: 'zero_donations' })
+    return
+  }
+  if (status === 'inactive') {
+    simulatorDonationCampaign.status = 'inactive'
+    logEvent('DonationCard: State Changed', { newStatus: 'inactive' })
     return
   }
   simulatorDonationCampaign.status = status
@@ -3572,14 +3625,38 @@ const openDuplicateWarningSimulation = () => {
                       >اجرا شده و شفاف</Button>
                       <Button
                         size="xs"
-                        :variant="simulatorDonationCampaign.collectedAmount === 0 ? 'secondary' : 'ghost'"
+                        :variant="simulatorDonationCampaign.status === 'inactive' ? 'destructive' : 'ghost'"
+                        class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
+                        @click="setDonationState('inactive')"
+                      >متوقف / غیرفعال</Button>
+                      <Button
+                        size="xs"
+                        :variant="simulatorDonationCampaign.collectedAmount === 0 && simulatorDonationCampaign.status === 'active' ? 'secondary' : 'ghost'"
                         class="h-7 text-xs font-semibold rounded-lg cursor-pointer text-emerald-600 dark:text-emerald-400"
                         @click="setDonationState('zero')"
                       >بدون واریزی (تست حذف)</Button>
                     </div>
                   </div>
 
+                  <!-- Hard-deleted preview state -->
+                  <div 
+                    v-if="simulatorDonationDeleted" 
+                    class="w-full max-w-md py-8 px-4 rounded-3xl border border-dashed border-destructive/40 bg-destructive/5 flex flex-col items-center justify-center text-center gap-2.5"
+                  >
+                    <div class="size-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+                      <Trash2Icon class="size-5" />
+                    </div>
+                    <h4 class="text-xs font-bold text-foreground">پویش به طور کامل پاکسازی گردید</h4>
+                    <p class="text-[10px] text-muted-foreground max-w-xs">
+                      چون پویش واریزی نداشت، کامپوننت با موفقیت حذف شد.
+                    </p>
+                    <Button size="xs" variant="outline" class="rounded-lg mt-1" @click="resetSimulatorDonation">
+                      بارگذاری مجدد پویش
+                    </Button>
+                  </div>
+
                   <DonationCard
+                    v-else
                     v-bind="simulatorDonationCampaign"
                     @donate-click="handleDonateClick"
                     @topic-click="handleDonationTopicClick"
@@ -3592,6 +3669,17 @@ const openDuplicateWarningSimulation = () => {
                     v-model:open="simulatorDonationModalOpen"
                     :campaign-title="simulatorDonationCampaign.title"
                     @submit-donation="handleDonationSubmit"
+                  />
+
+                  <ConfirmModal
+                    v-model:is-open="simulatorDonationConfirmDeleteOpen"
+                    :title="simulatorDonationConfirmConfig.title"
+                    :description="simulatorDonationConfirmConfig.description"
+                    :confirm-text="simulatorDonationConfirmConfig.confirmText"
+                    cancel-text="انصراف"
+                    :variant="simulatorDonationConfirmConfig.variant"
+                    @confirm="handleConfirmDonationDelete"
+                    @cancel="simulatorDonationConfirmDeleteOpen = false"
                   />
                 </div>
 

@@ -19,7 +19,8 @@ import {
   Share2Icon,
   ClockIcon,
   PencilIcon,
-  Trash2Icon
+  Trash2Icon,
+  BanIcon
 } from '@lucide/vue'
 
 const props = withDefaults(defineProps<DonationCampaignProps>(), {
@@ -89,6 +90,12 @@ const statusConfig = computed(() => {
         label: 'اجرا شده و شفاف',
         variant: 'default' as const,
         icon: CheckCircle2Icon
+      }
+    case 'inactive':
+      return {
+        label: 'متوقف / غیرفعال',
+        variant: 'destructive' as const,
+        icon: BanIcon
       }
     default:
       return {
@@ -378,6 +385,7 @@ const totalTransparencyCost = computed(() => {
 
     <!-- 5. ACTIONS FOOTER BAR -->
     <CardFooter class="p-3 bg-muted/20 border-t border-border/40 flex items-center justify-between gap-2">
+      <!-- 1. Active State Action -->
       <Button 
         v-if="status === 'active'"
         variant="default"
@@ -389,6 +397,19 @@ const totalTransparencyCost = computed(() => {
         <span>مشارکت در این مهربانی</span>
       </Button>
 
+      <!-- 2. Inactive / Stopped State Action -->
+      <Button 
+        v-else-if="status === 'inactive'"
+        variant="secondary" 
+        disabled 
+        size="sm"
+        class="h-8 px-3 text-xs font-bold rounded-xl shadow-none flex-1 opacity-70 bg-muted text-muted-foreground border border-border/40"
+      >
+        <BanIcon class="size-3.5" data-icon="inline-start" />
+        <span>پویش متوقف و غیرفعال شد</span>
+      </Button>
+
+      <!-- 3. Completed or Executed Action -->
       <Button 
         v-else
         variant="secondary" 
@@ -402,7 +423,7 @@ const totalTransparencyCost = computed(() => {
 
       <!-- Edit Campaign Button -->
       <Button 
-        v-if="canEdit"
+        v-if="canEdit && status !== 'inactive'"
         variant="outline" 
         size="icon" 
         class="size-8 rounded-xl border-border/60 hover:bg-muted/50 text-primary hover:text-primary shrink-0 cursor-pointer shadow-none"
@@ -412,20 +433,14 @@ const totalTransparencyCost = computed(() => {
         <PencilIcon class="size-3.5" />
       </Button>
 
-      <!-- Delete / Purge Campaign Button (Disabled if campaign has donations) -->
+      <!-- Delete / Purge Campaign Button (Clickable -> Opens Confirmation Modal) -->
       <Button 
-        v-if="canEdit"
+        v-if="canEdit && status !== 'inactive'"
         variant="outline" 
         size="icon" 
-        :disabled="hasDonations"
-        :class="[
-          'size-8 rounded-xl border-border/60 shrink-0 shadow-none transition-all',
-          hasDonations 
-            ? 'opacity-40 cursor-not-allowed text-muted-foreground hover:bg-transparent hover:text-muted-foreground' 
-            : 'text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer border-destructive/30'
-        ]"
-        @click="!hasDonations && emit('delete-click', id)"
-        :title="hasDonations ? 'پویش‌های دارای واریزی قابل حذف نیستند' : 'پاکسازی و حذف اهدا'"
+        class="size-8 rounded-xl border-border/60 shrink-0 shadow-none transition-all text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer border-destructive/30"
+        @click="emit('delete-click', id)"
+        :title="hasDonations ? 'متوقف‌سازی و غیرفعال‌کردن پویش' : 'پاکسازی و حذف کامل اهدا'"
       >
         <Trash2Icon class="size-3.5" />
       </Button>
