@@ -35,8 +35,9 @@ export default defineConfig(({ mode }) => {
       }
     ],
     server: {
-      host: '127.0.0.1',
-      port: isLabs ? 3000 : 5001,
+      host: true,
+      port: isLabs ? 5002 : 5001,
+      strictPort: false,
     },
     build: {
       rollupOptions: {
