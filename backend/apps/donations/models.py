@@ -109,7 +109,7 @@ class DonationTransaction(models.Model):
         FAILED = 'failed', 'ناموفق'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    campaign = models.ForeignKey(DonationCampaign, on_delete=models.PROTECT, related_name='transactions')
+    campaign = models.ForeignKey(DonationCampaign, on_delete=models.CASCADE, related_name='transactions')
     donor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='donations')
     
     amount = models.BigIntegerField(validators=[MinValueValidator(1000)])  # Minimum 1,000 Tomans
