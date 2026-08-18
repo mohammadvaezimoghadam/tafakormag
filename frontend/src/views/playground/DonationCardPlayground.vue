@@ -22,8 +22,8 @@ const toggleDarkMode = () => {
 // Modal State
 const isModalOpen = ref(false)
 
-// Active Preset State (A, B, C)
-const selectedState = ref<'stateA' | 'stateB' | 'stateC'>('stateA')
+// Active Preset State (A, B, C, D)
+const selectedState = ref<'stateA' | 'stateB' | 'stateC' | 'stateD'>('stateA')
 
 // Mock Campaigns Preset Data
 const mockStateA: DonationCampaignProps = {
@@ -37,6 +37,7 @@ const mockStateA: DonationCampaignProps = {
   targetAmount: 100000000,
   collectedAmount: 45000000,
   donorsCount: 28,
+  canEdit: true,
   mediaGallery: [
     'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80',
@@ -82,6 +83,7 @@ const mockStateB: DonationCampaignProps = {
   targetAmount: 60000000,
   collectedAmount: 60000000,
   donorsCount: 64,
+  canEdit: true,
   mediaGallery: [
     'https://images.unsplash.com/photo-1548625149-fc4a29cf7092?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=800&q=80',
@@ -118,6 +120,7 @@ const mockStateC: DonationCampaignProps = {
   targetAmount: 80000000,
   collectedAmount: 80000000,
   donorsCount: 95,
+  canEdit: true,
   mediaGallery: [
     'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=800&q=80',
@@ -151,15 +154,35 @@ const mockStateC: DonationCampaignProps = {
   }
 }
 
+const mockStateD: DonationCampaignProps = {
+  id: 'cmp-104',
+  title: 'پویش جدید ایجاد شده (بدون واریزی - تست دکمه پاکسازی)',
+  description: 'این پویش به تازگی ایجاد شده و هنوز هیچ حامی یا مبلغی برای آن ثبت نشده است. بنابراین دکمه پاکسازی (حذف) در پایین کارت فعال بوده و قابل تست است.',
+  topicId: 'topic-mosque-55',
+  topicName: 'کانون فرهنگی نور',
+  category: 'عمرانی و تجهیزات',
+  status: 'active',
+  targetAmount: 50000000,
+  collectedAmount: 0,
+  donorsCount: 0,
+  canEdit: true,
+  mediaGallery: [
+    'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80'
+  ],
+  recentDonors: []
+}
+
 // Current Campaign Model (Reactive)
 const currentCampaign = reactive<DonationCampaignProps>({ ...mockStateA })
 
-const loadPreset = (state: 'stateA' | 'stateB' | 'stateC') => {
+const loadPreset = (state: 'stateA' | 'stateB' | 'stateC' | 'stateD') => {
   selectedState.value = state
   let preset: DonationCampaignProps
   if (state === 'stateA') preset = mockStateA
   else if (state === 'stateB') preset = mockStateB
-  else preset = mockStateC
+  else if (state === 'stateC') preset = mockStateC
+  else preset = mockStateD
 
   Object.assign(currentCampaign, JSON.parse(JSON.stringify(preset)))
 }
@@ -205,6 +228,19 @@ const handleTransparencyClick = (index: number, url: string) => {
 
 const handleShareClick = (campaignId: string | number) => {
   addLog('share-click', { campaignId })
+}
+
+const handleEditClick = (campaignId: string | number) => {
+  addLog('edit-click', { campaignId })
+  alert(`رویداد ویرایش پویش (edit-click) برای شناسه ${campaignId} شلیک شد.`)
+}
+
+const handleDeleteClick = (campaignId: string | number) => {
+  addLog('delete-click', { campaignId })
+  if (confirm(`آیا از پاکسازی و حذف پویش «${currentCampaign.title}» اطمینان دارید؟`)) {
+    addLog('delete-confirmed', { campaignId })
+    alert(`پویش با شناسه ${campaignId} با موفقیت پاکسازی شد.`)
+  }
 }
 
 const handleDonationSubmit = (amount: number, isAnon: boolean) => {
@@ -305,6 +341,19 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
                   </div>
                   <Badge variant="outline" class="text-[10px]">اجرا شده</Badge>
                 </Button>
+
+                <Button
+                  variant="outline"
+                  class="justify-between h-auto py-3 px-4 text-right"
+                  :class="selectedState === 'stateD' ? 'border-emerald-500 bg-emerald-500/10 font-bold' : ''"
+                  @click="loadPreset('stateD')"
+                >
+                  <div class="flex flex-col items-start gap-0.5">
+                    <span class="text-xs font-bold text-foreground">State D: پویش بدون واریزی (تست حذف)</span>
+                    <span class="text-[11px] text-muted-foreground">مبلغ ۰ تومان، دکمه سطل زباله فعال</span>
+                  </div>
+                  <Badge variant="secondary" class="text-[10px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">حذف فعال</Badge>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -315,6 +364,21 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
               <CardTitle class="text-sm font-bold text-foreground">تنظیمات زنده پارامترها</CardTitle>
             </CardHeader>
             <CardContent class="p-4 pt-2 space-y-4 text-xs">
+              <div class="flex items-center justify-between p-2 rounded-xl bg-muted/30 border border-border/40">
+                <div class="flex flex-col">
+                  <span class="font-bold text-foreground">دسترسی مدیریت / سازنده (canEdit):</span>
+                  <span class="text-[10px] text-muted-foreground">نمایش دکمه‌های ویرایش و حذف در پایین کارت</span>
+                </div>
+                <Button 
+                  size="sm" 
+                  :variant="currentCampaign.canEdit ? 'default' : 'outline'" 
+                  class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
+                  @click="currentCampaign.canEdit = !currentCampaign.canEdit"
+                >
+                  {{ currentCampaign.canEdit ? 'فعال (مالک)' : 'غیرفعال (عادی)' }}
+                </Button>
+              </div>
+
               <div class="space-y-1">
                 <label class="font-semibold text-muted-foreground">وضعیت پویش (Status):</label>
                 <div class="flex gap-2">
@@ -337,6 +401,15 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
                     @click="currentCampaign.status = 'executed'"
                   >Executed</Button>
                 </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="font-semibold text-muted-foreground">تعداد حامیان (Donors Count):</label>
+                <input 
+                  type="number" 
+                  v-model.number="currentCampaign.donorsCount"
+                  class="w-full p-2 rounded-md border border-border bg-background text-foreground text-start placeholder:text-start"
+                />
               </div>
 
               <div class="space-y-1">
@@ -405,6 +478,8 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
             @topic-click="handleTopicClick"
             @transparency-click="handleTransparencyClick"
             @share-click="handleShareClick"
+            @edit-click="handleEditClick"
+            @delete-click="handleDeleteClick"
           />
         </div>
 

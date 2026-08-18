@@ -275,6 +275,7 @@ const simulatorDonationCampaign = reactive<DonationCampaignProps>({
   targetAmount: 100000000,
   collectedAmount: 45000000,
   donorsCount: 28,
+  canEdit: true,
   mediaGallery: [
     'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80',
@@ -301,6 +302,14 @@ const handleTransparencyClick = (idx: number, url: string) => {
   logEvent('DonationCard: Transparency Image Clicked', { idx, url })
 }
 
+const handleDonationEditClick = (campaignId: string | number) => {
+  logEvent('DonationCard: Edit Clicked', { campaignId })
+}
+
+const handleDonationDeleteClick = (campaignId: string | number) => {
+  logEvent('DonationCard: Delete Clicked', { campaignId })
+}
+
 const handleDonationSubmit = (amount: number, isAnon: boolean) => {
   logEvent('DonationModal: Donation Submitted', { amount, isAnon })
   simulatorDonationCampaign.collectedAmount += amount
@@ -314,16 +323,27 @@ const handleDonationSubmit = (amount: number, isAnon: boolean) => {
   })
 }
 
-const setDonationState = (status: 'active' | 'completed' | 'executed') => {
+const setDonationState = (status: 'active' | 'completed' | 'executed' | 'zero') => {
+  if (status === 'zero') {
+    simulatorDonationCampaign.status = 'active'
+    simulatorDonationCampaign.collectedAmount = 0
+    simulatorDonationCampaign.donorsCount = 0
+    simulatorDonationCampaign.recentDonors = []
+    logEvent('DonationCard: State Changed', { newStatus: 'zero_donations' })
+    return
+  }
   simulatorDonationCampaign.status = status
   if (status === 'active') {
     simulatorDonationCampaign.collectedAmount = 45000000
+    simulatorDonationCampaign.donorsCount = 28
     simulatorDonationCampaign.targetAmount = 100000000
   } else if (status === 'completed') {
     simulatorDonationCampaign.collectedAmount = 100000000
+    simulatorDonationCampaign.donorsCount = 64
     simulatorDonationCampaign.targetAmount = 100000000
   } else if (status === 'executed') {
     simulatorDonationCampaign.collectedAmount = 80000000
+    simulatorDonationCampaign.donorsCount = 95
     simulatorDonationCampaign.targetAmount = 80000000
     simulatorDonationCampaign.transparency = {
       isAvailable: true,
@@ -3531,10 +3551,10 @@ const openDuplicateWarningSimulation = () => {
                   <!-- In-place 3-State Testing Controls -->
                   <div class="flex flex-wrap items-center justify-between w-full max-w-md pb-2 border-b border-border/40 gap-2">
                     <span class="text-xs font-bold text-foreground">تست وضعیت‌های پویش:</span>
-                    <div class="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/40 text-xs">
+                    <div class="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/40 text-xs flex-wrap">
                       <Button
                         size="xs"
-                        :variant="simulatorDonationCampaign.status === 'active' ? 'default' : 'ghost'"
+                        :variant="simulatorDonationCampaign.status === 'active' && simulatorDonationCampaign.collectedAmount > 0 ? 'default' : 'ghost'"
                         class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
                         @click="setDonationState('active')"
                       >در حال جمع‌آوری</Button>
@@ -3550,6 +3570,12 @@ const openDuplicateWarningSimulation = () => {
                         class="h-7 text-xs font-semibold rounded-lg cursor-pointer"
                         @click="setDonationState('executed')"
                       >اجرا شده و شفاف</Button>
+                      <Button
+                        size="xs"
+                        :variant="simulatorDonationCampaign.collectedAmount === 0 ? 'secondary' : 'ghost'"
+                        class="h-7 text-xs font-semibold rounded-lg cursor-pointer text-emerald-600 dark:text-emerald-400"
+                        @click="setDonationState('zero')"
+                      >بدون واریزی (تست حذف)</Button>
                     </div>
                   </div>
 
@@ -3558,6 +3584,8 @@ const openDuplicateWarningSimulation = () => {
                     @donate-click="handleDonateClick"
                     @topic-click="handleDonationTopicClick"
                     @transparency-click="handleTransparencyClick"
+                    @edit-click="handleDonationEditClick"
+                    @delete-click="handleDonationDeleteClick"
                   />
 
                   <DonationModal

@@ -18,7 +18,8 @@ import {
   ImageIcon,
   Share2Icon,
   ClockIcon,
-  PencilIcon
+  PencilIcon,
+  Trash2Icon
 } from '@lucide/vue'
 
 const props = withDefaults(defineProps<DonationCampaignProps>(), {
@@ -34,7 +35,17 @@ const emit = defineEmits<{
   (e: 'transparency-click', imageIndex: number, imageUrl: string): void
   (e: 'share-click', campaignId: string | number): void
   (e: 'edit-click', campaignId: string | number): void
+  (e: 'delete-click', campaignId: string | number): void
 }>()
+
+// Check if campaign has any donations (donations amount > 0 or donorsCount > 0 or recentDonors length > 0)
+const hasDonations = computed(() => {
+  return Boolean(
+    (props.donorsCount && props.donorsCount > 0) ||
+    (props.collectedAmount && props.collectedAmount > 0) ||
+    (props.recentDonors && props.recentDonors.length > 0)
+  )
+})
 
 // Active Media Index for gallery preview
 const currentMediaIndex = ref(0)
@@ -389,6 +400,7 @@ const totalTransparencyCost = computed(() => {
         <span>{{ status === 'executed' ? 'پایان و اجرای پویش' : 'تکمیل شده' }}</span>
       </Button>
 
+      <!-- Edit Campaign Button -->
       <Button 
         v-if="canEdit"
         variant="outline" 
@@ -400,6 +412,25 @@ const totalTransparencyCost = computed(() => {
         <PencilIcon class="size-3.5" />
       </Button>
 
+      <!-- Delete / Purge Campaign Button (Disabled if campaign has donations) -->
+      <Button 
+        v-if="canEdit"
+        variant="outline" 
+        size="icon" 
+        :disabled="hasDonations"
+        :class="[
+          'size-8 rounded-xl border-border/60 shrink-0 shadow-none transition-all',
+          hasDonations 
+            ? 'opacity-40 cursor-not-allowed text-muted-foreground hover:bg-transparent hover:text-muted-foreground' 
+            : 'text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer border-destructive/30'
+        ]"
+        @click="!hasDonations && emit('delete-click', id)"
+        :title="hasDonations ? 'پویش‌های دارای واریزی قابل حذف نیستند' : 'پاکسازی و حذف اهدا'"
+      >
+        <Trash2Icon class="size-3.5" />
+      </Button>
+
+      <!-- Share Button -->
       <Button 
         variant="outline" 
         size="icon" 
