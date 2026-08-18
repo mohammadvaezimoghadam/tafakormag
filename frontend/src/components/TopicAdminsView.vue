@@ -50,6 +50,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'back'): void
+  (e: 'ownership-transferred', newOwner: UserSimple): void
 }>()
 
 // Internal States
@@ -315,6 +316,7 @@ const handleExecuteTransferOwnership = async () => {
     owner.value = res.data.owner
     await fetchAdmins()
     isTransferModalOpen.value = false
+    emit('ownership-transferred', res.data.owner)
   } catch (err: any) {
     if (err.response && err.response.data && err.response.data.error) {
       errorMessage.value = err.response.data.error

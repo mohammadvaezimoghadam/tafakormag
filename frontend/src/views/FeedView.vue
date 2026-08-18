@@ -19,6 +19,7 @@ import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
+import TopicAdminsView from '@/components/TopicAdminsView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import DonationsFeed from '@/components/kindness/DonationsFeed.vue'
 import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
@@ -28,6 +29,7 @@ import type { CreateDonationPayload } from '@/types/kindness'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon } from '@lucide/vue'
 import {
   Dialog,
@@ -784,8 +786,11 @@ const handleCancelEdit = () => {
 const isTopicCreator = computed<boolean>(() => {
   if (!selectedTopic.value || !userProfile.value) return false
   if (!selectedTopic.value.created_by) return true
+  const createdById = typeof selectedTopic.value.created_by === 'object' && selectedTopic.value.created_by !== null
+    ? (selectedTopic.value.created_by as any).id
+    : selectedTopic.value.created_by
   return Boolean(
-    String(selectedTopic.value.created_by) === String(userProfile.value.id) ||
+    String(createdById) === String(userProfile.value.id) ||
     (selectedTopic.value.created_by_phone && userProfile.value.phone && 
      String(selectedTopic.value.created_by_phone) === String(userProfile.value.phone))
   )
@@ -1152,6 +1157,9 @@ const toggleTheme = useToggle(isDark)
                 :topic-id="selectedTopic?.id"
                 :is-owner="isTopicCreator"
                 @back="activeTopicSubView = 'feed'"
+                @ownership-transferred="async () => {
+                  await topicStore.loadTopics();
+                }"
               />
             </div>
           </transition>
