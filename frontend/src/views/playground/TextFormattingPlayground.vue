@@ -54,19 +54,24 @@ const handleEditorSelect = () => {
   }
 
   const rect = getSelectionPixelRect(el, start, end)
-  const menuWidth = 230
-  const menuHeight = 38
+  const menuWidth = 330
+  const menuHeight = 40
+  const verticalGap = 10
 
   const centerX = rect.left + (rect.width / 2)
-  const minX = (menuWidth / 2) + 8
-  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 8)
+  const minX = (menuWidth / 2) + 12
+  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
   const clampedX = Math.min(Math.max(centerX, minX), maxX)
 
-  let top = rect.top - menuHeight - 6
+  const candidateTopAbove = rect.top - menuHeight - verticalGap
+  let top = 0
   let placement: 'top' | 'bottom' = 'top'
 
-  if (top < 0) {
-    top = rect.bottom + 6
+  if (candidateTopAbove >= 0) {
+    top = candidateTopAbove
+    placement = 'top'
+  } else {
+    top = rect.bottom + verticalGap
     placement = 'bottom'
   }
 

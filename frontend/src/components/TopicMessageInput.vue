@@ -296,22 +296,36 @@ const handleTextareaSelect = (isExpanded = false) => {
 
   // ۲. محاسبه مختصات دقیق پیکسل بر روی textarea
   const rect = getSelectionPixelRect(el, start, end)
-  const menuWidth = 230
-  const menuHeight = 38
+  const menuWidth = 330
+  const menuHeight = 40
+  const verticalGap = 10 // فاصله ایمن بین نوار ابزار و متن
 
-  // موقعیت افقی (مرکز متن انتخاب‌شده)
+  // موقعیت افقی (مرکز متن انتخاب‌شده با جلوگیری از بیرون‌زدگی)
   const centerX = rect.left + (rect.width / 2)
-  const minX = (menuWidth / 2) + 8
-  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 8)
+  const minX = (menuWidth / 2) + 12
+  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
   const clampedX = Math.min(Math.max(centerX, minX), maxX)
 
-  // موقعیت عمودی: بالای متن با ۶ پیکسل فاصله
-  let top = isExpanded ? (rect.top + 24 - menuHeight - 6) : (rect.top - menuHeight - 6)
+  let top = 0
   let placement: 'top' | 'bottom' = 'top'
 
-  if (top < (isExpanded ? 24 : 0)) {
-    top = isExpanded ? (rect.bottom + 24 + 6) : (rect.bottom + 6)
-    placement = 'bottom'
+  if (!isExpanded) {
+    // برای کادر اصلی پیام: منو در فضای باز بالای فیلد ورودی قرار می‌گیرد تا هرگز روی متن نباشد
+    top = Math.min(rect.top - menuHeight - verticalGap, -menuHeight - 6)
+    placement = 'top'
+  } else {
+    // برای مودال بزرگنمایی:
+    const selectionTopInContainer = rect.top + 24 // ۲۴ پیکسل پدینگ کانتینر
+    const selectionBottomInContainer = rect.bottom + 24
+
+    const candidateTopAbove = selectionTopInContainer - menuHeight - verticalGap
+    if (candidateTopAbove >= 8) {
+      top = candidateTopAbove
+      placement = 'top'
+    } else {
+      top = selectionBottomInContainer + verticalGap
+      placement = 'bottom'
+    }
   }
 
   const coords: MenuCoords = {
