@@ -34,6 +34,9 @@ import {
   DialogClose
 } from '@/components/ui/dialog'
 import AIRefinerDrawer from './AIRefinerDrawer.vue'
+import FloatingFormatMenu, { type MenuCoords } from '@/components/common/FloatingFormatMenu.vue'
+import { wrapSelection, type FormatType } from '@/utils/textFormatter'
+import { getSelectionPixelRect } from '@/utils/caretPosition'
 
 interface Attachment {
   id: string | number
@@ -247,8 +250,144 @@ const isMobile = () => {
          (navigator.maxTouchPoints > 0)
 }
 
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
+const showFormatMenu = ref(false)
+const showExpandedFormatMenu = ref(false)
+const menuCoords = ref<MenuCoords | null>(null)
+const expandedMenuCoords = ref<MenuCoords | null>(null)
+const selectedText = ref('')
+const expandedSelectedText = ref('')
+
+const handleTextareaSelect = (isExpanded = false) => {
+  const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+  if (!el) return
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+
+  // اگر هیچ متنی انتخاب نشده باشد
+  if (start >= end) {
+    if (isExpanded) {
+      showExpandedFormatMenu.value = false
+      expandedSelectedText.value = ''
+      expandedMenuCoords.value = null
+    } else {
+      showFormatMenu.value = false
+      selectedText.value = ''
+      menuCoords.value = null
+    }
+    return
+  }
+
+  const rawSelection = el.value.substring(start, end)
+
+  // ۱. بررسی محتوای انتخاب‌شده: اگر خالی، فقط فاصله یا خط‌خالی باشد، منو باز نشود
+  if (!rawSelection || rawSelection.trim().length === 0) {
+    if (isExpanded) {
+      showExpandedFormatMenu.value = false
+      expandedSelectedText.value = ''
+      expandedMenuCoords.value = null
+    } else {
+      showFormatMenu.value = false
+      selectedText.value = ''
+      menuCoords.value = null
+    }
+    return
+  }
+
+  // ۲. محاسبه مختصات دقیق پیکسل بر روی textarea
+  const rect = getSelectionPixelRect(el, start, end)
+  const menuWidth = 230
+  const menuHeight = 38
+
+  // موقعیت افقی (مرکز متن انتخاب‌شده)
+  const centerX = rect.left + (rect.width / 2)
+  const minX = (menuWidth / 2) + 8
+  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 8)
+  const clampedX = Math.min(Math.max(centerX, minX), maxX)
+
+  // موقعیت عمودی: بالای متن با ۶ پیکسل فاصله
+  let top = isExpanded ? (rect.top + 24 - menuHeight - 6) : (rect.top - menuHeight - 6)
+  let placement: 'top' | 'bottom' = 'top'
+
+  if (top < (isExpanded ? 24 : 0)) {
+    top = isExpanded ? (rect.bottom + 24 + 6) : (rect.bottom + 6)
+    placement = 'bottom'
+  }
+
+  const coords: MenuCoords = {
+    top,
+    left: isExpanded ? clampedX + 24 : clampedX,
+    placement
+  }
+
+  if (isExpanded) {
+    expandedSelectedText.value = rawSelection
+    expandedMenuCoords.value = coords
+    showExpandedFormatMenu.value = true
+  } else {
+    selectedText.value = rawSelection
+    menuCoords.value = coords
+    showFormatMenu.value = true
+  }
+}
+
+const handleTextareaBlur = (isExpanded = false) => {
+  setTimeout(() => {
+    if (isExpanded) {
+      showExpandedFormatMenu.value = false
+    } else {
+      showFormatMenu.value = false
+    }
+  }, 250)
+}
+
+const applyFormat = (format: FormatType, isExpanded = false) => {
+  const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+  if (!el) return
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const res = wrapSelection(text.value, start, end, format)
+  text.value = res.newText
+
+  nextTick(() => {
+    el.focus()
+    el.setSelectionRange(res.newCursorStart, res.newCursorEnd)
+    handleTextareaSelect(isExpanded)
+    adjustHeight()
+  })
+}
+
+const handleKeydown = (event: KeyboardEvent, isExpanded = false) => {
+  // ۱. بررسی کلیدهای میانبر فرمت‌دهی متن (Ctrl/Cmd)
+  const isCtrlOrMeta = event.ctrlKey || event.metaKey
+  if (isCtrlOrMeta) {
+    let format: FormatType | null = null
+    const key = event.key.toLowerCase()
+
+    if (key === 'b') {
+      format = 'bold'
+    } else if (key === 'i') {
+      format = 'italic'
+    } else if (key === 'u') {
+      format = 'underline'
+    } else if (key === 'x' && event.shiftKey) {
+      format = 'strikethrough'
+    } else if (key === '`') {
+      format = 'code'
+    } else if (key === 'q' && event.shiftKey) {
+      format = 'quote'
+    }
+
+    if (format) {
+      event.preventDefault()
+      applyFormat(format, isExpanded)
+      return
+    }
+  }
+
+  // ۲. ارسال پیام با دکمه Enter
+  if (!isExpanded && event.key === 'Enter' && !event.shiftKey) {
     if (isMobile()) {
       // On mobile, Enter should go to next line (default behavior)
       return
@@ -527,9 +666,22 @@ const languageStore = useLanguageStore()
             rows="1"
             :class="textareaClasses"
             dir="auto"
-            @keydown="handleKeydown"
+            @select="handleTextareaSelect(false)"
+            @mouseup="handleTextareaSelect(false)"
+            @keyup="handleTextareaSelect(false)"
+            @touchend="handleTextareaSelect(false)"
+            @blur="handleTextareaBlur(false)"
+            @keydown="(e) => handleKeydown(e, false)"
           />
         </transition>
+
+        <!-- Floating Format Toolbar (Main Input) -->
+        <FloatingFormatMenu
+          :show="showFormatMenu"
+          :coords="menuCoords"
+          :selected-text="selectedText"
+          @format="(f) => applyFormat(f, false)"
+        />
       </div>
 
       <!-- Left Element: Send Button / Record Voice Button / Save Edit Button -->
@@ -671,13 +823,27 @@ const languageStore = useLanguageStore()
         </div>
 
         <!-- Body: Large Textarea -->
-        <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0">
+        <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0 relative">
+          <!-- Floating Format Toolbar (Expanded Modal) -->
+          <FloatingFormatMenu
+            :show="showExpandedFormatMenu"
+            :coords="expandedMenuCoords"
+            :selected-text="expandedSelectedText"
+            @format="(f) => applyFormat(f, true)"
+          />
+
           <textarea
             ref="expandedTextareaRef"
             v-model="text"
             :placeholder="languageStore.t('پیام خود را بنویسید...', 'Type your message...')"
             class="w-full flex-1 bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-sm font-semibold leading-relaxed text-foreground placeholder:text-muted-foreground/50 resize-none overflow-y-auto scrollbar-thin text-start"
             dir="auto"
+            @select="handleTextareaSelect(true)"
+            @mouseup="handleTextareaSelect(true)"
+            @keyup="handleTextareaSelect(true)"
+            @touchend="handleTextareaSelect(true)"
+            @blur="handleTextareaBlur(true)"
+            @keydown="(e) => handleKeydown(e, true)"
           />
         </div>
 

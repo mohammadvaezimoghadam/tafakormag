@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import FormattedText from '@/components/common/FormattedText.vue'
 import { 
   HeartIcon, 
   MessageCircleIcon, 
@@ -517,13 +518,12 @@ const formatTime = (timeInSeconds: number) => {
     <!-- Card Body Content -->
     <div class="p-5 flex flex-col gap-4">
       <!-- Post Text Content / Edit Box -->
-      <p 
-        v-if="content" 
-        class="text-sm font-medium leading-relaxed text-foreground/90 whitespace-pre-line text-start"
+      <FormattedText
+        v-if="content"
+        :content="content"
+        class-name="text-sm font-medium leading-relaxed text-foreground/90 text-start"
         dir="auto"
-      >
-        {{ content }}
-      </p>
+      />
 
       <!-- MEDIA RENDERERS -->
       <!-- 1. IMAGE POST -->
@@ -751,9 +751,11 @@ const formatTime = (timeInSeconds: number) => {
                   <span class="text-[11.5px] font-extrabold text-foreground">{{ comment.authorName }}</span>
                   <span class="text-[10px] text-muted-foreground font-semibold">{{ formatTimestamp(comment.timestamp) }}</span>
                 </div>
-                <p class="text-[12.5px] leading-relaxed text-foreground/90 font-medium text-start" dir="auto">
-                  {{ comment.text }}
-                </p>
+                <FormattedText
+                  :content="comment.text"
+                  class-name="text-[12.5px] leading-relaxed text-foreground/90 font-medium text-start"
+                  dir="auto"
+                />
               </div>
             </div>
           </template>

@@ -27,6 +27,11 @@ const labsRouter = createRouter({
       name: 'create-donation-playground',
       component: () => import('@/views/playground/CreateDonationPlayground.vue'),
     },
+    {
+      path: '/playground/text-formatting',
+      name: 'text-formatting-playground',
+      component: () => import('@/views/playground/TextFormattingPlayground.vue'),
+    },
   ],
 })
 
