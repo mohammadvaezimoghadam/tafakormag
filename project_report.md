@@ -473,7 +473,7 @@
   * [x] جایگزینی رندرینگ متن پست‌ها و دیدگاه‌ها در `PostCard.vue` با `FormattedText`
   * [x] توسعه صفحه آزمایشگاهی `TextFormattingPlayground.vue` با پیش‌نمایش دوطرفه و بازرس HTML
   * [x] ثبت روت `/playground/text-formatting` در `labsRouter.ts`
-  * [x] به‌روزرسانی فایل `changelog.md` عمومی با نسخه 4.9.0
+  * [x] به‌روزرسانی فایل `changelog.md` عمومی با نسخه 5.2.0
   * [x] اجرای موفقیت‌آمیز `vue-tsc`، تست بیلد پلتفرم و آزمایشگاه با خروجی ۱۰۰٪ بدون خطا
 
 
