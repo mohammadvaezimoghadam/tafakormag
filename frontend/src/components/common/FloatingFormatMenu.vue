@@ -98,7 +98,7 @@ const menuStyle = computed(() => {
       :style="menuStyle"
       :dir="languageStore.dir"
       @mousedown.prevent
-      @touchstart.prevent.stop
+      @touchstart.stop
       @contextmenu.prevent.stop
     >
       <!-- Small Arrow Pointer -->

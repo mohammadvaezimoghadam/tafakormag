@@ -208,10 +208,24 @@ watch([text, hasAttachments], () => {
   })
 })
 
+const handleGlobalSelectionChange = () => {
+  const activeEl = document.activeElement
+  if (activeEl === textareaRef.value) {
+    handleTextareaSelect(false)
+  } else if (activeEl === expandedTextareaRef.value) {
+    handleTextareaSelect(true)
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
     adjustHeight()
   })
+  document.addEventListener('selectionchange', handleGlobalSelectionChange)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('selectionchange', handleGlobalSelectionChange)
 })
 
 // Actions
@@ -345,14 +359,24 @@ const handleTextareaSelect = (isExpanded = false) => {
   }
 }
 
+const handleTouchend = (isExpanded = false) => {
+  handleTextareaSelect(isExpanded)
+  setTimeout(() => handleTextareaSelect(isExpanded), 50)
+  setTimeout(() => handleTextareaSelect(isExpanded), 120)
+}
+
 const handleTextareaBlur = (isExpanded = false) => {
   setTimeout(() => {
+    const active = document.activeElement
+    if (active && (active as HTMLElement).closest && (active as HTMLElement).closest('.floating-format-menu')) {
+      return
+    }
     if (isExpanded) {
       showExpandedFormatMenu.value = false
     } else {
       showFormatMenu.value = false
     }
-  }, 250)
+  }, 350)
 }
 
 const handleMenuAction = async (action: ActionType, isExpanded = false) => {
@@ -742,7 +766,7 @@ const languageStore = useLanguageStore()
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
-            @touchend="handleTextareaSelect(false)"
+            @touchend="handleTouchend(false)"
             @contextmenu.prevent.stop
             @blur="handleTextareaBlur(false)"
             @keydown="(e) => handleKeydown(e, false)"
@@ -917,7 +941,7 @@ const languageStore = useLanguageStore()
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
-            @touchend="handleTextareaSelect(true)"
+            @touchend="handleTouchend(true)"
             @contextmenu.prevent.stop
             @blur="handleTextareaBlur(true)"
             @keydown="(e) => handleKeydown(e, true)"

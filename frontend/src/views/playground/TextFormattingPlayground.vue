@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
   TypeIcon, 
   Code2Icon, 
@@ -84,11 +84,35 @@ const handleEditorSelect = () => {
   showEditorFormatMenu.value = true
 }
 
+const handleEditorTouchend = () => {
+  handleEditorSelect()
+  setTimeout(handleEditorSelect, 50)
+  setTimeout(handleEditorSelect, 120)
+}
+
 const handleEditorBlur = () => {
   setTimeout(() => {
+    const active = document.activeElement
+    if (active && (active as HTMLElement).closest && (active as HTMLElement).closest('.floating-format-menu')) {
+      return
+    }
     showEditorFormatMenu.value = false
-  }, 250)
+  }, 350)
 }
+
+const handleGlobalSelectionChange = () => {
+  if (document.activeElement === editorTextareaRef.value) {
+    handleEditorSelect()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('selectionchange', handleGlobalSelectionChange)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('selectionchange', handleGlobalSelectionChange)
+})
 
 const handleEditorAction = async (action: ActionType) => {
   const el = editorTextareaRef.value
@@ -348,7 +372,7 @@ const handleMockSend = (payload: { text: string }) => {
                 @select="handleEditorSelect"
                 @mouseup="handleEditorSelect"
                 @keyup="handleEditorSelect"
-                @touchend="handleEditorSelect"
+                @touchend="handleEditorTouchend"
                 @contextmenu.prevent.stop
                 @blur="handleEditorBlur"
                 @keydown="handleEditorKeydown"
