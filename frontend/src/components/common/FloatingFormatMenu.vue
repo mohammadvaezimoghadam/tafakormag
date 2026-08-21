@@ -6,11 +6,17 @@ import {
   UnderlineIcon, 
   StrikethroughIcon, 
   CodeIcon, 
-  QuoteIcon 
+  QuoteIcon,
+  CopyIcon,
+  ScissorsIcon,
+  CheckCheckIcon,
+  ClipboardPasteIcon
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { useLanguageStore } from '@/stores/languageStore'
 import type { FormatType } from '@/utils/textFormatter'
+
+export type ActionType = 'copy' | 'cut' | 'select-all' | 'paste'
 
 export interface MenuCoords {
   top: number
@@ -30,12 +36,17 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'format', type: FormatType): void
+  (e: 'action', type: ActionType): void
 }>()
 
 const languageStore = useLanguageStore()
 
 const handleFormat = (type: FormatType) => {
   emit('format', type)
+}
+
+const handleAction = (type: ActionType) => {
+  emit('action', type)
 }
 
 // تشخیص فرمت‌های فعال روی متن انتخاب‌شده
@@ -83,15 +94,17 @@ const menuStyle = computed(() => {
   <transition name="format-pop">
     <div
       v-if="props.show"
-      class="floating-format-menu absolute z-50 bg-card/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border/80 dark:border-border/40 shadow-xl rounded-2xl p-1 flex items-center gap-0.5 select-none -translate-x-1/2"
+      class="floating-format-menu absolute z-50 bg-card/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border/80 dark:border-border/40 shadow-2xl rounded-2xl p-1 flex items-center gap-0.5 select-none -translate-x-1/2 max-w-[calc(100vw-32px)] overflow-x-auto scrollbar-none"
       :style="menuStyle"
       :dir="languageStore.dir"
       @mousedown.prevent
+      @touchstart.prevent.stop
+      @contextmenu.prevent.stop
     >
       <!-- Small Arrow Pointer -->
       <div 
         v-if="props.coords"
-        class="absolute left-1/2 -translate-x-1/2 size-2 rotate-45 bg-card/95 dark:bg-zinc-900/95 border-border/80 dark:border-border/40"
+        class="absolute left-1/2 -translate-x-1/2 size-2 rotate-45 bg-card/95 dark:bg-zinc-900/95 border-border/80 dark:border-border/40 pointer-events-none"
         :class="[
           props.coords.placement === 'bottom' 
             ? '-top-1 border-t border-l' 
@@ -99,12 +112,53 @@ const menuStyle = computed(() => {
         ]"
       />
 
+      <!-- Clipboard Actions Group (Copy, Cut, Select All, Paste) -->
+      <!-- Copy Button -->
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+        :title="languageStore.t('کپی (Copy)', 'Copy (Ctrl+C)')"
+        @click="handleAction('copy')"
+      >
+        <CopyIcon class="size-3.5 stroke-[2.2]" />
+      </Button>
+
+      <!-- Cut Button -->
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+        :title="languageStore.t('برش (Cut)', 'Cut (Ctrl+X)')"
+        @click="handleAction('cut')"
+      >
+        <ScissorsIcon class="size-3.5 stroke-[2.2]" />
+      </Button>
+
+      <!-- Select All Button -->
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+        :title="languageStore.t('انتخاب همه (Select All)', 'Select All (Ctrl+A)')"
+        @click="handleAction('select-all')"
+      >
+        <CheckCheckIcon class="size-3.5 stroke-[2.2]" />
+      </Button>
+
+      <!-- Separator between Clipboard and Formatting -->
+      <div class="w-px h-4 bg-border/70 mx-0.5 shrink-0" />
+
+      <!-- Formatting Group -->
       <!-- Bold Button -->
       <Button
         type="button"
         :variant="isBoldActive ? 'secondary' : 'ghost'"
         size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer"
+        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
         :class="[
           isBoldActive 
             ? 'bg-primary/15 text-primary hover:bg-primary/20' 
@@ -121,7 +175,7 @@ const menuStyle = computed(() => {
         type="button"
         :variant="isItalicActive ? 'secondary' : 'ghost'"
         size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer"
+        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
         :class="[
           isItalicActive 
             ? 'bg-primary/15 text-primary hover:bg-primary/20' 
@@ -138,7 +192,7 @@ const menuStyle = computed(() => {
         type="button"
         :variant="isUnderlineActive ? 'secondary' : 'ghost'"
         size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer"
+        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
         :class="[
           isUnderlineActive 
             ? 'bg-primary/15 text-primary hover:bg-primary/20' 
@@ -155,7 +209,7 @@ const menuStyle = computed(() => {
         type="button"
         :variant="isStrikethroughActive ? 'secondary' : 'ghost'"
         size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer"
+        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
         :class="[
           isStrikethroughActive 
             ? 'bg-primary/15 text-primary hover:bg-primary/20' 
@@ -168,14 +222,14 @@ const menuStyle = computed(() => {
       </Button>
 
       <!-- Separator -->
-      <div class="w-px h-4 bg-border/60 mx-0.5" />
+      <div class="w-px h-4 bg-border/70 mx-0.5 shrink-0" />
 
       <!-- Inline Code Button -->
       <Button
         type="button"
         :variant="isCodeActive ? 'secondary' : 'ghost'"
         size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer"
+        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
         :class="[
           isCodeActive 
             ? 'bg-primary/15 text-primary hover:bg-primary/20' 
@@ -192,7 +246,7 @@ const menuStyle = computed(() => {
         type="button"
         :variant="isQuoteActive ? 'secondary' : 'ghost'"
         size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer"
+        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
         :class="[
           isQuoteActive 
             ? 'bg-primary/15 text-primary hover:bg-primary/20' 

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import FormattedText from '@/components/common/FormattedText.vue'
-import FloatingFormatMenu, { type MenuCoords } from '@/components/common/FloatingFormatMenu.vue'
+import FloatingFormatMenu, { type MenuCoords, type ActionType } from '@/components/common/FloatingFormatMenu.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import { parseMarkdownToHtml, wrapSelection, type FormatType } from '@/utils/textFormatter'
 import { getSelectionPixelRect } from '@/utils/caretPosition'
@@ -83,6 +83,63 @@ const handleEditorBlur = () => {
   setTimeout(() => {
     showEditorFormatMenu.value = false
   }, 250)
+}
+
+const handleEditorAction = async (action: ActionType) => {
+  const el = editorTextareaRef.value
+  if (!el) return
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const sel = el.value.substring(start, end)
+
+  if (action === 'copy') {
+    if (sel) {
+      try {
+        await navigator.clipboard.writeText(sel)
+      } catch (e) {
+        document.execCommand('copy')
+      }
+    }
+  } else if (action === 'cut') {
+    if (sel) {
+      try {
+        await navigator.clipboard.writeText(sel)
+      } catch (e) {
+        document.execCommand('copy')
+      }
+      const before = currentText.value.substring(0, start)
+      const after = currentText.value.substring(end)
+      currentText.value = before + after
+      setTimeout(() => {
+        el.focus()
+        el.setSelectionRange(start, start)
+        handleEditorSelect()
+      }, 0)
+    }
+  } else if (action === 'select-all') {
+    el.focus()
+    el.setSelectionRange(0, el.value.length)
+    setTimeout(() => {
+      handleEditorSelect()
+    }, 0)
+  } else if (action === 'paste') {
+    try {
+      const clipText = await navigator.clipboard.readText()
+      if (clipText) {
+        const before = currentText.value.substring(0, start)
+        const after = currentText.value.substring(end)
+        currentText.value = before + clipText + after
+        setTimeout(() => {
+          el.focus()
+          el.setSelectionRange(start + clipText.length, start + clipText.length)
+          handleEditorSelect()
+        }, 0)
+      }
+    } catch (err) {
+      console.warn('Clipboard paste failed:', err)
+    }
+  }
 }
 
 const applyEditorFormat = (format: FormatType) => {
@@ -273,6 +330,7 @@ const handleMockSend = (payload: { text: string }) => {
                 :coords="editorMenuCoords"
                 :selected-text="editorSelectedText"
                 @format="applyEditorFormat"
+                @action="handleEditorAction"
               />
 
               <textarea
@@ -286,6 +344,7 @@ const handleMockSend = (payload: { text: string }) => {
                 @mouseup="handleEditorSelect"
                 @keyup="handleEditorSelect"
                 @touchend="handleEditorSelect"
+                @contextmenu.prevent.stop
                 @blur="handleEditorBlur"
                 @keydown="handleEditorKeydown"
               />

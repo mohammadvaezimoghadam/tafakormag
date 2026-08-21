@@ -34,7 +34,7 @@ import {
   DialogClose
 } from '@/components/ui/dialog'
 import AIRefinerDrawer from './AIRefinerDrawer.vue'
-import FloatingFormatMenu, { type MenuCoords } from '@/components/common/FloatingFormatMenu.vue'
+import FloatingFormatMenu, { type MenuCoords, type ActionType } from '@/components/common/FloatingFormatMenu.vue'
 import { wrapSelection, type FormatType } from '@/utils/textFormatter'
 import { getSelectionPixelRect } from '@/utils/caretPosition'
 
@@ -339,6 +339,65 @@ const handleTextareaBlur = (isExpanded = false) => {
       showFormatMenu.value = false
     }
   }, 250)
+}
+
+const handleMenuAction = async (action: ActionType, isExpanded = false) => {
+  const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+  if (!el) return
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const sel = el.value.substring(start, end)
+
+  if (action === 'copy') {
+    if (sel) {
+      try {
+        await navigator.clipboard.writeText(sel)
+      } catch (e) {
+        document.execCommand('copy')
+      }
+    }
+  } else if (action === 'cut') {
+    if (sel) {
+      try {
+        await navigator.clipboard.writeText(sel)
+      } catch (e) {
+        document.execCommand('copy')
+      }
+      const before = text.value.substring(0, start)
+      const after = text.value.substring(end)
+      text.value = before + after
+      nextTick(() => {
+        el.focus()
+        el.setSelectionRange(start, start)
+        handleTextareaSelect(isExpanded)
+        adjustHeight()
+      })
+    }
+  } else if (action === 'select-all') {
+    el.focus()
+    el.setSelectionRange(0, el.value.length)
+    nextTick(() => {
+      handleTextareaSelect(isExpanded)
+    })
+  } else if (action === 'paste') {
+    try {
+      const clipText = await navigator.clipboard.readText()
+      if (clipText) {
+        const before = text.value.substring(0, start)
+        const after = text.value.substring(end)
+        text.value = before + clipText + after
+        nextTick(() => {
+          el.focus()
+          el.setSelectionRange(start + clipText.length, start + clipText.length)
+          handleTextareaSelect(isExpanded)
+          adjustHeight()
+        })
+      }
+    } catch (err) {
+      console.warn('Clipboard paste failed:', err)
+    }
+  }
 }
 
 const applyFormat = (format: FormatType, isExpanded = false) => {
@@ -670,6 +729,7 @@ const languageStore = useLanguageStore()
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
             @touchend="handleTextareaSelect(false)"
+            @contextmenu.prevent.stop
             @blur="handleTextareaBlur(false)"
             @keydown="(e) => handleKeydown(e, false)"
           />
@@ -681,6 +741,7 @@ const languageStore = useLanguageStore()
           :coords="menuCoords"
           :selected-text="selectedText"
           @format="(f) => applyFormat(f, false)"
+          @action="(act) => handleMenuAction(act, false)"
         />
       </div>
 
@@ -830,6 +891,7 @@ const languageStore = useLanguageStore()
             :coords="expandedMenuCoords"
             :selected-text="expandedSelectedText"
             @format="(f) => applyFormat(f, true)"
+            @action="(act) => handleMenuAction(act, true)"
           />
 
           <textarea
@@ -842,6 +904,7 @@ const languageStore = useLanguageStore()
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
             @touchend="handleTextareaSelect(true)"
+            @contextmenu.prevent.stop
             @blur="handleTextareaBlur(true)"
             @keydown="(e) => handleKeydown(e, true)"
           />
