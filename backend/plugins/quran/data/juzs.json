@@ -1,0 +1,977 @@
+[
+  {
+    "number": 1,
+    "name": "جزء ۱ (الم)",
+    "start_surah": 1,
+    "start_ayah": 1,
+    "end_surah": 2,
+    "end_ayah": 141,
+    "surah_mapping": [
+      {
+        "surah": 1,
+        "ayah_from": 1,
+        "ayah_to": 7
+      },
+      {
+        "surah": 2,
+        "ayah_from": 1,
+        "ayah_to": 141
+      }
+    ]
+  },
+  {
+    "number": 2,
+    "name": "جزء ۲ (سیقول)",
+    "start_surah": 2,
+    "start_ayah": 142,
+    "end_surah": 2,
+    "end_ayah": 252,
+    "surah_mapping": [
+      {
+        "surah": 2,
+        "ayah_from": 142,
+        "ayah_to": 252
+      }
+    ]
+  },
+  {
+    "number": 3,
+    "name": "جزء ۳ (تلک الرسل)",
+    "start_surah": 2,
+    "start_ayah": 253,
+    "end_surah": 3,
+    "end_ayah": 92,
+    "surah_mapping": [
+      {
+        "surah": 2,
+        "ayah_from": 253,
+        "ayah_to": 286
+      },
+      {
+        "surah": 3,
+        "ayah_from": 1,
+        "ayah_to": 92
+      }
+    ]
+  },
+  {
+    "number": 4,
+    "name": "جزء ۴ (لن تنالوا)",
+    "start_surah": 3,
+    "start_ayah": 93,
+    "end_surah": 4,
+    "end_ayah": 23,
+    "surah_mapping": [
+      {
+        "surah": 3,
+        "ayah_from": 93,
+        "ayah_to": 200
+      },
+      {
+        "surah": 4,
+        "ayah_from": 1,
+        "ayah_to": 23
+      }
+    ]
+  },
+  {
+    "number": 5,
+    "name": "جزء ۵ (والمحصنات)",
+    "start_surah": 4,
+    "start_ayah": 24,
+    "end_surah": 4,
+    "end_ayah": 147,
+    "surah_mapping": [
+      {
+        "surah": 4,
+        "ayah_from": 24,
+        "ayah_to": 147
+      }
+    ]
+  },
+  {
+    "number": 6,
+    "name": "جزء ۶ (لا یحب الله)",
+    "start_surah": 4,
+    "start_ayah": 148,
+    "end_surah": 5,
+    "end_ayah": 81,
+    "surah_mapping": [
+      {
+        "surah": 4,
+        "ayah_from": 148,
+        "ayah_to": 176
+      },
+      {
+        "surah": 5,
+        "ayah_from": 1,
+        "ayah_to": 81
+      }
+    ]
+  },
+  {
+    "number": 7,
+    "name": "جزء ۷ (واذا سمعوا)",
+    "start_surah": 5,
+    "start_ayah": 82,
+    "end_surah": 6,
+    "end_ayah": 110,
+    "surah_mapping": [
+      {
+        "surah": 5,
+        "ayah_from": 82,
+        "ayah_to": 120
+      },
+      {
+        "surah": 6,
+        "ayah_from": 1,
+        "ayah_to": 110
+      }
+    ]
+  },
+  {
+    "number": 8,
+    "name": "جزء ۸ (ولو اننا)",
+    "start_surah": 6,
+    "start_ayah": 111,
+    "end_surah": 7,
+    "end_ayah": 87,
+    "surah_mapping": [
+      {
+        "surah": 6,
+        "ayah_from": 111,
+        "ayah_to": 165
+      },
+      {
+        "surah": 7,
+        "ayah_from": 1,
+        "ayah_to": 87
+      }
+    ]
+  },
+  {
+    "number": 9,
+    "name": "جزء ۹ (قال الملا)",
+    "start_surah": 7,
+    "start_ayah": 88,
+    "end_surah": 8,
+    "end_ayah": 40,
+    "surah_mapping": [
+      {
+        "surah": 7,
+        "ayah_from": 88,
+        "ayah_to": 206
+      },
+      {
+        "surah": 8,
+        "ayah_from": 1,
+        "ayah_to": 40
+      }
+    ]
+  },
+  {
+    "number": 10,
+    "name": "جزء ۱۰ (واعلموا)",
+    "start_surah": 8,
+    "start_ayah": 41,
+    "end_surah": 9,
+    "end_ayah": 92,
+    "surah_mapping": [
+      {
+        "surah": 8,
+        "ayah_from": 41,
+        "ayah_to": 75
+      },
+      {
+        "surah": 9,
+        "ayah_from": 1,
+        "ayah_to": 92
+      }
+    ]
+  },
+  {
+    "number": 11,
+    "name": "جزء ۱۱ (یعتذرون)",
+    "start_surah": 9,
+    "start_ayah": 93,
+    "end_surah": 11,
+    "end_ayah": 5,
+    "surah_mapping": [
+      {
+        "surah": 9,
+        "ayah_from": 93,
+        "ayah_to": 129
+      },
+      {
+        "surah": 10,
+        "ayah_from": 1,
+        "ayah_to": 109
+      },
+      {
+        "surah": 11,
+        "ayah_from": 1,
+        "ayah_to": 5
+      }
+    ]
+  },
+  {
+    "number": 12,
+    "name": "جزء ۱۲ (وما من دابة)",
+    "start_surah": 11,
+    "start_ayah": 6,
+    "end_surah": 12,
+    "end_ayah": 52,
+    "surah_mapping": [
+      {
+        "surah": 11,
+        "ayah_from": 6,
+        "ayah_to": 123
+      },
+      {
+        "surah": 12,
+        "ayah_from": 1,
+        "ayah_to": 52
+      }
+    ]
+  },
+  {
+    "number": 13,
+    "name": "جزء ۱۳ (وما ابرئ)",
+    "start_surah": 12,
+    "start_ayah": 53,
+    "end_surah": 14,
+    "end_ayah": 52,
+    "surah_mapping": [
+      {
+        "surah": 12,
+        "ayah_from": 53,
+        "ayah_to": 111
+      },
+      {
+        "surah": 13,
+        "ayah_from": 1,
+        "ayah_to": 43
+      },
+      {
+        "surah": 14,
+        "ayah_from": 1,
+        "ayah_to": 52
+      }
+    ]
+  },
+  {
+    "number": 14,
+    "name": "جزء ۱۴ (ربما)",
+    "start_surah": 15,
+    "start_ayah": 1,
+    "end_surah": 16,
+    "end_ayah": 128,
+    "surah_mapping": [
+      {
+        "surah": 15,
+        "ayah_from": 1,
+        "ayah_to": 99
+      },
+      {
+        "surah": 16,
+        "ayah_from": 1,
+        "ayah_to": 128
+      }
+    ]
+  },
+  {
+    "number": 15,
+    "name": "جزء ۱۵ (سبحان الذی)",
+    "start_surah": 17,
+    "start_ayah": 1,
+    "end_surah": 18,
+    "end_ayah": 74,
+    "surah_mapping": [
+      {
+        "surah": 17,
+        "ayah_from": 1,
+        "ayah_to": 111
+      },
+      {
+        "surah": 18,
+        "ayah_from": 1,
+        "ayah_to": 74
+      }
+    ]
+  },
+  {
+    "number": 16,
+    "name": "جزء ۱۶ (قال الم)",
+    "start_surah": 18,
+    "start_ayah": 75,
+    "end_surah": 20,
+    "end_ayah": 135,
+    "surah_mapping": [
+      {
+        "surah": 18,
+        "ayah_from": 75,
+        "ayah_to": 110
+      },
+      {
+        "surah": 19,
+        "ayah_from": 1,
+        "ayah_to": 98
+      },
+      {
+        "surah": 20,
+        "ayah_from": 1,
+        "ayah_to": 135
+      }
+    ]
+  },
+  {
+    "number": 17,
+    "name": "جزء ۱۷ (اقترب)",
+    "start_surah": 21,
+    "start_ayah": 1,
+    "end_surah": 22,
+    "end_ayah": 78,
+    "surah_mapping": [
+      {
+        "surah": 21,
+        "ayah_from": 1,
+        "ayah_to": 112
+      },
+      {
+        "surah": 22,
+        "ayah_from": 1,
+        "ayah_to": 78
+      }
+    ]
+  },
+  {
+    "number": 18,
+    "name": "جزء ۱۸ (قد افلح)",
+    "start_surah": 23,
+    "start_ayah": 1,
+    "end_surah": 25,
+    "end_ayah": 20,
+    "surah_mapping": [
+      {
+        "surah": 23,
+        "ayah_from": 1,
+        "ayah_to": 118
+      },
+      {
+        "surah": 24,
+        "ayah_from": 1,
+        "ayah_to": 64
+      },
+      {
+        "surah": 25,
+        "ayah_from": 1,
+        "ayah_to": 20
+      }
+    ]
+  },
+  {
+    "number": 19,
+    "name": "جزء ۱۹ (وقال الذین)",
+    "start_surah": 25,
+    "start_ayah": 21,
+    "end_surah": 27,
+    "end_ayah": 55,
+    "surah_mapping": [
+      {
+        "surah": 25,
+        "ayah_from": 21,
+        "ayah_to": 77
+      },
+      {
+        "surah": 26,
+        "ayah_from": 1,
+        "ayah_to": 227
+      },
+      {
+        "surah": 27,
+        "ayah_from": 1,
+        "ayah_to": 55
+      }
+    ]
+  },
+  {
+    "number": 20,
+    "name": "جزء ۲۰ (امن خلق)",
+    "start_surah": 27,
+    "start_ayah": 56,
+    "end_surah": 29,
+    "end_ayah": 45,
+    "surah_mapping": [
+      {
+        "surah": 27,
+        "ayah_from": 56,
+        "ayah_to": 93
+      },
+      {
+        "surah": 28,
+        "ayah_from": 1,
+        "ayah_to": 88
+      },
+      {
+        "surah": 29,
+        "ayah_from": 1,
+        "ayah_to": 45
+      }
+    ]
+  },
+  {
+    "number": 21,
+    "name": "جزء ۲۱ (اتل ما اوحی)",
+    "start_surah": 29,
+    "start_ayah": 46,
+    "end_surah": 33,
+    "end_ayah": 30,
+    "surah_mapping": [
+      {
+        "surah": 29,
+        "ayah_from": 46,
+        "ayah_to": 69
+      },
+      {
+        "surah": 30,
+        "ayah_from": 1,
+        "ayah_to": 60
+      },
+      {
+        "surah": 31,
+        "ayah_from": 1,
+        "ayah_to": 34
+      },
+      {
+        "surah": 32,
+        "ayah_from": 1,
+        "ayah_to": 30
+      },
+      {
+        "surah": 33,
+        "ayah_from": 1,
+        "ayah_to": 30
+      }
+    ]
+  },
+  {
+    "number": 22,
+    "name": "جزء ۲۲ (ومن یقنت)",
+    "start_surah": 33,
+    "start_ayah": 31,
+    "end_surah": 36,
+    "end_ayah": 27,
+    "surah_mapping": [
+      {
+        "surah": 33,
+        "ayah_from": 31,
+        "ayah_to": 73
+      },
+      {
+        "surah": 34,
+        "ayah_from": 1,
+        "ayah_to": 54
+      },
+      {
+        "surah": 35,
+        "ayah_from": 1,
+        "ayah_to": 45
+      },
+      {
+        "surah": 36,
+        "ayah_from": 1,
+        "ayah_to": 27
+      }
+    ]
+  },
+  {
+    "number": 23,
+    "name": "جزء ۲۳ (وما انزلنا)",
+    "start_surah": 36,
+    "start_ayah": 28,
+    "end_surah": 39,
+    "end_ayah": 31,
+    "surah_mapping": [
+      {
+        "surah": 36,
+        "ayah_from": 28,
+        "ayah_to": 83
+      },
+      {
+        "surah": 37,
+        "ayah_from": 1,
+        "ayah_to": 182
+      },
+      {
+        "surah": 38,
+        "ayah_from": 1,
+        "ayah_to": 88
+      },
+      {
+        "surah": 39,
+        "ayah_from": 1,
+        "ayah_to": 31
+      }
+    ]
+  },
+  {
+    "number": 24,
+    "name": "جزء ۲۴ (فمن اظلم)",
+    "start_surah": 39,
+    "start_ayah": 32,
+    "end_surah": 41,
+    "end_ayah": 46,
+    "surah_mapping": [
+      {
+        "surah": 39,
+        "ayah_from": 32,
+        "ayah_to": 75
+      },
+      {
+        "surah": 40,
+        "ayah_from": 1,
+        "ayah_to": 85
+      },
+      {
+        "surah": 41,
+        "ayah_from": 1,
+        "ayah_to": 46
+      }
+    ]
+  },
+  {
+    "number": 25,
+    "name": "جزء ۲۵ (الیه یرد)",
+    "start_surah": 41,
+    "start_ayah": 47,
+    "end_surah": 45,
+    "end_ayah": 37,
+    "surah_mapping": [
+      {
+        "surah": 41,
+        "ayah_from": 47,
+        "ayah_to": 54
+      },
+      {
+        "surah": 42,
+        "ayah_from": 1,
+        "ayah_to": 53
+      },
+      {
+        "surah": 43,
+        "ayah_from": 1,
+        "ayah_to": 89
+      },
+      {
+        "surah": 44,
+        "ayah_from": 1,
+        "ayah_to": 59
+      },
+      {
+        "surah": 45,
+        "ayah_from": 1,
+        "ayah_to": 37
+      }
+    ]
+  },
+  {
+    "number": 26,
+    "name": "جزء ۲۶ (حم)",
+    "start_surah": 46,
+    "start_ayah": 1,
+    "end_surah": 51,
+    "end_ayah": 30,
+    "surah_mapping": [
+      {
+        "surah": 46,
+        "ayah_from": 1,
+        "ayah_to": 35
+      },
+      {
+        "surah": 47,
+        "ayah_from": 1,
+        "ayah_to": 38
+      },
+      {
+        "surah": 48,
+        "ayah_from": 1,
+        "ayah_to": 29
+      },
+      {
+        "surah": 49,
+        "ayah_from": 1,
+        "ayah_to": 18
+      },
+      {
+        "surah": 50,
+        "ayah_from": 1,
+        "ayah_to": 45
+      },
+      {
+        "surah": 51,
+        "ayah_from": 1,
+        "ayah_to": 30
+      }
+    ]
+  },
+  {
+    "number": 27,
+    "name": "جزء ۲۷ (قال فما خطبکم)",
+    "start_surah": 51,
+    "start_ayah": 31,
+    "end_surah": 57,
+    "end_ayah": 29,
+    "surah_mapping": [
+      {
+        "surah": 51,
+        "ayah_from": 31,
+        "ayah_to": 60
+      },
+      {
+        "surah": 52,
+        "ayah_from": 1,
+        "ayah_to": 49
+      },
+      {
+        "surah": 53,
+        "ayah_from": 1,
+        "ayah_to": 62
+      },
+      {
+        "surah": 54,
+        "ayah_from": 1,
+        "ayah_to": 55
+      },
+      {
+        "surah": 55,
+        "ayah_from": 1,
+        "ayah_to": 78
+      },
+      {
+        "surah": 56,
+        "ayah_from": 1,
+        "ayah_to": 96
+      },
+      {
+        "surah": 57,
+        "ayah_from": 1,
+        "ayah_to": 29
+      }
+    ]
+  },
+  {
+    "number": 28,
+    "name": "جزء ۲۸ (قد سمع)",
+    "start_surah": 58,
+    "start_ayah": 1,
+    "end_surah": 66,
+    "end_ayah": 12,
+    "surah_mapping": [
+      {
+        "surah": 58,
+        "ayah_from": 1,
+        "ayah_to": 22
+      },
+      {
+        "surah": 59,
+        "ayah_from": 1,
+        "ayah_to": 24
+      },
+      {
+        "surah": 60,
+        "ayah_from": 1,
+        "ayah_to": 13
+      },
+      {
+        "surah": 61,
+        "ayah_from": 1,
+        "ayah_to": 14
+      },
+      {
+        "surah": 62,
+        "ayah_from": 1,
+        "ayah_to": 11
+      },
+      {
+        "surah": 63,
+        "ayah_from": 1,
+        "ayah_to": 11
+      },
+      {
+        "surah": 64,
+        "ayah_from": 1,
+        "ayah_to": 18
+      },
+      {
+        "surah": 65,
+        "ayah_from": 1,
+        "ayah_to": 12
+      },
+      {
+        "surah": 66,
+        "ayah_from": 1,
+        "ayah_to": 12
+      }
+    ]
+  },
+  {
+    "number": 29,
+    "name": "جزء ۲۹ (تبارک الذی)",
+    "start_surah": 67,
+    "start_ayah": 1,
+    "end_surah": 77,
+    "end_ayah": 50,
+    "surah_mapping": [
+      {
+        "surah": 67,
+        "ayah_from": 1,
+        "ayah_to": 30
+      },
+      {
+        "surah": 68,
+        "ayah_from": 1,
+        "ayah_to": 52
+      },
+      {
+        "surah": 69,
+        "ayah_from": 1,
+        "ayah_to": 52
+      },
+      {
+        "surah": 70,
+        "ayah_from": 1,
+        "ayah_to": 44
+      },
+      {
+        "surah": 71,
+        "ayah_from": 1,
+        "ayah_to": 28
+      },
+      {
+        "surah": 72,
+        "ayah_from": 1,
+        "ayah_to": 28
+      },
+      {
+        "surah": 73,
+        "ayah_from": 1,
+        "ayah_to": 20
+      },
+      {
+        "surah": 74,
+        "ayah_from": 1,
+        "ayah_to": 56
+      },
+      {
+        "surah": 75,
+        "ayah_from": 1,
+        "ayah_to": 40
+      },
+      {
+        "surah": 76,
+        "ayah_from": 1,
+        "ayah_to": 31
+      },
+      {
+        "surah": 77,
+        "ayah_from": 1,
+        "ayah_to": 50
+      }
+    ]
+  },
+  {
+    "number": 30,
+    "name": "جزء ۳۰ (عمّ)",
+    "start_surah": 78,
+    "start_ayah": 1,
+    "end_surah": 114,
+    "end_ayah": 6,
+    "surah_mapping": [
+      {
+        "surah": 78,
+        "ayah_from": 1,
+        "ayah_to": 40
+      },
+      {
+        "surah": 79,
+        "ayah_from": 1,
+        "ayah_to": 46
+      },
+      {
+        "surah": 80,
+        "ayah_from": 1,
+        "ayah_to": 42
+      },
+      {
+        "surah": 81,
+        "ayah_from": 1,
+        "ayah_to": 29
+      },
+      {
+        "surah": 82,
+        "ayah_from": 1,
+        "ayah_to": 19
+      },
+      {
+        "surah": 83,
+        "ayah_from": 1,
+        "ayah_to": 36
+      },
+      {
+        "surah": 84,
+        "ayah_from": 1,
+        "ayah_to": 25
+      },
+      {
+        "surah": 85,
+        "ayah_from": 1,
+        "ayah_to": 22
+      },
+      {
+        "surah": 86,
+        "ayah_from": 1,
+        "ayah_to": 17
+      },
+      {
+        "surah": 87,
+        "ayah_from": 1,
+        "ayah_to": 19
+      },
+      {
+        "surah": 88,
+        "ayah_from": 1,
+        "ayah_to": 26
+      },
+      {
+        "surah": 89,
+        "ayah_from": 1,
+        "ayah_to": 30
+      },
+      {
+        "surah": 90,
+        "ayah_from": 1,
+        "ayah_to": 20
+      },
+      {
+        "surah": 91,
+        "ayah_from": 1,
+        "ayah_to": 15
+      },
+      {
+        "surah": 92,
+        "ayah_from": 1,
+        "ayah_to": 21
+      },
+      {
+        "surah": 93,
+        "ayah_from": 1,
+        "ayah_to": 11
+      },
+      {
+        "surah": 94,
+        "ayah_from": 1,
+        "ayah_to": 8
+      },
+      {
+        "surah": 95,
+        "ayah_from": 1,
+        "ayah_to": 8
+      },
+      {
+        "surah": 96,
+        "ayah_from": 1,
+        "ayah_to": 19
+      },
+      {
+        "surah": 97,
+        "ayah_from": 1,
+        "ayah_to": 5
+      },
+      {
+        "surah": 98,
+        "ayah_from": 1,
+        "ayah_to": 8
+      },
+      {
+        "surah": 99,
+        "ayah_from": 1,
+        "ayah_to": 8
+      },
+      {
+        "surah": 100,
+        "ayah_from": 1,
+        "ayah_to": 11
+      },
+      {
+        "surah": 101,
+        "ayah_from": 1,
+        "ayah_to": 11
+      },
+      {
+        "surah": 102,
+        "ayah_from": 1,
+        "ayah_to": 8
+      },
+      {
+        "surah": 103,
+        "ayah_from": 1,
+        "ayah_to": 3
+      },
+      {
+        "surah": 104,
+        "ayah_from": 1,
+        "ayah_to": 9
+      },
+      {
+        "surah": 105,
+        "ayah_from": 1,
+        "ayah_to": 5
+      },
+      {
+        "surah": 106,
+        "ayah_from": 1,
+        "ayah_to": 4
+      },
+      {
+        "surah": 107,
+        "ayah_from": 1,
+        "ayah_to": 7
+      },
+      {
+        "surah": 108,
+        "ayah_from": 1,
+        "ayah_to": 3
+      },
+      {
+        "surah": 109,
+        "ayah_from": 1,
+        "ayah_to": 6
+      },
+      {
+        "surah": 110,
+        "ayah_from": 1,
+        "ayah_to": 3
+      },
+      {
+        "surah": 111,
+        "ayah_from": 1,
+        "ayah_to": 5
+      },
+      {
+        "surah": 112,
+        "ayah_from": 1,
+        "ayah_to": 4
+      },
+      {
+        "surah": 113,
+        "ayah_from": 1,
+        "ayah_to": 5
+      },
+      {
+        "surah": 114,
+        "ayah_from": 1,
+        "ayah_to": 6
+      }
+    ]
+  }
+]

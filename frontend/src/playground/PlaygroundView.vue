@@ -28,7 +28,9 @@ import DonationModal from '@/components/kindness/DonationModal.vue'
 import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
 import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
+import MarketplaceAppIcon from '@/components/marketplace/MarketplaceAppIcon.vue'
 import type { DonationCampaignProps, CreateDonationPayload, CampaignCategory } from '@/types/kindness'
+import type { MarketplaceApp, AppIconSize } from '@/types/marketplace'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -84,11 +86,81 @@ import {
   WrenchIcon,
   ClockIcon,
   LayersIcon,
-  EyeIcon
+  EyeIcon,
+  BookOpenIcon,
+  CodeIcon,
+  DownloadCloudIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'under-dev'>('create-donation-dialog')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'under-dev' | 'marketplace-icon'>('marketplace-icon')
+
+// MarketplaceAppIcon simulation state
+const simulatorMarketplaceIconTitle = ref('افزونه قرآن کریم')
+const simulatorMarketplaceIconCategory = ref('فرهنگی و مذهبی')
+const simulatorMarketplaceIconVariant = ref<'active' | 'coming-soon'>('active')
+const simulatorMarketplaceIconType = ref<'image' | 'vector'>('image')
+const simulatorMarketplaceIconImageUrl = ref('https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=400&q=80')
+const simulatorMarketplaceIconVector = ref<'book' | 'layers' | 'code' | 'sparkles'>('book')
+const simulatorMarketplaceIconSize = ref<AppIconSize>('responsive')
+const simulatorMarketplaceIconBadge = ref('')
+const simulatorMarketplaceIconRating = ref(4.9)
+const simulatorMarketplaceIconInstalled = ref(false)
+const simulatorMarketplaceIconShowCategory = ref(false)
+
+const simulatorMarketplaceVectorComponent = computed(() => {
+  switch (simulatorMarketplaceIconVector.value) {
+    case 'book': return BookOpenIcon
+    case 'layers': return LayersIcon
+    case 'code': return CodeIcon
+    case 'sparkles': return SparklesIcon
+    default: return BookOpenIcon
+  }
+})
+
+// 3-Column Marketplace Simulation Apps for Playground
+const simulatorMarketplaceApps = ref<MarketplaceApp[]>([
+  {
+    id: 'app-quran',
+    title: 'قرآن کریم',
+    category: 'متن و صوت آیات',
+    developer: 'تیم نرم‌افزاری تفکر',
+    iconUrl: 'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=400&q=80',
+    isComingSoon: false,
+    badge: 'ویژه',
+    badgeVariant: 'default',
+    rating: 4.9,
+    isInstalled: true,
+    description: 'افزونه جامع قرآن کریم شامل متن کامل، ترجمه و صوت قاریان.'
+  },
+  {
+    id: 'app-hadith',
+    title: 'احادیث و روایات',
+    category: 'حکمت‌های اهل‌بیت',
+    developer: 'کانون حکمت',
+    iconUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80',
+    isComingSoon: false,
+    badge: 'جدید',
+    badgeVariant: 'secondary',
+    rating: 4.8,
+    isInstalled: false,
+    description: 'دسترسی سریع به حکمت‌های نهج‌البلاغه و احادیث اخلاقی.'
+  },
+  {
+    id: 'app-ai-helper',
+    title: 'ویراستار هوشمند',
+    category: 'هوش مصنوعی',
+    developer: 'هسته هوش تفکر',
+    icon: SparklesIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'secondary',
+    rating: 0,
+    isInstalled: false,
+    description: 'بهینه‌سازی خودکار لحن متن و تصحیح علائم نگارشی.'
+  }
+])
+
 
 // DonationChatCard (In-Topic Message Card) simulation state
 const simulatorChatCardTitle = ref('تجهیز و شاداب‌سازی مدرسه ابتدایی روستا')
@@ -575,6 +647,7 @@ const currentComponentFile = computed(() => {
     case 'donation-chat-card': return 'DonationChatCard.vue'
     case 'create-donation-dialog': return 'CreateDonationDialog.vue'
     case 'under-dev': return 'UnderDevelopmentCard.vue'
+    case 'marketplace-icon': return 'MarketplaceAppIcon.vue'
     default: return ''
   }
 })
@@ -1766,6 +1839,21 @@ const openDuplicateWarningSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'under-dev'" class="size-3.5 text-primary" />
               </button>
+              <button 
+                @click="handleComponentChange('marketplace-icon')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'marketplace-icon' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <LayersIcon class="size-3.5 text-primary" />
+                  آیکون افزونه بازارچه (MarketplaceAppIcon) 🛍️
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'marketplace-icon'" class="size-3.5 text-primary" />
+              </button>
             </div>
           </div>
         </div>
@@ -1950,7 +2038,7 @@ const openDuplicateWarningSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -2748,6 +2836,127 @@ const openDuplicateWarningSimulation = () => {
                   <HeartIcon class="size-3.5 fill-current" data-icon="inline-start" />
                   <span>اجرای دیالوگ ساخت پویش</span>
                 </Button>
+              </div>
+
+              <!-- MarketplaceAppIcon Specific Controls -->
+              <div v-if="currentComponent === 'marketplace-icon'" class="flex flex-col gap-4 text-start">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <!-- Mode Variant -->
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9px] text-muted-foreground">حالت نمایش (Variant):</Label>
+                    <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                      <button
+                        @click="simulatorMarketplaceIconVariant = 'active'; logEvent('MarketplaceIcon: Variant set to Active', {})"
+                        :class="[
+                          'py-1 rounded text-[9.5px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                          simulatorMarketplaceIconVariant === 'active' ? 'bg-background text-primary shadow-xs font-black' : 'text-muted-foreground hover:text-foreground'
+                        ]"
+                      >
+                        دارای آیکون
+                      </button>
+                      <button
+                        @click="simulatorMarketplaceIconVariant = 'coming-soon'; logEvent('MarketplaceIcon: Variant set to Coming Soon', {})"
+                        :class="[
+                          'py-1 rounded text-[9.5px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                          simulatorMarketplaceIconVariant === 'coming-soon' ? 'bg-background text-amber-600 dark:text-amber-400 shadow-xs font-black' : 'text-muted-foreground hover:text-foreground'
+                        ]"
+                      >
+                        به‌زودی
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Title Input -->
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9px] text-muted-foreground">عنوان افزونه:</Label>
+                    <Input v-model="simulatorMarketplaceIconTitle" class="h-8 text-xs font-bold" />
+                  </div>
+
+                  <!-- Category Input -->
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9px] text-muted-foreground">دسته‌بندی افزونه:</Label>
+                    <Input v-model="simulatorMarketplaceIconCategory" class="h-8 text-xs" />
+                  </div>
+
+                  <!-- Icon Size -->
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9px] text-muted-foreground">اندازه آیکون:</Label>
+                    <div class="grid grid-cols-4 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                      <button
+                        v-for="sz in (['responsive', 'sm', 'md', 'lg'] as const)"
+                        :key="sz"
+                        @click="simulatorMarketplaceIconSize = sz; logEvent('MarketplaceIcon: Size changed', { size: sz })"
+                        :class="[
+                          'py-1 rounded text-[9px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                          simulatorMarketplaceIconSize === sz ? 'bg-background text-primary shadow-xs font-black' : 'text-muted-foreground hover:text-foreground'
+                        ]"
+                      >
+                        {{ sz === 'responsive' ? 'گرید' : sz.toUpperCase() }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Icon Source Switcher & Quick Toggles -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9px] text-muted-foreground">نوع تصویر/آیکون:</Label>
+                    <div class="grid grid-cols-2 gap-1 bg-muted/65 p-1 rounded-lg border border-border/40">
+                      <button
+                        @click="simulatorMarketplaceIconType = 'image'"
+                        :class="[
+                          'py-1 rounded text-[9.5px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                          simulatorMarketplaceIconType === 'image' ? 'bg-background text-primary shadow-xs font-black' : 'text-muted-foreground hover:text-foreground'
+                        ]"
+                      >
+                        تصویر URL
+                      </button>
+                      <button
+                        @click="simulatorMarketplaceIconType = 'vector'"
+                        :class="[
+                          'py-1 rounded text-[9.5px] font-bold transition-all cursor-pointer outline-none border border-transparent',
+                          simulatorMarketplaceIconType === 'vector' ? 'bg-background text-primary shadow-xs font-black' : 'text-muted-foreground hover:text-foreground'
+                        ]"
+                      >
+                        آیکون لوسید
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9px] text-muted-foreground">نشان اختصاصی (Badge):</Label>
+                    <Input v-model="simulatorMarketplaceIconBadge" placeholder="مثال: ویژه، جدید" class="h-8 text-xs" />
+                  </div>
+
+                  <div class="flex items-center gap-2 pt-2">
+                    <button
+                      @click="simulatorMarketplaceIconInstalled = !simulatorMarketplaceIconInstalled; logEvent('MarketplaceIcon: Installed toggle', { installed: simulatorMarketplaceIconInstalled })"
+                      class="px-2.5 py-1.5 text-[10px] rounded-lg border flex-1 flex items-center justify-between cursor-pointer"
+                      :class="simulatorMarketplaceIconInstalled ? 'bg-primary/10 border-primary text-primary font-bold' : 'border-border/60 bg-muted/20 text-muted-foreground'"
+                    >
+                      <span>نصب‌شده</span>
+                      <CheckIcon v-if="simulatorMarketplaceIconInstalled" class="size-3" />
+                    </button>
+                    <button
+                      @click="simulatorMarketplaceIconShowCategory = !simulatorMarketplaceIconShowCategory"
+                      class="px-2.5 py-1.5 text-[10px] rounded-lg border flex-1 flex items-center justify-between cursor-pointer"
+                      :class="simulatorMarketplaceIconShowCategory ? 'bg-primary/10 border-primary text-primary font-bold' : 'border-border/60 bg-muted/20 text-muted-foreground'"
+                    >
+                      <span>زیرعنوان</span>
+                      <CheckIcon v-if="simulatorMarketplaceIconShowCategory" class="size-3" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <router-link 
+                      to="/playground/marketplace-icon" 
+                      class="w-full h-8 text-xs font-bold gap-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <span>صفحه کامل آزمایشگاه آیکون</span>
+                      <ExternalLinkIcon class="size-3" />
+                    </router-link>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -3792,27 +4001,57 @@ const openDuplicateWarningSimulation = () => {
                   />
                 </div>
 
-                <!-- UnderDevelopmentCard Preview -->
+                <!-- MarketplaceAppIcon Preview -->
                 <div 
-                  v-else-if="currentComponent === 'under-dev'"
-                  class="w-full max-w-xl mx-auto flex flex-col items-center justify-center py-4 gap-4"
+                  v-else-if="currentComponent === 'marketplace-icon'"
+                  class="w-full flex flex-col items-center gap-6 py-4"
                   :dir="languageStore.dir"
                 >
-                  <UnderDevelopmentCard
-                    :title="simulatorUnderDevTitle"
-                    :description="simulatorUnderDevDesc"
-                    :icon="currentUnderDevIconComponent"
-                    :badge-text="simulatorUnderDevBadge"
-                    :badge-variant="simulatorUnderDevBadgeVariant"
-                    :eta="simulatorUnderDevEta"
-                    :features="simulatorUnderDevFeatures"
-                    :action-text="simulatorUnderDevActionText"
-                    :show-back-button="simulatorUnderDevShowBack"
-                    :pattern-speed="simulatorUnderDevSpeed"
-                    :pattern-style="simulatorUnderDevPattern"
-                    @action="logEvent('UnderDevCard: Action Clicked (Notify/Interest)', { title: simulatorUnderDevTitle })"
-                    @back="logEvent('UnderDevCard: Back Button Clicked', {})"
-                  />
+                  <!-- 1. Single Icon Sandbox Preview -->
+                  <div class="w-full bg-card/40 border border-border/60 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[180px] relative">
+                    <span class="absolute top-2.5 right-3 text-[9px] font-mono text-muted-foreground">تک‌آیکون ایزوله:</span>
+                    <div class="w-24 flex flex-col items-center">
+                      <MarketplaceAppIcon
+                        :title="simulatorMarketplaceIconTitle"
+                        :category="simulatorMarketplaceIconCategory"
+                        :is-coming-soon="simulatorMarketplaceIconVariant === 'coming-soon'"
+                        :icon-url="simulatorMarketplaceIconType === 'image' ? simulatorMarketplaceIconImageUrl : ''"
+                        :icon="simulatorMarketplaceIconType === 'vector' ? simulatorMarketplaceVectorComponent : undefined"
+                        :size="simulatorMarketplaceIconSize"
+                        :badge="simulatorMarketplaceIconBadge"
+                        :rating="simulatorMarketplaceIconRating"
+                        :is-installed="simulatorMarketplaceIconInstalled"
+                        :show-category="simulatorMarketplaceIconShowCategory"
+                        @click="(app) => logEvent('MarketplaceIcon: Single Icon Clicked', { title: simulatorMarketplaceIconTitle, variant: simulatorMarketplaceIconVariant })"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- 2. Row Grid Preview (3 per row) -->
+                  <div class="w-full bg-card/30 border border-border/60 rounded-2xl p-5 flex flex-col gap-3">
+                    <div class="flex items-center justify-between border-b border-border/40 pb-2.5">
+                      <div class="flex items-center gap-2">
+                        <div class="size-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">۳</div>
+                        <span class="text-xs font-black text-foreground">چیدمان ۳ ستونه ردیف بازارچه (پیش‌نمایش سناریوی اصلی)</span>
+                      </div>
+                      <Badge variant="secondary" class="text-[9px] px-2 py-0.5">۳ افزونه در ردیف</Badge>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 sm:gap-6 w-full py-2">
+                      <div 
+                        v-for="app in simulatorMarketplaceApps" 
+                        :key="app.id"
+                        class="w-full flex justify-center"
+                      >
+                        <MarketplaceAppIcon
+                          :app="app"
+                          size="responsive"
+                          :show-category="true"
+                          @click="(a) => logEvent('MarketplaceIcon: Row Grid Item Clicked (Navigate to details)', a)"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
               </div>

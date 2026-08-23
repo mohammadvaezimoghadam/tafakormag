@@ -37,6 +37,8 @@ import AIRefinerDrawer from './AIRefinerDrawer.vue'
 import FloatingFormatMenu, { type MenuCoords, type ActionType } from '@/components/common/FloatingFormatMenu.vue'
 import { wrapSelection, type FormatType } from '@/utils/textFormatter'
 import { getSelectionPixelRect } from '@/utils/caretPosition'
+import { usePluginRegistryStore } from '@/plugins/core/pluginRegistry'
+import type { ComposerAction } from '@/plugins/core/pluginTypes'
 
 interface Attachment {
   id: string | number
@@ -581,6 +583,44 @@ const recordingStatusClasses = computed(() => {
 
 import { useLanguageStore } from '@/stores/languageStore'
 const languageStore = useLanguageStore()
+
+const pluginRegistry = usePluginRegistryStore()
+const pluginComposerActions = computed(() => pluginRegistry.composerActions)
+const activePluginDialog = ref<ComposerAction | null>(null)
+
+const handlePluginActionClick = (action: ComposerAction) => {
+  isActionSheetOpen.value = false
+  if (action.dialogComponent) {
+    activePluginDialog.value = action
+  } else if (action.execute) {
+    action.execute({
+      insertText: handlePluginInsert,
+      currentText: text.value,
+    })
+  }
+}
+
+const handlePluginInsert = (insertedMarkdown: string) => {
+  if (!insertedMarkdown) return
+  const el = textareaRef.value || expandedTextareaRef.value
+  if (el) {
+    const start = el.selectionStart || 0
+    const end = el.selectionEnd || 0
+    const before = text.value.substring(0, start)
+    const after = text.value.substring(end)
+    const prefix = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : ''
+    const suffix = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : ''
+    text.value = before + prefix + insertedMarkdown + suffix + after
+    nextTick(() => {
+      el.focus()
+      const newPos = (before + prefix + insertedMarkdown).length
+      el.setSelectionRange(newPos, newPos)
+    })
+  } else {
+    text.value = (text.value ? text.value + '\n\n' : '') + insertedMarkdown
+  }
+  activePluginDialog.value = null
+}
 </script>
 
 <template>
@@ -1086,8 +1126,42 @@ const languageStore = useLanguageStore()
           </span>
         </div>
       </div>
+
+      <!-- Plugin Actions in Modal -->
+      <template v-if="pluginComposerActions.length > 0">
+        <div class="pt-2 border-t border-border/40 space-y-2">
+          <span class="text-[11px] font-bold text-muted-foreground block">
+            {{ languageStore.t('افزونه‌ها و ابزارها', 'Plugins & Tools') }}
+          </span>
+          <div class="grid grid-cols-3 gap-2.5">
+            <button
+              v-for="action in pluginComposerActions"
+              :key="action.id"
+              type="button"
+              class="group relative aspect-square rounded-2xl border border-emerald-500/30 bg-emerald-50/10 hover:bg-emerald-50/20 hover:border-emerald-500/60 flex flex-col items-center justify-center gap-2 p-2 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 text-center select-none"
+              @click="handlePluginActionClick(action)"
+            >
+              <div class="size-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform shadow-xs">
+                {{ action.icon || '📖' }}
+              </div>
+              <span class="text-xs font-bold text-foreground group-hover:text-emerald-600 transition-colors">
+                {{ action.label }}
+              </span>
+            </button>
+          </div>
+        </div>
+      </template>
     </DialogContent>
   </Dialog>
+
+  <!-- Active Plugin Dialog Component Container -->
+  <component
+    v-if="activePluginDialog && activePluginDialog.dialogComponent"
+    :is="activePluginDialog.dialogComponent"
+    :on-insert="handlePluginInsert"
+    @insert="handlePluginInsert"
+    @close="activePluginDialog = null"
+  />
 </template>
 
 <style scoped>

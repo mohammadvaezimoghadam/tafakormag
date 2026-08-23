@@ -1,0 +1,45 @@
+{
+  "manifest_version": 1,
+  "identifier": "quran",
+  "name": "Official Quran Plugin",
+  "version": "1.0.0",
+  "description": "Multi-edition Quran reader, search engine, and composer reference tool",
+  "author": "Tafakor Core Team",
+  "icon": "BookOpen",
+  "is_core": true,
+  "capabilities": [
+    "composer_action",
+    "mini_app",
+    "search_provider"
+  ],
+  "scopes": [
+    "read:content",
+    "read:quran"
+  ],
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "default_edition": {
+        "type": "string",
+        "default": "quran-simple",
+        "description": "Default Arabic text edition identifier"
+      },
+      "default_translation": {
+        "type": "string",
+        "default": "fa.ansarian",
+        "description": "Default translation edition identifier"
+      },
+      "show_bismillah": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to display Bismillah before Surahs"
+      }
+    },
+    "additionalProperties": true
+  },
+  "default_config": {
+    "default_edition": "quran-simple",
+    "default_translation": "fa.ansarian",
+    "show_bismillah": true
+  }
+}

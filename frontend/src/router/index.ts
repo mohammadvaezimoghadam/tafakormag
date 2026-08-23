@@ -34,7 +34,12 @@ const router = createRouter({
     {
       path: '/marketplace',
       name: 'marketplace',
-      component: () => import('@/views/FeedView.vue')
+      component: () => import('@/views/MarketplaceView.vue')
+    },
+    {
+      path: '/plugins',
+      name: 'plugins',
+      component: () => import('@/views/MarketplaceView.vue')
     },
     {
       path: '/playground/donation-card',
@@ -45,6 +50,11 @@ const router = createRouter({
       path: '/playground/create-donation',
       name: 'create-donation-playground',
       component: () => import('@/views/playground/CreateDonationPlayground.vue')
+    },
+    {
+      path: '/playground/quran-plugins',
+      name: 'quran-plugins-playground',
+      component: () => import('@/views/playground/PluginsAndQuranPlayground.vue')
     },
     {
       path: '/:pathMatch(.*)*',

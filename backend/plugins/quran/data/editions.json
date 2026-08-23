@@ -1,0 +1,82 @@
+[
+  {
+    "identifier": "quran-simple",
+    "name": "متن ساده قرآن کریم (عربی)",
+    "english_name": "Simple Arabic Quran",
+    "language": "ar",
+    "type": "quran",
+    "format": "text",
+    "direction": "rtl",
+    "author": "Tanzil Project",
+    "is_default": true,
+    "total_ayahs": 6236,
+    "metadata": {
+      "source": "tanzil.net",
+      "license": "Creative Commons Attribution 3.0"
+    }
+  },
+  {
+    "identifier": "quran-uthmani",
+    "name": "متن عثمان طه با اعراب کامل",
+    "english_name": "Uthmani Script Quran",
+    "language": "ar",
+    "type": "quran",
+    "format": "text",
+    "direction": "rtl",
+    "author": "King Fahd Complex",
+    "is_default": false,
+    "total_ayahs": 6236,
+    "metadata": {
+      "source": "tanzil.net",
+      "license": "Creative Commons Attribution 3.0"
+    }
+  },
+  {
+    "identifier": "fa.ansarian",
+    "name": "ترجمه فارسی استاد انصاریان",
+    "english_name": "Ansarian Persian Translation",
+    "language": "fa",
+    "type": "translation",
+    "format": "text",
+    "direction": "rtl",
+    "author": "حسین انصاریان",
+    "is_default": true,
+    "total_ayahs": 6236,
+    "metadata": {
+      "source": "erfan.ir",
+      "license": "Public Domain"
+    }
+  },
+  {
+    "identifier": "fa.makarem",
+    "name": "ترجمه فارسی آیت‌الله مکارم شیرازی",
+    "english_name": "Makarem Persian Translation",
+    "language": "fa",
+    "type": "translation",
+    "format": "text",
+    "direction": "rtl",
+    "author": "ناصر مکارم شیرازی",
+    "is_default": false,
+    "total_ayahs": 6236,
+    "metadata": {
+      "source": "makarem.ir",
+      "license": "Public Domain"
+    }
+  },
+  {
+    "identifier": "en.sahih",
+    "name": "English Sahih International",
+    "english_name": "Sahih International",
+    "language": "en",
+    "type": "translation",
+    "format": "text",
+    "direction": "ltr",
+    "author": "Sahih International",
+    "is_default": false,
+    "total_ayahs": 6236,
+    "metadata": {
+      "source": "tanzil.net",
+      "license": "Public Domain"
+    }
+  }
+]

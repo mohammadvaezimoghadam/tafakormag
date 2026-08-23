@@ -39,7 +39,20 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.notes',
     'apps.donations',
+    'apps.plugin_system',
 ]
+
+# ==============================================================================
+# پیکربندی سیستم پلاگین تفاخر (Tafakor Plugin System)
+# ==============================================================================
+INSTALLED_TAFAKOR_PLUGINS = [
+    'plugins.quran',
+]
+
+# الحاق پویا و ایمن اپلیکیشن‌های پلاگین به INSTALLED_APPS
+for _plugin_app in INSTALLED_TAFAKOR_PLUGINS:
+    if _plugin_app not in INSTALLED_APPS:
+        INSTALLED_APPS.append(_plugin_app)
 
 # ==============================================================================
 # REST Framework

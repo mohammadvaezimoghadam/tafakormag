@@ -32,6 +32,16 @@ const labsRouter = createRouter({
       name: 'text-formatting-playground',
       component: () => import('@/views/playground/TextFormattingPlayground.vue'),
     },
+    {
+      path: '/playground/marketplace-icon',
+      name: 'marketplace-icon-playground',
+      component: () => import('@/views/playground/MarketplaceIconPlayground.vue'),
+    },
+    {
+      path: '/playground/quran-plugins',
+      name: 'quran-plugins-playground',
+      component: () => import('@/views/playground/PluginsAndQuranPlayground.vue'),
+    },
   ],
 })
 

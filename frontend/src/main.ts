@@ -13,5 +13,8 @@ import { useLanguageStore } from '@/stores/languageStore'
 const languageStore = useLanguageStore()
 languageStore.init()
 
+import { initializePlugins } from '@/plugins/core/pluginLoader'
+initializePlugins(router)
+
 app.mount('#app')
 
