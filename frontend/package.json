@@ -11,7 +11,7 @@
     "build:labs": "vite build --mode labs",
     "preview": "vite preview",
     "type-check": "vue-tsc --build",
-    "test:unit": "node --test src/lib/utils.test.js"
+    "test:unit": "node --experimental-strip-types --test src/lib/utils.test.js"
   },
   "dependencies": {
     "@lucide/vue": "^1.26.0",

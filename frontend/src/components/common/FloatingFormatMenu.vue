@@ -28,10 +28,14 @@ const props = withDefaults(defineProps<{
   show: boolean
   coords?: MenuCoords | null
   selectedText?: string
+  hasText?: boolean
+  mode?: 'full' | 'context' | 'auto'
 }>(), {
   show: false,
   coords: null,
-  selectedText: ''
+  selectedText: '',
+  hasText: false,
+  mode: 'auto'
 })
 
 const emit = defineEmits<{
@@ -40,6 +44,12 @@ const emit = defineEmits<{
 }>()
 
 const languageStore = useLanguageStore()
+
+const isContextMode = computed(() => {
+  if (props.mode === 'context') return true
+  if (props.mode === 'full') return false
+  return !props.selectedText || props.selectedText.trim().length === 0
+})
 
 const handleFormat = (type: FormatType) => {
   emit('format', type)
@@ -52,7 +62,7 @@ const handleAction = (type: ActionType) => {
 // تشخیص فرمت‌های فعال روی متن انتخاب‌شده
 const isBoldActive = computed(() => {
   const s = props.selectedText.trim()
-  return s.startsWith('**') && s.endsWith('**') && s.length >= 4
+  return (s.startsWith('**') && s.endsWith('**') && s.length >= 4)
 })
 
 const isItalicActive = computed(() => {
@@ -94,11 +104,13 @@ const menuStyle = computed(() => {
   <transition name="format-pop">
     <div
       v-if="props.show"
-      class="floating-format-menu absolute z-50 bg-card/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border/80 dark:border-border/40 shadow-2xl rounded-2xl p-1 flex items-center gap-0.5 select-none -translate-x-1/2 max-w-[calc(100vw-32px)] overflow-x-auto scrollbar-none"
+      class="floating-format-menu absolute z-50 bg-card/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border/80 dark:border-border/40 shadow-2xl rounded-2xl p-1 flex items-center gap-0.5 select-none -translate-x-1/2 max-w-[calc(100vw-24px)] overflow-x-auto scrollbar-none pointer-events-auto"
       :style="menuStyle"
       :dir="languageStore.dir"
       @mousedown.prevent
+      @pointerdown.prevent
       @touchstart.stop
+      @touchend.stop
       @contextmenu.prevent.stop
     >
       <!-- Small Arrow Pointer -->
@@ -112,151 +124,207 @@ const menuStyle = computed(() => {
         ]"
       />
 
-      <!-- Clipboard Actions Group (Copy, Cut, Select All, Paste) -->
-      <!-- Copy Button -->
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
-        :title="languageStore.t('کپی (Copy)', 'Copy (Ctrl+C)')"
-        @click="handleAction('copy')"
-      >
-        <CopyIcon class="size-3.5 stroke-[2.2]" />
-      </Button>
+      <!-- ================= A) Context Mode (Long Press / Caret Mode) ================= -->
+      <template v-if="isContextMode">
+        <!-- Paste Button with Label -->
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="h-7.5 px-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+          :title="languageStore.t('جایگذاری (Paste)', 'Paste (Ctrl+V)')"
+          @click="handleAction('paste')"
+          @pointerdown.prevent
+        >
+          <ClipboardPasteIcon class="size-3.5 text-primary stroke-[2.2]" />
+          <span>{{ languageStore.t('جایگذاری', 'Paste') }}</span>
+        </Button>
 
-      <!-- Cut Button -->
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
-        :title="languageStore.t('برش (Cut)', 'Cut (Ctrl+X)')"
-        @click="handleAction('cut')"
-      >
-        <ScissorsIcon class="size-3.5 stroke-[2.2]" />
-      </Button>
+        <!-- Select All Button with Label (if input has text) -->
+        <Button
+          v-if="props.hasText"
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="h-7.5 px-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+          :title="languageStore.t('انتخاب همه (Select All)', 'Select All (Ctrl+A)')"
+          @click="handleAction('select-all')"
+          @pointerdown.prevent
+        >
+          <CheckCheckIcon class="size-3.5 text-muted-foreground stroke-[2.2]" />
+          <span>{{ languageStore.t('انتخاب همه', 'Select All') }}</span>
+        </Button>
+      </template>
 
-      <!-- Select All Button -->
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
-        :title="languageStore.t('انتخاب همه (Select All)', 'Select All (Ctrl+A)')"
-        @click="handleAction('select-all')"
-      >
-        <CheckCheckIcon class="size-3.5 stroke-[2.2]" />
-      </Button>
+      <!-- ================= B) Full Selection Mode (With Text Selected) ================= -->
+      <template v-else>
+        <!-- Copy Button -->
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+          :title="languageStore.t('کپی (Copy)', 'Copy (Ctrl+C)')"
+          @click="handleAction('copy')"
+          @pointerdown.prevent
+        >
+          <CopyIcon class="size-3.5 stroke-[2.2]" />
+        </Button>
 
-      <!-- Separator between Clipboard and Formatting -->
-      <div class="w-px h-4 bg-border/70 mx-0.5 shrink-0" />
+        <!-- Cut Button -->
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+          :title="languageStore.t('برش (Cut)', 'Cut (Ctrl+X)')"
+          @click="handleAction('cut')"
+          @pointerdown.prevent
+        >
+          <ScissorsIcon class="size-3.5 stroke-[2.2]" />
+        </Button>
 
-      <!-- Formatting Group -->
-      <!-- Bold Button -->
-      <Button
-        type="button"
-        :variant="isBoldActive ? 'secondary' : 'ghost'"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
-        :class="[
-          isBoldActive 
-            ? 'bg-primary/15 text-primary hover:bg-primary/20' 
-            : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
-        ]"
-        :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
-        @click="handleFormat('bold')"
-      >
-        <BoldIcon class="size-3.5 stroke-[2.5]" />
-      </Button>
+        <!-- Select All Button -->
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+          :title="languageStore.t('انتخاب همه (Select All)', 'Select All (Ctrl+A)')"
+          @click="handleAction('select-all')"
+          @pointerdown.prevent
+        >
+          <CheckCheckIcon class="size-3.5 stroke-[2.2]" />
+        </Button>
 
-      <!-- Italic Button -->
-      <Button
-        type="button"
-        :variant="isItalicActive ? 'secondary' : 'ghost'"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
-        :class="[
-          isItalicActive 
-            ? 'bg-primary/15 text-primary hover:bg-primary/20' 
-            : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
-        ]"
-        :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
-        @click="handleFormat('italic')"
-      >
-        <ItalicIcon class="size-3.5 stroke-[2.5]" />
-      </Button>
+        <!-- Paste Button -->
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
+          :title="languageStore.t('جایگذاری (Paste)', 'Paste (Ctrl+V)')"
+          @click="handleAction('paste')"
+          @pointerdown.prevent
+        >
+          <ClipboardPasteIcon class="size-3.5 stroke-[2.2]" />
+        </Button>
 
-      <!-- Underline Button -->
-      <Button
-        type="button"
-        :variant="isUnderlineActive ? 'secondary' : 'ghost'"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
-        :class="[
-          isUnderlineActive 
-            ? 'bg-primary/15 text-primary hover:bg-primary/20' 
-            : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
-        ]"
-        :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
-        @click="handleFormat('underline')"
-      >
-        <UnderlineIcon class="size-3.5 stroke-[2.5]" />
-      </Button>
+        <!-- Separator between Clipboard and Formatting -->
+        <div class="w-px h-4 bg-border/70 mx-0.5 shrink-0" />
 
-      <!-- Strikethrough Button -->
-      <Button
-        type="button"
-        :variant="isStrikethroughActive ? 'secondary' : 'ghost'"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
-        :class="[
-          isStrikethroughActive 
-            ? 'bg-primary/15 text-primary hover:bg-primary/20' 
-            : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
-        ]"
-        :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
-        @click="handleFormat('strikethrough')"
-      >
-        <StrikethroughIcon class="size-3.5 stroke-[2.5]" />
-      </Button>
+        <!-- Formatting Group -->
+        <!-- Bold Button -->
+        <Button
+          type="button"
+          :variant="isBoldActive ? 'secondary' : 'ghost'"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
+          :class="[
+            isBoldActive 
+              ? 'bg-primary/15 text-primary hover:bg-primary/20' 
+              : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
+          ]"
+          :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
+          @click="handleFormat('bold')"
+          @pointerdown.prevent
+        >
+          <BoldIcon class="size-3.5 stroke-[2.5]" />
+        </Button>
 
-      <!-- Separator -->
-      <div class="w-px h-4 bg-border/70 mx-0.5 shrink-0" />
+        <!-- Italic Button -->
+        <Button
+          type="button"
+          :variant="isItalicActive ? 'secondary' : 'ghost'"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
+          :class="[
+            isItalicActive 
+              ? 'bg-primary/15 text-primary hover:bg-primary/20' 
+              : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
+          ]"
+          :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
+          @click="handleFormat('italic')"
+          @pointerdown.prevent
+        >
+          <ItalicIcon class="size-3.5 stroke-[2.5]" />
+        </Button>
 
-      <!-- Inline Code Button -->
-      <Button
-        type="button"
-        :variant="isCodeActive ? 'secondary' : 'ghost'"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
-        :class="[
-          isCodeActive 
-            ? 'bg-primary/15 text-primary hover:bg-primary/20' 
-            : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
-        ]"
-        :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
-        @click="handleFormat('code')"
-      >
-        <CodeIcon class="size-3.5 stroke-[2.5]" />
-      </Button>
+        <!-- Underline Button -->
+        <Button
+          type="button"
+          :variant="isUnderlineActive ? 'secondary' : 'ghost'"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
+          :class="[
+            isUnderlineActive 
+              ? 'bg-primary/15 text-primary hover:bg-primary/20' 
+              : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
+          ]"
+          :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
+          @click="handleFormat('underline')"
+          @pointerdown.prevent
+        >
+          <UnderlineIcon class="size-3.5 stroke-[2.5]" />
+        </Button>
 
-      <!-- Quote Button -->
-      <Button
-        type="button"
-        :variant="isQuoteActive ? 'secondary' : 'ghost'"
-        size="icon-xs"
-        class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
-        :class="[
-          isQuoteActive 
-            ? 'bg-primary/15 text-primary hover:bg-primary/20' 
-            : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
-        ]"
-        :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
-        @click="handleFormat('quote')"
-      >
-        <QuoteIcon class="size-3.5 stroke-[2.5]" />
-      </Button>
+        <!-- Strikethrough Button -->
+        <Button
+          type="button"
+          :variant="isStrikethroughActive ? 'secondary' : 'ghost'"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
+          :class="[
+            isStrikethroughActive 
+              ? 'bg-primary/15 text-primary hover:bg-primary/20' 
+              : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
+          ]"
+          :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
+          @click="handleFormat('strikethrough')"
+          @pointerdown.prevent
+        >
+          <StrikethroughIcon class="size-3.5 stroke-[2.5]" />
+        </Button>
+
+        <!-- Separator -->
+        <div class="w-px h-4 bg-border/70 mx-0.5 shrink-0" />
+
+        <!-- Inline Code Button -->
+        <Button
+          type="button"
+          :variant="isCodeActive ? 'secondary' : 'ghost'"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
+          :class="[
+            isCodeActive 
+              ? 'bg-primary/15 text-primary hover:bg-primary/20' 
+              : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
+          ]"
+          :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
+          @click="handleFormat('code')"
+          @pointerdown.prevent
+        >
+          <CodeIcon class="size-3.5 stroke-[2.5]" />
+        </Button>
+
+        <!-- Quote Button -->
+        <Button
+          type="button"
+          :variant="isQuoteActive ? 'secondary' : 'ghost'"
+          size="icon-xs"
+          class="h-7 w-7 rounded-xl transition-all cursor-pointer shrink-0"
+          :class="[
+            isQuoteActive 
+              ? 'bg-primary/15 text-primary hover:bg-primary/20' 
+              : 'text-foreground/80 hover:text-foreground hover:bg-muted/80'
+          ]"
+          :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
+          @click="handleFormat('quote')"
+          @pointerdown.prevent
+        >
+          <QuoteIcon class="size-3.5 stroke-[2.5]" />
+        </Button>
+      </template>
     </div>
   </transition>
 </template>

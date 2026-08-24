@@ -266,10 +266,70 @@ const isMobile = () => {
 
 const showFormatMenu = ref(false)
 const showExpandedFormatMenu = ref(false)
+const menuMode = ref<'full' | 'context' | 'auto'>('auto')
+const expandedMenuMode = ref<'full' | 'context' | 'auto'>('auto')
 const menuCoords = ref<MenuCoords | null>(null)
 const expandedMenuCoords = ref<MenuCoords | null>(null)
 const selectedText = ref('')
 const expandedSelectedText = ref('')
+
+const touchHoldTimer = ref<any>(null)
+const touchStartPos = ref<{ x: number; y: number } | null>(null)
+
+const handleTouchstart = (e: TouchEvent, isExpanded = false) => {
+  if (!e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartPos.value = { x: touch.clientX, y: touch.clientY }
+
+  clearTimeout(touchHoldTimer.value)
+  touchHoldTimer.value = setTimeout(() => {
+    const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+    if (!el) return
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? 0
+
+    if (start >= end) {
+      const rect = el.getBoundingClientRect()
+      const touchX = (touchStartPos.value?.x || touch.clientX) - rect.left
+      const touchY = (touchStartPos.value?.y || touch.clientY) - rect.top
+
+      const menuWidth = 180
+      const menuHeight = 40
+      const minX = (menuWidth / 2) + 12
+      const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
+      const clampedX = Math.min(Math.max(touchX, minX), maxX)
+
+      const coords: MenuCoords = {
+        top: Math.min(touchY - menuHeight - 12, -menuHeight - 6),
+        left: isExpanded ? clampedX + 24 : clampedX,
+        placement: 'top'
+      }
+
+      if (isExpanded) {
+        expandedMenuCoords.value = coords
+        expandedMenuMode.value = 'context'
+        showExpandedFormatMenu.value = true
+      } else {
+        menuCoords.value = coords
+        menuMode.value = 'context'
+        showFormatMenu.value = true
+      }
+    }
+  }, 450)
+}
+
+const handleTouchmove = (e: TouchEvent) => {
+  if (!touchStartPos.value || !e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+  const dx = Math.abs(touch.clientX - touchStartPos.value.x)
+  const dy = Math.abs(touch.clientY - touchStartPos.value.y)
+  if (dx > 10 || dy > 10) {
+    clearTimeout(touchHoldTimer.value)
+    touchStartPos.value = null
+  }
+}
 
 const handleTextareaSelect = (isExpanded = false) => {
   const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
@@ -351,18 +411,31 @@ const handleTextareaSelect = (isExpanded = false) => {
   if (isExpanded) {
     expandedSelectedText.value = rawSelection
     expandedMenuCoords.value = coords
+    expandedMenuMode.value = 'auto'
     showExpandedFormatMenu.value = true
   } else {
     selectedText.value = rawSelection
     menuCoords.value = coords
+    menuMode.value = 'auto'
     showFormatMenu.value = true
   }
 }
 
 const handleTouchend = (isExpanded = false) => {
+  clearTimeout(touchHoldTimer.value)
+  touchStartPos.value = null
   handleTextareaSelect(isExpanded)
   setTimeout(() => handleTextareaSelect(isExpanded), 50)
   setTimeout(() => handleTextareaSelect(isExpanded), 120)
+}
+
+const handleDocSelectionChange = () => {
+  const active = document.activeElement
+  if (active === textareaRef.value) {
+    handleTextareaSelect(false)
+  } else if (active === expandedTextareaRef.value) {
+    handleTextareaSelect(true)
+  }
 }
 
 const handleTextareaBlur = (isExpanded = false) => {
@@ -737,7 +810,7 @@ const languageStore = useLanguageStore()
       </transition>
 
       <!-- Center Element: Text Input / Recording Info Display -->
-      <div class="flex-1 min-w-0">
+      <div class="flex-1 min-w-0 relative">
         <transition name="fade" mode="out-in">
           <!-- Voice Recording Display -->
           <div 
@@ -766,6 +839,8 @@ const languageStore = useLanguageStore()
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
+            @touchstart="handleTouchstart($event, false)"
+            @touchmove="handleTouchmove"
             @touchend="handleTouchend(false)"
             @contextmenu.prevent.stop
             @blur="handleTextareaBlur(false)"
@@ -778,6 +853,8 @@ const languageStore = useLanguageStore()
           :show="showFormatMenu"
           :coords="menuCoords"
           :selected-text="selectedText"
+          :has-text="!!text"
+          :mode="menuMode"
           @format="(f) => applyFormat(f, false)"
           @action="(act) => handleMenuAction(act, false)"
         />
@@ -928,6 +1005,8 @@ const languageStore = useLanguageStore()
             :show="showExpandedFormatMenu"
             :coords="expandedMenuCoords"
             :selected-text="expandedSelectedText"
+            :has-text="!!text"
+            :mode="expandedMenuMode"
             @format="(f) => applyFormat(f, true)"
             @action="(act) => handleMenuAction(act, true)"
           />
@@ -941,6 +1020,8 @@ const languageStore = useLanguageStore()
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
+            @touchstart="handleTouchstart($event, true)"
+            @touchmove="handleTouchmove"
             @touchend="handleTouchend(true)"
             @contextmenu.prevent.stop
             @blur="handleTextareaBlur(true)"
