@@ -44,9 +44,9 @@
       <div v-if="activeTab === 'composer'" class="space-y-6 animate-in fade-in duration-200">
         <div class="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl space-y-4">
           <div>
-            <h3 class="font-bold text-base">تست درج آیه در ویرایشگر پیام (Composer Integration)</h3>
+            <h3 class="font-bold text-base">تست دستورات اسلش و درج آیه در ویرایشگر پیام (Slash Commands & Composer)</h3>
             <p class="text-xs text-zinc-500 mt-1">
-              روی دکمه «+» در نوار پیام کلیک کنید و گزینه «📖 درج آیه قرآن» را انتخاب نمایید تا نحوه تولید و درج خودکار مارک‌داون را مشاهده کنید.
+              در فیلد ورودی متن علامت <code class="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-emerald-600 rounded font-bold font-mono">/</code> را تایپ کنید یا از دکمه «+» گزینه «📖 درج آیه قرآن» را بزنید. سپس سوره و آیه را انتخاب کرده و دکمه ارسال را بزنید تا تبدیل خودکار توکن به متن مارک‌داون آیه را مشاهده نمایید.
             </p>
           </div>
 

@@ -1,165 +1,301 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { 
+  BookOpenIcon, 
+  SparklesIcon, 
+  FeatherIcon, 
+  BotIcon, 
+  CalendarIcon, 
+  MicIcon, 
+  CalculatorIcon, 
+  LibraryIcon, 
+  PaletteIcon
+} from '@lucide/vue'
+import { useLanguageStore } from '@/stores/languageStore'
+import { useToastStore } from '@/stores/toastStore'
+import { useUserStore } from '@/stores/userStore'
+import { usePluginRegistryStore } from '@/plugins/core/pluginRegistry'
+import MarketplaceAppIcon from '@/components/marketplace/MarketplaceAppIcon.vue'
+import MarketplaceAppModal from '@/components/marketplace/MarketplaceAppModal.vue'
+import type { MarketplaceApp } from '@/types/marketplace'
+
+const languageStore = useLanguageStore()
+const toastStore = useToastStore()
+const userStore = useUserStore()
+const pluginRegistry = usePluginRegistryStore()
+const router = useRouter()
+
+const selectedAppForModal = ref<MarketplaceApp | null>(null)
+const isDetailsModalOpen = ref(false)
+const isInstalling = ref(false)
+
+// Exactly 9 Apps in a 3x3 Grid (3 columns x 3 rows)
+// In RTL: Index 0 is Top-Right (Quran - Active), rest are Coming Soon
+const marketplaceApps = ref<MarketplaceApp[]>([
+  // 1. Quran Plugin (Active - Top Right in RTL)
+  {
+    id: 'quran',
+    title: 'قرآن کریم',
+    category: 'متن، ترجمه و صوت',
+    developer: 'تیم نرم‌افزاری تفکر',
+    icon: BookOpenIcon,
+    isComingSoon: false,
+    badge: 'نصب‌شده',
+    badgeVariant: 'outline',
+    rating: 4.9,
+    downloadsCount: 2450,
+    isInstalled: true,
+    version: '۱.۲.۰',
+    description: 'افزونه جامع و رسمی قرآن کریم شامل متن کامل ۱۱۴ سوره، ۳۰ جزء، ترجمه انصاریان و مکارم شیرازی و قابلیت استناد سریع در پیام‌ها با دستور /quran.',
+    capabilities: ['slash_command', 'audio_recitation', 'search_engine', 'translations'],
+    screenshots: []
+  },
+  // 2. Nahj al-Balagha (Coming Soon)
+  {
+    id: 'nahj',
+    title: 'نهج‌البلاغه و حکمت‌ها',
+    category: 'کلام امیرالمؤمنین (ع)',
+    developer: 'کانون اندیشه اسلامی',
+    icon: FeatherIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۰.۹.۰',
+    description: 'دسترسی سریع به خطبه‌ها، نامه‌ها و حکمت‌های نهج‌البلاغه با امکان جستجوی موضوعی و درج قطعات برگزیده در گفت‌وگوهای پلتفرم.',
+    capabilities: ['slash_command', 'search_engine'],
+    screenshots: []
+  },
+  // 3. Sahifeh Sajjadiyya (Coming Soon)
+  {
+    id: 'sahifeh',
+    title: 'صحیفه سجادیه',
+    category: 'ادعیه و مناجات',
+    developer: 'تیم معارف تفکر',
+    icon: SparklesIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۰.۸.۰',
+    description: 'مجموعه دعاهای امام سجاد (ع) همراه با ترجمه روان و تفکیک موضوعی جهت مطالعه و اشتراک‌گذاری در تاپیک‌ها.',
+    capabilities: ['slash_command', 'translations'],
+    screenshots: []
+  },
+  // 4. AI Writing Assistant (Coming Soon)
+  {
+    id: 'ai-editor',
+    title: 'دستیار ویراستار',
+    category: 'هوش مصنوعی و متن',
+    developer: 'هسته هوش مصنوعی تفکر',
+    icon: BotIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'پیشنهاد کلمات، اصلاح ساختار نگارشی، اعراب‌گذاری هوشمند و خلاصه‌سازی متون با استفاده از مدل‌های زبانی بومی.',
+    capabilities: ['ai_tools', 'editor_extension'],
+    screenshots: []
+  },
+  // 5. Prayer Times & Calendar (Coming Soon)
+  {
+    id: 'calendar-adhan',
+    title: 'تقویم و اوقات شرعی',
+    category: 'اذان و رویدادها',
+    developer: 'تیم تفکر',
+    icon: CalendarIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'محاسبه دقیق اوقات شرعی شهرهای مختلف، تقویم هجری قمری و شمسی و یادآورهای زمان‌بندی‌شده رویدادها.',
+    capabilities: ['notifications', 'calendar_sync'],
+    screenshots: []
+  },
+  // 6. Voice Notes & Dictation (Coming Soon)
+  {
+    id: 'voice-notes',
+    title: 'یادداشت صوتی',
+    category: 'تبدیل گفتار به متن',
+    developer: 'تیم نرم‌افزاری تفکر',
+    icon: MicIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۰.۹.۵',
+    description: 'ضبط پیام صوتی و تبدیل بلادرنگ صوت به متن فارسی استاندارد جهت ارسال سریع در پیام‌ها و پیش‌نویس‌ها.',
+    capabilities: ['speech_to_text', 'audio_player'],
+    screenshots: []
+  },
+  // 7. Religious Financial Calculator (Coming Soon)
+  {
+    id: 'calculator-khums',
+    title: 'محاسبه‌گر وجوهات',
+    category: 'خمس، زکات و صدقه',
+    developer: 'واحد مالی و شرعی',
+    icon: CalculatorIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'ابزار دقیق و گام‌به‌گام برای محاسبه خمس سالانه، زکات فطره، رد مظالم و صدقات مستحبی با تطبیق فتاوای مراجع.',
+    capabilities: ['calculator', 'donations_link'],
+    screenshots: []
+  },
+  // 8. Hadith Library (Coming Soon)
+  {
+    id: 'hadith-library',
+    title: 'کتابخانه حدیثی',
+    category: 'اصول کافی و روایات',
+    developer: 'مرکز تحقیقات حدیثی',
+    icon: LibraryIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۰.۸.۵',
+    description: 'بانک جامع احادیث معتبر شیعه با دسته‌بندی موضوعی اخلاقی، اعتقادی و اجتماعی و سندشناسی روایات.',
+    capabilities: ['search_engine', 'slash_command'],
+    screenshots: []
+  },
+  // 9. Quote Card Designer (Coming Soon)
+  {
+    id: 'quote-designer',
+    title: 'کارت‌نگار و پوستر',
+    category: 'طراحی تصویر و اشتراک',
+    developer: 'تیم چندرسانه‌ای تفکر',
+    icon: PaletteIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'تولید فوری پوسترهای متنی چشم‌نواز از آیات و احادیث برای اشتراک‌گذاری در استوری‌ها و پیام‌رسان‌ها.',
+    capabilities: ['image_export', 'templates'],
+    screenshots: []
+  }
+])
+
+onMounted(async () => {
+  try {
+    await pluginRegistry.fetchMarketplacePlugins()
+    const quranBackend = pluginRegistry.marketplacePlugins.find(p => p.identifier === 'quran')
+    if (quranBackend && marketplaceApps.value[0]) {
+      marketplaceApps.value[0].isInstalled = quranBackend.is_installed ?? true
+    }
+  } catch (e) {
+    // Offline safe ignore
+  }
+})
+
+const handleAppClick = (app?: MarketplaceApp) => {
+  if (!app) return
+  selectedAppForModal.value = app
+  isDetailsModalOpen.value = true
+}
+
+const handleOpenApp = (app: MarketplaceApp) => {
+  isDetailsModalOpen.value = false
+  toastStore.triggerToast(
+    languageStore.t(`مینی‌اپ «${app.title}» به‌زودی در پلتفرم اصلی منتشر خواهد شد.`, `The \"${app.title}\" mini-app will be released soon in the platform.`),
+    'info'
+  )
+}
+
+const handleInstallApp = async (app: MarketplaceApp) => {
+  if (!userStore.isAuthenticated) {
+    isDetailsModalOpen.value = false
+    userStore.isLoginModalOpen = true
+    toastStore.triggerToast(
+      languageStore.t('برای نصب و مدیریت افزونه‌ها، لطفاً ابتدا وارد حساب کاربری خود شوید.', 'Please sign in first to install and manage plugins.'),
+      'warning'
+    )
+    return
+  }
+
+  isInstalling.value = true
+  try {
+    if (app.isInstalled) {
+      await pluginRegistry.uninstallPlugin(String(app.id))
+      app.isInstalled = false
+      toastStore.triggerToast(
+        languageStore.t(`افزونه «${app.title}» با موفقیت پاک شد.`, `Plugin \"${app.title}\" was removed.`),
+        'info'
+      )
+    } else {
+      // 3-second simulated installation delay requested by user
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      await pluginRegistry.installPlugin(String(app.id))
+      app.isInstalled = true
+      toastStore.triggerToast(
+        languageStore.t(`افزونه «${app.title}» با موفقیت نصب و فعال شد.`, `Plugin \"${app.title}\" installed and activated.`),
+        'success'
+      )
+    }
+  } catch (err) {
+    // Graceful offline fallback
+    app.isInstalled = !app.isInstalled
+    toastStore.triggerToast(
+      app.isInstalled 
+        ? languageStore.t(`افزونه «${app.title}» با موفقیت فعال شد.`, `Plugin \"${app.title}\" activated.`)
+        : languageStore.t(`افزونه «${app.title}» پاک شد.`, `Plugin \"${app.title}\" removed.`),
+      'success'
+    )
+  } finally {
+    isInstalling.value = false
+  }
+}
+</script>
+
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+  <div class="w-full flex flex-col font-sans select-none pb-24" :dir="languageStore.dir">
     
-    <!-- Hero Banner -->
-    <div class="p-8 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl text-white shadow-2xl space-y-3">
-      <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold">
-        <span>🧩</span>
-        <span>مرکز افزونه‌ها و مینی‌اپ‌ها (Tafakor Marketplace)</span>
-      </div>
-      <h1 class="text-3xl sm:text-4xl font-black">مارکت‌پلیس افزونه‌های تفکر</h1>
-      <p class="text-sm sm:text-base text-purple-100 max-w-2xl leading-relaxed">
-        امکانات پلتفرم تفکر را با افزونه‌های رسمی و کاربردی گسترش دهید؛ بدون تغییر در هسته و با حفظ کامل حریم خصوصی.
-      </p>
-    </div>
-
-    <!-- Plugins Section -->
-    <div class="space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold text-zinc-900 dark:text-zinc-100">افزونه‌های موجود</h2>
-        <span class="text-xs text-zinc-500">{{ plugins.length }} افزونه ثبت شده</span>
-      </div>
-
-      <div v-if="loading" class="text-center py-16 text-zinc-400 text-sm">
-        در حال دریافت اطلاعات افزونه‌ها...
-      </div>
-
-      <div v-else-if="plugins.length === 0" class="text-center py-16 text-zinc-400 text-sm">
-        در حال حاضر افزونه‌ای ثبت نشده است.
-      </div>
-
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div
-          v-for="p in plugins"
-          :key="p.identifier"
-          class="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl space-y-5 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between"
-        >
-          <div class="space-y-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl font-bold">
-                  {{ p.identifier === 'quran' ? '📖' : '🧩' }}
-                </div>
-                <div>
-                  <h3 class="font-bold text-zinc-900 dark:text-zinc-100 text-base flex items-center gap-2">
-                    {{ p.name }}
-                    <span v-if="p.is_core" class="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-semibold">
-                      رسمی
-                    </span>
-                  </h3>
-                  <p class="text-xs text-zinc-400">نسخه {{ p.version }} • توسعه‌دهنده: {{ p.author || 'تیم تفکر' }}</p>
-                </div>
-              </div>
-
-              <!-- Status badge -->
-              <span
-                :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-semibold',
-                  p.is_installed && p.is_enabled
-                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                    : p.is_installed
-                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
-                ]"
-              >
-                {{ p.is_installed && p.is_enabled ? 'فعال' : p.is_installed ? 'غیرفعال' : 'نصب نشده' }}
-              </span>
-            </div>
-
-            <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              {{ p.description }}
-            </p>
-
-            <!-- Capabilities pills -->
-            <div class="flex flex-wrap gap-1.5 pt-1">
-              <span
-                v-for="cap in p.capabilities"
-                :key="cap"
-                class="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg text-[11px]"
-              >
-                {{ getCapabilityLabel(cap) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="pt-4 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-3">
-            <div>
-              <router-link
-                v-if="p.identifier === 'quran'"
-                to="/apps/quran"
-                class="px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1"
-              >
-                <span>باز کردن مینی‌اپ</span>
-                <span>↗</span>
-              </router-link>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <template v-if="p.is_installed">
-                <button
-                  @click="togglePlugin(p.identifier)"
-                  class="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-xl text-xs font-semibold transition-colors"
-                >
-                  {{ p.is_enabled ? 'غیرفعال‌سازی' : 'فعال‌سازی' }}
-                </button>
-                <button
-                  @click="uninstallPlugin(p.identifier)"
-                  class="px-3.5 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl text-xs font-semibold transition-colors"
-                >
-                  حذف
-                </button>
-              </template>
-              <template v-else>
-                <button
-                  @click="installPlugin(p.identifier)"
-                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all"
-                >
-                  نصب و فعال‌سازی
-                </button>
-              </template>
-            </div>
-          </div>
-
-        </div>
+    <!-- 3-Column Grid of 3 Rows (9 Apps Total) with standard spacing -->
+    <div class="grid grid-cols-3 gap-3.5 sm:gap-6 w-full py-2">
+      <div 
+        v-for="app in marketplaceApps" 
+        :key="app.id"
+        class="w-full flex justify-center"
+      >
+        <MarketplaceAppIcon
+          :app="app"
+          size="responsive"
+          :show-category="true"
+          @click="handleAppClick"
+        />
       </div>
     </div>
+
+    <!-- Reusable Marketplace App Install / Details Modal -->
+    <MarketplaceAppModal
+      v-model:open="isDetailsModalOpen"
+      :app="selectedAppForModal"
+      :is-installed="selectedAppForModal?.isInstalled"
+      :is-installing="isInstalling"
+      @open-app="handleOpenApp"
+      @install="handleInstallApp"
+    />
 
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { usePluginRegistryStore } from '../plugins/core/pluginRegistry'
-
-const registry = usePluginRegistryStore()
-
-onMounted(async () => {
-  await registry.fetchMarketplacePlugins()
-})
-
-const loading = computed(() => registry.loading)
-const plugins = computed(() => registry.marketplacePlugins)
-
-const installPlugin = async (identifier: string) => {
-  await registry.installPlugin(identifier)
-}
-
-const uninstallPlugin = async (identifier: string) => {
-  await registry.uninstallPlugin(identifier)
-}
-
-const togglePlugin = async (identifier: string) => {
-  await registry.togglePlugin(identifier)
-}
-
-const getCapabilityLabel = (cap: string) => {
-  const map: Record<string, string> = {
-    composer_action: 'دکمه در ویرایشگر',
-    mini_app: 'مینی‌اپلیکیشن اختصاصی',
-    search_provider: 'موتور جستجو',
-    topic_action: 'عملیات تاپیک',
-  }
-  return map[cap] || cap
-}
-</script>

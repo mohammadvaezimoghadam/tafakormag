@@ -113,7 +113,7 @@ export function parseMarkdownToHtml(rawText: string): string {
 }
 
 /**
- * اعمال فرمت روی متن انتخاب‌شده یا درج نشانه‌گذاری در محل نشانگر
+ * اعمال فرمت روی متن انتخاب‌شده یا درج نشانه‌گذاری در محل نشانگر با قابلیت هوشمند Toggle-Off
  */
 export function wrapSelection(
   fullText: string,
@@ -126,26 +126,40 @@ export function wrapSelection(
   const after = fullText.substring(end)
 
   if (format === 'quote') {
-    // اگر نقل‌قول باشد
     if (selected.length > 0) {
-      // اضافه کردن > به ابتدای هر خط انتخاب شده
-      const formattedSelected = selected
-        .split('\n')
-        .map(line => line.startsWith('> ') ? line : `> ${line}`)
-        .join('\n')
+      const lines = selected.split('\n')
+      const allQuoted = lines.every(l => l.trim() === '' || l.startsWith('> ') || l.startsWith('>'))
+      
+      if (allQuoted) {
+        // Toggle-off (Unwrap quote): Remove leading > or > 
+        const unquotedSelected = lines
+          .map(line => line.replace(/^>\s?/, ''))
+          .join('\n')
+        const newText = `${before}${unquotedSelected}${after}`
+        return {
+          newText,
+          newCursorStart: start,
+          newCursorEnd: start + unquotedSelected.length
+        }
+      } else {
+        // Wrap with quote
+        const formattedSelected = lines
+          .map(line => line.startsWith('> ') ? line : `> ${line}`)
+          .join('\n')
 
-      const needsLeadingNewline = before.length > 0 && !before.endsWith('\n')
-      const prefix = needsLeadingNewline ? '\n' : ''
-      const newText = `${before}${prefix}${formattedSelected}${after}`
-      const addedLen = prefix.length
+        const needsLeadingNewline = before.length > 0 && !before.endsWith('\n')
+        const prefix = needsLeadingNewline ? '\n' : ''
+        const newText = `${before}${prefix}${formattedSelected}${after}`
+        const addedLen = prefix.length
 
-      return {
-        newText,
-        newCursorStart: start + addedLen,
-        newCursorEnd: start + addedLen + formattedSelected.length
+        return {
+          newText,
+          newCursorStart: start + addedLen,
+          newCursorEnd: start + addedLen + formattedSelected.length
+        }
       }
     } else {
-      // بدون سلکشن: ایجاد خط نقل‌قول در موقعیت نشانگر
+      // Without selection: Insert quote line at cursor
       const needsLeadingNewline = before.length > 0 && !before.endsWith('\n')
       const insert = needsLeadingNewline ? '\n> ' : '> '
       const newText = `${before}${insert}${after}`
@@ -176,8 +190,18 @@ export function wrapSelection(
       break
   }
 
-  // اگر متنی انتخاب نشده باشد (start === end)، تگ‌ها درج شده و نشانگر بین آنها قرار می‌گیرد
+  // 1. If no text is selected (cursor only)
   if (start === end) {
+    // Check if cursor is right between matching empty tags e.g. **|**
+    if (before.endsWith(tag) && after.startsWith(tag)) {
+      // Remove the empty tags
+      const newText = `${before.slice(0, -tag.length)}${after.slice(tag.length)}`
+      return {
+        newText,
+        newCursorStart: start - tag.length,
+        newCursorEnd: start - tag.length
+      }
+    }
     const newText = `${before}${tag}${tag}${after}`
     return {
       newText,
@@ -186,7 +210,48 @@ export function wrapSelection(
     }
   }
 
-  // اگر متن انتخاب شده باشد، دور آن احاطه می‌شود
+  // Handle selected text with potential leading/trailing whitespace
+  const trimmedSelected = selected.trim()
+  
+  // 2. Check if selected text (or trimmed selection) already starts and ends with the exact tag (Enclosed Selection)
+  // e.g. Selected is "**سلام**" or " **سلام** "
+  if (
+    trimmedSelected.length >= tag.length * 2 &&
+    trimmedSelected.startsWith(tag) &&
+    trimmedSelected.endsWith(tag) &&
+    !(format === 'italic' && trimmedSelected.startsWith('**') && trimmedSelected.endsWith('**'))
+  ) {
+    const leadSpaces = selected.slice(0, selected.indexOf(trimmedSelected))
+    const trailSpaces = selected.slice(selected.indexOf(trimmedSelected) + trimmedSelected.length)
+    const unwrappedCore = trimmedSelected.slice(tag.length, -tag.length)
+    const unwrapped = `${leadSpaces}${unwrappedCore}${trailSpaces}`
+    const newText = `${before}${unwrapped}${after}`
+    return {
+      newText,
+      newCursorStart: start + leadSpaces.length,
+      newCursorEnd: start + leadSpaces.length + unwrappedCore.length
+    }
+  }
+
+  // 3. Check if selection is immediately wrapped by the tag in fullText (External Wrapper)
+  // e.g. fullText is "**سلام**" and user selected "سلام" (before ends with "**" and after starts with "**")
+  if (
+    before.endsWith(tag) &&
+    after.startsWith(tag) &&
+    !(format === 'italic' && before.endsWith('**') && after.startsWith('**'))
+  ) {
+    // Unwrap external tags
+    const newBefore = before.slice(0, -tag.length)
+    const newAfter = after.slice(tag.length)
+    const newText = `${newBefore}${selected}${newAfter}`
+    return {
+      newText,
+      newCursorStart: start - tag.length,
+      newCursorEnd: end - tag.length
+    }
+  }
+
+  // 4. Default: Wrap selection with format tags
   const newText = `${before}${tag}${selected}${tag}${after}`
   return {
     newText,

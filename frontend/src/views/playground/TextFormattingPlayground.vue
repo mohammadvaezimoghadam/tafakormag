@@ -358,6 +358,7 @@ const handleMockSend = (payload: { text: string }) => {
                 :show="showEditorFormatMenu"
                 :coords="editorMenuCoords"
                 :selected-text="editorSelectedText"
+                :has-text="Boolean(currentText.trim())"
                 @format="applyEditorFormat"
                 @action="handleEditorAction"
               />

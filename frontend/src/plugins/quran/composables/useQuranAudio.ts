@@ -140,6 +140,69 @@ function notifyAyahChange(surahNumber: number, ayahNumber: number) {
   })
 }
 
+async function playAyah(
+  surah: QuranSurah,
+  ayahNum: number,
+  ayahData?: QuranAyah
+) {
+  const audio = getAudioElement()
+  error.value = null
+  currentSurah.value = surah
+  currentAyahNumber.value = ayahNum
+  currentAyah.value = ayahData || null
+
+  const globalNum = ayahData?.number || ayahData?.id
+  currentGlobalNumber.value = globalNum || null
+
+  const audioUrl = ayahData?.audio_url || resolveAyahAudioUrl(surah.number, ayahNum, globalNum)
+
+  try {
+    isLoading.value = true
+    audio.src = audioUrl
+    audio.playbackRate = playbackRate.value
+    audio.volume = isMuted.value ? 0 : volume.value
+
+    await audio.play()
+    isPlaying.value = true
+    notifyAyahChange(surah.number, ayahNum)
+  } catch (err: any) {
+    console.warn('[QuranAudio] Playback failed or autoplay prevented:', err)
+    isPlaying.value = false
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function nextAyah() {
+  if (!currentSurah.value || currentAyahNumber.value === null) return
+  const nextNum = currentAyahNumber.value + 1
+  if (nextNum <= currentSurah.value.ayah_count) {
+    playAyah(currentSurah.value, nextNum)
+  }
+}
+
+function prevAyah() {
+  const audio = getAudioElement()
+  if (!currentSurah.value || currentAyahNumber.value === null) return
+  if (currentTime.value > 3) {
+    audio.currentTime = 0
+    return
+  }
+  const prevNum = currentAyahNumber.value - 1
+  if (prevNum >= 1) {
+    playAyah(currentSurah.value, prevNum)
+  }
+}
+
+function togglePlayPause() {
+  const audio = getAudioElement()
+  if (isPlaying.value) {
+    audio.pause()
+  } else {
+    audio.play().catch(console.warn)
+  }
+}
+
 function handleTrackEnded() {
   if (repeatMode.value === 'ayah') {
     const audio = getAudioElement()
@@ -172,66 +235,6 @@ export function useQuranAudio() {
     if (!duration.value || duration.value === 0) return 0
     return Math.min(100, Math.max(0, (currentTime.value / duration.value) * 100))
   })
-
-  const playAyah = async (
-    surah: QuranSurah,
-    ayahNum: number,
-    ayahData?: QuranAyah
-  ) => {
-    error.value = null
-    currentSurah.value = surah
-    currentAyahNumber.value = ayahNum
-    currentAyah.value = ayahData || null
-
-    const globalNum = ayahData?.number || ayahData?.id
-    currentGlobalNumber.value = globalNum || null
-
-    const audioUrl = ayahData?.audio_url || resolveAyahAudioUrl(surah.number, ayahNum, globalNum)
-
-    try {
-      isLoading.value = true
-      audio.src = audioUrl
-      audio.playbackRate = playbackRate.value
-      audio.volume = isMuted.value ? 0 : volume.value
-
-      await audio.play()
-      isPlaying.value = true
-      notifyAyahChange(surah.number, ayahNum)
-    } catch (err: any) {
-      console.warn('[QuranAudio] Playback failed or autoplay prevented:', err)
-      isPlaying.value = false
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const togglePlayPause = () => {
-    if (isPlaying.value) {
-      audio.pause()
-    } else {
-      audio.play().catch(console.warn)
-    }
-  }
-
-  const nextAyah = () => {
-    if (!currentSurah.value || currentAyahNumber.value === null) return
-    const nextNum = currentAyahNumber.value + 1
-    if (nextNum <= currentSurah.value.ayah_count) {
-      playAyah(currentSurah.value, nextNum)
-    }
-  }
-
-  const prevAyah = () => {
-    if (!currentSurah.value || currentAyahNumber.value === null) return
-    if (currentTime.value > 3) {
-      audio.currentTime = 0
-      return
-    }
-    const prevNum = currentAyahNumber.value - 1
-    if (prevNum >= 1) {
-      playAyah(currentSurah.value, prevNum)
-    }
-  }
 
   const seek = (progressPercent: number) => {
     if (!duration.value) return

@@ -34,7 +34,7 @@
             سوره {{ audio.currentSurah.value.name }} • آیه {{ audio.currentAyahNumber.value }}
           </h4>
           <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-            {{ audio.currentReciter.value.nameFa }}
+            {{ audio.currentReciter.value?.nameFa }}
           </p>
         </div>
       </div>

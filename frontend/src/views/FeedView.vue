@@ -26,6 +26,7 @@ import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue
 import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
 import type { CreateDonationPayload } from '@/types/kindness'
+import MarketplaceView from './MarketplaceView.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -1006,7 +1007,7 @@ const toggleTheme = useToggle(isDark)
     
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
     <div 
-      v-if="currentTab === 'profile' || currentTab === 'donate' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      v-if="currentTab === 'profile' || currentTab === 'donate' || currentTab === 'marketplace' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
       class="sticky top-0 z-40 bg-background/60 dark:bg-background/50 backdrop-blur-md pt-4 pb-2.5"
     >
       <PlatformHeader 
@@ -1277,22 +1278,7 @@ const toggleTheme = useToggle(isDark)
 
         <!-- TAB 3: MARKETPLACE -->
         <div v-else-if="currentTab === 'marketplace'" key="marketplace" class="w-full flex flex-col gap-4">
-          <UnderDevelopmentCard
-            :title="languageStore.t('بازارچه نصب افزونه تفکر', 'Tafakor Plugin Marketplace')"
-            :description="languageStore.t('افزونه های دلخواه را نصب کنید و در تاپیک خود اضافه کنید', 'Install custom plugins and add them to your topics')"
-            :icon="LayersIcon"
-            :eta="languageStore.t('نسخه 6 شهریور ماه 405', 'Version 6 - Shahrivar 1405')"
-            :features="[
-              languageStore.t('افزونه قرآن کریم', 'Holy Quran Plugin'),
-              languageStore.t('بهرمندی از آیه ها', 'Access to Verses'),
-              languageStore.t('بهرمندی از سوره ها', 'Access to Surahs'),
-              languageStore.t('بهرمندی از صوت قرآن کریم', 'Holy Quran Recitation Audio')
-            ]"
-            :action-text="languageStore.t('صفحه خانه', 'Home Page')"
-            @action="currentTab = 'home'"
-            :show-back-button="true"
-            @back="currentTab = 'home'"
-          />
+          <MarketplaceView />
         </div>
 
         <!-- TAB 3: PROFILE -->

@@ -65,9 +65,9 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
       ]"
       :title="languageStore.t('بازارچه', 'Marketplace')"
     >
-      <!-- Floating 'Soon' Badge on Top -->
-      <span class="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] px-1.5 py-0.2 bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold rounded-full shadow-2xs backdrop-blur-xs whitespace-nowrap pointer-events-none leading-tight">
-        {{ languageStore.t('به‌زودی', 'Soon') }}
+      <!-- Floating 'New' Badge on Top (Green) -->
+      <span class="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] px-1.5 py-0.2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold rounded-full shadow-2xs backdrop-blur-xs whitespace-nowrap pointer-events-none leading-tight">
+        {{ languageStore.t('جدید', 'New') }}
       </span>
 
       <LayersIcon class="size-3.5 shrink-0" />

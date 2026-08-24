@@ -34,27 +34,12 @@ const router = createRouter({
     {
       path: '/marketplace',
       name: 'marketplace',
-      component: () => import('@/views/MarketplaceView.vue')
+      component: () => import('@/views/FeedView.vue')
     },
     {
       path: '/plugins',
       name: 'plugins',
-      component: () => import('@/views/MarketplaceView.vue')
-    },
-    {
-      path: '/playground/donation-card',
-      name: 'donation-card-playground',
-      component: () => import('@/views/playground/DonationCardPlayground.vue')
-    },
-    {
-      path: '/playground/create-donation',
-      name: 'create-donation-playground',
-      component: () => import('@/views/playground/CreateDonationPlayground.vue')
-    },
-    {
-      path: '/playground/quran-plugins',
-      name: 'quran-plugins-playground',
-      component: () => import('@/views/playground/PluginsAndQuranPlayground.vue')
+      component: () => import('@/views/FeedView.vue')
     },
     {
       path: '/:pathMatch(.*)*',

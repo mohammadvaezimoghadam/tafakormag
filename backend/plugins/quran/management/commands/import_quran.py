@@ -437,7 +437,13 @@ class Command(BaseCommand):
                         )
             self.stdout.write(self.style.SUCCESS(f"Registered {len(ed_list)} default Quran editions."))
 
-        # Load sample dataset into database
-        sample_file = data_dir / 'sample_quran.json'
-        if sample_file.exists():
-            self.import_from_file(sample_file, force=force, dry_run=dry_run, batch_size=batch_size)
+        # If full directory exists, import all full edition datasets (all 114 Surahs and 6,236 Ayahs)
+        full_dir = data_dir / 'full'
+        if full_dir.exists() and full_dir.is_dir():
+            self.stdout.write(self.style.NOTICE(f"Importing full Quran datasets from {full_dir}..."))
+            self.import_from_directory(full_dir, force=force, dry_run=dry_run, batch_size=batch_size)
+        else:
+            # Fallback to sample dataset
+            sample_file = data_dir / 'sample_quran.json'
+            if sample_file.exists():
+                self.import_from_file(sample_file, force=force, dry_run=dry_run, batch_size=batch_size)

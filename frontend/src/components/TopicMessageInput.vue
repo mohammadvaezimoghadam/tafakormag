@@ -35,6 +35,9 @@ import {
 } from '@/components/ui/dialog'
 import AIRefinerDrawer from './AIRefinerDrawer.vue'
 import FloatingFormatMenu, { type MenuCoords, type ActionType } from '@/components/common/FloatingFormatMenu.vue'
+import PluginSlashCommandModal, { type SlashModalStep } from './PluginSlashCommandModal.vue'
+import { quranApi } from '@/plugins/quran/api'
+import type { QuranSurah, QuranAyah } from '@/plugins/quran/types'
 import { wrapSelection, type FormatType } from '@/utils/textFormatter'
 import { getSelectionPixelRect } from '@/utils/caretPosition'
 import { usePluginRegistryStore } from '@/plugins/core/pluginRegistry'
@@ -231,13 +234,43 @@ onUnmounted(() => {
 })
 
 // Actions
-const handleSend = () => {
+const resolveTokens = async (rawText: string): Promise<string> => {
+  const quranRegex = /\/quran-sureh:([a-zA-Z0-9_\-]+)-ayeh:([0-9]+)/g
+  let resolved = rawText
+  const matches = Array.from(rawText.matchAll(quranRegex))
+  for (const m of matches) {
+    const fullToken = m[0]
+    const cached = quranTokenCache.get(fullToken)
+    if (cached) {
+      resolved = resolved.replace(fullToken, cached)
+    } else {
+      const ayahNum = Number(m[2])
+      try {
+        const formatted = await quranApi.formatReference({
+          surah_number: 1,
+          ayah_number: ayahNum,
+          edition_id: 'quran-simple',
+          translation_id: 'fa.ansarian',
+          include_citation: true,
+        })
+        resolved = resolved.replace(fullToken, formatted.markdown)
+      } catch {
+        resolved = resolved.replace(fullToken, `> — قرآن کریم (آیه ${ayahNum})`)
+      }
+    }
+  }
+  return resolved
+}
+
+const handleSend = async () => {
   if (props.disabled) return
   if (!hasContent.value) return
 
+  const resolvedText = await resolveTokens(text.value.trim())
+
   if (props.isEditMode) {
     emit('save', {
-      text: text.value.trim()
+      text: resolvedText
     })
     return
   }
@@ -246,7 +279,7 @@ const handleSend = () => {
   const completedAttachments = attachments.value.filter(a => a.status !== 'uploading')
 
   emit('send', {
-    text: text.value.trim(),
+    text: resolvedText,
     attachments: completedAttachments
   })
 
@@ -273,6 +306,74 @@ const expandedMenuCoords = ref<MenuCoords | null>(null)
 const selectedText = ref('')
 const expandedSelectedText = ref('')
 
+// Hold & Long-Press Touch State
+let touchHoldTimer: any = null
+let touchStartX = 0
+let touchStartY = 0
+let touchHasMoved = false
+let isTouchHolding = false
+
+const calculateMenuCoordinates = (
+  el: HTMLTextAreaElement,
+  start: number,
+  end: number,
+  isExpanded: boolean,
+  fallbackTouchPoint?: { clientX: number; clientY: number }
+): MenuCoords => {
+  const isContext = (start >= end)
+  const menuWidth = isContext ? 190 : 330
+  const menuHeight = 40
+  const verticalGap = 8
+
+  let centerX = 0
+  let candidateTop = 0
+  let placement: 'top' | 'bottom' = 'top'
+
+  const elRect = el.getBoundingClientRect()
+
+  if (fallbackTouchPoint) {
+    centerX = fallbackTouchPoint.clientX - elRect.left
+    const touchTopInEl = fallbackTouchPoint.clientY - elRect.top
+    candidateTop = touchTopInEl - menuHeight - verticalGap
+    if (candidateTop < 6 && !isExpanded) {
+      candidateTop = -menuHeight - 8
+      placement = 'top'
+    } else if (candidateTop < 6 && isExpanded) {
+      candidateTop = touchTopInEl + 24
+      placement = 'bottom'
+    }
+  } else {
+    const rect = getSelectionPixelRect(el, start, end)
+    centerX = rect.left + (rect.width / 2)
+    candidateTop = rect.top - menuHeight - verticalGap
+    if (!isExpanded) {
+      candidateTop = Math.min(candidateTop, -menuHeight - 6)
+      placement = 'top'
+    } else {
+      const topInContainer = rect.top + 24
+      const candidateAbove = topInContainer - menuHeight - verticalGap
+      if (candidateAbove >= 8) {
+        candidateTop = candidateAbove
+        placement = 'top'
+      } else {
+        candidateTop = rect.bottom + 24 + verticalGap
+        placement = 'bottom'
+      }
+    }
+  }
+
+  const containerWidth = el.clientWidth || 300
+  const minX = (menuWidth / 2) + 8
+  const maxX = Math.max(minX, containerWidth - (menuWidth / 2) - 8)
+  const clampedX = Math.min(Math.max(centerX, minX), maxX)
+
+  return {
+    top: candidateTop,
+    left: isExpanded ? clampedX + 24 : clampedX,
+    placement
+  }
+}
+
 const handleTextareaSelect = (isExpanded = false) => {
   const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
   if (!el) return
@@ -280,75 +381,42 @@ const handleTextareaSelect = (isExpanded = false) => {
   const start = el.selectionStart ?? 0
   const end = el.selectionEnd ?? 0
 
-  // اگر هیچ متنی انتخاب نشده باشد
   if (start >= end) {
     if (isExpanded) {
-      showExpandedFormatMenu.value = false
-      expandedSelectedText.value = ''
-      expandedMenuCoords.value = null
+      if (!isTouchHolding) {
+        showExpandedFormatMenu.value = false
+        expandedSelectedText.value = ''
+        expandedMenuCoords.value = null
+      }
     } else {
-      showFormatMenu.value = false
-      selectedText.value = ''
-      menuCoords.value = null
+      if (!isTouchHolding) {
+        showFormatMenu.value = false
+        selectedText.value = ''
+        menuCoords.value = null
+      }
     }
     return
   }
 
   const rawSelection = el.value.substring(start, end)
-
-  // ۱. بررسی محتوای انتخاب‌شده: اگر خالی، فقط فاصله یا خط‌خالی باشد، منو باز نشود
   if (!rawSelection || rawSelection.trim().length === 0) {
     if (isExpanded) {
-      showExpandedFormatMenu.value = false
-      expandedSelectedText.value = ''
-      expandedMenuCoords.value = null
+      if (!isTouchHolding) {
+        showExpandedFormatMenu.value = false
+        expandedSelectedText.value = ''
+        expandedMenuCoords.value = null
+      }
     } else {
-      showFormatMenu.value = false
-      selectedText.value = ''
-      menuCoords.value = null
+      if (!isTouchHolding) {
+        showFormatMenu.value = false
+        selectedText.value = ''
+        menuCoords.value = null
+      }
     }
     return
   }
 
-  // ۲. محاسبه مختصات دقیق پیکسل بر روی textarea
-  const rect = getSelectionPixelRect(el, start, end)
-  const menuWidth = 330
-  const menuHeight = 40
-  const verticalGap = 10 // فاصله ایمن بین نوار ابزار و متن
-
-  // موقعیت افقی (مرکز متن انتخاب‌شده با جلوگیری از بیرون‌زدگی)
-  const centerX = rect.left + (rect.width / 2)
-  const minX = (menuWidth / 2) + 12
-  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
-  const clampedX = Math.min(Math.max(centerX, minX), maxX)
-
-  let top = 0
-  let placement: 'top' | 'bottom' = 'top'
-
-  if (!isExpanded) {
-    // برای کادر اصلی پیام: منو در فضای باز بالای فیلد ورودی قرار می‌گیرد تا هرگز روی متن نباشد
-    top = Math.min(rect.top - menuHeight - verticalGap, -menuHeight - 6)
-    placement = 'top'
-  } else {
-    // برای مودال بزرگنمایی:
-    const selectionTopInContainer = rect.top + 24 // ۲۴ پیکسل پدینگ کانتینر
-    const selectionBottomInContainer = rect.bottom + 24
-
-    const candidateTopAbove = selectionTopInContainer - menuHeight - verticalGap
-    if (candidateTopAbove >= 8) {
-      top = candidateTopAbove
-      placement = 'top'
-    } else {
-      top = selectionBottomInContainer + verticalGap
-      placement = 'bottom'
-    }
-  }
-
-  const coords: MenuCoords = {
-    top,
-    left: isExpanded ? clampedX + 24 : clampedX,
-    placement
-  }
+  const coords = calculateMenuCoordinates(el, start, end, isExpanded)
 
   if (isExpanded) {
     expandedSelectedText.value = rawSelection
@@ -361,16 +429,117 @@ const handleTextareaSelect = (isExpanded = false) => {
   }
 }
 
-const handleTouchend = (isExpanded = false) => {
+const handleTouchStart = (e: TouchEvent, isExpanded = false) => {
+  if (props.disabled) return
+  if (!e.touches || e.touches.length === 0) return
+
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  touchHasMoved = false
+  isTouchHolding = false
+
+  if (touchHoldTimer) clearTimeout(touchHoldTimer)
+  touchHoldTimer = setTimeout(() => {
+    if (!touchHasMoved) {
+      isTouchHolding = true
+      handleLongPressHold(touch, isExpanded)
+    }
+  }, 450)
+}
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (!e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+  const dx = Math.abs(touch.clientX - touchStartX)
+  const dy = Math.abs(touch.clientY - touchStartY)
+  if (dx > 10 || dy > 10) {
+    touchHasMoved = true
+    if (touchHoldTimer) {
+      clearTimeout(touchHoldTimer)
+      touchHoldTimer = null
+    }
+  }
+}
+
+const handleTouchEnd = (_e: TouchEvent, isExpanded = false) => {
+  if (touchHoldTimer) {
+    clearTimeout(touchHoldTimer)
+    touchHoldTimer = null
+  }
+  if (isTouchHolding) {
+    setTimeout(() => {
+      isTouchHolding = false
+    }, 300)
+    return
+  }
   handleTextareaSelect(isExpanded)
-  setTimeout(() => handleTextareaSelect(isExpanded), 50)
-  setTimeout(() => handleTextareaSelect(isExpanded), 120)
+  setTimeout(() => handleTextareaSelect(isExpanded), 60)
+  setTimeout(() => handleTextareaSelect(isExpanded), 160)
+}
+
+const handleLongPressHold = (touch: Touch, isExpanded = false) => {
+  const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+  if (!el) return
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const sel = (start < end) ? el.value.substring(start, end) : ''
+
+  const coords = calculateMenuCoordinates(el, start, end, isExpanded, {
+    clientX: touch.clientX,
+    clientY: touch.clientY
+  })
+
+  if (isExpanded) {
+    expandedSelectedText.value = sel
+    expandedMenuCoords.value = coords
+    showExpandedFormatMenu.value = true
+  } else {
+    selectedText.value = sel
+    menuCoords.value = coords
+    showFormatMenu.value = true
+  }
+}
+
+const handleContextMenu = (e: MouseEvent, isExpanded = false) => {
+  if (isMobile()) {
+    e.preventDefault()
+    const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+    if (el) {
+      const start = el.selectionStart ?? 0
+      const end = el.selectionEnd ?? 0
+      const sel = (start < end) ? el.value.substring(start, end) : ''
+      const coords = calculateMenuCoordinates(el, start, end, isExpanded, {
+        clientX: e.clientX,
+        clientY: e.clientY
+      })
+      if (isExpanded) {
+        expandedSelectedText.value = sel
+        expandedMenuCoords.value = coords
+        showExpandedFormatMenu.value = true
+      } else {
+        selectedText.value = sel
+        menuCoords.value = coords
+        showFormatMenu.value = true
+      }
+    }
+  }
+}
+
+const handleTextareaFocus = (isExpanded = false) => {
+  handleTextareaSelect(isExpanded)
 }
 
 const handleTextareaBlur = (isExpanded = false) => {
   setTimeout(() => {
     const active = document.activeElement
     if (active && (active as HTMLElement).closest && (active as HTMLElement).closest('.floating-format-menu')) {
+      return
+    }
+    if (isTouchHolding) {
       return
     }
     if (isExpanded) {
@@ -561,14 +730,14 @@ const handleRemoveAttachment = (id: string | number) => {
 
 // Dynamic classes based on attachment status
 const containerClasses = computed(() => {
-  if (hasAttachments.value || (isLongText.value && !isRecording.value) || props.isEditMode) {
+  if (hasAttachments.value || (isLongText.value && !isRecording.value) || props.isEditMode || isSlashModalOpen.value) {
     return 'w-full flex flex-col relative bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 rounded-3xl p-1.5 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-white focus-within:dark:bg-muted/25'
   }
   return 'w-full flex flex-col relative transition-all duration-300'
 })
 
 const textareaClasses = computed(() => {
-  if (hasAttachments.value || (isLongText.value && !isRecording.value)) {
+  if (hasAttachments.value || (isLongText.value && !isRecording.value) || isSlashModalOpen.value) {
     return 'w-full bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-1.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
   }
   return 'w-full bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
@@ -588,9 +757,99 @@ const pluginRegistry = usePluginRegistryStore()
 const pluginComposerActions = computed(() => pluginRegistry.composerActions)
 const activePluginDialog = ref<ComposerAction | null>(null)
 
+// Slash Command and Plugin Drawer State
+const isSlashModalOpen = ref(false)
+const slashModalStep = ref<SlashModalStep>('plugins')
+const quranTokenCache = new Map<string, string>()
+
+// Watch text changes to trigger slash modal when user types '/'
+watch(text, (newVal) => {
+  if (props.disabled) return
+  if (newVal && (newVal.endsWith('/') || newVal.endsWith(' /') || newVal.endsWith('\n/'))) {
+    if (!isSlashModalOpen.value) {
+      isSlashModalOpen.value = true
+      slashModalStep.value = 'plugins'
+    }
+  }
+})
+
+const handleSlashSelectPlugin = (pluginIdentifier: string, token: string) => {
+  if (text.value.endsWith('/')) {
+    text.value = text.value.slice(0, -1) + token
+  } else {
+    text.value = (text.value ? text.value + ' ' : '') + token
+  }
+  adjustHeight()
+}
+
+const handleSlashSelectSurah = (surah: QuranSurah, token: string) => {
+  if (text.value.includes('/quran')) {
+    text.value = text.value.replace(/\/quran(?:-sureh:[a-zA-Z0-9_\-]+)?\s*$/, token)
+  } else {
+    text.value = (text.value ? text.value + ' ' : '') + token
+  }
+  adjustHeight()
+}
+
+const handleSlashConfirm = (payload: {
+  token: string
+  surah: QuranSurah
+  ayahNumber: number
+  ayah: QuranAyah
+  markdown: string
+}) => {
+  quranTokenCache.set(payload.token, payload.markdown)
+
+  const regex = /\/quran(?:-sureh:[a-zA-Z0-9_\-]+(?:-ayeh:[0-9]+)?)?\s*$/
+  if (regex.test(text.value)) {
+    text.value = text.value.replace(regex, payload.token + ' ')
+  } else {
+    text.value = (text.value ? text.value + ' ' : '') + payload.token + ' '
+  }
+
+  isSlashModalOpen.value = false
+  nextTick(() => {
+    const el = textareaRef.value || expandedTextareaRef.value
+    if (el) {
+      el.focus()
+      const len = text.value.length
+      el.setSelectionRange(len, len)
+    }
+    adjustHeight()
+  })
+}
+
+const detectedQuranTokens = computed(() => {
+  const quranRegex = /\/quran-sureh:([a-zA-Z0-9_\-]+)-ayeh:([0-9]+)/g
+  const list: { raw: string; surah: string; ayah: string }[] = []
+  const matches = Array.from(text.value.matchAll(quranRegex))
+  for (const m of matches) {
+    list.push({
+      raw: m[0],
+      surah: m[1] || '',
+      ayah: m[2] || ''
+    })
+  }
+  return list
+})
+
+const removeQuranToken = (rawToken: string) => {
+  text.value = text.value.replace(rawToken, '').replace(/\s{2,}/g, ' ').trim()
+  quranTokenCache.delete(rawToken)
+  adjustHeight()
+}
+
+const openSlashModalForQuran = () => {
+  isSlashModalOpen.value = true
+  slashModalStep.value = 'surah'
+}
+
 const handlePluginActionClick = (action: ComposerAction) => {
   isActionSheetOpen.value = false
-  if (action.dialogComponent) {
+  if (action.id === 'quran-insert-ayah' || action.id === 'quran') {
+    isSlashModalOpen.value = true
+    slashModalStep.value = 'surah'
+  } else if (action.dialogComponent) {
     activePluginDialog.value = action
   } else if (action.execute) {
     action.execute({
@@ -707,6 +966,23 @@ const handlePluginInsert = (insertedMarkdown: string) => {
       </div>
     </transition>
 
+    <!-- Plugin Slash Command Inline Drawer (Inside the container above input row) -->
+    <transition name="attachments-slide">
+      <div 
+        v-if="isSlashModalOpen"
+        class="w-full z-20 text-start pb-2 px-1"
+      >
+        <PluginSlashCommandModal
+          :is-open="isSlashModalOpen"
+          :initial-step="slashModalStep"
+          @close="isSlashModalOpen = false"
+          @select-plugin="handleSlashSelectPlugin"
+          @select-surah="handleSlashSelectSurah"
+          @confirm="handleSlashConfirm"
+        />
+      </div>
+    </transition>
+
     <!-- Main Message Input Row -->
     <div 
       class="w-full flex items-end gap-1.5 relative" 
@@ -777,7 +1053,36 @@ const handlePluginInsert = (insertedMarkdown: string) => {
       </transition>
 
       <!-- Center Element: Text Input / Recording Info Display -->
-      <div class="flex-1 min-w-0">
+      <div class="flex-1 min-w-0 relative">
+        <!-- Quran Token Visual Badges / Chips -->
+        <div
+          v-if="detectedQuranTokens.length > 0 && !isRecording"
+          class="w-full flex flex-wrap gap-1.5 px-2 pb-1.5 z-10"
+        >
+          <div
+            v-for="tok in detectedQuranTokens"
+            :key="tok.raw"
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary rounded-xl text-[11px] font-medium animate-in fade-in"
+          >
+            <span class="font-mono text-[10px]">{{ tok.raw }}</span>
+            <button
+              type="button"
+              @click="openSlashModalForQuran"
+              class="hover:underline text-[10px] text-primary cursor-pointer font-medium"
+            >
+              {{ languageStore.t('ویرایش', 'Edit') }}
+            </button>
+            <button
+              type="button"
+              @click="removeQuranToken(tok.raw)"
+              class="size-3.5 rounded-full hover:bg-primary/20 flex items-center justify-center text-[10px] text-primary transition-colors cursor-pointer"
+              title="حذف"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
         <transition name="fade" mode="out-in">
           <!-- Voice Recording Display -->
           <div 
@@ -806,8 +1111,11 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
-            @touchend="handleTouchend(false)"
-            @contextmenu.prevent.stop
+            @touchstart="handleTouchStart($event, false)"
+            @touchmove="handleTouchMove($event)"
+            @touchend="handleTouchEnd($event, false)"
+            @focus="handleTextareaFocus(false)"
+            @contextmenu="handleContextMenu($event, false)"
             @blur="handleTextareaBlur(false)"
             @keydown="(e) => handleKeydown(e, false)"
           />
@@ -818,6 +1126,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           :show="showFormatMenu"
           :coords="menuCoords"
           :selected-text="selectedText"
+          :has-text="Boolean(text.trim())"
           @format="(f) => applyFormat(f, false)"
           @action="(act) => handleMenuAction(act, false)"
         />
@@ -968,6 +1277,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             :show="showExpandedFormatMenu"
             :coords="expandedMenuCoords"
             :selected-text="expandedSelectedText"
+            :has-text="Boolean(text.trim())"
             @format="(f) => applyFormat(f, true)"
             @action="(act) => handleMenuAction(act, true)"
           />
@@ -981,8 +1291,11 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
-            @touchend="handleTouchend(true)"
-            @contextmenu.prevent.stop
+            @touchstart="handleTouchStart($event, true)"
+            @touchmove="handleTouchMove($event)"
+            @touchend="handleTouchEnd($event, true)"
+            @focus="handleTextareaFocus(true)"
+            @contextmenu="handleContextMenu($event, true)"
             @blur="handleTextareaBlur(true)"
             @keydown="(e) => handleKeydown(e, true)"
           />
@@ -1165,11 +1478,11 @@ const handlePluginInsert = (insertedMarkdown: string) => {
 </template>
 
 <style scoped>
-/* Trans-slide for attachments strip */
+/* Trans-slide for attachments strip and inline drawers */
 .attachments-slide-enter-active,
 .attachments-slide-leave-active {
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 120px;
+  max-height: 420px;
   opacity: 1;
   overflow-y: hidden;
 }

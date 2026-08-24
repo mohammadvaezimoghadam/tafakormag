@@ -25,6 +25,7 @@ import {
   ExternalLinkIcon
 } from '@lucide/vue'
 import MarketplaceAppIcon from '@/components/marketplace/MarketplaceAppIcon.vue'
+import MarketplaceAppModal from '@/components/marketplace/MarketplaceAppModal.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -179,10 +180,34 @@ const marketplaceMockApps = ref<MarketplaceApp[]>([
 // Details Dialog simulation for clicked app
 const isDetailsDialogOpen = ref(false)
 const selectedAppForDetails = ref<MarketplaceApp | null>(null)
+const isInstallingModalApp = ref(false)
+
+const openCustomModalTest = () => {
+  const customApp: MarketplaceApp = {
+    id: 'custom-test',
+    title: customTitle.value,
+    category: customCategory.value,
+    developer: 'توسعه‌دهنده آزمایشی',
+    isComingSoon: selectedVariant.value === 'coming-soon',
+    iconUrl: customIconType.value === 'image' ? customImageUrl.value : '',
+    icon: customIconType.value === 'vector' ? vectorIconComponent.value : undefined,
+    badge: customBadge.value,
+    badgeVariant: customBadgeVariant.value,
+    rating: customRating.value,
+    downloadsCount: 2450,
+    isInstalled: customIsInstalled.value,
+    version: '۱.۲.۰',
+    description: 'افزونه سفارشی برای تست وضعیت‌های مختلف مودال نصب، امتیاز، باز کردن اپ و اعلان‌های به‌زودی.',
+    capabilities: ['slash_command', 'audio_recitation', 'search_engine']
+  }
+  selectedAppForDetails.value = customApp
+  isDetailsDialogOpen.value = true
+  logEvent('Opened Custom App Details Modal', { title: customTitle.value, isComingSoon: customApp.isComingSoon })
+}
 
 const handleAppIconClick = (app?: MarketplaceApp) => {
   if (!app) {
-    logEvent('Single Icon Clicked', { title: customTitle.value, variant: selectedVariant.value })
+    openCustomModalTest()
     return
   }
   logEvent('Marketplace App Icon Clicked (Navigating to Details)', { id: app.id, title: app.title })
@@ -190,14 +215,27 @@ const handleAppIconClick = (app?: MarketplaceApp) => {
   isDetailsDialogOpen.value = true
 }
 
-const toggleInstallStatus = () => {
-  if (selectedAppForDetails.value) {
-    selectedAppForDetails.value.isInstalled = !selectedAppForDetails.value.isInstalled
+const toggleInstallStatus = async (app?: MarketplaceApp) => {
+  const target = app || selectedAppForDetails.value
+  if (target) {
+    isInstallingModalApp.value = true
+    await new Promise(r => setTimeout(r, 600))
+    target.isInstalled = !target.isInstalled
+    isInstallingModalApp.value = false
     logEvent('App Install Status Changed', { 
-      id: selectedAppForDetails.value.id, 
-      installed: selectedAppForDetails.value.isInstalled 
+      id: target.id, 
+      installed: target.isInstalled 
     })
   }
+}
+
+const handleOpenAppFromPlayground = (app: MarketplaceApp) => {
+  logEvent('Open Mini-App Button Clicked', { id: app.id, title: app.title })
+  isDetailsDialogOpen.value = false
+}
+
+const handleNotifyFromPlayground = (app: MarketplaceApp) => {
+  logEvent('Notify Me Button Toggled', { id: app.id, title: app.title })
 }
 
 // Event Log system
@@ -476,7 +514,7 @@ const copyCode = async () => {
           </div>
 
           <!-- The Component Live Preview -->
-          <div class="w-24 sm:w-28 flex flex-col items-center">
+          <div class="w-28 sm:w-36 flex flex-col items-center">
             <MarketplaceAppIcon
               :title="customTitle"
               :category="customCategory"
@@ -492,6 +530,17 @@ const copyCode = async () => {
               :disabled="customDisabled"
               @click="handleAppIconClick()"
             />
+
+            <!-- Direct Modal Preview Button -->
+            <Button
+              size="sm"
+              variant="outline"
+              @click="openCustomModalTest"
+              class="mt-3 text-xs font-bold gap-1.5 rounded-xl border-border/80 hover:bg-muted cursor-pointer shadow-2xs"
+            >
+              <EyeIcon class="size-3.5 text-primary" />
+              <span>{{ languageStore.t('تست و باز کردن مودال نصب', 'Test Install Modal') }}</span>
+            </Button>
           </div>
         </div>
 
@@ -608,118 +657,16 @@ const copyCode = async () => {
       <pre class="p-4 rounded-xl bg-muted/50 border border-border/40 font-mono text-xs text-foreground/90 overflow-x-auto text-start leading-relaxed whitespace-pre">{{ generatedCode }}</pre>
     </div>
 
-    <!-- DETAILS MODAL (Simulating Plugin Details & Download Page as described by User) -->
-    <Dialog v-model:open="isDetailsDialogOpen">
-      <DialogContent class="sm:max-w-[480px] p-0 overflow-hidden bg-card/95 backdrop-blur-xl border border-border/60" :dir="languageStore.dir">
-        
-        <!-- Header with App Cover & Info -->
-        <DialogHeader class="p-5 pb-4 border-b border-border/30 bg-muted/20">
-          <div class="flex items-start gap-3.5 text-start">
-            <div class="size-16 rounded-2xl overflow-hidden border border-border/60 shrink-0 bg-background shadow-xs flex items-center justify-center">
-              <img 
-                v-if="selectedAppForDetails?.iconUrl" 
-                :src="selectedAppForDetails.iconUrl" 
-                :alt="selectedAppForDetails?.title" 
-                class="size-full object-cover" 
-              />
-              <component 
-                v-else 
-                :is="selectedAppForDetails?.icon || LayersIcon" 
-                class="size-8 text-primary" 
-              />
-            </div>
-            
-            <div class="flex-1 flex flex-col gap-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <DialogTitle class="text-sm font-black text-foreground truncate">
-                  {{ selectedAppForDetails?.title }}
-                </DialogTitle>
-                <Badge 
-                  v-if="selectedAppForDetails?.isComingSoon"
-                  variant="secondary"
-                  class="text-[9px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                >
-                  {{ languageStore.t('به‌زودی', 'Soon') }}
-                </Badge>
-              </div>
-
-              <span class="text-xs text-muted-foreground truncate">
-                {{ selectedAppForDetails?.category }}
-              </span>
-
-              <div class="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground font-medium">
-                <span class="flex items-center gap-1">
-                  <StarIcon class="size-3 text-amber-500 fill-amber-500" />
-                  <span>{{ selectedAppForDetails?.rating || '—' }}</span>
-                </span>
-                <span>•</span>
-                <span>{{ selectedAppForDetails?.developer }}</span>
-                <span>•</span>
-                <span>{{ selectedAppForDetails?.version }}</span>
-              </div>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <!-- Body: Description & Screenshots -->
-        <div class="p-5 flex flex-col gap-4 text-start">
-          <DialogDescription class="text-xs text-foreground/80 leading-relaxed">
-            {{ selectedAppForDetails?.description }}
-          </DialogDescription>
-
-          <!-- Screenshots preview -->
-          <div v-if="selectedAppForDetails?.screenshots && selectedAppForDetails.screenshots.length > 0" class="flex flex-col gap-1.5">
-            <span class="text-[10.5px] font-bold text-muted-foreground">تصاویر محیط افزونه:</span>
-            <div class="grid grid-cols-2 gap-2">
-              <div 
-                v-for="(img, idx) in selectedAppForDetails.screenshots" 
-                :key="idx"
-                class="rounded-xl overflow-hidden border border-border/40 aspect-video bg-muted/40"
-              >
-                <img :src="img" class="size-full object-cover" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer Actions -->
-        <DialogFooter class="p-4 bg-muted/20 border-t border-border/30 flex justify-between sm:justify-between items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            @click="isDetailsDialogOpen = false" 
-            class="text-xs font-bold h-8.5 rounded-xl cursor-pointer"
-          >
-            {{ languageStore.t('بستن', 'Close') }}
-          </Button>
-
-          <Button 
-            v-if="!selectedAppForDetails?.isComingSoon"
-            :variant="selectedAppForDetails?.isInstalled ? 'outline' : 'default'" 
-            size="sm" 
-            @click="toggleInstallStatus"
-            class="text-xs font-bold h-8.5 rounded-xl gap-1.5 cursor-pointer"
-          >
-            <CheckIcon v-if="selectedAppForDetails?.isInstalled" class="size-3.5 text-emerald-500" />
-            <DownloadCloudIcon v-else class="size-3.5" />
-            <span>
-              {{ selectedAppForDetails?.isInstalled ? languageStore.t('نصب‌شده (حذف)', 'Installed (Remove)') : languageStore.t('نصب افزونه', 'Install Plugin') }}
-            </span>
-          </Button>
-          <Button
-            v-else
-            variant="secondary"
-            size="sm"
-            disabled
-            class="text-xs font-bold h-8.5 rounded-xl gap-1.5 opacity-70"
-          >
-            <ClockIcon class="size-3.5" />
-            <span>{{ languageStore.t('در حال توسعه', 'In Development') }}</span>
-          </Button>
-        </DialogFooter>
-
-      </DialogContent>
-    </Dialog>
+    <!-- DETAILS & INSTALL MODAL (Modular Component) -->
+    <MarketplaceAppModal
+      v-model:open="isDetailsDialogOpen"
+      :app="selectedAppForDetails"
+      :is-installed="selectedAppForDetails?.isInstalled"
+      :is-installing="isInstallingModalApp"
+      @install="toggleInstallStatus"
+      @open-app="handleOpenAppFromPlayground"
+      @notify="handleNotifyFromPlayground"
+    />
 
   </div>
 </template>

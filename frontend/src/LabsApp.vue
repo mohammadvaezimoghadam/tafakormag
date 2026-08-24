@@ -5,7 +5,10 @@ import {
   SunIcon, 
   MoonIcon, 
   PaletteIcon, 
-  FlaskConicalIcon
+  FlaskConicalIcon,
+  BookOpenIcon,
+  LayersIcon,
+  HeartIcon
 } from '@lucide/vue'
 
 // Dark/Light theme manager via VueUse
@@ -24,35 +27,59 @@ const toggleDark = useToggle(isDark)
       
       <!-- Top Navigation Header for Design Labs -->
       <header class="sticky top-0 z-50 w-full border-b border-border/80 bg-background/80 backdrop-blur-md flex justify-center">
-        <div class="w-full max-w-6xl px-6 h-16 flex items-center justify-between">
+        <div class="w-full max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           
           <!-- Logo & Brand -->
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2.5 shrink-0">
             <div class="size-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-sm animate-pulse">
               <FlaskConicalIcon class="size-4 text-primary-foreground" />
             </div>
             <div>
-              <span class="font-extrabold tracking-tight text-sm">آزمایشگاه طراحی AVA (Design Labs)</span>
-              <span class="text-[9px] block text-muted-foreground mt-0.5 leading-none">محیط‌های تستی و شوکیس</span>
+              <span class="font-extrabold tracking-tight text-sm">آزمایشگاه تفکر (Tafakor Labs)</span>
+              <span class="text-[9px] block text-muted-foreground mt-0.5 leading-none">محیط تست مینی‌اپ‌ها و کامپوننت‌ها</span>
             </div>
           </div>
 
-          <!-- Navigation Links (Showcase and Playground only) -->
-          <nav class="flex items-center gap-2">
+          <!-- Navigation Links for All Playgrounds -->
+          <nav class="hidden md:flex items-center gap-1.5 overflow-x-auto py-1">
             <router-link 
               to="/showcase" 
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/5 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/10"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/10 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/20"
             >
-              <PaletteIcon class="size-4" />
-              <span>نمایشگاه دیزاین</span>
+              <PaletteIcon class="size-3.5" />
+              <span>دیزاین سیستم</span>
             </router-link>
 
             <router-link 
               to="/playground" 
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/5 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/10"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/10 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/20"
             >
-              <FlaskConicalIcon class="size-4" />
-              <span>زمین بازی</span>
+              <FlaskConicalIcon class="size-3.5" />
+              <span>زمین بازی کلی</span>
+            </router-link>
+
+            <router-link 
+              to="/playground/quran-plugins" 
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/10 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/20"
+            >
+              <BookOpenIcon class="size-3.5 text-emerald-500" />
+              <span>مینی‌اپ قرآن</span>
+            </router-link>
+
+            <router-link 
+              to="/playground/marketplace-icon" 
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/10 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/20"
+            >
+              <LayersIcon class="size-3.5 text-blue-500" />
+              <span>بازارچه و آیکون</span>
+            </router-link>
+
+            <router-link 
+              to="/playground/create-donation" 
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/10 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/20"
+            >
+              <HeartIcon class="size-3.5 text-rose-500" />
+              <span>پویش مهربانی</span>
             </router-link>
           </nav>
 
