@@ -46,6 +46,9 @@ export default defineConfig(({ mode }) => {
           : { main: path.resolve(__dirname, 'index.html') }) as Record<string, string>
       }
     },
+    optimizeDeps: {
+      include: ['dompurify']
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

@@ -37,6 +37,11 @@ const router = createRouter({
       component: () => import('@/views/FeedView.vue')
     },
     {
+      path: '/playground',
+      name: 'playground',
+      component: () => import('@/playground/PlaygroundView.vue')
+    },
+    {
       path: '/playground/donation-card',
       name: 'donation-card-playground',
       component: () => import('@/views/playground/DonationCardPlayground.vue')
@@ -45,6 +50,11 @@ const router = createRouter({
       path: '/playground/create-donation',
       name: 'create-donation-playground',
       component: () => import('@/views/playground/CreateDonationPlayground.vue')
+    },
+    {
+      path: '/playground/text-formatting',
+      name: 'text-formatting-playground',
+      component: () => import('@/views/playground/TextFormattingPlayground.vue')
     },
     {
       path: '/:pathMatch(.*)*',

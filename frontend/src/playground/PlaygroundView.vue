@@ -84,7 +84,8 @@ import {
   WrenchIcon,
   ClockIcon,
   LayersIcon,
-  EyeIcon
+  EyeIcon,
+  TypeIcon
 } from '@lucide/vue'
 
 // Simulator configs
@@ -1766,6 +1767,43 @@ const openDuplicateWarningSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'under-dev'" class="size-3.5 text-primary" />
               </button>
+            </div>
+          </div>
+
+          <!-- Standalone Playgrounds -->
+          <div class="flex flex-col gap-3 pt-4 border-t border-border/40">
+            <Label class="text-[11px] font-semibold text-muted-foreground block">پلی‌گراندهای اختصاصی:</Label>
+            <div class="flex flex-col gap-1.5">
+              <router-link 
+                to="/playground/text-formatting"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <TypeIcon class="size-3.5 text-primary" />
+                  قالب‌بندی غنی متن (Text Formatting)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/donation-card"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <HeartIcon class="size-3.5 text-primary" />
+                  کارت مهربانی (Donation Card)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/create-donation"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <PlusIcon class="size-3.5 text-primary" />
+                  ایجاد پویش (Create Donation)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
             </div>
           </div>
         </div>
