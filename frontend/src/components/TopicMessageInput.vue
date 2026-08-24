@@ -208,6 +208,27 @@ watch([text, hasAttachments], () => {
   })
 })
 
+const handleOutsidePointer = (e: Event) => {
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  if (target.closest('.floating-format-menu')) return
+  if (target === textareaRef.value || target === expandedTextareaRef.value) {
+    if (menuMode.value === 'context') {
+      showFormatMenu.value = false
+      menuMode.value = 'auto'
+    }
+    if (expandedMenuMode.value === 'context') {
+      showExpandedFormatMenu.value = false
+      expandedMenuMode.value = 'auto'
+    }
+    return
+  }
+  showFormatMenu.value = false
+  showExpandedFormatMenu.value = false
+  menuMode.value = 'auto'
+  expandedMenuMode.value = 'auto'
+}
+
 const handleGlobalSelectionChange = () => {
   const activeEl = document.activeElement
   if (activeEl === textareaRef.value) {
@@ -222,10 +243,12 @@ onMounted(() => {
     adjustHeight()
   })
   document.addEventListener('selectionchange', handleGlobalSelectionChange)
+  window.addEventListener('pointerdown', handleOutsidePointer)
 })
 
 onUnmounted(() => {
   document.removeEventListener('selectionchange', handleGlobalSelectionChange)
+  window.removeEventListener('pointerdown', handleOutsidePointer)
 })
 
 // Actions
@@ -273,108 +296,167 @@ const expandedMenuCoords = ref<MenuCoords | null>(null)
 const selectedText = ref('')
 const expandedSelectedText = ref('')
 
-const touchHoldTimer = ref<any>(null)
-const touchStartPos = ref<{ x: number; y: number } | null>(null)
+let touchHoldTimer: any = null
+let touchStartX = 0
+let touchStartY = 0
+let touchHasMoved = false
+let isTouchHolding = false
 
-const handleTouchstart = (e: TouchEvent, isExpanded = false) => {
-  if (!e.touches || e.touches.length === 0) return
-  const touch = e.touches[0]
-  if (!touch) return
-  touchStartPos.value = { x: touch.clientX, y: touch.clientY }
+const triggerContextMenu = (clientX: number, clientY: number, isExpanded = false) => {
+  const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
+  if (!el) return
 
-  clearTimeout(touchHoldTimer.value)
-  touchHoldTimer.value = setTimeout(() => {
-    const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
-    if (!el) return
-    const start = el.selectionStart ?? 0
-    const end = el.selectionEnd ?? 0
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const sel = (start < end) ? el.value.substring(start, end) : ''
+  const isContext = !sel || sel.trim().length === 0
 
-    if (start >= end) {
-      const rect = el.getBoundingClientRect()
-      const touchX = (touchStartPos.value?.x || touch.clientX) - rect.left
-      const touchY = (touchStartPos.value?.y || touch.clientY) - rect.top
+  const elRect = el.getBoundingClientRect()
+  const touchX = clientX - elRect.left
+  const touchY = clientY - elRect.top
 
-      const menuWidth = 180
-      const menuHeight = 40
-      const minX = (menuWidth / 2) + 12
-      const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
-      const clampedX = Math.min(Math.max(touchX, minX), maxX)
+  const menuWidth = isContext ? 190 : 330
+  const menuHeight = 40
+  const minX = (menuWidth / 2) + 12
+  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
+  const clampedX = Math.min(Math.max(touchX, minX), maxX)
 
-      const coords: MenuCoords = {
-        top: Math.min(touchY - menuHeight - 12, -menuHeight - 6),
-        left: isExpanded ? clampedX + 24 : clampedX,
-        placement: 'top'
-      }
+  let top = Math.min(touchY - menuHeight - 12, -menuHeight - 6)
+  let placement: 'top' | 'bottom' = 'top'
 
-      if (isExpanded) {
-        expandedMenuCoords.value = coords
-        expandedMenuMode.value = 'context'
-        showExpandedFormatMenu.value = true
-      } else {
-        menuCoords.value = coords
-        menuMode.value = 'context'
-        showFormatMenu.value = true
-      }
+  if (isExpanded) {
+    if (touchY - menuHeight - 12 < 8) {
+      top = touchY + 24
+      placement = 'bottom'
     }
-  }, 450)
-}
+  }
 
-const handleTouchmove = (e: TouchEvent) => {
-  if (!touchStartPos.value || !e.touches || e.touches.length === 0) return
-  const touch = e.touches[0]
-  if (!touch) return
-  const dx = Math.abs(touch.clientX - touchStartPos.value.x)
-  const dy = Math.abs(touch.clientY - touchStartPos.value.y)
-  if (dx > 10 || dy > 10) {
-    clearTimeout(touchHoldTimer.value)
-    touchStartPos.value = null
+  const coords: MenuCoords = {
+    top,
+    left: isExpanded ? clampedX + 24 : clampedX,
+    placement
+  }
+
+  if (isExpanded) {
+    expandedSelectedText.value = sel
+    expandedMenuCoords.value = coords
+    expandedMenuMode.value = isContext ? 'context' : 'full'
+    showExpandedFormatMenu.value = true
+  } else {
+    selectedText.value = sel
+    menuCoords.value = coords
+    menuMode.value = isContext ? 'context' : 'full'
+    showFormatMenu.value = true
   }
 }
 
+const handleTouchStart = (e: TouchEvent, isExpanded = false) => {
+  if (props.disabled) return
+  if (!e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  touchHasMoved = false
+
+  if (touchHoldTimer) clearTimeout(touchHoldTimer)
+  touchHoldTimer = setTimeout(() => {
+    if (!touchHasMoved) {
+      isTouchHolding = true
+      triggerContextMenu(touch.clientX, touch.clientY, isExpanded)
+    }
+  }, 400)
+}
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (!e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+  const dx = Math.abs(touch.clientX - touchStartX)
+  const dy = Math.abs(touch.clientY - touchStartY)
+  if (dx > 10 || dy > 10) {
+    touchHasMoved = true
+    if (touchHoldTimer) {
+      clearTimeout(touchHoldTimer)
+      touchHoldTimer = null
+    }
+  }
+}
+
+const handleTouchEnd = (isExpanded = false) => {
+  if (touchHoldTimer) {
+    clearTimeout(touchHoldTimer)
+    touchHoldTimer = null
+  }
+
+  if (isTouchHolding) {
+    // Keep context menu open after long-press touch lift
+    setTimeout(() => {
+      isTouchHolding = false
+    }, 400)
+    return
+  }
+
+  handleTextareaSelect(isExpanded)
+  setTimeout(() => handleTextareaSelect(isExpanded), 60)
+  setTimeout(() => handleTextareaSelect(isExpanded), 160)
+}
+
+const handleContextMenu = (e: MouseEvent, isExpanded = false) => {
+  e.preventDefault()
+  triggerContextMenu(e.clientX, e.clientY, isExpanded)
+}
+
 const handleTextareaSelect = (isExpanded = false) => {
+  if (isTouchHolding) return
+
   const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
   if (!el) return
 
   const start = el.selectionStart ?? 0
   const end = el.selectionEnd ?? 0
 
-  // اگر هیچ متنی انتخاب نشده باشد
   if (start >= end) {
     if (isExpanded) {
-      showExpandedFormatMenu.value = false
-      expandedSelectedText.value = ''
-      expandedMenuCoords.value = null
+      if (expandedMenuMode.value !== 'context') {
+        showExpandedFormatMenu.value = false
+        expandedSelectedText.value = ''
+        expandedMenuCoords.value = null
+      }
     } else {
-      showFormatMenu.value = false
-      selectedText.value = ''
-      menuCoords.value = null
+      if (menuMode.value !== 'context') {
+        showFormatMenu.value = false
+        selectedText.value = ''
+        menuCoords.value = null
+      }
     }
     return
   }
 
   const rawSelection = el.value.substring(start, end)
-
-  // ۱. بررسی محتوای انتخاب‌شده: اگر خالی، فقط فاصله یا خط‌خالی باشد، منو باز نشود
   if (!rawSelection || rawSelection.trim().length === 0) {
     if (isExpanded) {
-      showExpandedFormatMenu.value = false
-      expandedSelectedText.value = ''
-      expandedMenuCoords.value = null
+      if (expandedMenuMode.value !== 'context') {
+        showExpandedFormatMenu.value = false
+        expandedSelectedText.value = ''
+        expandedMenuCoords.value = null
+      }
     } else {
-      showFormatMenu.value = false
-      selectedText.value = ''
-      menuCoords.value = null
+      if (menuMode.value !== 'context') {
+        showFormatMenu.value = false
+        selectedText.value = ''
+        menuCoords.value = null
+      }
     }
     return
   }
 
-  // ۲. محاسبه مختصات دقیق پیکسل بر روی textarea
   const rect = getSelectionPixelRect(el, start, end)
   const menuWidth = 330
   const menuHeight = 40
-  const verticalGap = 10 // فاصله ایمن بین نوار ابزار و متن
+  const verticalGap = 10
 
-  // موقعیت افقی (مرکز متن انتخاب‌شده با جلوگیری از بیرون‌زدگی)
   const centerX = rect.left + (rect.width / 2)
   const minX = (menuWidth / 2) + 12
   const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
@@ -384,14 +466,11 @@ const handleTextareaSelect = (isExpanded = false) => {
   let placement: 'top' | 'bottom' = 'top'
 
   if (!isExpanded) {
-    // برای کادر اصلی پیام: منو در فضای باز بالای فیلد ورودی قرار می‌گیرد تا هرگز روی متن نباشد
     top = Math.min(rect.top - menuHeight - verticalGap, -menuHeight - 6)
     placement = 'top'
   } else {
-    // برای مودال بزرگنمایی:
-    const selectionTopInContainer = rect.top + 24 // ۲۴ پیکسل پدینگ کانتینر
+    const selectionTopInContainer = rect.top + 24
     const selectionBottomInContainer = rect.bottom + 24
-
     const candidateTopAbove = selectionTopInContainer - menuHeight - verticalGap
     if (candidateTopAbove >= 8) {
       top = candidateTopAbove
@@ -411,30 +490,13 @@ const handleTextareaSelect = (isExpanded = false) => {
   if (isExpanded) {
     expandedSelectedText.value = rawSelection
     expandedMenuCoords.value = coords
-    expandedMenuMode.value = 'auto'
+    expandedMenuMode.value = 'full'
     showExpandedFormatMenu.value = true
   } else {
     selectedText.value = rawSelection
     menuCoords.value = coords
-    menuMode.value = 'auto'
+    menuMode.value = 'full'
     showFormatMenu.value = true
-  }
-}
-
-const handleTouchend = (isExpanded = false) => {
-  clearTimeout(touchHoldTimer.value)
-  touchStartPos.value = null
-  handleTextareaSelect(isExpanded)
-  setTimeout(() => handleTextareaSelect(isExpanded), 50)
-  setTimeout(() => handleTextareaSelect(isExpanded), 120)
-}
-
-const handleDocSelectionChange = () => {
-  const active = document.activeElement
-  if (active === textareaRef.value) {
-    handleTextareaSelect(false)
-  } else if (active === expandedTextareaRef.value) {
-    handleTextareaSelect(true)
   }
 }
 
@@ -444,10 +506,15 @@ const handleTextareaBlur = (isExpanded = false) => {
     if (active && (active as HTMLElement).closest && (active as HTMLElement).closest('.floating-format-menu')) {
       return
     }
+    if (isTouchHolding) return
     if (isExpanded) {
-      showExpandedFormatMenu.value = false
+      if (expandedMenuMode.value !== 'context') {
+        showExpandedFormatMenu.value = false
+      }
     } else {
-      showFormatMenu.value = false
+      if (menuMode.value !== 'context') {
+        showFormatMenu.value = false
+      }
     }
   }, 350)
 }
@@ -839,10 +906,10 @@ const languageStore = useLanguageStore()
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
-            @touchstart="handleTouchstart($event, false)"
-            @touchmove="handleTouchmove"
-            @touchend="handleTouchend(false)"
-            @contextmenu.prevent.stop
+            @touchstart="handleTouchStart($event, false)"
+            @touchmove="handleTouchMove"
+            @touchend="handleTouchEnd(false)"
+            @contextmenu="handleContextMenu($event, false)"
             @blur="handleTextareaBlur(false)"
             @keydown="(e) => handleKeydown(e, false)"
           />
@@ -1020,10 +1087,10 @@ const languageStore = useLanguageStore()
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
-            @touchstart="handleTouchstart($event, true)"
-            @touchmove="handleTouchmove"
-            @touchend="handleTouchend(true)"
-            @contextmenu.prevent.stop
+            @touchstart="handleTouchStart($event, true)"
+            @touchmove="handleTouchMove"
+            @touchend="handleTouchEnd(true)"
+            @contextmenu="handleContextMenu($event, true)"
             @blur="handleTextareaBlur(true)"
             @keydown="(e) => handleKeydown(e, true)"
           />
