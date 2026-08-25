@@ -1,10 +1,11 @@
+from unittest.mock import patch, MagicMock
 from concurrent.futures import ThreadPoolExecutor
 from django.test import TransactionTestCase
 from django.db import connection
 from apps.accounts.models import User
 from apps.notes.models import Topic
 from apps.donations.models import DonationCampaign, DonationTransaction
-from apps.donations.services import initiate_donation, verify_and_settle_transaction
+from apps.donations.services import initiate_donation, verify_and_settle_transaction, ZarinPalService
 
 
 class DonationServicesTest(TransactionTestCase):
@@ -14,8 +15,22 @@ class DonationServicesTest(TransactionTestCase):
         self.donor2 = User.objects.create_user(phone='09124444444')
         self.topic = Topic.objects.create(name='خیریه عمومی', created_by=self.creator)
 
-    def test_initiate_donation_success(self):
-        """Test initiating donation returns pending transaction and authority."""
+    @patch('apps.donations.services.requests.post')
+    def test_initiate_donation_zarinpal_sandbox_success(self, mock_post):
+        """Test initiating donation connects to ZarinPal and returns S... authority and startpay url."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "data": {
+                "code": 100,
+                "message": "Success",
+                "authority": "S0000000000000000000000000000123456",
+                "fee_type": "Merchant",
+                "fee": 100
+            },
+            "errors": []
+        }
+        mock_post.return_value = mock_response
+
         campaign = DonationCampaign.objects.create(
             topic=self.topic,
             creator=self.creator,
@@ -32,14 +47,47 @@ class DonationServicesTest(TransactionTestCase):
         self.assertIsNotNone(trx.id)
         self.assertEqual(trx.status, DonationTransaction.PaymentStatus.PENDING)
         self.assertEqual(trx.amount, 250000)
-        self.assertTrue(trx.authority.startswith('AUTH_'))
-        self.assertIn('authority=', gateway_url)
+        self.assertEqual(trx.authority, "S0000000000000000000000000000123456")
+        self.assertTrue(trx.authority.startswith('S'))
+        self.assertIn('StartPay/S0000000000000000000000000000123456', gateway_url)
 
-    def test_idempotent_settlement(self):
+    @patch('apps.donations.services.requests.post')
+    def test_zarinpal_verify_payment_success(self, mock_post):
+        """Test ZarinPal verification with code 100."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "data": {
+                "code": 100,
+                "ref_id": 987654321,
+                "card_pan": "502229******1234",
+                "fee": 500
+            },
+            "errors": []
+        }
+        mock_post.return_value = mock_response
+
+        is_verified, ref_id, card_pan, fee, err = ZarinPalService.verify_payment(
+            authority="S0000000000000000000000000000123456",
+            amount_tomans=250000
+        )
+        self.assertTrue(is_verified)
+        self.assertEqual(ref_id, 987654321)
+        self.assertEqual(card_pan, "502229******1234")
+        self.assertIsNone(err)
+
+
+    @patch('apps.donations.services.requests.post')
+    def test_idempotent_settlement(self, mock_post):
         """
         Idempotent Settle: Call verify_and_settle_transaction() multiple times with the same
         authority and assert that collected_amount and donors_count increase only once.
         """
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "data": {"code": 100, "authority": "S0000000000000000000000000000999999"}
+        }
+        mock_post.return_value = mock_response
+
         campaign = DonationCampaign.objects.create(
             topic=self.topic,
             creator=self.creator,
@@ -69,7 +117,8 @@ class DonationServicesTest(TransactionTestCase):
         self.assertEqual(campaign.collected_amount, 500000)
         self.assertEqual(campaign.donors_count, 1)
 
-    def test_concurrent_donations_simulation(self):
+    @patch('apps.donations.services.requests.post')
+    def test_concurrent_donations_simulation(self, mock_post):
         """
         Simulate settlement of multiple distinct transactions and verify that the final
         collected_amount and donors_count match the exact sum without race conditions.
@@ -87,12 +136,19 @@ class DonationServicesTest(TransactionTestCase):
         authorities = []
 
         for i in range(num_transactions):
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": {"code": 100, "authority": f"S0000000000000000000000000000000{i:02d}"}
+            }
+            mock_post.return_value = mock_response
+
             trx, _ = initiate_donation(
                 campaign_id=campaign.id,
                 amount=donation_amount,
                 donor=self.donor1
             )
             authorities.append(trx.authority)
+
 
         def settle_worker(auth):
             return verify_and_settle_transaction(authority=auth, gateway_ref=f"REF_{auth[:8]}")

@@ -24,7 +24,11 @@ class DonorSerializer(serializers.ModelSerializer):
         image = getattr(obj.donor, 'profile_image', None)
         if image:
             try:
-                return image.url
+                url = image.url
+                request = self.context.get('request')
+                if request and url:
+                    return request.build_absolute_uri(url)
+                return url
             except Exception:
                 return None
         return None
@@ -47,7 +51,11 @@ class TransparencyLogSerializer(serializers.ModelSerializer):
     def get_receipt_url(self, obj):
         if obj.receipt_image:
             try:
-                return obj.receipt_image.url
+                url = obj.receipt_image.url
+                request = self.context.get('request')
+                if request and url:
+                    return request.build_absolute_uri(url)
+                return url
             except Exception:
                 return None
         return None
@@ -75,7 +83,9 @@ class DonationCampaignDetailSerializer(serializers.ModelSerializer):
         image = getattr(obj.creator, 'profile_image', None)
         if image:
             try:
-                avatar_url = image.url
+                url = image.url
+                request = self.context.get('request')
+                avatar_url = request.build_absolute_uri(url) if request else url
             except Exception:
                 pass
         full_name = f"{obj.creator.first_name} {obj.creator.last_name}".strip()
@@ -91,8 +101,8 @@ class DonationCampaignDetailSerializer(serializers.ModelSerializer):
             return []
         successful_donations = obj.transactions.filter(
             status=DonationTransaction.PaymentStatus.SUCCESSFUL
-        ).order_by('-completed_at')[:50]
-        return DonorSerializer(successful_donations, many=True).data
+        ).select_related('donor').order_by('-completed_at')[:50]
+        return DonorSerializer(successful_donations, many=True, context=self.context).data
 
     def get_transparency_logs(self, obj):
         logs = obj.transparency_logs.all().order_by('-created_at')
@@ -116,6 +126,7 @@ class DonationCampaignCreateSerializer(serializers.ModelSerializer):
         write_only=True
     )
     deadline = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    is_public_donors_list = serializers.BooleanField(default=True, required=False)
 
     class Meta:
         model = DonationCampaign

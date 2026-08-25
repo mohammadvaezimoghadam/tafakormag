@@ -32,6 +32,11 @@ const labsRouter = createRouter({
       name: 'text-formatting-playground',
       component: () => import('@/views/playground/TextFormattingPlayground.vue'),
     },
+    {
+      path: '/playground/payment-receipt',
+      name: 'payment-receipt-playground',
+      component: () => import('@/views/playground/PaymentReceiptPlayground.vue'),
+    },
   ],
 })
 

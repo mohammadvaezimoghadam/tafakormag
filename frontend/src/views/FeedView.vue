@@ -25,12 +25,14 @@ import DonationsFeed from '@/components/kindness/DonationsFeed.vue'
 import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
 import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
+import PaymentReceiptModal from '@/components/kindness/PaymentReceiptModal.vue'
 import type { CreateDonationPayload } from '@/types/kindness'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon, LayersIcon } from '@lucide/vue'
+import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon, LayersIcon, CheckCircle2Icon } from '@lucide/vue'
+
 import {
   Dialog,
   DialogContent,
@@ -218,6 +220,58 @@ const handleFeedScroll = async () => {
   }
 }
 
+// Payment Callback Receipt State
+
+const isPaymentResultModalOpen = ref(false)
+const paymentResultData = ref<{
+  status: 'success' | 'failed'
+  ref_id?: string
+  amount?: number
+  authority?: string
+  campaign_id?: string
+}>({ status: 'success' })
+
+const formatDonationAmount = (val?: number): string => {
+  if (!val) return '۰'
+  return new Intl.NumberFormat('fa-IR').format(val)
+}
+
+const checkPaymentCallbackParams = () => {
+  const query = route.query
+  if (query.payment === 'success') {
+    paymentResultData.value = {
+      status: 'success',
+      ref_id: (query.ref_id as string) || (query.RefID as string) || '',
+      amount: query.amount ? Number(query.amount) : undefined,
+      authority: (query.authority as string) || (query.Authority as string) || '',
+      campaign_id: query.campaign_id as string
+    }
+    isPaymentResultModalOpen.value = true
+    toastStore.triggerToast(languageStore.t('پرداخت با موفقیت انجام و ثبت گردید.', 'Payment completed and recorded successfully.'), 'success')
+    
+    // Refresh campaigns list
+    if (donationsFeedRef.value) {
+      donationsFeedRef.value.loadCampaigns()
+    }
+
+    // Clean query params smoothly
+    router.replace({ path: route.path, query: {} })
+  } else if (query.payment === 'failed') {
+    const reason = query.reason
+    const msg = reason === 'canceled'
+      ? languageStore.t('پرداخت توسط کاربر لغو گردید.', 'Payment was canceled by user.')
+      : languageStore.t('پرداخت درگاه ناموفق بود یا تایید نشد.', 'Payment failed or was not verified.')
+    toastStore.triggerToast(msg, 'warning')
+    router.replace({ path: route.path, query: {} })
+  }
+}
+
+watch(() => route.query, () => {
+  if (route.query.payment) {
+    checkPaymentCallbackParams()
+  }
+})
+
 // Fetch data on mount
 onMounted(async () => {
   window.addEventListener('scroll', handleFeedScroll)
@@ -225,6 +279,7 @@ onMounted(async () => {
     await userStore.loadProfile()
     await topicStore.loadTopics()
     syncRouteToState()
+    checkPaymentCallbackParams()
   } catch (err) {
     console.error('Error on FeedView mount:', err)
   }
@@ -233,6 +288,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleFeedScroll)
 })
+
 
 // Header computed states for platform and connections view
 const headerIsInnerPage = computed(() => {
@@ -402,7 +458,7 @@ const handleDonationCreated = async (payload: CreateDonationPayload) => {
     }
     if (payload.media_files && payload.media_files.length > 0 && payload.media_files[0]) {
       formData.append('cover_image', payload.media_files[0])
-      payload.media_files.forEach((file) => {
+      payload.media_files.forEach((file: any) => {
         if (file) formData.append('uploaded_files', file)
       })
     }
@@ -440,7 +496,7 @@ const handleDonationUpdated = async (payload: CreateDonationPayload & { id?: str
     }
     if (payload.media_files && payload.media_files.length > 0 && payload.media_files[0]) {
       formData.append('cover_image', payload.media_files[0])
-      payload.media_files.forEach((file) => {
+      payload.media_files.forEach((file: any) => {
         if (file) formData.append('uploaded_files', file)
       })
     }
@@ -473,27 +529,30 @@ const handleProcessDonationPayment = async (data: { amount: number; isAnonymous:
       amount: data.amount,
       is_anonymous: data.isAnonymous
     })
-    isDonateModalOpen.value = false
-    toastStore.triggerToast(languageStore.t('درخواست پرداخت با موفقیت ثبت شد.', 'Payment initiated successfully.'), 'success')
-    
-    if (donationsFeedRef.value) {
-      donationsFeedRef.value.recordLocalDonation(selectedDonationForPayment.value.id, data.amount, data.isAnonymous)
-    }
 
     if (res.data?.gateway_url) {
-      window.location.href = res.data.gateway_url
-    }
-  } catch (err) {
-    // If backend payment fails or in demo mode, update locally with friendly notification
-    if (donationsFeedRef.value) {
-      donationsFeedRef.value.recordLocalDonation(selectedDonationForPayment.value.id, data.amount, data.isAnonymous)
       isDonateModalOpen.value = false
-      toastStore.triggerToast(languageStore.t('مشارکت شما با موفقیت ثبت شد.', 'Your donation was recorded successfully.'), 'success')
+      toastStore.triggerToast(languageStore.t('در حال انتقال به درگاه پرداخت زرین‌پال...', 'Redirecting to ZarinPal payment gateway...'), 'info')
+      window.location.href = res.data.gateway_url
     } else {
-      toastStore.triggerToast(languageStore.t('خطا در پردازش پرداخت دونیت', 'Failed to process donation payment'), 'error')
+      toastStore.triggerToast(languageStore.t('خطا در دریافت آدرس درگاه پرداخت', 'Failed to retrieve gateway URL'), 'error')
     }
+  } catch (err: any) {
+    console.error('Donation payment error:', err)
+    const errData = err.response?.data
+    let errorMsg = languageStore.t('خطا در اتصال به درگاه پرداخت زرین‌پال', 'Failed to connect to ZarinPal gateway')
+
+    if (errData) {
+      if (errData.gateway) errorMsg = errData.gateway
+      else if (errData.campaign) errorMsg = errData.campaign
+      else if (errData.amount) errorMsg = Array.isArray(errData.amount) ? errData.amount[0] : errData.amount
+      else if (errData.detail) errorMsg = errData.detail
+      else if (typeof errData === 'string') errorMsg = errData
+    }
+    toastStore.triggerToast(errorMsg, 'error')
   }
 }
+
 
 const handleDonationTopicClick = (topicId: string | number) => {
   currentTab.value = 'home'
@@ -1006,7 +1065,7 @@ const toggleTheme = useToggle(isDark)
     
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
     <div 
-      v-if="currentTab === 'profile' || currentTab === 'donate' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      v-if="currentTab === 'profile' || currentTab === 'donate' || currentTab === 'marketplace' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
       class="sticky top-0 z-40 bg-background/60 dark:bg-background/50 backdrop-blur-md pt-4 pb-2.5"
     >
       <PlatformHeader 
@@ -1282,16 +1341,6 @@ const toggleTheme = useToggle(isDark)
             :description="languageStore.t('افزونه های دلخواه را نصب کنید و در تاپیک خود اضافه کنید', 'Install custom plugins and add them to your topics')"
             :icon="LayersIcon"
             :eta="languageStore.t('نسخه 6 شهریور ماه 405', 'Version 6 - Shahrivar 1405')"
-            :features="[
-              languageStore.t('افزونه قرآن کریم', 'Holy Quran Plugin'),
-              languageStore.t('بهرمندی از آیه ها', 'Access to Verses'),
-              languageStore.t('بهرمندی از سوره ها', 'Access to Surahs'),
-              languageStore.t('بهرمندی از صوت قرآن کریم', 'Holy Quran Recitation Audio')
-            ]"
-            :action-text="languageStore.t('صفحه خانه', 'Home Page')"
-            @action="currentTab = 'home'"
-            :show-back-button="true"
-            @back="currentTab = 'home'"
           />
         </div>
 
@@ -1580,8 +1629,17 @@ const toggleTheme = useToggle(isDark)
       @cancel="isConfirmDeleteDonationOpen = false"
     />
 
+    <!-- ZarinPal Payment Receipt / Result Modal -->
+    <PaymentReceiptModal
+      v-model:open="isPaymentResultModalOpen"
+      :amount="paymentResultData.amount"
+      :ref-id="paymentResultData.ref_id"
+      :authority="paymentResultData.authority"
+    />
+
   </div>
 </template>
+
 
 <style scoped>
 

@@ -63,178 +63,9 @@ const selectedCategory = ref<'my_campaigns' | 'all' | 'inactive' | CampaignCateg
 const loading = ref(true)
 const campaigns = ref<DonationCampaignProps[]>([])
 
-// Default high-quality sample data if backend has no records yet
-const SAMPLE_CAMPAIGNS: DonationCampaignProps[] = [
-  {
-    id: 1,
-    title: 'تجهیز و شاداب‌سازی ۲ کلاس درس در دبستان روستای محروم',
-    description: 'خرید ۲۰ عدد نیمکت استاندارد، یک تخته هوشمند و رنگ‌آمیزی کامل کلاس‌ها جهت ایجاد محیطی پویا برای دانش‌آموزان منطقه محروم.',
-    topicId: 101,
-    topicName: 'کانون جهادی مدرسه شهید رجایی',
-    category: 'مدرسه و آموزش',
-    status: 'active',
-    targetAmount: 85000000,
-    collectedAmount: 52000000,
-    donorsCount: 38,
-    authorName: 'گروه جهادی عمار',
-    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    timestamp: '۲ روز پیش',
-    mediaGallery: [
-      'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80'
-    ],
-    recentDonors: [
-      {
-        id: 'd-1',
-        name: 'علی رضایی',
-        amount: 5000000,
-        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-        isAnonymous: false,
-        donatedAt: '۱۰ دقیقه پیش'
-      },
-      {
-        id: 'd-2',
-        name: 'کاربر ناشناس',
-        amount: 10000000,
-        isAnonymous: true,
-        donatedAt: '۲ ساعت پیش'
-      },
-      {
-        id: 'd-3',
-        name: 'مریم حسینی',
-        amount: 2000000,
-        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-        isAnonymous: false,
-        donatedAt: 'دیروز'
-      }
-    ]
-  },
-  {
-    id: 2,
-    title: 'تامین سیستم گرمایشی و تهویه مسجد و حسینیه حضرت ولیعصر (عج)',
-    description: 'خرید و راه‌اندازی دستگاه پکیج و رادیاتور جهت تامین گرمایش سالن اصلی مسجد و جلسات قرآنی جوانان.',
-    topicId: 102,
-    topicName: 'مسجد حضرت ولیعصر (عج)',
-    category: 'مسجد و اماکن مذهبی',
-    status: 'active',
-    targetAmount: 60000000,
-    collectedAmount: 60000000,
-    donorsCount: 45,
-    authorName: 'هیئت امنای مسجد',
-    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-    timestamp: '۴ روز پیش',
-    mediaGallery: [
-      'https://images.unsplash.com/photo-1548625149-fc4a29cf7092?auto=format&fit=crop&w=800&q=80'
-    ],
-    recentDonors: [
-      {
-        id: 'd-10',
-        name: 'محسن کریمی',
-        amount: 15000000,
-        isAnonymous: false,
-        donatedAt: '۳ روز پیش'
-      }
-    ]
-  },
-  {
-    id: 3,
-    title: 'تهیه و توزیع ۱۲۰ بسته معیشتی و لوازم‌التحریر برای خانواده‌های کم‌برخوردار',
-    description: 'پویش تامین ارزاق ضروری شامل برنج، روغن، حبوبات و بسته‌های کامل نوشت‌افزار تحصیلی برای کودکان خانواده‌های نیازمند.',
-    topicId: 103,
-    topicName: 'خیریه یاس نبوی',
-    category: 'نیازمندان و معیشت',
-    status: 'executed',
-    targetAmount: 90000000,
-    collectedAmount: 90000000,
-    donorsCount: 82,
-    authorName: 'مرکز نیکوکاری یاس',
-    authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
-    timestamp: 'هفته گذشته',
-    mediaGallery: [
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=800&q=80'
-    ],
-    recentDonors: [
-      {
-        id: 'd-20',
-        name: 'زهرا موسوی',
-        amount: 8000000,
-        avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
-        isAnonymous: false,
-        donatedAt: 'هفته گذشته'
-      }
-    ],
-    transparency: {
-      isAvailable: true,
-      executedAt: '۱۴۰۳/۰۵/۲۰',
-      description: 'تمامی ۱۲۰ بسته معیشتی تهیه و با حفظ کرامت انسانی به دست خانواده‌های تحت پوشش رسید. گزارش شفافیت و فاکتورها بارگذاری گردید.',
-      costBreakdown: {
-        'خرید اقلام غذایی و ارزاق': 55000000,
-        'خرید بسته‌های نوشت‌افزار': 30000000,
-        'هزینه حمل و توزیع': 5000000
-      },
-      receiptImages: [
-        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=400&q=80'
-      ]
-    }
-  },
-  {
-    id: 4,
-    title: 'تامین هزینه درمان و جراحی کودک کم‌شنوا',
-    description: 'تامین هزینه‌های پیوند حلزون گوش و جلسات توانبخشی و گفتاردرمانی برای کودک نیازمند.',
-    topicId: 104,
-    topicName: 'پویش سلامت و درمان امید',
-    category: 'درمانی و سلامت',
-    status: 'active',
-    targetAmount: 120000000,
-    collectedAmount: 78000000,
-    donorsCount: 64,
-    authorName: 'خیریه سلامت امید',
-    authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
-    timestamp: '۵ روز پیش',
-    mediaGallery: [
-      'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80'
-    ],
-    recentDonors: [
-      {
-        id: 'd-30',
-        name: 'دکتر حسنی',
-        amount: 20000000,
-        isAnonymous: false,
-        donatedAt: 'دیروز'
-      }
-    ]
-  },
-  {
-    id: 5,
-    title: 'احداث منبع آب شرب و لوله‌کشی روستایی',
-    description: 'ساخت مخزن ۲۰ هزار لیتری بتنی و اجرای خط انتقال آب شرب پایدار برای ۵۰ خانوار روستایی.',
-    topicId: 105,
-    topicName: 'گروه جهادی آبرسانی کوثر',
-    category: 'عمرانی و تجهیزات',
-    status: 'active',
-    targetAmount: 150000000,
-    collectedAmount: 95000000,
-    donorsCount: 71,
-    authorName: 'گروه جهادی کوثر',
-    authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-    timestamp: '۶ روز پیش',
-    mediaGallery: [
-      'https://images.unsplash.com/photo-1541888946425-d0fbb18015f5?auto=format&fit=crop&w=800&q=80'
-    ],
-    recentDonors: [
-      {
-        id: 'd-40',
-        name: 'حامی نیک‌اندیش',
-        amount: 30000000,
-        isAnonymous: true,
-        donatedAt: '۲ روز پیش'
-      }
-    ]
-  }
-]
-
 // Normalize category value from backend/category chip
 const normalizeCategory = (category: string): CampaignCategory => {
+
   const cat = category.toLowerCase()
   if (cat.includes('mosque') || cat.includes('مسجد') || cat.includes('مذهبی')) return 'mosque'
   if (cat.includes('school') || cat.includes('مدرسه') || cat.includes('آموزش')) return 'school'
@@ -301,15 +132,16 @@ const loadCampaigns = async () => {
         }
       })
     } else {
-      campaigns.value = [...SAMPLE_CAMPAIGNS]
+      campaigns.value = []
     }
   } catch (err) {
-    console.warn('Could not fetch campaigns from server, using sample list:', err)
-    campaigns.value = [...SAMPLE_CAMPAIGNS]
+    console.warn('Could not fetch campaigns from server:', err)
+    campaigns.value = []
   } finally {
     loading.value = false
   }
 }
+
 
 onMounted(() => {
   loadCampaigns()

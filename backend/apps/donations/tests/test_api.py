@@ -1,3 +1,4 @@
+from unittest.mock import patch, MagicMock
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.utils import timezone
@@ -5,6 +6,7 @@ from apps.accounts.models import User
 from apps.notes.models import Topic, Post
 from apps.donations.models import DonationCampaign, DonationTransaction, TransparencyLog
 from apps.donations.services import verify_and_settle_transaction
+
 
 
 class DonationAPITest(APITestCase):
@@ -204,3 +206,117 @@ class DonationAPITest(APITestCase):
         post.refresh_from_db()
         self.assertIn('عنوان ویرایش‌شده پویش', post.content)
         self.assertIn('25,000,000', post.content)
+
+    @patch('apps.donations.services.requests.post')
+    def test_donation_initiate_api_success(self, mock_post):
+
+        """
+        Initiating donation via POST /campaigns/<id>/donate/ connects to ZarinPal and returns gateway_url.
+        """
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "data": {
+                "code": 100,
+                "authority": "S0000000000000000000000000000API123",
+                "fee_type": "Merchant",
+                "fee": 100
+            },
+            "errors": []
+        }
+        mock_post.return_value = mock_response
+
+        campaign = DonationCampaign.objects.create(
+            topic=self.topic,
+            creator=self.creator,
+            title='پویش بازسازی مدرسه',
+            description='شرح بازسازی',
+            target_amount=10000000
+        )
+
+        response = self.client.post(f'/api/v1/donations/campaigns/{campaign.id}/donate/', {
+            'amount': 50000,
+            'is_anonymous': False
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['authority'], 'S0000000000000000000000000000API123')
+        self.assertIn('StartPay/S0000000000000000000000000000API123', response.data['gateway_url'])
+
+    @patch('apps.donations.services.requests.post')
+    def test_donation_callback_success_redirects_and_settles(self, mock_post):
+        """
+        ZarinPal callback with Status=OK verifies payment and redirects to frontend with success params.
+        """
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "data": {
+                "code": 100,
+                "ref_id": 88776655,
+                "card_pan": "603799******1111",
+                "fee": 200
+            },
+            "errors": []
+        }
+        mock_post.return_value = mock_response
+
+        campaign = DonationCampaign.objects.create(
+            topic=self.topic,
+            creator=self.creator,
+            title='پویش درمان',
+            description='شرح درمان',
+            target_amount=20000000
+        )
+        trx = DonationTransaction.objects.create(
+            campaign=campaign,
+            donor=self.donor_user,
+            amount=100000,
+            authority='S0000000000000000000000000000CALLBACK_OK'
+        )
+
+        response = self.client.get(
+            f'/api/v1/donations/payment/callback/?Authority={trx.authority}&Status=OK'
+        )
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('payment=success', response.url)
+        self.assertIn('ref_id=88776655', response.url)
+
+        # Check DB settlement
+        trx.refresh_from_db()
+        self.assertEqual(trx.status, DonationTransaction.PaymentStatus.SUCCESSFUL)
+        self.assertEqual(trx.gateway_reference_id, '88776655')
+
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.collected_amount, 100000)
+        self.assertEqual(campaign.donors_count, 1)
+
+    def test_donation_callback_nok_cancels_transaction(self):
+        """
+        ZarinPal callback with Status=NOK marks transaction as FAILED and redirects to frontend with failed params.
+        """
+        campaign = DonationCampaign.objects.create(
+            topic=self.topic,
+            creator=self.creator,
+            title='پویش درمان',
+            description='شرح درمان',
+            target_amount=20000000
+        )
+        trx = DonationTransaction.objects.create(
+            campaign=campaign,
+            donor=self.donor_user,
+            amount=100000,
+            authority='S0000000000000000000000000000CALLBACK_NOK'
+        )
+
+        response = self.client.get(
+            f'/api/v1/donations/payment/callback/?Authority={trx.authority}&Status=NOK'
+        )
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn('payment=failed', response.url)
+        self.assertIn('reason=canceled', response.url)
+
+        trx.refresh_from_db()
+        self.assertEqual(trx.status, DonationTransaction.PaymentStatus.FAILED)
+
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.collected_amount, 0)
+        self.assertEqual(campaign.donors_count, 0)
+
