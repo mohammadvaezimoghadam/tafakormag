@@ -77,6 +77,14 @@ KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY', config('KAVENEGAR_API_KEY', d
 KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', config('KAVENEGAR_SENDER', default=''))
 
 # ==============================================================================
+# پیکربندی درگاه پرداخت زرین‌پال (ZarinPal Gateway)
+# ==============================================================================
+ZARINPAL_SANDBOX = os.getenv('ZARINPAL_SANDBOX', config('ZARINPAL_SANDBOX', default='True')) == 'True'
+ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', config('ZARINPAL_MERCHANT_ID', default='00000000-0000-0000-0000-000000000000'))
+FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', config('FRONTEND_BASE_URL', default='http://localhost:5173'))
+BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', config('BACKEND_BASE_URL', default='http://localhost:8000'))
+
+# ==============================================================================
 # مدل کاربری سفارشی
 # ==============================================================================
 AUTH_USER_MODEL = 'accounts.User'
@@ -96,9 +104,12 @@ MIDDLEWARE = [
 ]
 
 # ==============================================================================
-# CORS
+# CORS & Reverse Proxy
 # ==============================================================================
 CORS_ALLOW_ALL_ORIGINS = True
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ==============================================================================
 # مسیرهای اصلی

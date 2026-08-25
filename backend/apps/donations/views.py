@@ -210,11 +210,14 @@ class DonationInitiateView(APIView):
         is_anonymous = serializer.validated_data.get('is_anonymous', False)
         donor = request.user if request.user.is_authenticated else None
 
+        callback_url = request.build_absolute_uri('/api/v1/donations/payment/callback/')
+
         trx, gateway_url = services.initiate_donation(
             campaign_id=id,
             amount=amount,
             is_anonymous=is_anonymous,
-            donor=donor
+            donor=donor,
+            callback_url=callback_url
         )
 
         return Response({
@@ -226,9 +229,79 @@ class DonationInitiateView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+from django.http import HttpResponseRedirect
+from django.conf import settings
+
+
+class PaymentCallbackView(APIView):
+    """
+    GET: Browser return handler from ZarinPal payment gateway.
+    Verifies transaction with ZarinPal API, settles database atomically,
+    and redirects user to frontend with result query params.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        authority = request.query_params.get('Authority') or request.query_params.get('authority')
+        status_param = (request.query_params.get('Status') or request.query_params.get('status') or '').upper()
+
+        # Dynamically determine frontend URL from current host (e.g. localhost:8085) or fallback to settings
+        host = request.get_host()
+        scheme = 'https' if request.is_secure() else 'http'
+        frontend_base = f"{scheme}://{host}"
+
+
+        if not authority:
+            return HttpResponseRedirect(f"{frontend_base}/donate?payment=failed&reason=missing_authority")
+
+        try:
+            trx = DonationTransaction.objects.get(authority=authority)
+        except DonationTransaction.DoesNotExist:
+            return HttpResponseRedirect(f"{frontend_base}/donate?payment=failed&authority={authority}&reason=not_found")
+
+        # 1. User canceled or payment failed on ZarinPal gateway
+        if status_param != 'OK':
+            if trx.status == DonationTransaction.PaymentStatus.PENDING:
+                trx.status = DonationTransaction.PaymentStatus.FAILED
+                trx.save(update_fields=['status'])
+            return HttpResponseRedirect(
+                f"{frontend_base}/donate?payment=failed&authority={authority}&reason=canceled&campaign_id={trx.campaign_id}"
+            )
+
+        # 2. Payment reported OK -> Verify with ZarinPal
+        if trx.status == DonationTransaction.PaymentStatus.SUCCESSFUL:
+            # Already settled (Idempotency)
+            ref_id = trx.gateway_reference_id or trx.tracking_code or authority
+            return HttpResponseRedirect(
+                f"{frontend_base}/donate?payment=success&authority={authority}&ref_id={ref_id}&amount={trx.amount}&campaign_id={trx.campaign_id}"
+            )
+
+        # Call ZarinPal verify endpoint
+        is_verified, ref_id, card_pan, fee, err_msg = services.ZarinPalService.verify_payment(
+            authority=authority,
+            amount_tomans=trx.amount
+        )
+
+        if is_verified:
+            settled_trx = services.verify_and_settle_transaction(
+                authority=authority,
+                gateway_ref=str(ref_id) if ref_id else None,
+                tracking_code=str(ref_id) if ref_id else None
+            )
+            return HttpResponseRedirect(
+                f"{frontend_base}/donate?payment=success&authority={authority}&ref_id={settled_trx.gateway_reference_id}&amount={settled_trx.amount}&campaign_id={settled_trx.campaign_id}"
+            )
+        else:
+            trx.status = DonationTransaction.PaymentStatus.FAILED
+            trx.save(update_fields=['status'])
+            return HttpResponseRedirect(
+                f"{frontend_base}/donate?payment=failed&authority={authority}&reason=verification_failed&campaign_id={trx.campaign_id}"
+            )
+
+
 class PaymentVerifyView(APIView):
     """
-    POST / GET: Payment gateway callback handler that triggers atomic verification and settlement.
+    POST / GET: Programmatic API endpoint for payment verification and settlement.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -239,6 +312,23 @@ class PaymentVerifyView(APIView):
 
         if not authority:
             return Response({'error': 'شناسه تراکنش (Authority) ارسال نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            trx_obj = DonationTransaction.objects.get(authority=authority)
+        except DonationTransaction.DoesNotExist:
+            return Response({'error': 'تراکنش با این شناسه یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not gateway_ref and trx_obj.status != DonationTransaction.PaymentStatus.SUCCESSFUL:
+            is_verified, ref_id, _, _, err_msg = services.ZarinPalService.verify_payment(
+                authority=authority,
+                amount_tomans=trx_obj.amount
+            )
+            if not is_verified:
+                trx_obj.status = DonationTransaction.PaymentStatus.FAILED
+                trx_obj.save(update_fields=['status'])
+                return Response({'error': err_msg or 'اعتبارسنجی درگاه ناموفق بود.'}, status=status.HTTP_400_BAD_REQUEST)
+            gateway_ref = str(ref_id)
+            tracking_code = str(ref_id)
 
         trx = services.verify_and_settle_transaction(
             authority=authority,
@@ -265,6 +355,23 @@ class PaymentVerifyView(APIView):
         if not authority:
             return Response({'error': 'شناسه تراکنش (Authority) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            trx_obj = DonationTransaction.objects.get(authority=authority)
+        except DonationTransaction.DoesNotExist:
+            return Response({'error': 'تراکنش با این شناسه یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not gateway_ref and trx_obj.status != DonationTransaction.PaymentStatus.SUCCESSFUL:
+            is_verified, ref_id, _, _, err_msg = services.ZarinPalService.verify_payment(
+                authority=authority,
+                amount_tomans=trx_obj.amount
+            )
+            if not is_verified:
+                trx_obj.status = DonationTransaction.PaymentStatus.FAILED
+                trx_obj.save(update_fields=['status'])
+                return Response({'error': err_msg or 'اعتبارسنجی درگاه ناموفق بود.'}, status=status.HTTP_400_BAD_REQUEST)
+            gateway_ref = str(ref_id)
+            tracking_code = str(ref_id)
+
         trx = services.verify_and_settle_transaction(
             authority=authority,
             gateway_ref=gateway_ref,
@@ -281,6 +388,7 @@ class PaymentVerifyView(APIView):
             'gateway_reference_id': trx.gateway_reference_id,
             'completed_at': trx.completed_at.isoformat() if trx.completed_at else None
         }, status=status.HTTP_200_OK)
+
 
 
 class TransparencyLogCreateView(APIView):

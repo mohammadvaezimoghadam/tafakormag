@@ -27,6 +27,7 @@ import DonationCard from '@/components/kindness/DonationCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
 import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
 import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
+import PaymentReceiptModal from '@/components/kindness/PaymentReceiptModal.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import MarketplaceAppIcon from '@/components/marketplace/MarketplaceAppIcon.vue'
 import type { DonationCampaignProps, CreateDonationPayload, CampaignCategory } from '@/types/kindness'
@@ -89,11 +90,13 @@ import {
   EyeIcon,
   BookOpenIcon,
   CodeIcon,
-  DownloadCloudIcon
+  DownloadCloudIcon,
+  TypeIcon,
+  ReceiptTextIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'under-dev' | 'marketplace-icon'>('marketplace-icon')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'payment-receipt-modal' | 'under-dev' | 'marketplace-icon'>('marketplace-icon')
 
 // MarketplaceAppIcon simulation state
 const simulatorMarketplaceIconTitle = ref('افزونه قرآن کریم')
@@ -161,6 +164,33 @@ const simulatorMarketplaceApps = ref<MarketplaceApp[]>([
   }
 ])
 
+// PaymentReceiptModal simulation state
+const isSimulatorReceiptOpen = ref(false)
+const simulatorReceiptAmount = ref<number>(500000)
+const simulatorReceiptRefId = ref('74839201948')
+const simulatorReceiptAuthority = ref('S000000000000000000000000000005jy5do')
+const simulatorReceiptCampaignTitle = ref('تجهیز و شاداب‌سازی کلاس درس مدرسه ابتدایی')
+
+const openReceiptModalWithPreset = (preset: 'small' | 'medium' | 'large') => {
+  if (preset === 'small') {
+    simulatorReceiptAmount.value = 50000
+    simulatorReceiptRefId.value = '10928374'
+    simulatorReceiptAuthority.value = 'S00000000000000000000000000000abc123'
+    simulatorReceiptCampaignTitle.value = 'پویش تامین بسته‌های معیشتی'
+  } else if (preset === 'medium') {
+    simulatorReceiptAmount.value = 500000
+    simulatorReceiptRefId.value = '74839201948'
+    simulatorReceiptAuthority.value = 'S000000000000000000000000000005jy5do'
+    simulatorReceiptCampaignTitle.value = 'تجهیز و شاداب‌سازی کلاس درس مدرسه ابتدایی'
+  } else if (preset === 'large') {
+    simulatorReceiptAmount.value = 20000000
+    simulatorReceiptRefId.value = '98765432101'
+    simulatorReceiptAuthority.value = 'S00000000000000000000000000000mnlow1'
+    simulatorReceiptCampaignTitle.value = 'تجهیز سیستم گرمایشی مسجد حضرت ولیعصر (عج)'
+  }
+  isSimulatorReceiptOpen.value = true
+  logEvent('PaymentReceiptModal: Opened with Preset', { preset, amount: simulatorReceiptAmount.value })
+}
 
 // DonationChatCard (In-Topic Message Card) simulation state
 const simulatorChatCardTitle = ref('تجهیز و شاداب‌سازی مدرسه ابتدایی روستا')
@@ -646,6 +676,7 @@ const currentComponentFile = computed(() => {
     case 'donation-card': return 'DonationCard.vue'
     case 'donation-chat-card': return 'DonationChatCard.vue'
     case 'create-donation-dialog': return 'CreateDonationDialog.vue'
+    case 'payment-receipt-modal': return 'PaymentReceiptModal.vue'
     case 'under-dev': return 'UnderDevelopmentCard.vue'
     case 'marketplace-icon': return 'MarketplaceAppIcon.vue'
     default: return ''
@@ -673,6 +704,8 @@ const handleComponentChange = (comp: typeof currentComponent.value) => {
   activeState.value = 'idle'
   if (comp === 'create-donation-dialog') {
     isSimulatorCreateDonationOpen.value = true
+  } else if (comp === 'payment-receipt-modal') {
+    isSimulatorReceiptOpen.value = true
   }
   logEvent('Component Changed', { component: comp })
 }
@@ -1825,6 +1858,21 @@ const openDuplicateWarningSimulation = () => {
                 <CheckCircle2Icon v-if="currentComponent === 'create-donation-dialog'" class="size-3.5 text-primary" />
               </button>
               <button 
+                @click="handleComponentChange('payment-receipt-modal')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'payment-receipt-modal' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <CheckCircle2Icon class="size-3.5 text-emerald-500" />
+                  رسید پرداخت موفق زرین‌پال (PaymentReceiptModal) 💳
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'payment-receipt-modal'" class="size-3.5 text-primary" />
+              </button>
+              <button 
                 @click="handleComponentChange('under-dev')"
                 :class="[
                   'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
@@ -1854,6 +1902,73 @@ const openDuplicateWarningSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'marketplace-icon'" class="size-3.5 text-primary" />
               </button>
+            </div>
+          </div>
+
+          <!-- Standalone Playgrounds -->
+          <div class="flex flex-col gap-3 pt-4 border-t border-border/40">
+            <Label class="text-[11px] font-semibold text-muted-foreground block">پلی‌گراندهای اختصاصی:</Label>
+            <div class="flex flex-col gap-1.5">
+              <router-link 
+                to="/playground/text-formatting"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <TypeIcon class="size-3.5 text-primary" />
+                  قالب‌بندی غنی متن (Text Formatting)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/donation-card"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <HeartIcon class="size-3.5 text-primary" />
+                  کارت مهربانی (Donation Card)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/create-donation"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <PlusIcon class="size-3.5 text-primary" />
+                  ایجاد پویش (Create Donation)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/marketplace-icon"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <LayersIcon class="size-3.5 text-primary" />
+                  آیکون‌های بازارچه (Marketplace Icons)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/quran-plugins"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <SparklesIcon class="size-3.5 text-emerald-500" />
+                  پلاگین‌ها و مینی‌اپ قرآن (Quran & Plugins)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/payment-receipt"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <ReceiptTextIcon class="size-3.5 text-emerald-500" />
+                  رسید پرداخت موفق زرین‌پال (Payment Receipt)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
             </div>
           </div>
         </div>
@@ -2038,7 +2153,7 @@ const openDuplicateWarningSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon' || currentComponent === 'payment-receipt-modal'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -2956,6 +3071,50 @@ const openDuplicateWarningSimulation = () => {
                       <ExternalLinkIcon class="size-3" />
                     </router-link>
                   </div>
+                </div>
+              </div>
+
+              <!-- PaymentReceiptModal Specific Controls -->
+              <div v-if="currentComponent === 'payment-receipt-modal'" class="flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <Label class="text-[10px] text-muted-foreground">بارگذاری سناریوهای آماده تست:</Label>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <Button size="xs" variant="outline" class="text-[11px] h-7 cursor-pointer" @click="openReceiptModalWithPreset('small')">
+                      مبلغ ۵۰ هزار تومان
+                    </Button>
+                    <Button size="xs" variant="outline" class="text-[11px] h-7 cursor-pointer" @click="openReceiptModalWithPreset('medium')">
+                      مبلغ ۵۰۰ هزار تومان
+                    </Button>
+                    <Button size="xs" variant="outline" class="text-[11px] h-7 cursor-pointer" @click="openReceiptModalWithPreset('large')">
+                      مبلغ ۲۰ میلیون تومان
+                    </Button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <div class="flex flex-col gap-1 text-start">
+                    <Label class="text-[9.5px] text-muted-foreground">مبلغ اهدایی (تومان):</Label>
+                    <Input type="number" v-model.number="simulatorReceiptAmount" class="h-8 text-xs font-semibold" placeholder="مبلغ" />
+                  </div>
+                  <div class="flex flex-col gap-1 text-start">
+                    <Label class="text-[9.5px] text-muted-foreground">عنوان پویش:</Label>
+                    <Input v-model="simulatorReceiptCampaignTitle" class="h-8 text-xs" placeholder="عنوان پویش" />
+                  </div>
+                  <div class="flex flex-col gap-1 text-start">
+                    <Label class="text-[9.5px] text-muted-foreground">شماره پیگیری (Ref ID):</Label>
+                    <Input v-model="simulatorReceiptRefId" class="h-8 text-xs font-mono" placeholder="Ref ID" />
+                  </div>
+                  <div class="flex flex-col gap-1 text-start">
+                    <Label class="text-[9.5px] text-muted-foreground">شناسه تراکنش (Authority):</Label>
+                    <Input v-model="simulatorReceiptAuthority" class="h-8 text-xs font-mono" placeholder="Authority" />
+                  </div>
+                </div>
+
+                <div class="flex justify-end">
+                  <Button size="sm" class="h-8.5 font-bold text-xs gap-1.5 rounded-xl cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white" @click="isSimulatorReceiptOpen = true">
+                    <CheckCircle2Icon class="size-3.5" />
+                    <span>باز کردن مودال رسید پرداخت</span>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -3972,6 +4131,45 @@ const openDuplicateWarningSimulation = () => {
                   </div>
                 </div>
 
+                <!-- PaymentReceiptModal Preview -->
+                <div 
+                  v-else-if="currentComponent === 'payment-receipt-modal'"
+                  class="w-full flex flex-col items-center justify-center py-8 gap-5 text-center"
+                  :dir="languageStore.dir"
+                >
+                  <Button 
+                    @click="isSimulatorReceiptOpen = true" 
+                    class="cursor-pointer flex items-center gap-2 h-10 px-6 font-bold text-xs shadow-md bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
+                  >
+                    <CheckCircle2Icon class="size-4" />
+                    {{ languageStore.t('نمایش مجدد مودال رسید پرداخت موفق', 'Open Successful Payment Receipt Modal') }}
+                  </Button>
+
+                  <div class="w-full max-w-sm rounded-2xl bg-card/60 border border-border/50 p-4 text-start flex flex-col gap-2">
+                    <span class="text-xs font-bold text-foreground">اطلاعات فاکتور در حال نمایش:</span>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-border/30">
+                      <span class="text-muted-foreground">مبلغ:</span>
+                      <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ new Intl.NumberFormat('fa-IR').format(simulatorReceiptAmount) }} تومان</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-border/30">
+                      <span class="text-muted-foreground">شماره پیگیری:</span>
+                      <span class="font-mono text-xs font-semibold">{{ simulatorReceiptRefId }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs py-1 border-b border-border/30">
+                      <span class="text-muted-foreground">شناسه زرین‌پال:</span>
+                      <span class="font-mono text-[10px] text-muted-foreground truncate max-w-[170px]">{{ simulatorReceiptAuthority }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs py-1">
+                      <span class="text-muted-foreground">پویش:</span>
+                      <span class="text-xs truncate max-w-[170px] font-medium">{{ simulatorReceiptCampaignTitle }}</span>
+                    </div>
+                  </div>
+
+                  <p class="text-[10px] text-muted-foreground text-center max-w-xs leading-relaxed">
+                    {{ languageStore.t('تست و بررسی مودال رسید پرداخت موفق زرین‌پال پس از بازگشت کاربر از درگاه بانکی.', 'Test and inspect the ZarinPal success receipt modal after returning from payment gateway.') }}
+                  </p>
+                </div>
+
                 <!-- DuplicateWarningDialog Preview -->
                 <div 
                   v-else-if="currentComponent === 'duplicate-warning-dialog'"
@@ -4180,6 +4378,17 @@ const openDuplicateWarningSimulation = () => {
         logEvent('CreateDonationDialog: Campaign Created', payload)
         simulatorLastCreatedDonation = payload
       }"
+    />
+
+    <!-- PaymentReceiptModal Simulator Instance -->
+    <PaymentReceiptModal
+      v-model:open="isSimulatorReceiptOpen"
+      :amount="simulatorReceiptAmount"
+      :ref-id="simulatorReceiptRefId"
+      :authority="simulatorReceiptAuthority"
+      :campaign-title="simulatorReceiptCampaignTitle"
+      @close="logEvent('PaymentReceiptModal: Closed', {})"
+      @view-campaign="logEvent('PaymentReceiptModal: View Campaign Clicked', {})"
     />
 
     </div>
