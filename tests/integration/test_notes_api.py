@@ -61,6 +61,20 @@ class TestNotesAPIIntegration:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "Topic A Edited"
 
+    def test_topic_post_badge_create_and_update(self):
+        # 1. Create topic with post_badge
+        payload = {"name": "Topic Badge Test", "description": "Desc", "post_badge": "@my_badge"}
+        response = self.client1.post("/api/notes/topics/", payload, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["post_badge"] == "@my_badge"
+        topic_id = response.data["id"]
+
+        # 2. Update post_badge
+        update_payload = {"post_badge": "@updated_badge"}
+        res_update = self.client1.patch(f"/api/notes/topics/{topic_id}/", update_payload, format="json")
+        assert res_update.status_code == status.HTTP_200_OK
+        assert res_update.data["post_badge"] == "@updated_badge"
+
     def test_delete_topic_only_by_creator(self):
         topic = Topic.objects.create(name="Topic A", created_by=self.user1)
         
@@ -116,6 +130,39 @@ class TestNotesAPIIntegration:
         assert task.chat_id == "999888"
         assert task.text == "Testing bot dispatch"
         assert task.bot_token == "12345:telegram-token"
+
+    def test_post_creation_appends_topic_post_badge_to_bot_task(self):
+        # Configure user 1 with bot token
+        self.user1.telegram_bot_token = "12345:telegram-token"
+        self.user1.save()
+
+        # Create topic with post_badge and activate telegram bot
+        topic = Topic.objects.create(
+            name="Topic With Badge",
+            post_badge="@my_badge_channel",
+            created_by=self.user1,
+            telegram_bot_active=True
+        )
+        
+        target = MessagingTarget.objects.create(
+            user=self.user1,
+            platform="telegram",
+            chat_id="777666",
+            label="Badge Channel",
+            is_active=True
+        )
+        topic.telegram_connections.add(target)
+
+        # Create post
+        payload = {"topic": topic.id, "content": "Important Announcement"}
+        response = self.client1.post("/api/notes/", payload, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["content"] == "Important Announcement\n\n@my_badge_channel"
+
+        # Verify BotTask text includes badge
+        task = BotTask.objects.filter(post_id=response.data["id"]).first()
+        assert task is not None
+        assert task.text == "Important Announcement\n\n@my_badge_channel"
 
     def test_post_edit_triggers_edit_bot_task(self):
         # Set up bot, connections and post

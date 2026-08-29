@@ -10,6 +10,7 @@ class Topic(models.Model):
     name = models.CharField(max_length=255)
     image = models.FileField(upload_to='topic_images/', null=True, blank=True)
     description = models.TextField(blank=True, null=True)
+    post_badge = models.CharField(max_length=100, blank=True, default='')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

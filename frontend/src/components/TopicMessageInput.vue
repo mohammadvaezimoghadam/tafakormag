@@ -21,7 +21,13 @@ import {
   Wand2Icon,
   HeartIcon,
   BarChart3Icon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  BoldIcon,
+  ItalicIcon,
+  UnderlineIcon,
+  StrikethroughIcon,
+  CodeIcon,
+  QuoteIcon
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -69,6 +75,8 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'send', message: { text: string; attachments: Attachment[] }): void
+  (e: 'input-change', text: string): void
+  (e: 'update:text', text: string): void
   (e: 'attach'): void
   (e: 'plus'): void
   (e: 'create-donation'): void
@@ -88,6 +96,20 @@ let timerInterval: any = null
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showExpanded = ref(false)
 const expandedTextareaRef = ref<HTMLTextAreaElement | null>(null)
+
+watch(() => props.initialText, (newVal) => {
+  if (newVal !== undefined && newVal !== text.value) {
+    text.value = newVal || ''
+    nextTick(() => {
+      adjustHeight()
+    })
+  }
+})
+
+watch(text, (newVal) => {
+  emit('input-change', newVal || '')
+  emit('update:text', newVal || '')
+})
 
 const isAiRefinerOpen = ref(false)
 
@@ -213,6 +235,20 @@ watch([text, hasAttachments], () => {
   })
 })
 
+<<<<<<< HEAD
+=======
+const handleOutsidePointer = (e: Event) => {
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  if (target.closest('.floating-format-menu')) return
+  if (target === textareaRef.value) {
+    return
+  }
+  showFormatMenu.value = false
+  menuMode.value = 'auto'
+}
+
+>>>>>>> da1e8c4 (feat: add topic post badge, draft persistence, and native mobile context menu with fixed formatting toolbar)
 const handleGlobalSelectionChange = () => {
   const activeEl = document.activeElement
   if (activeEl === textareaRef.value) {
@@ -300,78 +336,41 @@ const isMobile = () => {
 }
 
 const showFormatMenu = ref(false)
-const showExpandedFormatMenu = ref(false)
+const menuMode = ref<'full' | 'context' | 'auto'>('auto')
 const menuCoords = ref<MenuCoords | null>(null)
-const expandedMenuCoords = ref<MenuCoords | null>(null)
 const selectedText = ref('')
 const expandedSelectedText = ref('')
 
-// Hold & Long-Press Touch State
-let touchHoldTimer: any = null
-let touchStartX = 0
-let touchStartY = 0
-let touchHasMoved = false
-let isTouchHolding = false
+// Helpers to detect active formats on selected text
+const isBoldActive = (isExpanded = false) => {
+  const s = (isExpanded ? expandedSelectedText.value : selectedText.value).trim()
+  return (s.startsWith('**') && s.endsWith('**') && s.length >= 4)
+}
 
-const calculateMenuCoordinates = (
-  el: HTMLTextAreaElement,
-  start: number,
-  end: number,
-  isExpanded: boolean,
-  fallbackTouchPoint?: { clientX: number; clientY: number }
-): MenuCoords => {
-  const isContext = (start >= end)
-  const menuWidth = isContext ? 190 : 330
-  const menuHeight = 40
-  const verticalGap = 8
+const isItalicActive = (isExpanded = false) => {
+  const s = (isExpanded ? expandedSelectedText.value : selectedText.value).trim()
+  return (s.startsWith('*') && s.endsWith('*') && !s.startsWith('**') && s.length >= 2) ||
+         (s.startsWith('_') && s.endsWith('_') && !s.startsWith('__') && s.length >= 2)
+}
 
-  let centerX = 0
-  let candidateTop = 0
-  let placement: 'top' | 'bottom' = 'top'
+const isUnderlineActive = (isExpanded = false) => {
+  const s = (isExpanded ? expandedSelectedText.value : selectedText.value).trim()
+  return s.startsWith('__') && s.endsWith('__') && s.length >= 4
+}
 
-  const elRect = el.getBoundingClientRect()
+const isStrikethroughActive = (isExpanded = false) => {
+  const s = (isExpanded ? expandedSelectedText.value : selectedText.value).trim()
+  return s.startsWith('~~') && s.endsWith('~~') && s.length >= 4
+}
 
-  if (fallbackTouchPoint) {
-    centerX = fallbackTouchPoint.clientX - elRect.left
-    const touchTopInEl = fallbackTouchPoint.clientY - elRect.top
-    candidateTop = touchTopInEl - menuHeight - verticalGap
-    if (candidateTop < 6 && !isExpanded) {
-      candidateTop = -menuHeight - 8
-      placement = 'top'
-    } else if (candidateTop < 6 && isExpanded) {
-      candidateTop = touchTopInEl + 24
-      placement = 'bottom'
-    }
-  } else {
-    const rect = getSelectionPixelRect(el, start, end)
-    centerX = rect.left + (rect.width / 2)
-    candidateTop = rect.top - menuHeight - verticalGap
-    if (!isExpanded) {
-      candidateTop = Math.min(candidateTop, -menuHeight - 6)
-      placement = 'top'
-    } else {
-      const topInContainer = rect.top + 24
-      const candidateAbove = topInContainer - menuHeight - verticalGap
-      if (candidateAbove >= 8) {
-        candidateTop = candidateAbove
-        placement = 'top'
-      } else {
-        candidateTop = rect.bottom + 24 + verticalGap
-        placement = 'bottom'
-      }
-    }
-  }
+const isCodeActive = (isExpanded = false) => {
+  const s = (isExpanded ? expandedSelectedText.value : selectedText.value).trim()
+  return s.startsWith('`') && s.endsWith('`') && s.length >= 2
+}
 
-  const containerWidth = el.clientWidth || 300
-  const minX = (menuWidth / 2) + 8
-  const maxX = Math.max(minX, containerWidth - (menuWidth / 2) - 8)
-  const clampedX = Math.min(Math.max(centerX, minX), maxX)
-
-  return {
-    top: candidateTop,
-    left: isExpanded ? clampedX + 24 : clampedX,
-    placement
-  }
+const isQuoteActive = (isExpanded = false) => {
+  const s = (isExpanded ? expandedSelectedText.value : selectedText.value).trim()
+  return s.startsWith('> ') || s.startsWith('>')
 }
 
 const handleTextareaSelect = (isExpanded = false) => {
@@ -383,17 +382,11 @@ const handleTextareaSelect = (isExpanded = false) => {
 
   if (start >= end) {
     if (isExpanded) {
-      if (!isTouchHolding) {
-        showExpandedFormatMenu.value = false
-        expandedSelectedText.value = ''
-        expandedMenuCoords.value = null
-      }
+      expandedSelectedText.value = ''
     } else {
-      if (!isTouchHolding) {
-        showFormatMenu.value = false
-        selectedText.value = ''
-        menuCoords.value = null
-      }
+      showFormatMenu.value = false
+      selectedText.value = ''
+      menuCoords.value = null
     }
     return
   }
@@ -401,136 +394,49 @@ const handleTextareaSelect = (isExpanded = false) => {
   const rawSelection = el.value.substring(start, end)
   if (!rawSelection || rawSelection.trim().length === 0) {
     if (isExpanded) {
-      if (!isTouchHolding) {
-        showExpandedFormatMenu.value = false
-        expandedSelectedText.value = ''
-        expandedMenuCoords.value = null
-      }
+      expandedSelectedText.value = ''
     } else {
-      if (!isTouchHolding) {
-        showFormatMenu.value = false
-        selectedText.value = ''
-        menuCoords.value = null
-      }
+      showFormatMenu.value = false
+      selectedText.value = ''
+      menuCoords.value = null
     }
     return
   }
-
-  const coords = calculateMenuCoordinates(el, start, end, isExpanded)
 
   if (isExpanded) {
     expandedSelectedText.value = rawSelection
-    expandedMenuCoords.value = coords
-    showExpandedFormatMenu.value = true
-  } else {
-    selectedText.value = rawSelection
-    menuCoords.value = coords
-    showFormatMenu.value = true
-  }
-}
-
-const handleTouchStart = (e: TouchEvent, isExpanded = false) => {
-  if (props.disabled) return
-  if (!e.touches || e.touches.length === 0) return
-
-  const touch = e.touches[0]
-  if (!touch) return
-  touchStartX = touch.clientX
-  touchStartY = touch.clientY
-  touchHasMoved = false
-  isTouchHolding = false
-
-  if (touchHoldTimer) clearTimeout(touchHoldTimer)
-  touchHoldTimer = setTimeout(() => {
-    if (!touchHasMoved) {
-      isTouchHolding = true
-      handleLongPressHold(touch, isExpanded)
-    }
-  }, 450)
-}
-
-const handleTouchMove = (e: TouchEvent) => {
-  if (!e.touches || e.touches.length === 0) return
-  const touch = e.touches[0]
-  if (!touch) return
-  const dx = Math.abs(touch.clientX - touchStartX)
-  const dy = Math.abs(touch.clientY - touchStartY)
-  if (dx > 10 || dy > 10) {
-    touchHasMoved = true
-    if (touchHoldTimer) {
-      clearTimeout(touchHoldTimer)
-      touchHoldTimer = null
-    }
-  }
-}
-
-const handleTouchEnd = (_e: TouchEvent, isExpanded = false) => {
-  if (touchHoldTimer) {
-    clearTimeout(touchHoldTimer)
-    touchHoldTimer = null
-  }
-  if (isTouchHolding) {
-    setTimeout(() => {
-      isTouchHolding = false
-    }, 300)
     return
   }
-  handleTextareaSelect(isExpanded)
-  setTimeout(() => handleTextareaSelect(isExpanded), 60)
-  setTimeout(() => handleTextareaSelect(isExpanded), 160)
-}
 
-const handleLongPressHold = (touch: Touch, isExpanded = false) => {
-  const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
-  if (!el) return
-
-  const start = el.selectionStart ?? 0
-  const end = el.selectionEnd ?? 0
-  const sel = (start < end) ? el.value.substring(start, end) : ''
-
-  const coords = calculateMenuCoordinates(el, start, end, isExpanded, {
-    clientX: touch.clientX,
-    clientY: touch.clientY
-  })
-
-  if (isExpanded) {
-    expandedSelectedText.value = sel
-    expandedMenuCoords.value = coords
-    showExpandedFormatMenu.value = true
-  } else {
-    selectedText.value = sel
-    menuCoords.value = coords
-    showFormatMenu.value = true
-  }
-}
-
-const handleContextMenu = (e: MouseEvent, isExpanded = false) => {
+  // Collapsed input: only show floating toolbar on desktop (no touch interference)
   if (isMobile()) {
-    e.preventDefault()
-    const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
-    if (el) {
-      const start = el.selectionStart ?? 0
-      const end = el.selectionEnd ?? 0
-      const sel = (start < end) ? el.value.substring(start, end) : ''
-      const coords = calculateMenuCoordinates(el, start, end, isExpanded, {
-        clientX: e.clientX,
-        clientY: e.clientY
-      })
-      if (isExpanded) {
-        expandedSelectedText.value = sel
-        expandedMenuCoords.value = coords
-        showExpandedFormatMenu.value = true
-      } else {
-        selectedText.value = sel
-        menuCoords.value = coords
-        showFormatMenu.value = true
-      }
-    }
+    showFormatMenu.value = false
+    selectedText.value = ''
+    return
   }
-}
 
-const handleTextareaFocus = (isExpanded = false) => {
-  handleTextareaSelect(isExpanded)
+  const rect = getSelectionPixelRect(el, start, end)
+  const menuWidth = 330
+  const menuHeight = 40
+  const verticalGap = 10
+
+  const centerX = rect.left + (rect.width / 2)
+  const minX = (menuWidth / 2) + 12
+  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
+  const clampedX = Math.min(Math.max(centerX, minX), maxX)
+
+  const top = Math.min(rect.top - menuHeight - verticalGap, -menuHeight - 6)
+
+  const coords: MenuCoords = {
+    top,
+    left: clampedX,
+    placement: 'top'
+  }
+
+  selectedText.value = rawSelection
+  menuCoords.value = coords
+  menuMode.value = 'full'
+  showFormatMenu.value = true
 }
 
 const handleTextareaBlur = (isExpanded = false) => {
@@ -539,12 +445,7 @@ const handleTextareaBlur = (isExpanded = false) => {
     if (active && (active as HTMLElement).closest && (active as HTMLElement).closest('.floating-format-menu')) {
       return
     }
-    if (isTouchHolding) {
-      return
-    }
-    if (isExpanded) {
-      showExpandedFormatMenu.value = false
-    } else {
+    if (!isExpanded) {
       showFormatMenu.value = false
     }
   }, 350)
@@ -1111,11 +1012,6 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
-            @touchstart="handleTouchStart($event, false)"
-            @touchmove="handleTouchMove($event)"
-            @touchend="handleTouchEnd($event, false)"
-            @focus="handleTextareaFocus(false)"
-            @contextmenu="handleContextMenu($event, false)"
             @blur="handleTextareaBlur(false)"
             @keydown="(e) => handleKeydown(e, false)"
           />
@@ -1253,7 +1149,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
         </div>
 
         <!-- Header -->
-        <div class="px-6 pb-4 border-b border-border/10 flex items-center justify-between shrink-0">
+        <div class="px-6 pb-3 border-b border-border/40 flex items-center justify-between shrink-0">
           <div class="flex items-center gap-2">
             <span class="text-sm font-black text-foreground">{{ props.isEditMode ? languageStore.t('ویرایش پیام', 'Edit Message') : languageStore.t('ویرایش پیام طولانی', 'Edit Long Message') }}</span>
             <span class="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">{{ languageStore.t('نمای بزرگ', 'Expanded View') }}</span>
@@ -1270,18 +1166,98 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           </Button>
         </div>
 
+        <!-- Fixed Formatting Toolbar at the Top of Expanded Modal -->
+        <div class="px-6 py-2 border-b border-border/40 bg-muted/25 dark:bg-muted/10 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 select-none" :dir="languageStore.dir">
+          <!-- Bold -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isBoldActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
+            @mousedown.prevent
+            @click="applyFormat('bold', true)"
+          >
+            <BoldIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Italic -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isItalicActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
+            @mousedown.prevent
+            @click="applyFormat('italic', true)"
+          >
+            <ItalicIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Underline -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isUnderlineActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
+            @mousedown.prevent
+            @click="applyFormat('underline', true)"
+          >
+            <UnderlineIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Strikethrough -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isStrikethroughActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
+            @mousedown.prevent
+            @click="applyFormat('strikethrough', true)"
+          >
+            <StrikethroughIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Separator -->
+          <div class="w-px h-4 bg-border/60 mx-1 shrink-0" />
+
+          <!-- Code -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isCodeActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
+            @mousedown.prevent
+            @click="applyFormat('code', true)"
+          >
+            <CodeIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Quote -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isQuoteActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
+            @mousedown.prevent
+            @click="applyFormat('quote', true)"
+          >
+            <QuoteIcon class="size-4 stroke-[2.5]" />
+          </Button>
+        </div>
+
         <!-- Body: Large Textarea -->
         <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0 relative">
-          <!-- Floating Format Toolbar (Expanded Modal) -->
-          <FloatingFormatMenu
-            :show="showExpandedFormatMenu"
-            :coords="expandedMenuCoords"
-            :selected-text="expandedSelectedText"
-            :has-text="Boolean(text.trim())"
-            @format="(f) => applyFormat(f, true)"
-            @action="(act) => handleMenuAction(act, true)"
-          />
-
           <textarea
             ref="expandedTextareaRef"
             v-model="text"
@@ -1291,11 +1267,6 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
-            @touchstart="handleTouchStart($event, true)"
-            @touchmove="handleTouchMove($event)"
-            @touchend="handleTouchEnd($event, true)"
-            @focus="handleTextareaFocus(true)"
-            @contextmenu="handleContextMenu($event, true)"
             @blur="handleTextareaBlur(true)"
             @keydown="(e) => handleKeydown(e, true)"
           />

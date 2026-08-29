@@ -20,7 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'create', topic: { title: string; description: string; image?: string }): void
+  (e: 'create', topic: { title: string; description: string; post_badge?: string; image?: string }): void
 }>()
 
 const toastStore = useToastStore()
@@ -28,6 +28,7 @@ const languageStore = useLanguageStore()
 
 const title = ref('')
 const description = ref('')
+const postBadge = ref('')
 const avatarPreview = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
@@ -63,18 +64,21 @@ const handleSubmit = () => {
   emit('create', {
     title: title.value.trim(),
     description: description.value.trim(),
+    post_badge: postBadge.value.trim() || undefined,
     image: avatarPreview.value || undefined
   })
 
   // Reset inputs
   title.value = ''
   description.value = ''
+  postBadge.value = ''
   avatarPreview.value = ''
 }
 
 const handleCancel = () => {
   title.value = ''
   description.value = ''
+  postBadge.value = ''
   avatarPreview.value = ''
   emit('close')
 }
@@ -173,6 +177,23 @@ const nameLetter = computed(() => {
             type="text" 
             v-model="description" 
             :placeholder="languageStore.t('توضیح کوتاهی درباره این تاپیک بنویسید...', 'Write a short description about this topic...')" 
+            class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
+            maxlength="100"
+            dir="auto"
+            @keyup.enter="handleSubmit"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <Label for="topic-badge" class="text-[10.5px] text-muted-foreground font-semibold">{{ languageStore.t('بج پست‌ها (امضای منبع):', 'Post Badge (Source Label):') }}</Label>
+            <span class="text-[9px] text-muted-foreground">{{ languageStore.t('اختیاری', 'Optional') }}</span>
+          </div>
+          <Input 
+            id="topic-badge" 
+            type="text" 
+            v-model="postBadge" 
+            :placeholder="languageStore.t('مثال: @my_channel یا 📌 منبع: تفکر', 'e.g., @my_channel or 📌 Source: Tafakor')" 
             class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
             maxlength="100"
             dir="auto"

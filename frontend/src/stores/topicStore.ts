@@ -6,6 +6,7 @@ export interface Topic {
   id: number
   title: string // maps to name in backend
   description: string
+  post_badge?: string
   image?: string
   unreadCount?: number // maps to post_count in backend
   time: string // formatted created_at
@@ -54,6 +55,7 @@ export const useTopicStore = defineStore('topic', () => {
       id: data.id,
       title: data.name,
       description: data.description || '',
+      post_badge: data.post_badge || '',
       image: getImageUrl(data.image),
       unreadCount: data.post_count || 0,
       time: data.created_at || 'هم‌اکنون',
@@ -90,12 +92,15 @@ export const useTopicStore = defineStore('topic', () => {
     }
   }
 
-  const addTopic = async (newTopic: { title: string; description: string; image?: File }) => {
+  const addTopic = async (newTopic: { title: string; description: string; post_badge?: string; image?: File }) => {
     loading.value = true
     try {
       const formData = new FormData()
       formData.append('name', newTopic.title)
       formData.append('description', newTopic.description)
+      if (newTopic.post_badge !== undefined) {
+        formData.append('post_badge', newTopic.post_badge)
+      }
       if (newTopic.image) {
         formData.append('image', newTopic.image)
       }
@@ -126,7 +131,7 @@ export const useTopicStore = defineStore('topic', () => {
     }
   }
 
-  const updateTopic = async (id: number, updatedTopic: { title: string; description: string; image?: string | File }) => {
+  const updateTopic = async (id: number, updatedTopic: { title: string; description: string; post_badge?: string; image?: string | File }) => {
     loading.value = true
     try {
       let payload: any
@@ -134,11 +139,17 @@ export const useTopicStore = defineStore('topic', () => {
         payload = new FormData()
         payload.append('name', updatedTopic.title)
         payload.append('description', updatedTopic.description)
+        if (updatedTopic.post_badge !== undefined) {
+          payload.append('post_badge', updatedTopic.post_badge)
+        }
         payload.append('image', updatedTopic.image)
       } else {
         payload = {
           name: updatedTopic.title,
           description: updatedTopic.description
+        }
+        if (updatedTopic.post_badge !== undefined) {
+          payload.post_badge = updatedTopic.post_badge
         }
         if (updatedTopic.image === '') {
           payload.image = null

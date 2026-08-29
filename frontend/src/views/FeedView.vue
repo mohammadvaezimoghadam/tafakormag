@@ -683,7 +683,7 @@ const dataURLtoFile = (dataurl: string, filename: string) => {
   return new File([u8arr], filename, { type: mime })
 }
 
-const handleCreateTopic = async (newTopic: { title: string; description: string; image?: string }) => {
+const handleCreateTopic = async (newTopic: { title: string; description: string; post_badge?: string; image?: string }) => {
   let imageFile: File | undefined = undefined
   if (newTopic.image && newTopic.image.startsWith('data:')) {
     imageFile = dataURLtoFile(newTopic.image, 'topic_image.png')
@@ -693,6 +693,7 @@ const handleCreateTopic = async (newTopic: { title: string; description: string;
     await topicStore.addTopic({
       title: newTopic.title,
       description: newTopic.description,
+      post_badge: newTopic.post_badge,
       image: imageFile
     })
     isCreateModalOpen.value = false
@@ -869,12 +870,13 @@ const handleTopicImport = () => {
   activeTopicSubView.value = 'import'
 }
 
-const handleSaveTopicEdit = async (updatedTopic: { title: string; description: string; image: string | File }) => {
+const handleSaveTopicEdit = async (updatedTopic: { title: string; description: string; post_badge?: string; image: string | File }) => {
   if (!selectedTopic.value) return
   try {
     await topicStore.updateTopic(selectedTopic.value.id, {
       title: updatedTopic.title,
       description: updatedTopic.description,
+      post_badge: updatedTopic.post_badge,
       image: updatedTopic.image
     })
     activeTopicSubView.value = 'feed'
@@ -978,6 +980,32 @@ const handleFileInputChange = (e: Event) => {
   }]
 }
 
+const getTopicDraft = (topicId?: number | string | null) => {
+  if (!topicId) return ''
+  try {
+    return localStorage.getItem(`tafakor_topic_draft_${topicId}`) || ''
+  } catch (e) {
+    return ''
+  }
+}
+
+const saveTopicDraft = (topicId: number | string | null, text: string) => {
+  if (!topicId) return
+  try {
+    if (text && text.trim()) {
+      localStorage.setItem(`tafakor_topic_draft_${topicId}`, text)
+    } else {
+      localStorage.removeItem(`tafakor_topic_draft_${topicId}`)
+    }
+  } catch (e) {}
+}
+
+const handleDraftChange = (newText: string) => {
+  if (!editingPost.value && selectedTopic.value) {
+    saveTopicDraft(selectedTopic.value.id, newText)
+  }
+}
+
 const removePostAttachment = () => {
   postAttachments.value = []
   selectedAttachmentFile.value = null
@@ -1022,6 +1050,9 @@ const handleSendPost = async (message: { text: string }, forceSubmit = false) =>
   try {
     await postStore.createPost(formData)
     await topicStore.loadTopics()
+    if (selectedTopic.value) {
+      saveTopicDraft(selectedTopic.value.id, '')
+    }
     triggerToast(languageStore.t('پست جدید ارسال و در کانال‌های فعال بازنشر شد', 'New post sent and republished in active channels'), 'success')
     removePostAttachment()
     pendingPostMessage.value = null
@@ -1247,10 +1278,12 @@ const toggleTheme = useToggle(isDark)
               <!-- Message Input component at the bottom of the feed -->
               <div class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] w-full">
                 <TopicMessageInput 
+                  :key="selectedTopic ? `topic-${selectedTopic.id}-${editingPost ? 'edit' : 'create'}` : 'no-topic'"
                   :disabled="!isTopicCreator"
                   :placeholder="languageStore.t('یادداشت خود را بنویسید...', 'Write your note...')"
                   :isEditMode="!!editingPost"
-                  :initialText="editingPost ? editingPost.content : ''"
+                  :initialText="editingPost ? editingPost.content : (selectedTopic ? getTopicDraft(selectedTopic.id) : '')"
+                  @input-change="handleDraftChange"
                   @send="handleSendPost"
                   @save="handleSaveEdit"
                   @cancel-edit="handleCancelEdit"

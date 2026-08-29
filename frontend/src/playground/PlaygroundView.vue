@@ -865,6 +865,7 @@ const simulatorTopicData = ref({
   id: 1,
   title: 'پشتیبانی فنی پلتفرم',
   description: 'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
+  post_badge: '@tafakor_channel',
   image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
   telegram_bot_active: true,
   bale_bot_active: false,
@@ -877,6 +878,7 @@ const resetSimulatorTopicEdit = () => {
     id: 1,
     title: 'پشتیبانی فنی پلتفرم',
     description: 'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
+    post_badge: '@tafakor_channel',
     image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     telegram_bot_active: true,
     bale_bot_active: false,
@@ -2643,18 +2645,49 @@ const openDuplicateWarningSimulation = () => {
               </div>
 
               <!-- Topic Edit Specific Controls -->
-              <div v-if="currentComponent === 'topic-edit'" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                <p class="text-[9.5px] text-muted-foreground leading-relaxed text-start">
-                  با استفاده از فرم پیش‌نمایش می‌توانید عنوان، توضیحات و تصویر تاپیک را ویرایش و ذخیره کنید. دکمه مقابل مقادیر را ریست می‌کند:
-                </p>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  @click="resetSimulatorTopicEdit"
-                  class="w-full text-xs font-semibold cursor-pointer h-9.5"
-                >
-                  بازنشانی مقادیر اولیه تاپیک
-                </Button>
+              <div v-if="currentComponent === 'topic-edit'" class="flex flex-col gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                  <p class="text-[9.5px] text-muted-foreground leading-relaxed text-start">
+                    با استفاده از فرم پیش‌نمایش می‌توانید عنوان، توضیحات، بج پست‌ها (امضای منبع) و تصویر تاپیک را ویرایش و ذخیره کنید:
+                  </p>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    @click="resetSimulatorTopicEdit"
+                    class="w-full text-xs font-semibold cursor-pointer h-9.5"
+                  >
+                    بازنشانی مقادیر اولیه تاپیک
+                  </Button>
+                </div>
+                <div class="flex items-center gap-2 pt-2 border-t border-border/40 text-start">
+                  <span class="text-[9.5px] text-muted-foreground whitespace-nowrap">نمونه‌های آماده بج:</span>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <Button 
+                      size="sm" 
+                      variant="secondary"
+                      @click="simulatorTopicData.post_badge = '@tafakor_news'; logEvent('Topic: Badge set to @tafakor_news', {})"
+                      class="h-7 text-[9px] px-2 font-mono"
+                    >
+                      @tafakor_news
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="secondary"
+                      @click="simulatorTopicData.post_badge = '📌 منبع: کانال پشتیبانی تفکر'; logEvent('Topic: Badge set to Persian label', {})"
+                      class="h-7 text-[9px] px-2"
+                    >
+                      📌 منبع: کانال تفکر
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      @click="simulatorTopicData.post_badge = ''; logEvent('Topic: Badge cleared', {})"
+                      class="h-7 text-[9px] px-2 text-destructive"
+                    >
+                      بدون بج (خالی)
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               <!-- Topic Connections Specific Controls -->
@@ -3598,6 +3631,7 @@ const openDuplicateWarningSimulation = () => {
                     @save="(data) => {
                       simulatorTopicData.title = data.title;
                       simulatorTopicData.description = data.description;
+                      simulatorTopicData.post_badge = data.post_badge;
                       simulatorTopicData.image = getImageUrl(data.image);
                       logEvent('TopicEdit: Saved', data);
                     }"

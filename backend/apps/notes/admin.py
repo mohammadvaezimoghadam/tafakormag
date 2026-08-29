@@ -3,8 +3,8 @@ from .models import Topic, Post, PostReaction, PostComment, BotTask
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'created_by', 'created_at', 'telegram_bot_active', 'bale_bot_active')
-    search_fields = ('name', 'description')
+    list_display = ('id', 'name', 'post_badge', 'created_by', 'created_at', 'telegram_bot_active', 'bale_bot_active')
+    search_fields = ('name', 'description', 'post_badge')
     list_filter = ('created_at', 'telegram_bot_active', 'bale_bot_active')
 
 @admin.register(Post)

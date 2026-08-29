@@ -333,6 +333,14 @@ class PostViewSet(viewsets.ModelViewSet):
             if not (is_owner or is_admin or self.request.user.is_superuser):
                 raise PermissionDenied("فقط سازنده تاپیک و ادمین‌های آن مجاز به ارسال پیام در آن هستند.")
 
+        # الصاق خودکار امضای منبع (بج تاپیک) به انتهای متن پست در صورت وجود
+        content = (serializer.validated_data.get('content', '') or "").strip()
+        if topic and getattr(topic, 'post_badge', ''):
+            badge = topic.post_badge.strip()
+            if badge and badge not in content:
+                content = f"{content}\n\n{badge}" if content else badge
+                serializer.validated_data['content'] = content
+
         post = serializer.save(author=self.request.user)
         
         # همگام‌سازی و ساخت تسک‌های ربات
