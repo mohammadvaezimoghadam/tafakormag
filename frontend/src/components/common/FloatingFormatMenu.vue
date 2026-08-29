@@ -111,7 +111,6 @@ const menuStyle = computed(() => {
       @pointerdown.prevent
       @touchstart.stop
       @touchend.stop
-      @contextmenu.prevent.stop
     >
       <!-- Small Arrow Pointer -->
       <div 

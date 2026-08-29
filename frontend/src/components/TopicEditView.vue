@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import PlatformHeader from './PlatformHeader.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ const props = defineProps<{
   topic: {
     title: string
     description: string
+    post_badge?: string
     image?: string
     [key: string]: any
   }
@@ -21,16 +22,32 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'back'): void
-  (e: 'save', updatedTopic: { title: string; description: string; image: string | File }): void
+  (e: 'save', updatedTopic: { title: string; description: string; post_badge: string; image: string | File }): void
 }>()
 
 const title = ref(props.topic?.title || '')
 const description = ref(props.topic?.description || '')
+const postBadge = ref(props.topic?.post_badge || '')
 
 // File upload state refs
 const imageFile = ref<File | null>(null)
-const imagePreview = ref(props.topic.image || '')
+const imagePreview = ref(props.topic?.image || '')
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+watch(
+  () => props.topic,
+  (newTopic) => {
+    if (newTopic) {
+      title.value = newTopic.title || ''
+      description.value = newTopic.description || ''
+      postBadge.value = newTopic.post_badge || ''
+      if (!imageFile.value) {
+        imagePreview.value = newTopic.image || ''
+      }
+    }
+  },
+  { deep: true }
+)
 
 const isSaving = ref(false)
 const saveSuccess = ref(false)
@@ -63,6 +80,7 @@ const handleSave = () => {
     emit('save', {
       title: title.value.trim(),
       description: description.value.trim(),
+      post_badge: postBadge.value.trim(),
       image: imageFile.value || imagePreview.value
     })
     
@@ -109,6 +127,22 @@ const handleSave = () => {
           class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 min-h-[90px] resize-none text-start"
           dir="auto"
         />
+      </div>
+
+      <div class="flex flex-col gap-2 text-start">
+        <div class="flex items-center justify-between">
+          <Label for="topic-badge" class="text-xs font-bold text-foreground/80">{{ languageStore.t('بج پست‌ها (امضای منبع)', 'Post Badge (Source Label)') }}</Label>
+          <span class="text-[10px] text-muted-foreground">{{ languageStore.t('اختیاری', 'Optional') }}</span>
+        </div>
+        <Input 
+          id="topic-badge" 
+          v-model="postBadge" 
+          :placeholder="languageStore.t('مثال: @my_channel یا 📌 منبع: تفکر', 'e.g., @my_channel or 📌 Source: Tafakor')" 
+          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 h-10.5 font-medium text-start"
+          dir="auto"
+          maxlength="100"
+        />
+        <span class="text-[10px] text-muted-foreground leading-normal">{{ languageStore.t('این متن کوتاه به صورت خودکار به انتهای پیام پست‌های این تاپیک اضافه می‌شود تا منبع انتشار مشخص باشد.', 'This short text will be automatically appended to the message of posts under this topic to identify the source.') }}</span>
       </div>
 
       <div class="flex flex-col gap-2 text-start">
