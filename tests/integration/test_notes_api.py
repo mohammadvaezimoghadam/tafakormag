@@ -75,6 +75,30 @@ class TestNotesAPIIntegration:
         assert res_update.status_code == status.HTTP_200_OK
         assert res_update.data["post_badge"] == "@updated_badge"
 
+    def test_topic_platform_badges_create_and_update(self):
+        # 1. Create topic with telegram_post_badge and bale_post_badge
+        payload = {
+            "name": "Topic Platform Badges",
+            "description": "Desc",
+            "telegram_post_badge": "@my_tg_chan",
+            "bale_post_badge": "ble.ir/my_bale_chan"
+        }
+        response = self.client1.post("/api/notes/topics/", payload, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["telegram_post_badge"] == "@my_tg_chan"
+        assert response.data["bale_post_badge"] == "ble.ir/my_bale_chan"
+        topic_id = response.data["id"]
+
+        # 2. Update platform badges
+        update_payload = {
+            "telegram_post_badge": "@updated_tg_chan",
+            "bale_post_badge": "ble.ir/updated_bale_chan"
+        }
+        res_update = self.client1.patch(f"/api/notes/topics/{topic_id}/", update_payload, format="json")
+        assert res_update.status_code == status.HTTP_200_OK
+        assert res_update.data["telegram_post_badge"] == "@updated_tg_chan"
+        assert res_update.data["bale_post_badge"] == "ble.ir/updated_bale_chan"
+
     def test_delete_topic_only_by_creator(self):
         topic = Topic.objects.create(name="Topic A", created_by=self.user1)
         
@@ -163,6 +187,54 @@ class TestNotesAPIIntegration:
         task = BotTask.objects.filter(post_id=response.data["id"]).first()
         assert task is not None
         assert task.text == "Important Announcement\n\n@my_badge_channel"
+
+    def test_post_creation_appends_platform_specific_badges_to_bot_tasks(self):
+        # Configure user 1 with bot tokens for both telegram and bale
+        self.user1.telegram_bot_token = "12345:telegram-token"
+        self.user1.bale_bot_token = "67890:bale-token"
+        self.user1.save()
+
+        # Create topic with telegram_post_badge and bale_post_badge
+        topic = Topic.objects.create(
+            name="Topic With Platform Badges",
+            telegram_post_badge="@my_telegram_badge",
+            bale_post_badge="ble.ir/my_bale_badge",
+            created_by=self.user1,
+            telegram_bot_active=True,
+            bale_bot_active=True
+        )
+
+        tg_target = MessagingTarget.objects.create(
+            user=self.user1,
+            platform="telegram",
+            chat_id="111222",
+            label="TG Target",
+            is_active=True
+        )
+        bale_target = MessagingTarget.objects.create(
+            user=self.user1,
+            platform="bale",
+            chat_id="333444",
+            label="Bale Target",
+            is_active=True
+        )
+        topic.telegram_connections.add(tg_target)
+        topic.bale_connections.add(bale_target)
+
+        # Create post
+        payload = {"topic": topic.id, "content": "Cross-Platform Post"}
+        response = self.client1.post("/api/notes/", payload, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # Verify Telegram task has Telegram badge
+        tg_task = BotTask.objects.filter(post_id=response.data["id"], platform="telegram").first()
+        assert tg_task is not None
+        assert tg_task.text == "Cross-Platform Post\n\n@my_telegram_badge"
+
+        # Verify Bale task has Bale badge
+        bale_task = BotTask.objects.filter(post_id=response.data["id"], platform="bale").first()
+        assert bale_task is not None
+        assert bale_task.text == "Cross-Platform Post\n\nble.ir/my_bale_badge"
 
     def test_post_edit_triggers_edit_bot_task(self):
         # Set up bot, connections and post

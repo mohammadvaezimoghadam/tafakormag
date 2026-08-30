@@ -957,8 +957,24 @@ const languageStore = useLanguageStore()
           </Button>
         </div>
 
-        <!-- Fixed Formatting Toolbar at the Top of Expanded Modal -->
-        <div class="px-6 py-2 border-b border-border/40 bg-muted/25 dark:bg-muted/10 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 select-none" :dir="languageStore.dir">
+        <!-- Body: Large Textarea -->
+        <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0 relative">
+          <textarea
+            ref="expandedTextareaRef"
+            v-model="text"
+            :placeholder="languageStore.t('پیام خود را بنویسید...', 'Type your message...')"
+            class="w-full flex-1 bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-sm font-semibold leading-relaxed text-foreground placeholder:text-muted-foreground/50 resize-none overflow-y-auto scrollbar-thin text-start"
+            dir="auto"
+            @select="handleTextareaSelect(true)"
+            @mouseup="handleTextareaSelect(true)"
+            @keyup="handleTextareaSelect(true)"
+            @blur="handleTextareaBlur(true)"
+            @keydown="(e) => handleKeydown(e, true)"
+          />
+        </div>
+
+        <!-- Fixed Formatting Toolbar above Footer in Expanded Modal -->
+        <div class="px-6 py-2 border-t border-border/40 bg-muted/25 dark:bg-muted/10 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 select-none" :dir="languageStore.dir">
           <!-- Bold -->
           <Button
             type="button"
@@ -1045,22 +1061,6 @@ const languageStore = useLanguageStore()
           >
             <QuoteIcon class="size-4 stroke-[2.5]" />
           </Button>
-        </div>
-
-        <!-- Body: Large Textarea -->
-        <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0 relative">
-          <textarea
-            ref="expandedTextareaRef"
-            v-model="text"
-            :placeholder="languageStore.t('پیام خود را بنویسید...', 'Type your message...')"
-            class="w-full flex-1 bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-sm font-semibold leading-relaxed text-foreground placeholder:text-muted-foreground/50 resize-none overflow-y-auto scrollbar-thin text-start"
-            dir="auto"
-            @select="handleTextareaSelect(true)"
-            @mouseup="handleTextareaSelect(true)"
-            @keyup="handleTextareaSelect(true)"
-            @blur="handleTextareaBlur(true)"
-            @keydown="(e) => handleKeydown(e, true)"
-          />
         </div>
 
         <!-- Footer -->

@@ -794,6 +794,8 @@ const simulatorTopicData = ref({
   title: 'پشتیبانی فنی پلتفرم',
   description: 'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
   post_badge: '@tafakor_channel',
+  telegram_post_badge: '@tafakor_channel',
+  bale_post_badge: 'ble.ir/tafakor_channel',
   image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
   telegram_bot_active: true,
   bale_bot_active: false,
@@ -807,6 +809,8 @@ const resetSimulatorTopicEdit = () => {
     title: 'پشتیبانی فنی پلتفرم',
     description: 'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
     post_badge: '@tafakor_channel',
+    telegram_post_badge: '@tafakor_channel',
+    bale_post_badge: 'ble.ir/tafakor_channel',
     image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     telegram_bot_active: true,
     bale_bot_active: false,
@@ -3427,6 +3431,8 @@ const openDuplicateWarningSimulation = () => {
                       simulatorTopicData.bale_bot_active = data.bale_bot_active;
                       simulatorTopicData.telegram_connections = data.telegram_connections;
                       simulatorTopicData.bale_connections = data.bale_connections;
+                      simulatorTopicData.telegram_post_badge = data.telegram_post_badge;
+                      simulatorTopicData.bale_post_badge = data.bale_post_badge;
                       logEvent('TopicConnections: Saved Settings', data);
                     }"
                   />
