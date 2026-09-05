@@ -235,8 +235,6 @@ watch([text, hasAttachments], () => {
   })
 })
 
-<<<<<<< HEAD
-=======
 const handleOutsidePointer = (e: Event) => {
   const target = e.target as HTMLElement | null
   if (!target) return
@@ -248,7 +246,6 @@ const handleOutsidePointer = (e: Event) => {
   menuMode.value = 'auto'
 }
 
->>>>>>> da1e8c4 (feat: add topic post badge, draft persistence, and native mobile context menu with fixed formatting toolbar)
 const handleGlobalSelectionChange = () => {
   const activeEl = document.activeElement
   if (activeEl === textareaRef.value) {
@@ -263,10 +260,12 @@ onMounted(() => {
     adjustHeight()
   })
   document.addEventListener('selectionchange', handleGlobalSelectionChange)
+  window.addEventListener('pointerdown', handleOutsidePointer)
 })
 
 onUnmounted(() => {
   document.removeEventListener('selectionchange', handleGlobalSelectionChange)
+  window.removeEventListener('pointerdown', handleOutsidePointer)
 })
 
 // Actions
