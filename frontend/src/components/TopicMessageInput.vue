@@ -48,6 +48,7 @@ import { wrapSelection, type FormatType } from '@/utils/textFormatter'
 import { getSelectionPixelRect } from '@/utils/caretPosition'
 import { usePluginRegistryStore } from '@/plugins/core/pluginRegistry'
 import type { ComposerAction } from '@/plugins/core/pluginTypes'
+import { useRouter } from 'vue-router'
 
 interface Attachment {
   id: string | number
@@ -754,6 +755,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 const languageStore = useLanguageStore()
 
 const pluginRegistry = usePluginRegistryStore()
+const router = useRouter()
 const pluginComposerActions = computed(() => pluginRegistry.composerActions)
 const activePluginDialog = ref<ComposerAction | null>(null)
 
@@ -841,14 +843,14 @@ const removeQuranToken = (rawToken: string) => {
 
 const openSlashModalForQuran = () => {
   isSlashModalOpen.value = true
-  slashModalStep.value = 'surah'
+  slashModalStep.value = pluginRegistry.isPluginInstalled('quran') ? 'surah' : 'plugins'
 }
 
 const handlePluginActionClick = (action: ComposerAction) => {
   isActionSheetOpen.value = false
   if (action.id === 'quran-insert-ayah' || action.id === 'quran') {
     isSlashModalOpen.value = true
-    slashModalStep.value = 'surah'
+    slashModalStep.value = pluginRegistry.isPluginInstalled('quran') ? 'surah' : 'plugins'
   } else if (action.dialogComponent) {
     activePluginDialog.value = action
   } else if (action.execute) {
@@ -857,6 +859,15 @@ const handlePluginActionClick = (action: ComposerAction) => {
       currentText: text.value,
     })
   }
+}
+
+const handleSlashNavigateMarketplace = () => {
+  isSlashModalOpen.value = false
+  if (text.value.endsWith('/')) {
+    text.value = text.value.slice(0, -1)
+    adjustHeight()
+  }
+  router.push('/marketplace')
 }
 
 const handlePluginInsert = (insertedMarkdown: string) => {
@@ -976,6 +987,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           :is-open="isSlashModalOpen"
           :initial-step="slashModalStep"
           @close="isSlashModalOpen = false"
+          @navigate-marketplace="handleSlashNavigateMarketplace"
           @select-plugin="handleSlashSelectPlugin"
           @select-surah="handleSlashSelectSurah"
           @confirm="handleSlashConfirm"

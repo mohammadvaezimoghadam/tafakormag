@@ -41,11 +41,11 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     developer: 'تیم نرم‌افزاری تفکر',
     icon: BookOpenIcon,
     isComingSoon: false,
-    badge: 'نصب‌شده',
+    badge: pluginRegistry.isPluginInstalled('quran') ? 'نصب‌شده' : 'رایگان',
     badgeVariant: 'outline',
     rating: 4.9,
     downloadsCount: 2450,
-    isInstalled: true,
+    isInstalled: pluginRegistry.isPluginInstalled('quran'),
     version: '۱.۲.۰',
     description: 'افزونه جامع و رسمی قرآن کریم شامل متن کامل ۱۱۴ سوره، ۳۰ جزء، ترجمه انصاریان و مکارم شیرازی و قابلیت استناد سریع در پیام‌ها با دستور /quran.',
     capabilities: ['slash_command', 'audio_recitation', 'search_engine', 'translations'],
@@ -198,11 +198,18 @@ const marketplaceApps = ref<MarketplaceApp[]>([
 ])
 
 onMounted(async () => {
+  if (marketplaceApps.value[0]) {
+    const isInstalled = pluginRegistry.isPluginInstalled('quran')
+    marketplaceApps.value[0].isInstalled = isInstalled
+    marketplaceApps.value[0].badge = isInstalled ? 'نصب‌شده' : 'رایگان'
+  }
   try {
     await pluginRegistry.fetchMarketplacePlugins()
     const quranBackend = pluginRegistry.marketplacePlugins.find(p => p.identifier === 'quran')
     if (quranBackend && marketplaceApps.value[0]) {
-      marketplaceApps.value[0].isInstalled = quranBackend.is_installed ?? true
+      const isInstalled = pluginRegistry.isPluginInstalled('quran')
+      marketplaceApps.value[0].isInstalled = isInstalled
+      marketplaceApps.value[0].badge = isInstalled ? 'نصب‌شده' : 'رایگان'
     }
   } catch (e) {
     // Offline safe ignore
@@ -239,6 +246,7 @@ const handleInstallApp = async (app: MarketplaceApp) => {
     if (app.isInstalled) {
       await pluginRegistry.uninstallPlugin(String(app.id))
       app.isInstalled = false
+      app.badge = languageStore.t('رایگان', 'Free')
       toastStore.triggerToast(
         languageStore.t(`افزونه «${app.title}» با موفقیت پاک شد.`, `Plugin \"${app.title}\" was removed.`),
         'info'
@@ -248,6 +256,7 @@ const handleInstallApp = async (app: MarketplaceApp) => {
       await new Promise(resolve => setTimeout(resolve, 3000))
       await pluginRegistry.installPlugin(String(app.id))
       app.isInstalled = true
+      app.badge = languageStore.t('نصب‌شده', 'Installed')
       toastStore.triggerToast(
         languageStore.t(`افزونه «${app.title}» با موفقیت نصب و فعال شد.`, `Plugin \"${app.title}\" installed and activated.`),
         'success'
@@ -256,6 +265,13 @@ const handleInstallApp = async (app: MarketplaceApp) => {
   } catch (err) {
     // Graceful offline fallback
     app.isInstalled = !app.isInstalled
+    if (app.isInstalled) {
+      pluginRegistry.setPluginInstalledLocally(String(app.id), true)
+      app.badge = languageStore.t('نصب‌شده', 'Installed')
+    } else {
+      pluginRegistry.setPluginInstalledLocally(String(app.id), false)
+      app.badge = languageStore.t('رایگان', 'Free')
+    }
     toastStore.triggerToast(
       app.isInstalled 
         ? languageStore.t(`افزونه «${app.title}» با موفقیت فعال شد.`, `Plugin \"${app.title}\" activated.`)

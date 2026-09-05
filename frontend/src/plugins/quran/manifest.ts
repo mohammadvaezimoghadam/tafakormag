@@ -11,7 +11,7 @@ export const quranManifest: PluginManifest = {
   descriptionFa: 'مطالعه، تلاوت، جستجوی آیات و درج ارجاعات قرآنی در متن یادداشت‌ها',
   author: 'Tafakor Core Team',
   icon: 'BookOpen',
-  is_core: true,
+  is_core: false,
   capabilities: ['composer_action', 'mini_app', 'search_provider'],
   scopes: ['read:content', 'read:quran'],
   routes: [

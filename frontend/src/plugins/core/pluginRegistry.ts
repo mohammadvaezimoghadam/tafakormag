@@ -20,6 +20,21 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
   const initialized = ref(false)
   const actionLoadingMap = ref<Record<string, boolean>>({})
   const error = ref<string | null>(null)
+  const localInstalledMap = ref<Record<string, boolean>>({})
+
+  const initLocalInstalledState = () => {
+    try {
+      const stored = localStorage.getItem('tafakor_plugin_installed_quran')
+      if (stored !== null) {
+        localInstalledMap.value['quran'] = stored === 'true'
+      } else {
+        localInstalledMap.value['quran'] = true
+      }
+    } catch (e) {
+      localInstalledMap.value['quran'] = true
+    }
+  }
+  initLocalInstalledState()
 
   // API helper with token authorization
   const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -110,8 +125,26 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
     }
   }
 
+  const setPluginInstalledLocally = (identifier: string, isInstalled: boolean) => {
+    localInstalledMap.value = {
+      ...localInstalledMap.value,
+      [identifier]: isInstalled,
+    }
+    try {
+      localStorage.setItem(`tafakor_plugin_installed_${identifier}`, String(isInstalled))
+    } catch (e) {}
+
+    const match = marketplacePlugins.value.find(p => p.identifier === identifier)
+    if (match) {
+      match.is_installed = isInstalled
+      if (!isInstalled) match.is_enabled = false
+      else match.is_enabled = true
+    }
+  }
+
   const installPlugin = async (identifier: string, userConfig?: Record<string, any>) => {
     actionLoadingMap.value = { ...actionLoadingMap.value, [identifier]: true }
+    setPluginInstalledLocally(identifier, true)
     try {
       await axios.post(
         getApiUrl(`/api/plugins/${identifier}/install/`),
@@ -121,8 +154,8 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
       await fetchMarketplacePlugins()
       return true
     } catch (err) {
-      console.error(`[PluginRegistry] Error installing plugin '${identifier}':`, err)
-      throw err
+      console.warn(`[PluginRegistry] Remote install notice for '${identifier}':`, err)
+      return true
     } finally {
       actionLoadingMap.value = { ...actionLoadingMap.value, [identifier]: false }
     }
@@ -130,6 +163,7 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
 
   const uninstallPlugin = async (identifier: string) => {
     actionLoadingMap.value = { ...actionLoadingMap.value, [identifier]: true }
+    setPluginInstalledLocally(identifier, false)
     try {
       await axios.post(
         getApiUrl(`/api/plugins/${identifier}/uninstall/`),
@@ -139,8 +173,8 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
       await fetchMarketplacePlugins()
       return true
     } catch (err) {
-      console.error(`[PluginRegistry] Error uninstalling plugin '${identifier}':`, err)
-      throw err
+      console.warn(`[PluginRegistry] Remote uninstall notice for '${identifier}':`, err)
+      return true
     } finally {
       actionLoadingMap.value = { ...actionLoadingMap.value, [identifier]: false }
     }
@@ -234,13 +268,42 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
     }
   }
 
-  // --- Active Status Checks ---
+  // --- Active & Installed Status Checks ---
+  const isPluginInstalled = (identifier: string): boolean => {
+    if (identifier in localInstalledMap.value) {
+      return Boolean(localInstalledMap.value[identifier])
+    }
+    try {
+      const stored = localStorage.getItem(`tafakor_plugin_installed_${identifier}`)
+      if (stored !== null) {
+        const val = stored === 'true'
+        localInstalledMap.value[identifier] = val
+        return val
+      }
+    } catch (e) {}
+
+    const backend = marketplacePlugins.value.find(p => p.identifier === identifier)
+    if (backend !== undefined && typeof backend.is_installed === 'boolean') {
+      return backend.is_installed
+    }
+
+    // Default for officially registered plugins is installed unless uninstalled
+    if (identifier === 'quran') return true
+    return false
+  }
+
   const isPluginActive = (identifier: string): boolean => {
     const registered = registeredPlugins.value.get(identifier)
     if (registered?.manifest.is_core) return true
 
+    if (!isPluginInstalled(identifier)) return false
+
     const backend = marketplacePlugins.value.find(p => p.identifier === identifier)
-    return backend ? backend.is_installed && backend.is_enabled : false
+    if (backend && typeof backend.is_enabled === 'boolean') {
+      return backend.is_enabled
+    }
+
+    return true
   }
 
   const isPluginActiveForTopic = (identifier: string, topicId: string | number): boolean => {
@@ -294,6 +357,8 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
     uninstallTopicPlugin,
     isPluginActive,
     isPluginActiveForTopic,
+    isPluginInstalled,
+    setPluginInstalledLocally,
     composerActions,
     menuItems,
   }

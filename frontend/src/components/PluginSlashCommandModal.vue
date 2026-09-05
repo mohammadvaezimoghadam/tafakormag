@@ -66,36 +66,69 @@
     </div>
 
     <!-- STEP 1: PLUGINS LIST -->
-    <div v-if="currentStep === 'plugins'" class="flex flex-col gap-1.5">
-      <Button
-        type="button"
-        variant="outline"
-        class="w-full h-auto p-2.5 rounded-xl hover:bg-muted/60 flex items-center justify-between text-start transition-all cursor-pointer border-border/40 hover:border-primary/30 group"
-        @click="selectPlugin('quran')"
-      >
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="size-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
-            <BookOpenIcon class="size-4" />
-          </div>
-          <div class="flex flex-col min-w-0 text-start">
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs font-bold text-foreground">
-                {{ languageStore.t('قرآن کریم', 'Holy Quran') }}
-              </span>
-              <Badge variant="secondary" class="font-mono text-[10px] px-1.5 py-0 h-4">
-                /quran
-              </Badge>
+    <div v-if="currentStep === 'plugins'" class="flex flex-col gap-2">
+      <!-- When Quran Plugin is Installed -->
+      <template v-if="isQuranInstalled">
+        <Button
+          type="button"
+          variant="outline"
+          class="w-full h-auto p-2.5 rounded-xl hover:bg-muted/60 flex items-center justify-between text-start transition-all cursor-pointer border-border/40 hover:border-primary/30 group"
+          @click="selectPlugin('quran')"
+        >
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="size-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
+              <BookOpenIcon class="size-4" />
             </div>
-            <p class="text-[11px] text-muted-foreground truncate font-normal mt-0.5">
-              {{ languageStore.t('جستجو و درج آیه و سوره به همراه ترجمه', 'Search and insert Quranic verses with translation') }}
-            </p>
+            <div class="flex flex-col min-w-0 text-start">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-foreground">
+                  {{ languageStore.t('قرآن کریم', 'Holy Quran') }}
+                </span>
+                <Badge variant="secondary" class="font-mono text-[10px] px-1.5 py-0 h-4">
+                  /quran
+                </Badge>
+              </div>
+              <p class="text-[11px] text-muted-foreground truncate font-normal mt-0.5">
+                {{ languageStore.t('جستجو و درج آیه و سوره به همراه ترجمه', 'Search and insert Quranic verses with translation') }}
+              </p>
+            </div>
           </div>
+
+          <span class="text-xs text-muted-foreground group-hover:text-foreground group-hover:-translate-x-0.5 transition-transform shrink-0">
+            {{ languageStore.isFa ? '←' : '→' }}
+          </span>
+        </Button>
+      </template>
+
+      <!-- EMPTY STATE: If Quran is not installed -->
+      <div 
+        v-else 
+        class="w-full flex flex-col items-center justify-center py-6 px-4 text-center rounded-2xl border border-dashed border-border/60 bg-muted/20 gap-3"
+      >
+        <div class="size-11 rounded-2xl bg-muted/70 border border-border/50 flex items-center justify-center text-muted-foreground shadow-2xs">
+          <LayersIcon class="size-5 text-muted-foreground/80" />
+        </div>
+        
+        <div class="flex flex-col gap-1 max-w-[280px]">
+          <h4 class="text-xs font-bold text-foreground">
+            {{ languageStore.t('هیچ افزونه‌ای نصب نشده است', 'No Plugins Installed') }}
+          </h4>
+          <p class="text-[11px] text-muted-foreground leading-relaxed">
+            {{ languageStore.t('برای استفاده از دستورات هوشمند اسلش و درج محتوا در یادداشت‌ها، ابتدا افزونه را از بازارچه نصب کنید.', 'To use slash commands and embed content in your notes, please install plugins from the marketplace.') }}
+          </p>
         </div>
 
-        <span class="text-xs text-muted-foreground group-hover:text-foreground group-hover:-translate-x-0.5 transition-transform shrink-0">
-          {{ languageStore.isFa ? '←' : '→' }}
-        </span>
-      </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          class="h-8 px-3.5 rounded-xl text-xs font-bold gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary active:scale-95 transition-all cursor-pointer shadow-2xs"
+          @click="handleNavigateMarketplace"
+        >
+          <LayersIcon class="size-3.5" />
+          <span>{{ languageStore.t('مشاهده بازارچه افزونه‌ها', 'Browse Marketplace') }}</span>
+        </Button>
+      </div>
     </div>
 
     <!-- STEP 2: SURAH PICKER -->
@@ -284,7 +317,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useLanguageStore } from '@/stores/languageStore'
+import { usePluginRegistryStore } from '@/plugins/core/pluginRegistry'
 import { quranApi } from '@/plugins/quran/api'
 import type { QuranSurah, QuranAyah } from '@/plugins/quran/types'
 import {
@@ -295,6 +330,7 @@ import {
   ChevronDownIcon,
   CheckIcon,
   XIcon,
+  LayersIcon,
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -318,6 +354,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'navigate-marketplace'): void
   (e: 'select-plugin', pluginIdentifier: string, token: string): void
   (e: 'select-surah', surah: QuranSurah, token: string): void
   (e: 'confirm', payload: {
@@ -330,6 +367,16 @@ const emit = defineEmits<{
 }>()
 
 const languageStore = useLanguageStore()
+const pluginRegistry = usePluginRegistryStore()
+const router = useRouter()
+
+const isQuranInstalled = computed(() => pluginRegistry.isPluginInstalled('quran'))
+
+const handleNavigateMarketplace = () => {
+  emit('close')
+  emit('navigate-marketplace')
+  router.push('/marketplace')
+}
 
 const currentStep = ref<SlashModalStep>(props.initialStep)
 const surahs = ref<QuranSurah[]>([])
@@ -411,8 +458,12 @@ const loadSurahs = async () => {
 
 watch(() => props.isOpen, (open) => {
   if (open) {
-    currentStep.value = props.initialStep || 'plugins'
-    loadSurahs()
+    if (!isQuranInstalled.value) {
+      currentStep.value = 'plugins'
+    } else {
+      currentStep.value = props.initialStep || 'plugins'
+      loadSurahs()
+    }
     if (currentStep.value === 'surah') {
       nextTick(() => surahSearchInputRef.value?.focus())
     }
@@ -420,6 +471,10 @@ watch(() => props.isOpen, (open) => {
 })
 
 const setStep = (step: SlashModalStep) => {
+  if (!isQuranInstalled.value) {
+    currentStep.value = 'plugins'
+    return
+  }
   currentStep.value = step
   if (step === 'surah') {
     nextTick(() => surahSearchInputRef.value?.focus())
@@ -427,7 +482,7 @@ const setStep = (step: SlashModalStep) => {
 }
 
 const selectPlugin = (identifier: string) => {
-  if (identifier === 'quran') {
+  if (identifier === 'quran' && isQuranInstalled.value) {
     emit('select-plugin', 'quran', '/quran ')
     setStep('surah')
   }
