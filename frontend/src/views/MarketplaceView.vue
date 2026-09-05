@@ -7,7 +7,7 @@ import {
   FeatherIcon, 
   BotIcon, 
   CalendarIcon, 
-  MicIcon, 
+  RadioIcon, 
   CalculatorIcon, 
   LibraryIcon, 
   PaletteIcon
@@ -123,22 +123,22 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     capabilities: ['notifications', 'calendar_sync'],
     screenshots: []
   },
-  // 6. Voice Notes & Dictation (Coming Soon)
+  // 6. Golha Program (Coming Soon)
   {
-    id: 'voice-notes',
-    title: 'یادداشت صوتی',
-    category: 'تبدیل گفتار به متن',
-    developer: 'تیم نرم‌افزاری تفکر',
-    icon: MicIcon,
+    id: 'golha',
+    title: 'برنامه گل‌ها',
+    category: 'موسیقی و نوستالژی',
+    developer: 'آرشیو رادیو گلها',
+    icon: RadioIcon,
     isComingSoon: true,
     badge: 'به‌زودی',
     badgeVariant: 'outline',
     rating: 0,
     downloadsCount: 0,
     isInstalled: false,
-    version: '۰.۹.۵',
-    description: 'ضبط پیام صوتی و تبدیل بلادرنگ صوت به متن فارسی استاندارد جهت ارسال سریع در پیام‌ها و پیش‌نویس‌ها.',
-    capabilities: ['speech_to_text', 'audio_player'],
+    version: '۱.۰.۰',
+    description: 'مجموعه فاخر و ماندگار برنامه‌های رادیو گل‌ها (گل‌های جاویدان، رنگارنگ، یک شاخه گل، برگ سبز و صحرایی) همراه با نوای ساز و آواز اساتید برجسته موسیقی اصیل ایرانی.',
+    capabilities: ['audio_streaming', 'archive', 'nostalgia_player'],
     screenshots: []
   },
   // 7. Religious Financial Calculator (Coming Soon)

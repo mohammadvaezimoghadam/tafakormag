@@ -232,6 +232,24 @@ const handleToggleNotification = () => {
                 <span>ترجمه انصاریان و مکارم</span>
               </span>
             </template>
+            <template v-else-if="app.id === 'golha'">
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>📻</span>
+                <span>آرشیو برنامه‌های رادیو گل‌ها</span>
+              </span>
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>🎵</span>
+                <span>دستگاه‌ها و گوشه‌های موسیقی اصیل</span>
+              </span>
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>📜</span>
+                <span>متن اشعار و شناسنامه آثار</span>
+              </span>
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>🎧</span>
+                <span>پخش باکیفیت و نوستالژیک</span>
+              </span>
+            </template>
             <template v-else>
               <span class="px-2.5 py-1.5 bg-muted/20 border border-border/40 rounded-xl text-xs text-muted-foreground flex items-center gap-1.5">
                 <span>✨</span>
