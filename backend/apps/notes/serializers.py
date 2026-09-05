@@ -30,7 +30,8 @@ class TopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Topic
         fields = [
-            'id', 'name', 'image', 'description', 'post_badge', 'created_by', 'created_by_phone',
+            'id', 'name', 'image', 'description', 'post_badge', 'telegram_post_badge', 'bale_post_badge',
+            'created_by', 'created_by_phone',
             'created_at', 'telegram_bot_active', 'bale_bot_active',
             'telegram_connections', 'bale_connections', 'post_count'
         ]

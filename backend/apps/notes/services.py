@@ -147,12 +147,17 @@ def set_message_ids(post: Post, platform: str, message_ids: dict[str, str]):
         )
 
 
-def _post_markdown_text(post: Post) -> str:
-    """متن ارسالی به ربات با الحاق خودکار بج تاپیک در صورت وجود"""
+def _post_markdown_text(post: Post, platform: Optional[str] = None) -> str:
+    """متن ارسالی به ربات با الحاق خودکار بج/امضای تاپیک در صورت وجود"""
     content = (post.content or "").strip()
     topic = getattr(post, 'topic', None)
     if topic:
-        badge = (getattr(topic, 'post_badge', '') or "").strip()
+        if platform == "telegram":
+            badge = (getattr(topic, 'telegram_post_badge', '') or getattr(topic, 'post_badge', '') or "").strip()
+        elif platform == "bale":
+            badge = (getattr(topic, 'bale_post_badge', '') or getattr(topic, 'post_badge', '') or "").strip()
+        else:
+            badge = (getattr(topic, 'post_badge', '') or "").strip()
         if badge and badge not in content:
             return f"{content}\n\n{badge}" if content else badge
     return post.content or ""
@@ -209,7 +214,7 @@ def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_dele
                     action="send",
                     platform=platform,
                     chat_id=str(chat_id),
-                    text=_post_markdown_text(post),
+                    text=_post_markdown_text(post, platform=platform),
                     message_id=None,
                     note_id=post.id,
                     post_id=post,
@@ -230,7 +235,7 @@ def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_dele
                             action="edit",
                             platform=platform,
                             chat_id=str(chat_id),
-                            text=_post_markdown_text(post),
+                            text=_post_markdown_text(post, platform=platform),
                             message_id=str(msg_id),
                             note_id=post.id,
                             post_id=post,
@@ -256,7 +261,7 @@ def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_dele
                         action="send",
                         platform=platform,
                         chat_id=str(chat_id),
-                        text=_post_markdown_text(post),
+                        text=_post_markdown_text(post, platform=platform),
                         message_id=None,
                         note_id=post.id,
                         post_id=post,

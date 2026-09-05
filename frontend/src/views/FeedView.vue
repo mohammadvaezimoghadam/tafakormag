@@ -890,7 +890,9 @@ const handleSaveTopicConnections = async (data: {
   telegram_bot_active: boolean
   bale_bot_active: boolean
   telegram_connections: number[]
-  bale_connections: number[] 
+  bale_connections: number[]
+  telegram_post_badge?: string
+  bale_post_badge?: string
 }) => {
   if (!selectedTopic.value) return
   try {

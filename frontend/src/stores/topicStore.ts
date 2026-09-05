@@ -7,6 +7,8 @@ export interface Topic {
   title: string // maps to name in backend
   description: string
   post_badge?: string
+  telegram_post_badge?: string
+  bale_post_badge?: string
   image?: string
   unreadCount?: number // maps to post_count in backend
   time: string // formatted created_at
@@ -56,6 +58,8 @@ export const useTopicStore = defineStore('topic', () => {
       title: data.name,
       description: data.description || '',
       post_badge: data.post_badge || '',
+      telegram_post_badge: data.telegram_post_badge || '',
+      bale_post_badge: data.bale_post_badge || '',
       image: getImageUrl(data.image),
       unreadCount: data.post_count || 0,
       time: data.created_at || 'هم‌اکنون',
@@ -176,7 +180,9 @@ export const useTopicStore = defineStore('topic', () => {
     telegram_bot_active: boolean
     bale_bot_active: boolean
     telegram_connections: number[]
-    bale_connections: number[] 
+    bale_connections: number[]
+    telegram_post_badge?: string
+    bale_post_badge?: string
   }) => {
     loading.value = true
     try {

@@ -866,6 +866,8 @@ const simulatorTopicData = ref({
   title: 'پشتیبانی فنی پلتفرم',
   description: 'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
   post_badge: '@tafakor_channel',
+  telegram_post_badge: '@tafakor_channel',
+  bale_post_badge: 'ble.ir/tafakor_channel',
   image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
   telegram_bot_active: true,
   bale_bot_active: false,
@@ -879,6 +881,8 @@ const resetSimulatorTopicEdit = () => {
     title: 'پشتیبانی فنی پلتفرم',
     description: 'درخواست راهنمایی در مورد دیزاین سیستم پلتفرم',
     post_badge: '@tafakor_channel',
+    telegram_post_badge: '@tafakor_channel',
+    bale_post_badge: 'ble.ir/tafakor_channel',
     image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     telegram_bot_active: true,
     bale_bot_active: false,
@@ -1958,6 +1962,53 @@ const openDuplicateWarningSimulation = () => {
                 <span class="flex items-center gap-2">
                   <SparklesIcon class="size-3.5 text-emerald-500" />
                   پلاگین‌ها و مینی‌اپ قرآن (Quran & Plugins)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/payment-receipt"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <ReceiptTextIcon class="size-3.5 text-emerald-500" />
+                  رسید پرداخت موفق زرین‌پال (Payment Receipt)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Standalone Playgrounds -->
+          <div class="flex flex-col gap-3 pt-4 border-t border-border/40">
+            <Label class="text-[11px] font-semibold text-muted-foreground block">پلی‌گراندهای اختصاصی:</Label>
+            <div class="flex flex-col gap-1.5">
+              <router-link 
+                to="/playground/text-formatting"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <TypeIcon class="size-3.5 text-primary" />
+                  قالب‌بندی غنی متن (Text Formatting)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/donation-card"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <HeartIcon class="size-3.5 text-primary" />
+                  کارت مهربانی (Donation Card)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
+              <router-link 
+                to="/playground/create-donation"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <PlusIcon class="size-3.5 text-primary" />
+                  ایجاد پویش (Create Donation)
                 </span>
                 <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
               </router-link>
@@ -3106,7 +3157,6 @@ const openDuplicateWarningSimulation = () => {
                   </div>
                 </div>
               </div>
-
               <!-- PaymentReceiptModal Specific Controls -->
               <div v-if="currentComponent === 'payment-receipt-modal'" class="flex flex-col gap-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -3655,6 +3705,8 @@ const openDuplicateWarningSimulation = () => {
                       simulatorTopicData.bale_bot_active = data.bale_bot_active;
                       simulatorTopicData.telegram_connections = data.telegram_connections;
                       simulatorTopicData.bale_connections = data.bale_connections;
+                      simulatorTopicData.telegram_post_badge = data.telegram_post_badge;
+                      simulatorTopicData.bale_post_badge = data.bale_post_badge;
                       logEvent('TopicConnections: Saved Settings', data);
                     }"
                   />

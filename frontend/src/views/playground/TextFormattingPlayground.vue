@@ -28,10 +28,112 @@ const router = useRouter()
 
 const editorTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const showEditorFormatMenu = ref(false)
+const editorMenuMode = ref<'full' | 'context' | 'auto'>('auto')
 const editorMenuCoords = ref<MenuCoords | null>(null)
 const editorSelectedText = ref('')
 
+let touchHoldTimer: any = null
+let touchStartX = 0
+let touchStartY = 0
+let touchHasMoved = false
+let isTouchHolding = false
+
+const triggerEditorContextMenu = (clientX: number, clientY: number) => {
+  const el = editorTextareaRef.value
+  if (!el) return
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const sel = (start < end) ? el.value.substring(start, end) : ''
+  const isContext = !sel || sel.trim().length === 0
+
+  const elRect = el.getBoundingClientRect()
+  const touchX = clientX - elRect.left
+  const touchY = clientY - elRect.top
+
+  const menuWidth = isContext ? 190 : 330
+  const menuHeight = 40
+  const minX = (menuWidth / 2) + 12
+  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
+  const clampedX = Math.min(Math.max(touchX, minX), maxX)
+
+  let top = Math.min(touchY - menuHeight - 10, -menuHeight - 6)
+  let placement: 'top' | 'bottom' = 'top'
+
+  if (touchY - menuHeight - 10 < 8) {
+    top = touchY + 24
+    placement = 'bottom'
+  }
+
+  editorMenuCoords.value = {
+    top,
+    left: clampedX,
+    placement
+  }
+  editorSelectedText.value = sel
+  editorMenuMode.value = isContext ? 'context' : 'full'
+  showEditorFormatMenu.value = true
+}
+
+const handleEditorTouchstart = (e: TouchEvent) => {
+  if (!e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  touchHasMoved = false
+
+  if (touchHoldTimer) clearTimeout(touchHoldTimer)
+  touchHoldTimer = setTimeout(() => {
+    if (!touchHasMoved) {
+      isTouchHolding = true
+      triggerEditorContextMenu(touch.clientX, touch.clientY)
+    }
+  }, 400)
+}
+
+const handleEditorTouchmove = (e: TouchEvent) => {
+  if (!e.touches || e.touches.length === 0) return
+  const touch = e.touches[0]
+  if (!touch) return
+  const dx = Math.abs(touch.clientX - touchStartX)
+  const dy = Math.abs(touch.clientY - touchStartY)
+  if (dx > 10 || dy > 10) {
+    touchHasMoved = true
+    if (touchHoldTimer) {
+      clearTimeout(touchHoldTimer)
+      touchHoldTimer = null
+    }
+  }
+}
+
+const handleEditorTouchend = () => {
+  if (touchHoldTimer) {
+    clearTimeout(touchHoldTimer)
+    touchHoldTimer = null
+  }
+
+  if (isTouchHolding) {
+    setTimeout(() => {
+      isTouchHolding = false
+    }, 400)
+    return
+  }
+
+  handleEditorSelect()
+  setTimeout(handleEditorSelect, 60)
+  setTimeout(handleEditorSelect, 160)
+}
+
+const handleEditorContextMenu = (e: MouseEvent) => {
+  e.preventDefault()
+  triggerEditorContextMenu(e.clientX, e.clientY)
+}
+
 const handleEditorSelect = () => {
+  if (isTouchHolding) return
+
   const el = editorTextareaRef.value
   if (!el) return
 
@@ -39,17 +141,21 @@ const handleEditorSelect = () => {
   const end = el.selectionEnd ?? 0
 
   if (start >= end) {
-    showEditorFormatMenu.value = false
-    editorSelectedText.value = ''
-    editorMenuCoords.value = null
+    if (editorMenuMode.value !== 'context') {
+      showEditorFormatMenu.value = false
+      editorSelectedText.value = ''
+      editorMenuCoords.value = null
+    }
     return
   }
 
   const rawSelection = el.value.substring(start, end)
   if (!rawSelection || rawSelection.trim().length === 0) {
-    showEditorFormatMenu.value = false
-    editorSelectedText.value = ''
-    editorMenuCoords.value = null
+    if (editorMenuMode.value !== 'context') {
+      showEditorFormatMenu.value = false
+      editorSelectedText.value = ''
+      editorMenuCoords.value = null
+    }
     return
   }
 
@@ -81,13 +187,8 @@ const handleEditorSelect = () => {
     placement
   }
   editorSelectedText.value = rawSelection
+  editorMenuMode.value = 'full'
   showEditorFormatMenu.value = true
-}
-
-const handleEditorTouchend = () => {
-  handleEditorSelect()
-  setTimeout(handleEditorSelect, 50)
-  setTimeout(handleEditorSelect, 120)
 }
 
 const handleEditorBlur = () => {
@@ -96,7 +197,10 @@ const handleEditorBlur = () => {
     if (active && (active as HTMLElement).closest && (active as HTMLElement).closest('.floating-format-menu')) {
       return
     }
-    showEditorFormatMenu.value = false
+    if (isTouchHolding) return
+    if (editorMenuMode.value !== 'context') {
+      showEditorFormatMenu.value = false
+    }
   }, 350)
 }
 
@@ -106,12 +210,29 @@ const handleGlobalSelectionChange = () => {
   }
 }
 
+const handleOutsidePointer = (e: Event) => {
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  if (target.closest('.floating-format-menu')) return
+  if (target === editorTextareaRef.value) {
+    if (editorMenuMode.value === 'context') {
+      showEditorFormatMenu.value = false
+      editorMenuMode.value = 'auto'
+    }
+    return
+  }
+  showEditorFormatMenu.value = false
+  editorMenuMode.value = 'auto'
+}
+
 onMounted(() => {
   document.addEventListener('selectionchange', handleGlobalSelectionChange)
+  window.addEventListener('pointerdown', handleOutsidePointer)
 })
 
 onUnmounted(() => {
   document.removeEventListener('selectionchange', handleGlobalSelectionChange)
+  window.removeEventListener('pointerdown', handleOutsidePointer)
 })
 
 const handleEditorAction = async (action: ActionType) => {
@@ -359,6 +480,7 @@ const handleMockSend = (payload: { text: string }) => {
                 :coords="editorMenuCoords"
                 :selected-text="editorSelectedText"
                 :has-text="Boolean(currentText.trim())"
+                :mode="editorMenuMode"
                 @format="applyEditorFormat"
                 @action="handleEditorAction"
               />
@@ -373,8 +495,10 @@ const handleMockSend = (payload: { text: string }) => {
                 @select="handleEditorSelect"
                 @mouseup="handleEditorSelect"
                 @keyup="handleEditorSelect"
+                @touchstart="handleEditorTouchstart"
+                @touchmove="handleEditorTouchmove"
                 @touchend="handleEditorTouchend"
-                @contextmenu.prevent.stop
+                @contextmenu="handleEditorContextMenu"
                 @blur="handleEditorBlur"
                 @keydown="handleEditorKeydown"
               />

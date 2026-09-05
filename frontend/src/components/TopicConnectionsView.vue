@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { 
   SendIcon, 
   MessageSquareIcon, 
@@ -24,7 +25,9 @@ const props = defineProps<{
     id: number
     title: string
     telegram_bot_active?: boolean
+    telegram_post_badge?: string
     bale_bot_active?: boolean
+    bale_post_badge?: string
     telegram_connections?: any[]
     bale_connections?: any[]
     [key: string]: any
@@ -41,12 +44,18 @@ const emit = defineEmits<{
     bale_bot_active: boolean
     telegram_connections: number[]
     bale_connections: number[]
+    telegram_post_badge: string
+    bale_post_badge: string
   }): void
 }>()
 
 // Active Toggles
 const telegramActive = ref(props.topic.telegram_bot_active || false)
 const baleActive = ref(props.topic.bale_bot_active || false)
+
+// Platform Badge Refs
+const telegramPostBadge = ref(props.topic.telegram_post_badge || '')
+const balePostBadge = ref(props.topic.bale_post_badge || '')
 
 // Verification Connection States (Retrieved from global or profiles)
 const telegramConnected = ref(props.telegramConnected || false)
@@ -145,6 +154,21 @@ const toggleBaleChannel = (id: number) => {
   }
 }
 
+watch(() => props.topic, (newTopic) => {
+  if (newTopic) {
+    telegramActive.value = newTopic.telegram_bot_active || false
+    baleActive.value = newTopic.bale_bot_active || false
+    telegramPostBadge.value = newTopic.telegram_post_badge || ''
+    balePostBadge.value = newTopic.bale_post_badge || ''
+    if (newTopic.telegram_connections) {
+      selectedTgConnections.value = newTopic.telegram_connections.map((c: any) => c.id || c)
+    }
+    if (newTopic.bale_connections) {
+      selectedBaleConnections.value = newTopic.bale_connections.map((c: any) => c.id || c)
+    }
+  }
+}, { deep: true })
+
 const handleSave = () => {
   isSaving.value = true
   setTimeout(() => {
@@ -154,7 +178,9 @@ const handleSave = () => {
       telegram_bot_active: telegramActive.value,
       bale_bot_active: baleActive.value,
       telegram_connections: selectedTgConnections.value,
-      bale_connections: selectedBaleConnections.value
+      bale_connections: selectedBaleConnections.value,
+      telegram_post_badge: telegramPostBadge.value.trim(),
+      bale_post_badge: balePostBadge.value.trim()
     })
     
     setTimeout(() => {
@@ -258,6 +284,27 @@ const handleSave = () => {
                 </div>
               </template>
             </div>
+
+            <!-- Telegram Post Badge / Signature -->
+            <div class="flex flex-col gap-1.5 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
+              <div class="flex items-center justify-between">
+                <Label for="tg-post-badge" class="text-[11px] font-bold text-foreground/85">
+                  {{ languageStore.t('امضای پست‌ها در تلگرام (بج منبع)', 'Telegram Post Signature (Source Badge)') }}
+                </Label>
+                <span class="text-[9.5px] text-muted-foreground">{{ languageStore.t('اختیاری', 'Optional') }}</span>
+              </div>
+              <Input 
+                id="tg-post-badge" 
+                v-model="telegramPostBadge" 
+                :placeholder="languageStore.t('مثال: @my_channel یا 📌 منبع: کانال تلگرام تفکر', 'e.g., @my_channel or 📌 Source: Tafakor Telegram')" 
+                class="h-9.5 rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 text-xs font-medium text-start"
+                dir="auto"
+                maxlength="100"
+              />
+              <span class="text-[9.5px] text-muted-foreground leading-normal">
+                {{ languageStore.t('این متن کوتاه به صورت خودکار به انتهای پیام‌های ارسالی به تلگرام اضافه خواهد شد.', 'This text will be automatically appended to posts sent to Telegram.') }}
+              </span>
+            </div>
           </div>
         </transition>
       </div>
@@ -334,6 +381,27 @@ const handleSave = () => {
                   <span class="text-[9px] text-muted-foreground/80 mt-1 block">{{ languageStore.t('برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در بله ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.', 'To permanently remove any of the above destinations, simply remove the Tafakor bot from the corresponding channel or group in Bale. The system will apply the changes automatically.') }}</span>
                 </div>
               </template>
+            </div>
+
+            <!-- Bale Post Badge / Signature -->
+            <div class="flex flex-col gap-1.5 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
+              <div class="flex items-center justify-between">
+                <Label for="bale-post-badge" class="text-[11px] font-bold text-foreground/85">
+                  {{ languageStore.t('امضای پست‌ها در بله (بج منبع)', 'Bale Post Signature (Source Badge)') }}
+                </Label>
+                <span class="text-[9.5px] text-muted-foreground">{{ languageStore.t('اختیاری', 'Optional') }}</span>
+              </div>
+              <Input 
+                id="bale-post-badge" 
+                v-model="balePostBadge" 
+                :placeholder="languageStore.t('مثال: ble.ir/my_channel یا 📌 منبع: کانال بله تفکر', 'e.g., ble.ir/my_channel or 📌 Source: Tafakor Bale')" 
+                class="h-9.5 rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 text-xs font-medium text-start"
+                dir="auto"
+                maxlength="100"
+              />
+              <span class="text-[9.5px] text-muted-foreground leading-normal">
+                {{ languageStore.t('این متن کوتاه به صورت خودکار به انتهای پیام‌های ارسالی به بله اضافه خواهد شد.', 'This text will be automatically appended to posts sent to Bale.') }}
+              </span>
             </div>
           </div>
         </transition>

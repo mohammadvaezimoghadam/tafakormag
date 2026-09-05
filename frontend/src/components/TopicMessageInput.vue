@@ -982,7 +982,6 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             </button>
           </div>
         </div>
-
         <transition name="fade" mode="out-in">
           <!-- Voice Recording Display -->
           <div 
@@ -1022,6 +1021,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           :coords="menuCoords"
           :selected-text="selectedText"
           :has-text="Boolean(text.trim())"
+          :mode="menuMode"
           @format="(f) => applyFormat(f, false)"
           @action="(act) => handleMenuAction(act, false)"
         />
@@ -1269,6 +1269,96 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @blur="handleTextareaBlur(true)"
             @keydown="(e) => handleKeydown(e, true)"
           />
+        </div>
+
+        <!-- Fixed Formatting Toolbar above Footer in Expanded Modal -->
+        <div class="px-6 py-2 border-t border-border/40 bg-muted/25 dark:bg-muted/10 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 select-none" :dir="languageStore.dir">
+          <!-- Bold -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isBoldActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
+            @mousedown.prevent
+            @click="applyFormat('bold', true)"
+          >
+            <BoldIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Italic -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isItalicActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
+            @mousedown.prevent
+            @click="applyFormat('italic', true)"
+          >
+            <ItalicIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Underline -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isUnderlineActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
+            @mousedown.prevent
+            @click="applyFormat('underline', true)"
+          >
+            <UnderlineIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Strikethrough -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isStrikethroughActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
+            @mousedown.prevent
+            @click="applyFormat('strikethrough', true)"
+          >
+            <StrikethroughIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Separator -->
+          <div class="w-px h-4 bg-border/60 mx-1 shrink-0" />
+
+          <!-- Code -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isCodeActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
+            @mousedown.prevent
+            @click="applyFormat('code', true)"
+          >
+            <CodeIcon class="size-4 stroke-[2.5]" />
+          </Button>
+
+          <!-- Quote -->
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            :class="[isQuoteActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+            :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
+            @mousedown.prevent
+            @click="applyFormat('quote', true)"
+          >
+            <QuoteIcon class="size-4 stroke-[2.5]" />
+          </Button>
         </div>
 
         <!-- Footer -->

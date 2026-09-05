@@ -16,7 +16,9 @@ class Topic(models.Model):
 
     # تنظیمات اتصال ربات‌ها
     telegram_bot_active = models.BooleanField(default=False)
+    telegram_post_badge = models.CharField(max_length=100, blank=True, default='')
     bale_bot_active = models.BooleanField(default=False)
+    bale_post_badge = models.CharField(max_length=100, blank=True, default='')
 
     telegram_connections = models.ManyToManyField(
         MessagingTarget,
