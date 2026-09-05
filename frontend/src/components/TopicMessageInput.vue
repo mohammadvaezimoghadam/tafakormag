@@ -27,7 +27,8 @@ import {
   UnderlineIcon,
   StrikethroughIcon,
   CodeIcon,
-  QuoteIcon
+  QuoteIcon,
+  SlashIcon
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -811,7 +812,7 @@ const handleSlashConfirm = (payload: {
 
   isSlashModalOpen.value = false
   nextTick(() => {
-    const el = textareaRef.value || expandedTextareaRef.value
+    const el = (showExpanded.value ? expandedTextareaRef.value : textareaRef.value) || textareaRef.value
     if (el) {
       el.focus()
       const len = text.value.length
@@ -846,6 +847,15 @@ const openSlashModalForQuran = () => {
   slashModalStep.value = pluginRegistry.isPluginInstalled('quran') ? 'surah' : 'plugins'
 }
 
+const toggleSlashModal = () => {
+  if (isSlashModalOpen.value) {
+    isSlashModalOpen.value = false
+  } else {
+    isSlashModalOpen.value = true
+    slashModalStep.value = 'plugins'
+  }
+}
+
 const handlePluginActionClick = (action: ComposerAction) => {
   isActionSheetOpen.value = false
   if (action.id === 'quran-insert-ayah' || action.id === 'quran') {
@@ -863,6 +873,7 @@ const handlePluginActionClick = (action: ComposerAction) => {
 
 const handleSlashNavigateMarketplace = () => {
   isSlashModalOpen.value = false
+  showExpanded.value = false
   if (text.value.endsWith('/')) {
     text.value = text.value.slice(0, -1)
     adjustHeight()
@@ -980,11 +991,11 @@ const handlePluginInsert = (insertedMarkdown: string) => {
     <!-- Plugin Slash Command Inline Drawer (Inside the container above input row) -->
     <transition name="attachments-slide">
       <div 
-        v-if="isSlashModalOpen"
+        v-if="isSlashModalOpen && !showExpanded"
         class="w-full z-20 text-start pb-2 px-1"
       >
         <PluginSlashCommandModal
-          :is-open="isSlashModalOpen"
+          :is-open="isSlashModalOpen && !showExpanded"
           :initial-step="slashModalStep"
           @close="isSlashModalOpen = false"
           @navigate-marketplace="handleSlashNavigateMarketplace"
@@ -1280,6 +1291,35 @@ const handlePluginInsert = (insertedMarkdown: string) => {
 
         <!-- Body: Large Textarea -->
         <div class="flex-1 p-6 overflow-hidden flex flex-col min-h-0 relative">
+          <!-- Quran Token Visual Badges / Chips in Expanded Modal -->
+          <div
+            v-if="detectedQuranTokens.length > 0"
+            class="w-full flex flex-wrap gap-1.5 pb-2 shrink-0 z-10"
+          >
+            <div
+              v-for="tok in detectedQuranTokens"
+              :key="tok.raw"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary rounded-xl text-[11px] font-medium animate-in fade-in"
+            >
+              <span class="font-mono text-[10px]">{{ tok.raw }}</span>
+              <button
+                type="button"
+                @click="openSlashModalForQuran"
+                class="hover:underline text-[10px] text-primary cursor-pointer font-medium"
+              >
+                {{ languageStore.t('ویرایش', 'Edit') }}
+              </button>
+              <button
+                type="button"
+                @click="removeQuranToken(tok.raw)"
+                class="size-3.5 rounded-full hover:bg-primary/20 flex items-center justify-center text-[10px] text-primary transition-colors cursor-pointer"
+                title="حذف"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
           <textarea
             ref="expandedTextareaRef"
             v-model="text"
@@ -1294,6 +1334,24 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @keydown="(e) => handleKeydown(e, true)"
           />
         </div>
+
+        <!-- Floating Plugin Slash Command Dialog inside Expanded Modal -->
+        <transition name="attachments-slide">
+          <div 
+            v-if="isSlashModalOpen" 
+            class="px-6 pb-2 z-30 shrink-0"
+          >
+            <PluginSlashCommandModal
+              :is-open="isSlashModalOpen"
+              :initial-step="slashModalStep"
+              @close="isSlashModalOpen = false"
+              @navigate-marketplace="handleSlashNavigateMarketplace"
+              @select-plugin="handleSlashSelectPlugin"
+              @select-surah="handleSlashSelectSurah"
+              @confirm="handleSlashConfirm"
+            />
+          </div>
+        </transition>
 
         <!-- Fixed Formatting Toolbar and Footer pinned above Keyboard on Mobile -->
         <div class="mt-auto shrink-0 z-20 select-none bg-white dark:bg-zinc-900 sticky bottom-0">
@@ -1400,6 +1458,18 @@ const handlePluginInsert = (insertedMarkdown: string) => {
                 @click="isAiRefinerOpen = true"
               >
                 <Wand2Icon class="size-5" />
+              </Button>
+
+              <!-- Plugins Slash Command Button in Modal Footer -->
+              <Button
+                variant="outline"
+                size="icon"
+                class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
+                :class="[isSlashModalOpen ? 'bg-primary/15 text-primary border-primary/40 shadow-2xs' : '']"
+                :title="languageStore.t('افزونه‌ها و دستورات اسلش (/)', 'Plugins & Slash Commands (/ )')"
+                @click="toggleSlashModal"
+              >
+                <SlashIcon class="size-5 stroke-[2.5]" />
               </Button>
 
               <!-- Simplified close/cancel button -->
