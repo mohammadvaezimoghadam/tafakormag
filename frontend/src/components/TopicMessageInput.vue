@@ -157,15 +157,108 @@ watch(() => props.isEditMode, (newVal) => {
   }
 }, { immediate: true })
 
-// Focus the expanded textarea when opened and lock body scroll
+// Focus the expanded textarea when opened and lock body scroll, tracking visual viewport
+const keyboardHeight = ref(0)
+const isExpandedTextareaFocused = ref(false)
+const visualViewportHeight = ref<number | null>(null)
+let initialViewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+
+const isKeyboardOpen = computed(() => {
+  if (keyboardHeight.value > 40) return true
+  if (isExpandedTextareaFocused.value && typeof window !== 'undefined') {
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    if (isTouch) {
+      const currentH = window.visualViewport ? window.visualViewport.height : window.innerHeight
+      if (currentH < initialViewportHeight - 80) {
+        return true
+      }
+      return true
+    }
+  }
+  return false
+})
+
+const handleVisualViewportChange = () => {
+  if (typeof window === 'undefined') return
+  const vv = window.visualViewport
+  if (!vv) {
+    keyboardHeight.value = 0
+    visualViewportHeight.value = null
+    return
+  }
+
+  const offsetFromBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop))
+  keyboardHeight.value = offsetFromBottom > 40 ? offsetFromBottom : 0
+  visualViewportHeight.value = vv.height
+}
+
+const expandedModalStyle = computed(() => {
+  if (isKeyboardOpen.value) {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    const currentH = vv ? vv.height : window.innerHeight
+    const btm = keyboardHeight.value > 0 ? keyboardHeight.value : 0
+    const maxH = Math.max(220, Math.floor(currentH - 10))
+    return {
+      bottom: `${btm}px`,
+      height: `${maxH}px`,
+      maxHeight: `${maxH}px`,
+      transition: 'bottom 0.15s ease-out, height 0.15s ease-out'
+    }
+  }
+  return {
+    bottom: '0px',
+    height: '80dvh',
+    maxHeight: '80dvh',
+    transition: 'bottom 0.2s ease-out, height 0.2s ease-out'
+  }
+})
+
+const handleExpandedTextareaFocus = () => {
+  isExpandedTextareaFocused.value = true
+  handleTextareaSelect(true)
+  setTimeout(() => {
+    handleVisualViewportChange()
+  }, 100)
+  setTimeout(() => {
+    handleVisualViewportChange()
+  }, 300)
+}
+
+const handleExpandedTextareaBlur = () => {
+  isExpandedTextareaFocused.value = false
+  handleTextareaBlur(true)
+  setTimeout(() => {
+    handleVisualViewportChange()
+  }, 150)
+}
+
 watch(showExpanded, (newVal) => {
   if (newVal) {
     document.body.style.overflow = 'hidden'
+    if (typeof window !== 'undefined') {
+      initialViewportHeight = window.innerHeight
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleVisualViewportChange)
+        window.visualViewport.addEventListener('scroll', handleVisualViewportChange)
+      }
+      window.addEventListener('resize', handleVisualViewportChange)
+      handleVisualViewportChange()
+    }
     nextTick(() => {
       expandedTextareaRef.value?.focus()
     })
   } else {
     document.body.style.overflow = ''
+    isExpandedTextareaFocused.value = false
+    keyboardHeight.value = 0
+    visualViewportHeight.value = null
+    if (typeof window !== 'undefined') {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleVisualViewportChange)
+        window.visualViewport.removeEventListener('scroll', handleVisualViewportChange)
+      }
+      window.removeEventListener('resize', handleVisualViewportChange)
+    }
   }
 })
 
@@ -266,6 +359,13 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('selectionchange', handleGlobalSelectionChange)
   window.removeEventListener('pointerdown', handleOutsidePointer)
+  if (typeof window !== 'undefined') {
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', handleVisualViewportChange)
+      window.visualViewport.removeEventListener('scroll', handleVisualViewportChange)
+    }
+    window.removeEventListener('resize', handleVisualViewportChange)
+  }
 })
 
 // Actions
@@ -1138,7 +1238,8 @@ const handlePluginInsert = (insertedMarkdown: string) => {
     <transition name="sheet-slide">
       <div 
         v-if="showExpanded" 
-        class="fixed bottom-0 inset-x-0 h-[80dvh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[calc(var(--radius)*1.5)] z-55 flex flex-col shadow-2xl transition-transform overflow-hidden"
+        class="fixed inset-x-0 bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[calc(var(--radius)*1.5)] z-55 flex flex-col shadow-2xl overflow-hidden"
+        :style="expandedModalStyle"
         :dir="languageStore.dir"
         @click.stop
       >
@@ -1176,157 +1277,161 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
-            @blur="handleTextareaBlur(true)"
+            @focus="handleExpandedTextareaFocus"
+            @blur="handleExpandedTextareaBlur"
             @keydown="(e) => handleKeydown(e, true)"
           />
         </div>
 
-        <!-- Fixed Formatting Toolbar above Footer in Expanded Modal -->
-        <div class="px-6 py-2 border-t border-border/40 bg-muted/25 dark:bg-muted/10 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 select-none" :dir="languageStore.dir">
-          <!-- Bold -->
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            :class="[isBoldActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
-            :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
-            @mousedown.prevent
-            @click="applyFormat('bold', true)"
-          >
-            <BoldIcon class="size-4 stroke-[2.5]" />
-          </Button>
-
-          <!-- Italic -->
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            :class="[isItalicActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
-            :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
-            @mousedown.prevent
-            @click="applyFormat('italic', true)"
-          >
-            <ItalicIcon class="size-4 stroke-[2.5]" />
-          </Button>
-
-          <!-- Underline -->
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            :class="[isUnderlineActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
-            :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
-            @mousedown.prevent
-            @click="applyFormat('underline', true)"
-          >
-            <UnderlineIcon class="size-4 stroke-[2.5]" />
-          </Button>
-
-          <!-- Strikethrough -->
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            :class="[isStrikethroughActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
-            :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
-            @mousedown.prevent
-            @click="applyFormat('strikethrough', true)"
-          >
-            <StrikethroughIcon class="size-4 stroke-[2.5]" />
-          </Button>
-
-          <!-- Separator -->
-          <div class="w-px h-4 bg-border/60 mx-1 shrink-0" />
-
-          <!-- Code -->
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            :class="[isCodeActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
-            :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
-            @mousedown.prevent
-            @click="applyFormat('code', true)"
-          >
-            <CodeIcon class="size-4 stroke-[2.5]" />
-          </Button>
-
-          <!-- Quote -->
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            :class="[isQuoteActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
-            :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
-            @mousedown.prevent
-            @click="applyFormat('quote', true)"
-          >
-            <QuoteIcon class="size-4 stroke-[2.5]" />
-          </Button>
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-border/10 bg-muted/5 dark:bg-muted/2 flex items-center justify-between shrink-0 rounded-b-none flex-row-reverse">
-          <!-- Actions -->
-          <div class="flex items-center gap-2">
-            <!-- AI Refiner Sparkle Button in Modal Footer -->
+        <!-- Fixed Formatting Toolbar and Footer pinned above Keyboard on Mobile -->
+        <div class="mt-auto shrink-0 z-20 select-none bg-white dark:bg-zinc-900 sticky bottom-0">
+          <!-- Fixed Formatting Toolbar above Footer in Expanded Modal -->
+          <div class="px-6 py-2 border-t border-border/40 bg-muted/25 dark:bg-muted/10 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 select-none" :dir="languageStore.dir">
+            <!-- Bold -->
             <Button
-              variant="outline"
-              size="icon"
-              class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
-              :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
-              @click="isAiRefinerOpen = true"
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              :class="[isBoldActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+              :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
+              @mousedown.prevent
+              @click="applyFormat('bold', true)"
             >
-              <Wand2Icon class="size-5" />
+              <BoldIcon class="size-4 stroke-[2.5]" />
             </Button>
 
-            <!-- Simplified close/cancel button -->
+            <!-- Italic -->
             <Button
-              variant="outline"
-              size="icon"
-              class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
-              :title="languageStore.t('انصراف', 'Cancel')"
-              @click="showExpanded = false"
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              :class="[isItalicActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+              :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
+              @mousedown.prevent
+              @click="applyFormat('italic', true)"
             >
-              <XIcon class="size-5" />
+              <ItalicIcon class="size-4 stroke-[2.5]" />
             </Button>
 
-            <!-- Simplified send/save button -->
-            <Button 
-              :variant="hasContent ? 'default' : 'outline'"
-              size="icon"
-              class="group rounded-xl active:scale-95 transition-all duration-200 cursor-pointer outline-none disabled:pointer-events-none disabled:opacity-50 shrink-0"
-              :class="[
-                hasContent 
-                  ? 'bg-primary text-primary-foreground border-none' 
-                  : 'border border-border/40 text-muted-foreground'
-              ]"
-              :disabled="props.disabled || !hasContent"
-              :title="props.isEditMode ? languageStore.t('ذخیره تغییرات', 'Save Changes') : languageStore.t('ارسال پیام', 'Send Message')"
-              @click="handleSendFromModal"
+            <!-- Underline -->
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              :class="[isUnderlineActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+              :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
+              @mousedown.prevent
+              @click="applyFormat('underline', true)"
             >
-              <SendIcon 
-                class="size-5 -rotate-45 transition-transform duration-200 group-hover:scale-110" 
-                :class="[
-                  languageStore.isFa 
-                    ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
-                    : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
-                ]"
-              />
+              <UnderlineIcon class="size-4 stroke-[2.5]" />
+            </Button>
+
+            <!-- Strikethrough -->
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              :class="[isStrikethroughActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+              :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
+              @mousedown.prevent
+              @click="applyFormat('strikethrough', true)"
+            >
+              <StrikethroughIcon class="size-4 stroke-[2.5]" />
+            </Button>
+
+            <!-- Separator -->
+            <div class="w-px h-4 bg-border/60 mx-1 shrink-0" />
+
+            <!-- Code -->
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              :class="[isCodeActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+              :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
+              @mousedown.prevent
+              @click="applyFormat('code', true)"
+            >
+              <CodeIcon class="size-4 stroke-[2.5]" />
+            </Button>
+
+            <!-- Quote -->
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              class="h-8 w-8 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              :class="[isQuoteActive(true) ? 'bg-primary/15 text-primary hover:bg-primary/20' : 'text-foreground/80 hover:text-foreground hover:bg-muted/80']"
+              :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
+              @mousedown.prevent
+              @click="applyFormat('quote', true)"
+            >
+              <QuoteIcon class="size-4 stroke-[2.5]" />
             </Button>
           </div>
 
-          <!-- Stats -->
-          <div class="flex items-center gap-3 text-[10px] text-muted-foreground font-bold">
-            <span>{{ languageStore.n(text.length) }} {{ languageStore.t('کاراکتر', 'characters') }}</span>
-            <span class="size-1 bg-muted-foreground/30 rounded-full" />
-            <span>{{ languageStore.n(lineCount) }} {{ languageStore.t('خط', 'lines') }}</span>
+          <!-- Footer -->
+          <div class="px-6 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-border/10 bg-muted/5 dark:bg-muted/2 flex items-center justify-between shrink-0 rounded-b-none flex-row-reverse">
+            <!-- Actions -->
+            <div class="flex items-center gap-2">
+              <!-- AI Refiner Sparkle Button in Modal Footer -->
+              <Button
+                variant="outline"
+                size="icon"
+                class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
+                :title="languageStore.t('بهبود متن با هوش مصنوعی', 'Refine text with AI')"
+                @click="isAiRefinerOpen = true"
+              >
+                <Wand2Icon class="size-5" />
+              </Button>
+
+              <!-- Simplified close/cancel button -->
+              <Button
+                variant="outline"
+                size="icon"
+                class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"
+                :title="languageStore.t('انصراف', 'Cancel')"
+                @click="showExpanded = false"
+              >
+                <XIcon class="size-5" />
+              </Button>
+
+              <!-- Simplified send/save button -->
+              <Button 
+                :variant="hasContent ? 'default' : 'outline'"
+                size="icon"
+                class="group rounded-xl active:scale-95 transition-all duration-200 cursor-pointer outline-none disabled:pointer-events-none disabled:opacity-50 shrink-0"
+                :class="[
+                  hasContent 
+                    ? 'bg-primary text-primary-foreground border-none' 
+                    : 'border border-border/40 text-muted-foreground'
+                ]"
+                :disabled="props.disabled || !hasContent"
+                :title="props.isEditMode ? languageStore.t('ذخیره تغییرات', 'Save Changes') : languageStore.t('ارسال پیام', 'Send Message')"
+                @click="handleSendFromModal"
+              >
+                <SendIcon 
+                  class="size-5 -rotate-45 transition-transform duration-200 group-hover:scale-110" 
+                  :class="[
+                    languageStore.isFa 
+                      ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
+                      : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
+                  ]"
+                />
+              </Button>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex items-center gap-3 text-[10px] text-muted-foreground font-bold">
+              <span>{{ languageStore.n(text.length) }} {{ languageStore.t('کاراکتر', 'characters') }}</span>
+              <span class="size-1 bg-muted-foreground/30 rounded-full" />
+              <span>{{ languageStore.n(lineCount) }} {{ languageStore.t('خط', 'lines') }}</span>
+            </div>
           </div>
         </div>
       </div>
