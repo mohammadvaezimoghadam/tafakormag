@@ -250,6 +250,24 @@ const handleToggleNotification = () => {
                 <span>پخش باکیفیت و نوستالژیک</span>
               </span>
             </template>
+            <template v-else-if="app.id === 'boostan'">
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>📜</span>
+                <span>متن کامل ده باب بوستان سعدی</span>
+              </span>
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>🔍</span>
+                <span>جستجوی ابیات، مضامین و واژگان</span>
+              </span>
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>✍️</span>
+                <span>درج سریع ابیات با دستور <code class="font-mono text-primary font-bold">/boostan</code></span>
+              </span>
+              <span class="px-2.5 py-1.5 bg-muted/30 border border-border/60 rounded-xl text-xs text-foreground font-medium flex items-center gap-1.5 shadow-2xs">
+                <span>💡</span>
+                <span>شرح لغات و حکایات پندآموز</span>
+              </span>
+            </template>
             <template v-else>
               <span class="px-2.5 py-1.5 bg-muted/20 border border-border/40 rounded-xl text-xs text-muted-foreground flex items-center gap-1.5">
                 <span>✨</span>

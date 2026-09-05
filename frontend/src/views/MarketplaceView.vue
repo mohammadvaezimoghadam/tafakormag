@@ -9,7 +9,7 @@ import {
   CalendarIcon, 
   RadioIcon, 
   CalculatorIcon, 
-  LibraryIcon, 
+  ScrollTextIcon, 
   PaletteIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -105,13 +105,13 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     capabilities: ['ai_tools', 'editor_extension'],
     screenshots: []
   },
-  // 5. Prayer Times & Calendar (Coming Soon)
+  // 5. Boostan Saadi (Coming Soon - Row 2)
   {
-    id: 'calendar-adhan',
-    title: 'تقویم و اوقات شرعی',
-    category: 'اذان و رویدادها',
-    developer: 'تیم تفکر',
-    icon: CalendarIcon,
+    id: 'boostan',
+    title: 'بوستان سعدی',
+    category: 'شعر و حکمت کهن',
+    developer: 'مرکز تحقیقات ادب فارسی',
+    icon: ScrollTextIcon,
     isComingSoon: true,
     badge: 'به‌زودی',
     badgeVariant: 'outline',
@@ -119,11 +119,11 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     downloadsCount: 0,
     isInstalled: false,
     version: '۱.۰.۰',
-    description: 'محاسبه دقیق اوقات شرعی شهرهای مختلف، تقویم هجری قمری و شمسی و یادآورهای زمان‌بندی‌شده رویدادها.',
-    capabilities: ['notifications', 'calendar_sync'],
+    description: 'متن کامل ده باب بوستان سعدی (عدل، احسان، عشق، تواضع، رضا، قناعت، تربیت، شکر، توبه و مناجات) با امکان جستجوی ابیات، شرح لغات و درج در پیام‌ها.',
+    capabilities: ['slash_command', 'search_engine', 'dictionary'],
     screenshots: []
   },
-  // 6. Golha Program (Coming Soon)
+  // 6. Golha Program (Coming Soon - Row 2)
   {
     id: 'golha',
     title: 'برنامه گل‌ها',
@@ -141,7 +141,25 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     capabilities: ['audio_streaming', 'archive', 'nostalgia_player'],
     screenshots: []
   },
-  // 7. Religious Financial Calculator (Coming Soon)
+  // 7. Prayer Times & Calendar (Coming Soon - Row 3)
+  {
+    id: 'calendar-adhan',
+    title: 'تقویم و اوقات شرعی',
+    category: 'اذان و رویدادها',
+    developer: 'تیم تفکر',
+    icon: CalendarIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'محاسبه دقیق اوقات شرعی شهرهای مختلف، تقویم هجری قمری و شمسی و یادآورهای زمان‌بندی‌شده رویدادها.',
+    capabilities: ['notifications', 'calendar_sync'],
+    screenshots: []
+  },
+  // 8. Religious Financial Calculator (Coming Soon - Row 3)
   {
     id: 'calculator-khums',
     title: 'محاسبه‌گر وجوهات',
@@ -157,24 +175,6 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     version: '۱.۰.۰',
     description: 'ابزار دقیق و گام‌به‌گام برای محاسبه خمس سالانه، زکات فطره، رد مظالم و صدقات مستحبی با تطبیق فتاوای مراجع.',
     capabilities: ['calculator', 'donations_link'],
-    screenshots: []
-  },
-  // 8. Hadith Library (Coming Soon)
-  {
-    id: 'hadith-library',
-    title: 'کتابخانه حدیثی',
-    category: 'اصول کافی و روایات',
-    developer: 'مرکز تحقیقات حدیثی',
-    icon: LibraryIcon,
-    isComingSoon: true,
-    badge: 'به‌زودی',
-    badgeVariant: 'outline',
-    rating: 0,
-    downloadsCount: 0,
-    isInstalled: false,
-    version: '۰.۸.۵',
-    description: 'بانک جامع احادیث معتبر شیعه با دسته‌بندی موضوعی اخلاقی، اعتقادی و اجتماعی و سندشناسی روایات.',
-    capabilities: ['search_engine', 'slash_command'],
     screenshots: []
   },
   // 9. Quote Card Designer (Coming Soon)
