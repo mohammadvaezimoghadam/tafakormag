@@ -1,3 +1,5 @@
+from unittest.mock import patch, MagicMock
+from django.conf import settings
 from django.test import TestCase
 from django.db import IntegrityError
 from apps.accounts.models import User, MessagingTarget
@@ -782,6 +784,230 @@ class Phase3ApiEndpointsTests(APITestCase):
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
+
+
+class TelegramBaleBotLifecycleTests(APITestCase):
+    """
+    تست‌های یکپارچه چرخه حیات ربات‌های بله و تلگرام:
+    1. ارسال پست و صف‌بندی خودکار تسک‌های ربات (send)
+    2. پردازش تسک‌ها توسط ربات و ثبت شناسه‌های پیام
+    3. ویرایش پست و صف‌بندی خودکار تسک‌های ویرایش (edit)
+    4. حذف انتخابی از یک پلتفرم (selective-delete)
+    5. حذف کامل پست و صف‌بندی تسک‌های حذف (delete)
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone="09121112233"
+        )
+        self.user.telegram_bot_token = "111:FAKE_TG_TOKEN"
+        self.user.bale_bot_token = "222:FAKE_BALE_TOKEN"
+        self.user.save()
+        self.client.force_authenticate(user=self.user)
+
+        self.topic = Topic.objects.create(
+            name="تاپیک همگام‌سازی بات‌ها",
+            created_by=self.user,
+            telegram_bot_active=True,
+            bale_bot_active=True,
+            post_badge="#کانال_تستی"
+        )
+
+        self.tg_target = MessagingTarget.objects.create(
+            user=self.user,
+            chat_id="tg_chat_1001",
+            label="کانال تلگرام",
+            platform="telegram",
+            is_active=True
+        )
+        self.bale_target = MessagingTarget.objects.create(
+            user=self.user,
+            chat_id="bale_chat_2002",
+            label="کانال بله",
+            platform="bale",
+            is_active=True
+        )
+        self.topic.telegram_connections.add(self.tg_target)
+        self.topic.bale_connections.add(self.bale_target)
+
+    def test_post_creation_dispatches_bot_tasks_for_both_platforms(self):
+        """ارسال پست جدید باید تسک‌های ارسال جداگانه برای تلگرام و بله ایجاد کند"""
+        url = "/api/notes/"
+        response = self.client.post(url, {
+            "topic": self.topic.id,
+            "content": "متن تستی پست جدید"
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        post_id = response.data["id"]
+        post = Post.objects.get(id=post_id)
+
+        # متن نهایی به دلیل وجود بج در تاپیک باید شامل امضا باشد
+        self.assertIn("#کانال_تستی", post.content)
+
+        # بررسی تسک‌های تلگرام و بله
+        tg_task = BotTask.objects.filter(post_id=post, platform="telegram", action="send").first()
+        bale_task = BotTask.objects.filter(post_id=post, platform="bale", action="send").first()
+
+        self.assertIsNotNone(tg_task)
+        self.assertEqual(tg_task.chat_id, "tg_chat_1001")
+        self.assertEqual(tg_task.bot_token, "111:FAKE_TG_TOKEN")
+        self.assertIn("متن تستی پست جدید", tg_task.text)
+
+        self.assertIsNotNone(bale_task)
+        self.assertEqual(bale_task.chat_id, "bale_chat_2002")
+        self.assertEqual(bale_task.bot_token, "222:FAKE_BALE_TOKEN")
+        self.assertIn("متن تستی پست جدید", bale_task.text)
+
+    def test_bot_worker_processes_tasks_and_records_message_ids(self):
+        """دریافت تسک‌ها و اعلام انجام کار توسط ورکر بات، شناسه‌های پیام را ذخیره می‌کند"""
+        # ایجاد پست
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای تأیید ورکر"
+        )
+        tg_task = BotTask.objects.create(
+            action="send",
+            platform="telegram",
+            chat_id="tg_chat_1001",
+            text="پست برای تأیید ورکر",
+            post_id=post,
+            bot_token=self.user.telegram_bot_token
+        )
+        bale_task = BotTask.objects.create(
+            action="send",
+            platform="bale",
+            chat_id="bale_chat_2002",
+            text="پست برای تأیید ورکر",
+            post_id=post,
+            bot_token=self.user.bale_bot_token
+        )
+
+        # اعلام موفقیت ارسال تلگرام به اندپوینت bot_task_detail
+        bot_key = getattr(settings, "BOT_API_KEY", "")
+        bot_headers = {"HTTP_X_BOT_API_KEY": bot_key} if bot_key else {}
+
+        detail_url_tg = f"/api/bot/tasks/{tg_task.id}/"
+        resp_tg = self.client.post(detail_url_tg, {"message_id": "tg_msg_777"}, format="json", **bot_headers)
+        self.assertEqual(resp_tg.status_code, status.HTTP_200_OK)
+
+        # اعلام موفقیت ارسال بله به اندپوینت bot_task_detail
+        detail_url_bale = f"/api/bot/tasks/{bale_task.id}/"
+        resp_bale = self.client.post(detail_url_bale, {"message_id": "bale_msg_888"}, format="json", **bot_headers)
+        self.assertEqual(resp_bale.status_code, status.HTTP_200_OK)
+
+        # بررسی به‌روزرسانی پست
+        post.refresh_from_db()
+        self.assertEqual(post.telegram_message_ids.get("tg_chat_1001"), "tg_msg_777")
+        self.assertEqual(post.bale_message_ids.get("bale_chat_2002"), "bale_msg_888")
+        self.assertIn("telegram", post.published_platforms)
+        self.assertIn("bale", post.published_platforms)
+
+    def test_post_editing_dispatches_edit_bot_tasks(self):
+        """ویرایش محتوای پست باید تسک‌های ویرایش (edit) را برای کانال‌های متصل بفرستد"""
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="متن اولیه قبل از ویرایش",
+            telegram_message_ids={"tg_chat_1001": "tg_msg_777"},
+            bale_message_ids={"bale_chat_2002": "bale_msg_888"},
+            published_platforms=["telegram", "bale"]
+        )
+
+        edit_url = f"/api/notes/{post.id}/"
+        response = self.client.patch(edit_url, {
+            "content": "متن تغییریافته جدید"
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # بررسی صف وظایف: باید دو تسک ویرایش ایجاد شده باشد
+        tg_edit_task = BotTask.objects.filter(post_id=post, platform="telegram", action="edit").first()
+        bale_edit_task = BotTask.objects.filter(post_id=post, platform="bale", action="edit").first()
+
+        self.assertIsNotNone(tg_edit_task)
+        self.assertEqual(tg_edit_task.message_id, "tg_msg_777")
+        self.assertEqual(tg_edit_task.chat_id, "tg_chat_1001")
+        self.assertIn("متن تغییریافته جدید", tg_edit_task.text)
+
+        self.assertIsNotNone(bale_edit_task)
+        self.assertEqual(bale_edit_task.message_id, "bale_msg_888")
+        self.assertEqual(bale_edit_task.chat_id, "bale_chat_2002")
+        self.assertIn("متن تغییریافته جدید", bale_edit_task.text)
+
+    @patch("threading.Thread")
+    def test_selective_delete_telegram_only(self, mock_thread_cls):
+        """حذف انتخابی از تلگرام فقط تسک حذف تلگرام می‌سازد و شناسه‌های بله دست‌نخورده می‌مانند"""
+        mock_inst = MagicMock()
+        mock_thread_cls.return_value = mock_inst
+
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست ارسالی در هر دو پیام‌رسان",
+            telegram_message_ids={"tg_chat_1001": "tg_msg_777"},
+            bale_message_ids={"bale_chat_2002": "bale_msg_888"},
+            published_platforms=["telegram", "bale"]
+        )
+
+        url = f"/api/notes/{post.id}/selective-delete/"
+        response = self.client.post(url, {
+            "delete_from_telegram": True,
+            "delete_from_bale": False,
+            "delete_from_db": False
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        # اجرای عملیات پس‌زمینه به صورت همگام در همین تراکنش آزمایشی
+        call_kwargs = mock_thread_cls.call_args[1]
+        call_kwargs["target"](*call_kwargs["args"])
+
+        post.refresh_from_db()
+        self.assertEqual(post.telegram_message_ids, {})
+        self.assertEqual(post.bale_message_ids, {"bale_chat_2002": "bale_msg_888"})
+        self.assertNotIn("telegram", post.published_platforms)
+        self.assertIn("bale", post.published_platforms)
+
+        # بررسی ایجاد تسک حذف تلگرام
+        delete_task = BotTask.objects.filter(post_id=post, platform="telegram", action="delete").first()
+        self.assertIsNotNone(delete_task)
+        self.assertEqual(delete_task.message_id, "tg_msg_777")
+
+        # مطمئن شویم برای بله هیچ تسک حذفی ایجاد نشده است
+        bale_delete_task = BotTask.objects.filter(post_id=post, platform="bale", action="delete").first()
+        self.assertIsNone(bale_delete_task)
+
+    def test_post_full_deletion_dispatches_delete_tasks(self):
+        """حذف کامل پست باید تسک‌های حذف را برای تمام پیام‌رسان‌های فعال ایجاد کرده و پست را پاک کند"""
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای حذف کامل",
+            telegram_message_ids={"tg_chat_1001": "tg_msg_777"},
+            bale_message_ids={"bale_chat_2002": "bale_msg_888"},
+            published_platforms=["telegram", "bale"]
+        )
+        post_id = post.id
+
+        delete_url = f"/api/notes/{post_id}/"
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # پست از دیتابیس پاک شده است
+        self.assertFalse(Post.objects.filter(id=post_id).exists())
+
+        # تسک‌های حذف برای تلگرام و بله با شناسه پیام‌های صحیح ایجاد شده‌اند
+        tg_del = BotTask.objects.filter(platform="telegram", action="delete", message_id="tg_msg_777").first()
+        bale_del = BotTask.objects.filter(platform="bale", action="delete", message_id="bale_msg_888").first()
+
+        self.assertIsNotNone(tg_del)
+        self.assertEqual(tg_del.chat_id, "tg_chat_1001")
+
+        self.assertIsNotNone(bale_del)
+        self.assertEqual(bale_del.chat_id, "bale_chat_2002")
+
 
 
 
