@@ -114,7 +114,7 @@
             {{ languageStore.t('هیچ افزونه‌ای نصب نشده است', 'No Plugins Installed') }}
           </h4>
           <p class="text-[11px] text-muted-foreground leading-relaxed">
-            {{ languageStore.t('برای استفاده از دستورات هوشمند اسلش و درج محتوا در یادداشت‌ها، ابتدا افزونه را از بازارچه نصب کنید.', 'To use slash commands and embed content in your notes, please install plugins from the marketplace.') }}
+            {{ languageStore.t('برای استفاده از دستورات هوشمند اسلش و درج محتوا در پیام، ابتدا افزونه را از بازارچه نصب کنید.', 'To use slash commands and embed content in your messages, please install plugins from the marketplace.') }}
           </p>
         </div>
 
