@@ -8,7 +8,7 @@ import {
   BotIcon, 
   CalendarIcon, 
   RadioIcon, 
-  CalculatorIcon, 
+  BookOpenTextIcon, 
   ScrollTextIcon, 
   PaletteIcon
 } from '@lucide/vue'
@@ -87,25 +87,7 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     capabilities: ['slash_command', 'translations'],
     screenshots: []
   },
-  // 4. AI Writing Assistant (Coming Soon)
-  {
-    id: 'ai-editor',
-    title: 'دستیار ویراستار',
-    category: 'هوش مصنوعی و متن',
-    developer: 'هسته هوش مصنوعی تفکر',
-    icon: BotIcon,
-    isComingSoon: true,
-    badge: 'به‌زودی',
-    badgeVariant: 'outline',
-    rating: 0,
-    downloadsCount: 0,
-    isInstalled: false,
-    version: '۱.۰.۰',
-    description: 'پیشنهاد کلمات، اصلاح ساختار نگارشی، اعراب‌گذاری هوشمند و خلاصه‌سازی متون با استفاده از مدل‌های زبانی بومی.',
-    capabilities: ['ai_tools', 'editor_extension'],
-    screenshots: []
-  },
-  // 5. Boostan Saadi (Coming Soon - Row 2)
+  // 4. Boostan Saadi (Coming Soon - Row 2)
   {
     id: 'boostan',
     title: 'بوستان سعدی',
@@ -121,6 +103,24 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     version: '۱.۰.۰',
     description: 'متن کامل ده باب بوستان سعدی (عدل، احسان، عشق، تواضع، رضا، قناعت، تربیت، شکر، توبه و مناجات) با امکان جستجوی ابیات، شرح لغات و درج در پیام‌ها.',
     capabilities: ['slash_command', 'search_engine', 'dictionary'],
+    screenshots: []
+  },
+  // 5. Masnavi Ma'navi - Mowlana (Coming Soon - Row 2)
+  {
+    id: 'masnavi',
+    title: 'مثنوی معنوی',
+    category: 'شعر و عرفان کهن',
+    developer: 'کانون مولوی‌پژوهی',
+    icon: BookOpenTextIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'متن کامل دفاتر شش‌گانه مثنوی معنوی مولانا جلال‌الدین بلخی همراه با تمثیل‌ها، حکایات پندآموز، شرح لغات و امکان درج ابیات در گفت‌وگوها.',
+    capabilities: ['slash_command', 'search_engine', 'mystical_topics'],
     screenshots: []
   },
   // 6. Golha Program (Coming Soon - Row 2)
@@ -141,7 +141,25 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     capabilities: ['audio_streaming', 'archive', 'nostalgia_player'],
     screenshots: []
   },
-  // 7. Prayer Times & Calendar (Coming Soon - Row 3)
+  // 7. AI Writing Assistant (Coming Soon - Row 3)
+  {
+    id: 'ai-editor',
+    title: 'دستیار ویراستار',
+    category: 'هوش مصنوعی و متن',
+    developer: 'هسته هوش مصنوعی تفکر',
+    icon: BotIcon,
+    isComingSoon: true,
+    badge: 'به‌زودی',
+    badgeVariant: 'outline',
+    rating: 0,
+    downloadsCount: 0,
+    isInstalled: false,
+    version: '۱.۰.۰',
+    description: 'پیشنهاد کلمات، اصلاح ساختار نگارشی، اعراب‌گذاری هوشمند و خلاصه‌سازی متون با استفاده از مدل‌های زبانی بومی.',
+    capabilities: ['ai_tools', 'editor_extension'],
+    screenshots: []
+  },
+  // 8. Prayer Times & Calendar (Coming Soon - Row 3)
   {
     id: 'calendar-adhan',
     title: 'تقویم و اوقات شرعی',
@@ -157,24 +175,6 @@ const marketplaceApps = ref<MarketplaceApp[]>([
     version: '۱.۰.۰',
     description: 'محاسبه دقیق اوقات شرعی شهرهای مختلف، تقویم هجری قمری و شمسی و یادآورهای زمان‌بندی‌شده رویدادها.',
     capabilities: ['notifications', 'calendar_sync'],
-    screenshots: []
-  },
-  // 8. Religious Financial Calculator (Coming Soon - Row 3)
-  {
-    id: 'calculator-khums',
-    title: 'محاسبه‌گر وجوهات',
-    category: 'خمس، زکات و صدقه',
-    developer: 'واحد مالی و شرعی',
-    icon: CalculatorIcon,
-    isComingSoon: true,
-    badge: 'به‌زودی',
-    badgeVariant: 'outline',
-    rating: 0,
-    downloadsCount: 0,
-    isInstalled: false,
-    version: '۱.۰.۰',
-    description: 'ابزار دقیق و گام‌به‌گام برای محاسبه خمس سالانه، زکات فطره، رد مظالم و صدقات مستحبی با تطبیق فتاوای مراجع.',
-    capabilities: ['calculator', 'donations_link'],
     screenshots: []
   },
   // 9. Quote Card Designer (Coming Soon)
