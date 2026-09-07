@@ -9,13 +9,18 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import User
-from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin
+from .models import (
+    Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin, TopicFAQ,
+    TopicChatSession, TopicChatMessage
+)
 from .serializers import (
     TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer,
-    TopicAdminSerializer, UserSimpleSerializer
+    TopicAdminSerializer, UserSimpleSerializer, TopicFAQSerializer,
+    TopicChatMessageSerializer, TopicChatSessionSerializer, TopicChatPromptSerializer
 )
 from .permissions import IsTopicOwnerOrAdmin
 from .services import create_bot_tasks, execute_external_platform_deletion, check_duplicate_message
+from .ai_service import TopicRAGService
 
 
 def update_topic_description(topic):
@@ -302,6 +307,141 @@ class TopicViewSet(viewsets.ModelViewSet):
         serializer = ImportTaskStatusSerializer(task)
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
+    @action(detail=True, methods=['get', 'post'], url_path='faqs', permission_classes=[permissions.AllowAny])
+    def faqs(self, request, pk=None):
+        """
+        GET /api/notes/topics/{id}/faqs/ - Public: list FAQs (or all including unpublished for owner/admin).
+        POST /api/notes/topics/{id}/faqs/ - Restricted: create a new FAQ for this topic.
+        """
+        topic = self.get_object()
+        user = request.user
+        is_owner = (topic.created_by == user) if (user and user.is_authenticated and topic.created_by) else False
+        is_admin = topic.admins.filter(user=user).exists() if (user and user.is_authenticated) else False
+        is_staff = bool(user and user.is_authenticated and user.is_superuser)
+        has_manage_perm = is_owner or is_admin or is_staff
+
+        if request.method == 'GET':
+            queryset = topic.faqs.select_related('created_by').all().order_by('order', '-created_at')
+            if not has_manage_perm:
+                queryset = queryset.filter(is_published=True)
+            search = request.query_params.get('search', '').strip()
+            if search:
+                queryset = queryset.filter(Q(question__icontains=search) | Q(answer__icontains=search))
+            serializer = TopicFAQSerializer(queryset, many=True, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'POST':
+            if not user or not user.is_authenticated:
+                return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+            if not has_manage_perm:
+                raise PermissionDenied("تنها سازنده یا ادمین‌های تاپیک مجاز به ثبت سوالات متداول هستند.")
+            serializer = TopicFAQSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save(topic=topic, created_by=user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='chat', permission_classes=[permissions.AllowAny])
+    def chat(self, request, pk=None):
+        """
+        POST /api/notes/topics/{id}/chat/
+        Body: { "message": "...", "session_id": "optional-uuid" }
+        Executes RAG retrieval across topic posts and FAQs, calls LLM, and returns assistant message with sources.
+        """
+        topic = self.get_object()
+        prompt_serializer = TopicChatPromptSerializer(data=request.data)
+        if not prompt_serializer.is_valid():
+            return Response(prompt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        message_text = prompt_serializer.validated_data['message'].strip()
+        session_id = prompt_serializer.validated_data.get('session_id')
+        user = request.user if (request.user and request.user.is_authenticated) else None
+
+        session = None
+        if session_id:
+            session = TopicChatSession.objects.filter(id=session_id, topic=topic).first()
+
+        if not session:
+            session = TopicChatSession.objects.create(topic=topic, user=user)
+
+        # Save user message
+        user_msg = TopicChatMessage.objects.create(
+            session=session,
+            role='user',
+            content=message_text
+        )
+
+        # Extract last turns for conversation context
+        recent_messages = list(
+            session.messages.exclude(role='system').order_by('-created_at')[:6]
+        )
+        recent_messages.reverse()
+        history = [{'role': m.role, 'content': m.content} for m in recent_messages if m.id != user_msg.id]
+
+        # Call RAG service
+        result = TopicRAGService.generate_topic_answer(
+            topic=topic,
+            query=message_text,
+            history=history,
+            session=session
+        )
+
+        # Save assistant message with retrieved sources
+        assistant_msg = TopicChatMessage.objects.create(
+            session=session,
+            role='assistant',
+            content=result['answer'],
+            sources=result['sources']
+        )
+
+        return Response({
+            "session_id": str(session.id),
+            "user_message": TopicChatMessageSerializer(user_msg).data,
+            "assistant_message": TopicChatMessageSerializer(assistant_msg).data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='chat-history', permission_classes=[permissions.AllowAny])
+    def chat_history(self, request, pk=None):
+        """
+        GET /api/notes/topics/{id}/chat-history/?session_id=...
+        Returns chat message history for the active session.
+        """
+        topic = self.get_object()
+        session_id = request.query_params.get('session_id')
+        user = request.user if (request.user and request.user.is_authenticated) else None
+
+        session = None
+        if session_id:
+            session = TopicChatSession.objects.filter(id=session_id, topic=topic).first()
+        elif user:
+            session = TopicChatSession.objects.filter(topic=topic, user=user).order_by('-updated_at').first()
+
+        if not session:
+            return Response({"session_id": None, "messages": []}, status=status.HTTP_200_OK)
+
+        messages = session.messages.all().order_by('created_at')
+        return Response({
+            "session_id": str(session.id),
+            "messages": TopicChatMessageSerializer(messages, many=True).data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['delete', 'post'], url_path='chat-clear', permission_classes=[permissions.AllowAny])
+    def chat_clear(self, request, pk=None):
+        """
+        DELETE or POST /api/notes/topics/{id}/chat-clear/
+        Clears chat history for the session or user.
+        """
+        topic = self.get_object()
+        session_id = request.data.get('session_id') or request.query_params.get('session_id')
+        user = request.user if (request.user and request.user.is_authenticated) else None
+
+        if session_id:
+            TopicChatSession.objects.filter(id=session_id, topic=topic).delete()
+        elif user:
+            TopicChatSession.objects.filter(topic=topic, user=user).delete()
+
+        return Response({"message": "تاریخچه گفت‌وگو با موفقیت پاک شد."}, status=status.HTTP_200_OK)
+
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
@@ -422,7 +562,7 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         return Response({"success": True, "emoji": emoji, "created": created})
 
-    # اندپوینت کامنت‌های پست (مشاهده و ثبت)
+    # اندپوینت کامنت‌های پست (مشاهده و ثبت معمولی یا ناشناس)
     @action(methods=['get', 'post'], detail=True, url_path='comments')
     def comments(self, request, pk=None):
         post = self.get_object()
@@ -432,21 +572,26 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer = PostCommentSerializer(comments, many=True)
             return Response(serializer.data)
         
-        # درخواست POST نیازمند ورود کاربر است
-        if not request.user.is_authenticated:
-            return Response(
-                {"detail": "برای ثبت نظر ابتدا باید وارد حساب خود شوید."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
+        # ثبت کامنت: کاربران مهمان (بدون لاگین) و کاربران لاگین‌شده می‌توانند به شکل ناشناس یا مشخص نظر ثبت کنند
         content = request.data.get('content', '').strip()
         if not content:
             return Response({"error": "متن نظر نمی‌تواند خالی باشد."}, status=status.HTTP_400_BAD_REQUEST)
 
+        is_unauthenticated = not (request.user and request.user.is_authenticated)
+        is_anonymous = is_unauthenticated or bool(request.data.get('is_anonymous', False))
+        author_name = str(request.data.get('author_name', '')).strip()
+
+        if is_anonymous and not author_name:
+            author_name = "کاربر ناشناس"
+
+        user = None if is_anonymous else request.user
+
         comment = PostComment.objects.create(
             post=post,
-            user=request.user,
-            content=content
+            user=user,
+            content=content,
+            is_anonymous=is_anonymous,
+            author_name=author_name if is_anonymous else ""
         )
         serializer = PostCommentSerializer(comment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -520,3 +665,73 @@ class ImportTaskViewSet(viewsets.ReadOnlyModelViewSet):
         task = self.get_object()
         serializer = self.get_serializer(task)
         return Response(serializer.data)
+
+
+class TopicFAQViewSet(viewsets.ModelViewSet):
+    serializer_class = TopicFAQSerializer
+    permission_classes = [IsTopicOwnerOrAdmin]
+
+    def get_queryset(self):
+        queryset = TopicFAQ.objects.select_related('created_by', 'topic').all().order_by('order', '-created_at')
+        topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
+        if topic_id:
+            queryset = queryset.filter(topic_id=topic_id)
+
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(Q(question__icontains=search) | Q(answer__icontains=search))
+
+        user = self.request.user
+        if topic_id:
+            try:
+                topic = Topic.objects.get(id=topic_id)
+                is_owner = (topic.created_by == user) if (user and user.is_authenticated and topic.created_by) else False
+                is_admin = topic.admins.filter(user=user).exists() if (user and user.is_authenticated) else False
+                is_staff = bool(user and user.is_authenticated and user.is_superuser)
+                if not (is_owner or is_admin or is_staff):
+                    queryset = queryset.filter(is_published=True)
+            except Topic.DoesNotExist:
+                queryset = queryset.filter(is_published=True)
+        else:
+            if not (user and user.is_authenticated and user.is_superuser):
+                queryset = queryset.filter(is_published=True)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        topic = serializer.validated_data.get('topic')
+        if not topic:
+            topic_id = self.request.data.get('topic') or self.request.query_params.get('topic') or self.request.query_params.get('topic_id')
+            if topic_id:
+                topic = get_object_or_404(Topic, id=topic_id)
+        if not topic:
+            raise serializers.ValidationError({"topic": "Topic is required."})
+        user = self.request.user
+        is_owner = (topic.created_by == user) if (user and topic.created_by) else False
+        is_admin = topic.admins.filter(user=user).exists() if user else False
+        if not (is_owner or is_admin or (user and user.is_superuser)):
+            raise PermissionDenied("تنها سازنده یا ادمین‌های تاپیک مجاز به ثبت سوالات متداول هستند.")
+        serializer.save(topic=topic, created_by=user)
+
+    @action(detail=False, methods=['post'], url_path='reorder', permission_classes=[permissions.IsAuthenticated])
+    def reorder(self, request):
+        topic_id = request.data.get('topic_id')
+        orders = request.data.get('orders', [])
+        if not topic_id or not isinstance(orders, list):
+            return Response({"error": "شناسه تاپیک و لیست ترتیب الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        topic = get_object_or_404(Topic, id=topic_id)
+        user = request.user
+        is_owner = (topic.created_by == user) if topic.created_by else False
+        is_admin = topic.admins.filter(user=user).exists()
+        if not (is_owner or is_admin or user.is_superuser):
+            raise PermissionDenied("تنها سازنده یا ادمین‌های تاپیک مجاز به تغییر ترتیب سوالات هستند.")
+
+        for item in orders:
+            faq_id = item.get('id')
+            new_order = item.get('order')
+            if faq_id is not None and new_order is not None:
+                TopicFAQ.objects.filter(id=faq_id, topic=topic).update(order=new_order)
+
+        return Response({"message": "ترتیب سوالات با موفقیت به‌روز شد."}, status=status.HTTP_200_OK)
+

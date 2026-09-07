@@ -85,10 +85,38 @@ class MessagingTarget(models.Model):
     )
     platform = models.CharField(max_length=10, choices=PLATFORM_CHOICES)
     chat_id = models.CharField(max_length=100)
+    username = models.CharField(max_length=255, blank=True, default='')
     label = models.CharField(max_length=255)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def auto_badge(self) -> str:
+        """
+        تولید هوشمند تگ منبع بر اساس نام کاربری یا شناسه کانال/گروه.
+        برای تلگرام: @username
+        برای بله: ble.ir/username
+        اگر چت شناسه نام کاربری معتبر نداشته باشد، رشته خالی برمی‌گرداند.
+        """
+        if self.username:
+            clean_u = self.username.lstrip('@').strip()
+            if self.platform == 'bale':
+                return f"ble.ir/{clean_u}"
+            return f"@{clean_u}"
+
+        clean_chat = (self.chat_id or '').strip()
+        if clean_chat.startswith('@'):
+            if self.platform == 'bale':
+                return f"ble.ir/{clean_chat.lstrip('@')}"
+            return clean_chat
+
+        if clean_chat and not clean_chat.startswith('-') and not clean_chat.isdigit():
+            if self.platform == 'bale':
+                return f"ble.ir/{clean_chat}"
+            return f"@{clean_chat}"
+
+        return ""
 
     class Meta:
         ordering = ["-created_at"]

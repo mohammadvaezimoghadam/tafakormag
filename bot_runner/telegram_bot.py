@@ -108,7 +108,8 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = await api_client.get_user_id_by_chat("telegram", user.id)
         label = chat.title or f"Chat {chat_id}"
-        await api_client.register_destination(user_id, "telegram", chat_id, label)
+        username = chat.username or ""
+        await api_client.register_destination(user_id, "telegram", chat_id, label, username=username)
 
         # ارسال پیام موفقیت به صورت خصوصی به کاربر
         await context.bot.send_message(
@@ -194,7 +195,8 @@ async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             label = chat.title or f"Chat {chat_id}"
-            await api_client.register_destination(user_id, "telegram", chat_id, label)
+            username = chat.username or ""
+            await api_client.register_destination(user_id, "telegram", chat_id, label, username=username)
 
             # ارسال پیام موفقیت به صورت خصوصی به کاربر
             await context.bot.send_message(
@@ -264,7 +266,8 @@ async def on_new_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         if is_admin:
             label = chat.title or f"Chat {chat_id}"
-            await api_client.register_destination(user_id, "telegram", chat_id, label)
+            username = chat.username or ""
+            await api_client.register_destination(user_id, "telegram", chat_id, label, username=username)
             await context.bot.send_message(
                 chat_id=from_user.id,
                 text=(

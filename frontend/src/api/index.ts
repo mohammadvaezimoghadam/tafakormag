@@ -34,10 +34,12 @@ instance.interceptors.response.use(
     if (status === 401) {
       const userStore = useUserStore()
       userStore.logout()
-      userStore.isLoginModalOpen = true
-      // Redirect to login if unauthenticated on auth page
+      
       const path = window.location.pathname
-      if (path !== '/' && path !== '/login') {
+      const isPublicPath = path === '/' || path === '/login' || path.startsWith('/p/') || path.startsWith('/preview/') || path.startsWith('/playground')
+
+      if (!isPublicPath) {
+        userStore.isLoginModalOpen = true
         toastStore.triggerToast('جلسه کاری شما منقضی شده است. لطفا دوباره وارد شوید.', 'error')
         window.location.href = '/'
       }
@@ -125,8 +127,19 @@ export const reactToPost = (postId: number | string, emoji: string) =>
 export const fetchComments = (postId: number | string) => 
   instance.get(`/api/notes/${postId}/comments/`)
 
-export const createComment = (postId: number | string, content: string) => 
-  instance.post(`/api/notes/${postId}/comments/`, { content })
+export const createComment = (postId: number | string, content: string, isAnonymous: boolean = false, authorName: string = '') => 
+  instance.post(`/api/notes/${postId}/comments/`, { 
+    content, 
+    is_anonymous: isAnonymous, 
+    author_name: authorName 
+  })
+
+export const createAnonymousComment = (postId: number | string, content: string, authorName: string = '') => 
+  instance.post(`/api/notes/${postId}/comments/`, { 
+    content, 
+    is_anonymous: true, 
+    author_name: authorName 
+  })
 
 // --- Destinations API ---
 export const fetchDestinations = (platform: 'telegram' | 'bale') => 
@@ -221,6 +234,97 @@ export const deleteDonationCampaign = (id: string | number) =>
 
 export const donateToCampaign = (campaignId: string | number, payload: { amount: number; is_anonymous?: boolean }) =>
   instance.post(`/api/v1/donations/campaigns/${campaignId}/donate/`, payload)
+
+// --- Topic FAQs API ---
+export interface TopicFAQ {
+  id: number
+  topic: number
+  question: string
+  answer: string
+  order: number
+  is_published: boolean
+  created_by?: UserSimple | null
+  created_at: string
+  updated_at: string
+}
+
+export const fetchTopicFaqs = (topicId: string | number, search?: string) =>
+  instance.get<TopicFAQ[]>(`/api/notes/topics/${topicId}/faqs/`, {
+    params: search ? { search } : undefined
+  })
+
+export const createTopicFaq = (
+  topicId: string | number,
+  payload: { question: string; answer: string; order?: number; is_published?: boolean }
+) =>
+  instance.post<TopicFAQ>(`/api/notes/topics/${topicId}/faqs/`, payload)
+
+export const updateTopicFaq = (
+  faqId: string | number,
+  payload: Partial<{ question: string; answer: string; order?: number; is_published?: boolean }>
+) =>
+  instance.patch<TopicFAQ>(`/api/notes/faqs/${faqId}/`, payload)
+
+export const deleteTopicFaq = (faqId: string | number) =>
+  instance.delete(`/api/notes/faqs/${faqId}/`)
+
+export const reorderTopicFaqs = (
+  topicId: string | number,
+  orders: { id: number | string; order: number }[]
+) =>
+  instance.post(`/api/notes/faqs/reorder/`, { topic_id: topicId, orders })
+
+// --- Topic AI Chat (RAG) API ---
+export interface TopicChatSource {
+  type: 'post' | 'faq'
+  id: number
+  title: string
+  preview?: string
+  author?: string
+  created_at?: string
+}
+
+export interface TopicChatMessage {
+  id: string
+  session?: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  sources?: TopicChatSource[]
+  created_at: string
+}
+
+export interface TopicChatResponse {
+  session_id: string
+  user_message: TopicChatMessage
+  assistant_message: TopicChatMessage
+}
+
+export const sendTopicChatMessage = (
+  topicId: string | number,
+  message: string,
+  sessionId?: string | null
+) =>
+  instance.post<TopicChatResponse>(`/api/notes/topics/${topicId}/chat/`, {
+    message,
+    session_id: sessionId || undefined
+  })
+
+export const fetchTopicChatHistory = (
+  topicId: string | number,
+  sessionId?: string | null
+) =>
+  instance.get<{ session_id: string | null; messages: TopicChatMessage[] }>(
+    `/api/notes/topics/${topicId}/chat-history/`,
+    { params: sessionId ? { session_id: sessionId } : undefined }
+  )
+
+export const clearTopicChatHistory = (
+  topicId: string | number,
+  sessionId?: string | null
+) =>
+  instance.post(`/api/notes/topics/${topicId}/chat-clear/`, {
+    session_id: sessionId || undefined
+  })
 
 export default instance
 

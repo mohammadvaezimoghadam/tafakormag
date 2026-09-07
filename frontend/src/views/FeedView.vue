@@ -20,6 +20,7 @@ import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
 import TopicImportView from '@/components/TopicImportView.vue'
 import TopicAdminsView from '@/components/TopicAdminsView.vue'
+import TopicAiChatView from '@/components/TopicAiChatView.vue'
 import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import DonationsFeed from '@/components/kindness/DonationsFeed.vue'
 import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue'
@@ -56,8 +57,8 @@ const currentTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
 // Subview connection state
 const showConnections = ref(false)
 
-// Active topic subview ('feed' | 'edit' | 'connections' | 'import' | 'admins')
-const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import' | 'admins'>('feed')
+// Active topic subview ('feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq')
+const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq'>('feed')
 
 // Initialize Pinia stores
 const botStore = useBotStore()
@@ -893,6 +894,8 @@ const handleSaveTopicConnections = async (data: {
   bale_connections: number[]
   telegram_post_badge?: string
   bale_post_badge?: string
+  telegram_post_link_mode?: 'auto_long' | 'always' | 'disabled'
+  bale_post_link_mode?: 'auto_long' | 'always' | 'disabled'
 }) => {
   if (!selectedTopic.value) return
   try {
@@ -1108,6 +1111,7 @@ const toggleTheme = useToggle(isDark)
         :title="headerTitle" 
         :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
         :show-options-button="!!(currentTab === 'home' && selectedTopic !== null)"
+        :show-faq-button="!!(currentTab === 'home' && selectedTopic !== null)"
         :is-owner="isTopicCreator"
         :show-search-button="(currentTab === 'home' && selectedTopic === null) || currentTab === 'donate'"
         v-model:search-query="searchQuery"
@@ -1117,6 +1121,7 @@ const toggleTheme = useToggle(isDark)
         @topic-connections="handleTopicConnections"
         @topic-import="handleTopicImport"
         @topic-admins="activeTopicSubView = 'admins'"
+        @topic-faq="activeTopicSubView = 'faq'"
       />
     </div>
 
@@ -1170,7 +1175,8 @@ const toggleTheme = useToggle(isDark)
             </div>
 
             <!-- Detail View: Topic Posts Feed -->
-            <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4.5 w-full pb-32">
+            <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4.5 w-full pb-32 relative">
+
               <!-- Skeleton Loading -->
               <div v-if="postStore.loading" class="flex flex-col gap-4.5 w-full animate-pulse">
                 <div 
@@ -1351,6 +1357,16 @@ const toggleTheme = useToggle(isDark)
                 @ownership-transferred="async () => {
                   await topicStore.loadTopics();
                 }"
+              />
+            </div>
+
+            <!-- Topic FAQ / AI Assistant Subview Page -->
+            <div v-else-if="activeTopicSubView === 'faq'" key="faq" class="w-full">
+              <TopicAiChatView 
+                :topic="selectedTopic"
+                :is-owner="isTopicCreator"
+                :is-admin="isTopicCreator"
+                @back="activeTopicSubView = 'feed'"
               />
             </div>
           </transition>

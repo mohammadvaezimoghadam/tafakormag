@@ -5,7 +5,9 @@ import {
   LinkIcon, 
   Trash2Icon,
   UploadCloudIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  HelpCircleIcon,
+  SparklesIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -27,6 +29,7 @@ const emit = defineEmits<{
   (e: 'connections'): void
   (e: 'import'): void
   (e: 'admins'): void
+  (e: 'faq'): void
   (e: 'delete'): void
 }>()
 
@@ -61,7 +64,7 @@ const menuStyle = computed(() => {
   }
 })
 
-const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'admins') => {
+const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'admins' | 'faq') => {
   if (action === 'edit') {
     emit('edit')
   } else if (action === 'connections') {
@@ -70,6 +73,8 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
     emit('import')
   } else if (action === 'admins') {
     emit('admins')
+  } else if (action === 'faq') {
+    emit('faq')
   } else if (action === 'delete') {
     emit('delete')
   }
@@ -92,6 +97,15 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         @click.stop
         :dir="languageStore.dir"
       >
+        <!-- Topic AI Assistant -->
+        <button 
+          @click="handleAction('faq')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+        >
+          <span>{{ languageStore.t('دستیار هوشمند تاپیک', 'Topic AI Assistant') }}</span>
+          <SparklesIcon class="size-3.5 text-amber-500" />
+        </button>
+
         <!-- Topic Admins -->
         <button 
           @click="handleAction('admins')" 

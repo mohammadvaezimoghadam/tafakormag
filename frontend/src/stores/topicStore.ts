@@ -9,6 +9,8 @@ export interface Topic {
   post_badge?: string
   telegram_post_badge?: string
   bale_post_badge?: string
+  telegram_post_link_mode?: 'auto_long' | 'always' | 'disabled'
+  bale_post_link_mode?: 'auto_long' | 'always' | 'disabled'
   image?: string
   unreadCount?: number // maps to post_count in backend
   time: string // formatted created_at
@@ -60,6 +62,8 @@ export const useTopicStore = defineStore('topic', () => {
       post_badge: data.post_badge || '',
       telegram_post_badge: data.telegram_post_badge || '',
       bale_post_badge: data.bale_post_badge || '',
+      telegram_post_link_mode: data.telegram_post_link_mode || 'auto_long',
+      bale_post_link_mode: data.bale_post_link_mode || 'auto_long',
       image: getImageUrl(data.image),
       unreadCount: data.post_count || 0,
       time: data.created_at || 'هم‌اکنون',
@@ -183,6 +187,8 @@ export const useTopicStore = defineStore('topic', () => {
     bale_connections: number[]
     telegram_post_badge?: string
     bale_post_badge?: string
+    telegram_post_link_mode?: 'auto_long' | 'always' | 'disabled'
+    bale_post_link_mode?: 'auto_long' | 'always' | 'disabled'
   }) => {
     loading.value = true
     try {

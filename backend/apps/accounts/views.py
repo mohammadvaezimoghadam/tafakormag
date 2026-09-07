@@ -390,6 +390,10 @@ class AuthViewSet(viewsets.GenericViewSet):
             platform = request.data.get('platform')
             chat_id = str(request.data.get('chat_id', '')).strip()
             label = request.data.get('label', '').strip()
+            username = str(request.data.get('username', '')).strip()
+            
+            if not username and chat_id.startswith('@'):
+                username = chat_id.lstrip('@')
             
             if platform not in ['telegram', 'bale'] or not chat_id or not label:
                 return Response({"error": "پلتفرم، شناسه چت و برچسب الزامی هستند."}, status=status.HTTP_400_BAD_REQUEST)
@@ -399,12 +403,14 @@ class AuthViewSet(viewsets.GenericViewSet):
                     user=request.user,
                     platform=platform,
                     chat_id=chat_id,
-                    defaults={'label': label, 'is_active': True}
+                    defaults={'label': label, 'username': username, 'is_active': True}
                 )
                 return Response({
                     "id": target.id,
                     "platform": target.platform,
                     "chat_id": target.chat_id,
+                    "username": target.username,
+                    "auto_badge": target.auto_badge,
                     "label": target.label,
                     "is_active": target.is_active
                 }, status=status.HTTP_201_CREATED)
@@ -421,6 +427,8 @@ class AuthViewSet(viewsets.GenericViewSet):
                 "id": t.id,
                 "platform": t.platform,
                 "chat_id": t.chat_id,
+                "username": t.username,
+                "auto_badge": t.auto_badge,
                 "label": t.label,
                 "is_active": t.is_active
             }

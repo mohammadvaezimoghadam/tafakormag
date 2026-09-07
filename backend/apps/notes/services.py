@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 import traceback
-from typing import Optional
+from typing import Optional, Any
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware, is_aware, now as tz_now
@@ -147,20 +147,83 @@ def set_message_ids(post: Post, platform: str, message_ids: dict[str, str]):
         )
 
 
-def _post_markdown_text(post: Post, platform: Optional[str] = None) -> str:
-    """متن ارسالی به ربات با الحاق خودکار بج/امضای تاپیک در صورت وجود"""
-    content = (post.content or "").strip()
+def _truncate_content(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    truncated = text[:limit]
+    last_space = max(truncated.rfind(' '), truncated.rfind('\n'))
+    if last_space > int(limit * 0.7):
+        truncated = truncated[:last_space]
+    return truncated.rstrip() + "..."
+
+
+def _post_markdown_text(post: Post, platform: Optional[str] = None, target: Optional[Any] = None) -> str:
+    """
+    متن ارسالی به ربات با کوتاه کردن خودکار متون طولانی و الصاق لینک پیش‌نمایش در تفکر،
+    به همراه الحاق خودکار بج/امضای تاپیک در صورت وجود.
+    اولویت انتساب تگ:
+    ۱. بج دستی وارد شده توسط کاربر در تاپیک (telegram_post_badge / bale_post_badge)
+    ۲. تگ خودکار استخراج‌شده از مقصد ثبت‌شده در دیتابیس (target.auto_badge)
+    ۳. بج عمومی تاپیک (post_badge)
+    """
+    raw_content = (post.content or "").strip()
     topic = getattr(post, 'topic', None)
+
+    # تعیین آستانه طول مجاز بر اساس نوع پست (مدیا یا متن ساده)
+    has_media = bool(post.media_file or post.media_type in ('image', 'video', 'audio'))
+    max_len = getattr(settings, 'BOT_MEDIA_POST_MAX_CHARS', 800) if has_media else getattr(settings, 'BOT_TEXT_POST_MAX_CHARS', 1000)
+    is_long = len(raw_content) > max_len
+
+    # تعیین نحوه درج لینک بر اساس تنظیمات پلتفرم در تاپیک
+    link_mode = 'auto_long'
     if topic:
         if platform == "telegram":
-            badge = (getattr(topic, 'telegram_post_badge', '') or getattr(topic, 'post_badge', '') or "").strip()
+            link_mode = getattr(topic, 'telegram_post_link_mode', 'auto_long') or 'auto_long'
         elif platform == "bale":
-            badge = (getattr(topic, 'bale_post_badge', '') or getattr(topic, 'post_badge', '') or "").strip()
-        else:
+            link_mode = getattr(topic, 'bale_post_link_mode', 'auto_long') or 'auto_long'
+
+    # بررسی شرط الصاق خودکار لینک به پایین پست
+    should_include_link = False
+    if link_mode == 'always':
+        should_include_link = True
+    elif link_mode == 'auto_long' and is_long:
+        should_include_link = True
+    elif link_mode == 'disabled':
+        should_include_link = False
+
+    # کوتاه کردن متن در صورت فراتر رفتن از حد مجاز
+    if is_long:
+        content = _truncate_content(raw_content, max_len)
+    else:
+        content = raw_content
+
+    # الصاق لینک خودکار به همراه متن راهنمای کوتاه در پایین پست
+    if should_include_link:
+        frontend_base = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173').rstrip('/')
+        post_id = post.id if post.id else ''
+        preview_url = f"{frontend_base}/p/{post_id}"
+        short_guide = f"🔗 مشاهده و ثبت نظر در تفکر:\n{preview_url}"
+        content = f"{content}\n\n{short_guide}" if content else short_guide
+
+    if topic:
+        badge = ""
+        if platform == "telegram":
+            badge = (getattr(topic, 'telegram_post_badge', '') or "").strip()
+        elif platform == "bale":
+            badge = (getattr(topic, 'bale_post_badge', '') or "").strip()
+
+        # اگر تاپیک بج دستی مختص پلتفرم نداشت، از تگ خودکار مقصد در دیتابیس استفاده می‌کنیم
+        if not badge and target and hasattr(target, 'auto_badge') and target.auto_badge:
+            badge = str(target.auto_badge).strip()
+
+        # در صورت نبود، بج عمومی تاپیک را بررسی می‌کنیم
+        if not badge:
             badge = (getattr(topic, 'post_badge', '') or "").strip()
+
         if badge and badge not in content:
-            return f"{content}\n\n{badge}" if content else badge
-    return post.content or ""
+            content = f"{content}\n\n{badge}" if content else badge
+
+    return content or ""
 
 
 def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_delete: bool = False):
@@ -205,16 +268,17 @@ def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_dele
         # دریافت اهداف ارتباط متصل به این تاپیک
         connections_field = f"{platform}_connections"
         connections = getattr(post.topic, connections_field).filter(is_active=True)
-        chat_ids = [str(conn.chat_id) for conn in connections]
+        conn_by_chat_id = {str(conn.chat_id): conn for conn in connections}
+        chat_ids = list(conn_by_chat_id.keys())
 
         if old_instance is None:
             # ۱. پست جدید: ارسال به تمام کانال‌های متصل
-            for chat_id in chat_ids:
+            for chat_id, conn in conn_by_chat_id.items():
                 BotTask.objects.create(
                     action="send",
                     platform=platform,
                     chat_id=str(chat_id),
-                    text=_post_markdown_text(post, platform=platform),
+                    text=_post_markdown_text(post, platform=platform, target=conn),
                     message_id=None,
                     note_id=post.id,
                     post_id=post,
@@ -229,13 +293,14 @@ def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_dele
 
             # الف) ویرایش در کانال‌هایی که قبلاً ارسال شده است
             for chat_id, msg_id in msg_ids.items():
+                conn = conn_by_chat_id.get(str(chat_id))
                 if msg_id and chat_id in chat_ids:
                     if content_changed:
                         BotTask.objects.create(
                             action="edit",
                             platform=platform,
                             chat_id=str(chat_id),
-                            text=_post_markdown_text(post, platform=platform),
+                            text=_post_markdown_text(post, platform=platform, target=conn),
                             message_id=str(msg_id),
                             note_id=post.id,
                             post_id=post,
@@ -255,13 +320,13 @@ def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_dele
                     )
 
             # ب) ارسال به کانال‌های جدیدی که به اتصالات اضافه شده‌اند ولی هنوز ارسال نشده بودند
-            for chat_id in chat_ids:
+            for chat_id, conn in conn_by_chat_id.items():
                 if chat_id not in msg_ids:
                     BotTask.objects.create(
                         action="send",
                         platform=platform,
                         chat_id=str(chat_id),
-                        text=_post_markdown_text(post, platform=platform),
+                        text=_post_markdown_text(post, platform=platform, target=conn),
                         message_id=None,
                         note_id=post.id,
                         post_id=post,

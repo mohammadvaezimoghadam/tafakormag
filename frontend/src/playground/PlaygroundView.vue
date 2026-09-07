@@ -30,6 +30,8 @@ import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
 import PaymentReceiptModal from '@/components/kindness/PaymentReceiptModal.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import MarketplaceAppIcon from '@/components/marketplace/MarketplaceAppIcon.vue'
+import TopicAiChatView from '@/components/TopicAiChatView.vue'
+import type { TopicFAQ } from '@/api'
 import type { DonationCampaignProps, CreateDonationPayload, CampaignCategory } from '@/types/kindness'
 import type { MarketplaceApp, AppIconSize } from '@/types/marketplace'
 import { Badge } from '@/components/ui/badge'
@@ -92,11 +94,12 @@ import {
   CodeIcon,
   DownloadCloudIcon,
   TypeIcon,
-  ReceiptTextIcon
+  ReceiptTextIcon,
+  HelpCircleIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'payment-receipt-modal' | 'under-dev' | 'marketplace-icon'>('marketplace-icon')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'payment-receipt-modal' | 'under-dev' | 'marketplace-icon' | 'topic-faq'>('topic-faq')
 
 // MarketplaceAppIcon simulation state
 const simulatorMarketplaceIconTitle = ref('افزونه قرآن کریم')
@@ -679,9 +682,67 @@ const currentComponentFile = computed(() => {
     case 'payment-receipt-modal': return 'PaymentReceiptModal.vue'
     case 'under-dev': return 'UnderDevelopmentCard.vue'
     case 'marketplace-icon': return 'MarketplaceAppIcon.vue'
+    case 'topic-faq': return 'TopicAiChatView.vue & PlatformHeader.vue'
     default: return ''
   }
 })
+
+// Topic FAQ simulation state
+const simulatorFaqViewMode = ref<'feed' | 'subview'>('feed')
+const simulatorFaqForcedState = ref<'default' | 'loading' | 'empty'>('default')
+const simulatorFaqIsOwner = ref(true)
+const simulatorFloatingFaqCount = ref(4)
+
+const createSimulatorMockFaqs = (): TopicFAQ[] => [
+  {
+    id: 1,
+    topic: 101,
+    question: 'قوانین و چارچوب فعالیت در این تاپیک چیست؟',
+    answer: 'احترام متقابل به تمام اعضا، تمرکز بر موضوع تخصصی تاپیک، ارسال نکردن پیام‌های نامرتبط یا تبلیغاتی، و رعایت ادب گفت‌وگو الزامی است.',
+    order: 0,
+    is_published: true,
+    created_at: '2026-03-01T10:00:00Z',
+    updated_at: '2026-03-01T10:00:00Z'
+  },
+  {
+    id: 2,
+    topic: 101,
+    question: 'چگونه می‌توانم فایل‌های مرتبط با جلسات را دریافت کنم؟',
+    answer: 'تمامی فایل‌ها، اسناد و اسلایدهای جلسات در بخش پیام‌های سنجاق‌شده (Pinned Messages) قرار داده می‌شوند.',
+    order: 1,
+    is_published: true,
+    created_at: '2026-03-02T11:30:00Z',
+    updated_at: '2026-03-02T11:30:00Z'
+  },
+  {
+    id: 3,
+    topic: 101,
+    question: 'زمان برگزاری نشست‌های هفتگی چه ساعتی است؟',
+    answer: 'نشست‌های آنلاین هر هفته دوشنبه‌ها ساعت ۱۸:۳۰ برگزار خواهد شد.',
+    order: 2,
+    is_published: true,
+    created_at: '2026-03-03T09:15:00Z',
+    updated_at: '2026-03-03T09:15:00Z'
+  },
+  {
+    id: 4,
+    topic: 101,
+    question: 'برای پیشنهاد موضوع جدید با چه کسی هماهنگ شوم؟',
+    answer: 'می‌توانید خلاصه موضوعات پیشنهادی خود را مستقیماً برای مدیران تاپیک ارسال فرمایید.',
+    order: 3,
+    is_published: true,
+    created_at: '2026-03-04T14:00:00Z',
+    updated_at: '2026-03-04T14:00:00Z'
+  }
+]
+
+const simulatorMockFaqs = ref<TopicFAQ[]>(createSimulatorMockFaqs())
+
+const resetSimulatorFaqs = () => {
+  simulatorMockFaqs.value = createSimulatorMockFaqs()
+  simulatorFaqForcedState.value = 'default'
+  logEvent('TopicFAQ: Reset mock data', {})
+}
 
 const isCopied = ref(false)
 
@@ -868,6 +929,8 @@ const simulatorTopicData = ref({
   post_badge: '@tafakor_channel',
   telegram_post_badge: '@tafakor_channel',
   bale_post_badge: 'ble.ir/tafakor_channel',
+  telegram_post_link_mode: 'auto_long' as 'auto_long' | 'always' | 'disabled',
+  bale_post_link_mode: 'auto_long' as 'auto_long' | 'always' | 'disabled',
   image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
   telegram_bot_active: true,
   bale_bot_active: false,
@@ -883,6 +946,8 @@ const resetSimulatorTopicEdit = () => {
     post_badge: '@tafakor_channel',
     telegram_post_badge: '@tafakor_channel',
     bale_post_badge: 'ble.ir/tafakor_channel',
+    telegram_post_link_mode: 'auto_long' as 'auto_long' | 'always' | 'disabled',
+    bale_post_link_mode: 'auto_long' as 'auto_long' | 'always' | 'disabled',
     image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     telegram_bot_active: true,
     bale_bot_active: false,
@@ -1908,6 +1973,21 @@ const openDuplicateWarningSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'marketplace-icon'" class="size-3.5 text-primary" />
               </button>
+              <button 
+                @click="handleComponentChange('topic-faq')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'topic-faq' 
+                    ? 'bg-primary/5 text-primary border-primary/30 font-bold' 
+                    : 'bg-background/20 border-border/40 text-foreground hover:bg-muted/40'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <SparklesIcon class="size-3.5 text-amber-500" />
+                  دستیار هوشمند تاپیک (Topic AI Assistant) 🤖✨
+                </span>
+                <CheckCircle2Icon v-if="currentComponent === 'topic-faq'" class="size-3.5 text-primary" />
+              </button>
             </div>
           </div>
 
@@ -1915,6 +1995,16 @@ const openDuplicateWarningSimulation = () => {
           <div class="flex flex-col gap-3 pt-4 border-t border-border/40">
             <Label class="text-[11px] font-semibold text-muted-foreground block">پلی‌گراندهای اختصاصی:</Label>
             <div class="flex flex-col gap-1.5">
+              <router-link 
+                to="/playground/topic-faq"
+                class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-amber-500/30 bg-amber-500/5 text-foreground hover:bg-amber-500/10 hover:text-amber-600 transition-all flex items-center justify-between"
+              >
+                <span class="flex items-center gap-2">
+                  <SparklesIcon class="size-3.5 text-amber-500" />
+                  دستیار هوشمند تاپیک (Topic AI Assistant)
+                </span>
+                <ArrowRightIcon class="size-3 rtl:rotate-180 text-muted-foreground" />
+              </router-link>
               <router-link 
                 to="/playground/text-formatting"
                 class="w-full text-right px-3 py-2 text-xs font-medium rounded-lg border border-border/40 bg-background/20 text-foreground hover:bg-muted/40 hover:text-primary transition-all flex items-center justify-between"
@@ -2206,7 +2296,7 @@ const openDuplicateWarningSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon' || currentComponent === 'payment-receipt-modal'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon' || currentComponent === 'payment-receipt-modal' || currentComponent === 'topic-faq'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -3200,6 +3290,52 @@ const openDuplicateWarningSimulation = () => {
                   </Button>
                 </div>
               </div>
+
+              <!-- Topic AI Assistant Specific Controls -->
+              <div v-if="currentComponent === 'topic-faq'" class="flex flex-col gap-4 text-start">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <Label class="text-[10px] text-muted-foreground font-semibold">حالت نمایش و تست دستیار هوشمند تاپیک:</Label>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <Button 
+                      size="xs" 
+                      :variant="simulatorFaqViewMode === 'feed' ? 'default' : 'outline'" 
+                      class="text-[11px] h-7 cursor-pointer" 
+                      @click="simulatorFaqViewMode = 'feed'; logEvent('TopicAI: Switched to feed mode', {})"
+                    >
+                      <span>۱. هدر با دکمه شیشه‌ای هوش مصنوعی و دکمه شناور</span>
+                    </Button>
+                    <Button 
+                      size="xs" 
+                      :variant="simulatorFaqViewMode === 'subview' ? 'default' : 'outline'" 
+                      class="text-[11px] h-7 cursor-pointer" 
+                      @click="simulatorFaqViewMode = 'subview'; logEvent('TopicAI: Switched to subview mode', {})"
+                    >
+                      <span>۲. صفحه گفت‌وگوی هوش مصنوعی (TopicAiChatView)</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-[9.5px] text-muted-foreground">نقش کاربری در تاپیک:</Label>
+                    <button 
+                      @click="simulatorFaqIsOwner = !simulatorFaqIsOwner; logEvent('TopicAI: Toggled owner role', { isOwner: simulatorFaqIsOwner })"
+                      class="h-8 px-3 rounded-lg border text-xs font-bold flex items-center justify-between cursor-pointer transition-colors"
+                      :class="simulatorFaqIsOwner ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-muted/20 border-border/60 text-muted-foreground'"
+                    >
+                      <span>{{ simulatorFaqIsOwner ? 'مدیر/صاحب تاپیک' : 'عضو تاپیک' }}</span>
+                      <CheckCircle2Icon v-if="simulatorFaqIsOwner" class="size-3.5 text-primary" />
+                    </button>
+                  </div>
+
+                  <div class="flex flex-col gap-1 justify-end">
+                    <Button size="sm" variant="outline" class="h-8 text-xs font-medium gap-1.5 cursor-pointer" @click="resetSimulatorFaqs">
+                      <RefreshCwIcon class="size-3" />
+                      <span>بازنشانی سوالات و نشست چت</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <!-- Dev Note & Quick Template Buttons (Horizontal flex) -->
@@ -3287,6 +3423,7 @@ const openDuplicateWarningSimulation = () => {
                       @delete-topic="handleSimulatorDeleteTopic"
                       @topic-connections="handleSimulatorTopicConnections"
                       @topic-import="handleSimulatorTopicImport"
+                      @topic-faq="logEvent('Header: Topic FAQ / AI Assistant Clicked', {})"
                     />
                   </div>
                   
@@ -3707,6 +3844,8 @@ const openDuplicateWarningSimulation = () => {
                       simulatorTopicData.bale_connections = data.bale_connections;
                       simulatorTopicData.telegram_post_badge = data.telegram_post_badge;
                       simulatorTopicData.bale_post_badge = data.bale_post_badge;
+                      simulatorTopicData.telegram_post_link_mode = data.telegram_post_link_mode;
+                      simulatorTopicData.bale_post_link_mode = data.bale_post_link_mode;
                       logEvent('TopicConnections: Saved Settings', data);
                     }"
                   />
@@ -4335,6 +4474,92 @@ const openDuplicateWarningSimulation = () => {
                         />
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Topic FAQ Preview -->
+                <div 
+                  v-else-if="currentComponent === 'topic-faq'"
+                  class="w-full flex flex-col items-center gap-5 py-2"
+                  :dir="languageStore.dir"
+                >
+                  <!-- 1. Phone Frame: Feed with Floating Glass Button -->
+                  <div v-if="simulatorFaqViewMode === 'feed'" class="w-full max-w-[420px] bg-card/80 border border-border/70 rounded-[32px] shadow-2xl overflow-hidden flex flex-col min-h-[580px] relative text-start">
+                    <!-- Status Bar -->
+                    <div class="w-full bg-background/90 px-5 py-2 border-b border-border/30 flex items-center justify-between text-[11px] font-mono text-muted-foreground select-none">
+                      <span>۱۹:۴۵</span>
+                      <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                        <span>4G</span>
+                        <span>95%</span>
+                      </div>
+                    </div>
+
+                    <!-- Topic PlatformHeader with AI/FAQ Button right next to 3-dots -->
+                    <div class="px-3 py-2 bg-background/95 border-b border-border/50 sticky top-0 z-20 backdrop-blur-md">
+                      <PlatformHeader
+                        :is-inner-page="true"
+                        inner-title="کانون تفکر و نوآوری"
+                        :show-faq-button="true"
+                        :show-options-button="true"
+                        @topic-faq="simulatorFaqViewMode = 'subview'; logEvent('Header FAQ/AI button clicked -> Open AI Chat', {})"
+                        @back="logEvent('Header back clicked', {})"
+                      />
+                    </div>
+
+                    <!-- Highlight banner pointing to the header button -->
+                    <div class="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-[10px]">
+                      <span class="text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1">
+                        <HelpCircleIcon class="size-3 text-amber-500 shrink-0" />
+                        <span>دکمه علامت سوال در هدر (سمت راست سه‌نقطه) فعال است 👆</span>
+                      </span>
+                      <Badge variant="outline" class="text-[9px] bg-background/50">فید تاپیک</Badge>
+                    </div>
+
+                    <!-- Mock Feed Content -->
+                    <div class="flex-1 p-4 space-y-3.5 overflow-y-auto">
+                      <div class="p-3.5 bg-card/60 border border-border/50 rounded-2xl space-y-2">
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-bold text-foreground">مدیر تاپیک</span>
+                          <span class="text-[10px] text-muted-foreground font-mono">۱۰ دقیقه پیش</span>
+                        </div>
+                        <p class="text-xs text-foreground/90 leading-relaxed">
+                          سلام به همه دوستان گرامی. دستیار هوشمند تاپیک با مدل زبانی و جستجوی RAG فعال گردید. می‌توانید از دکمه جدید در هدر سوالات خود را بپرسید.
+                        </p>
+                      </div>
+
+                      <div class="p-3.5 bg-muted/20 border border-border/40 rounded-2xl space-y-2">
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-bold text-foreground">سارا محمدی</span>
+                          <span class="text-[10px] text-muted-foreground font-mono">۲۵ دقیقه پیش</span>
+                        </div>
+                        <p class="text-xs text-foreground/80 leading-relaxed">
+                          برای جلسه دوشنبه آینده، منابع و فایل‌ها را از کجا دریافت کنیم؟
+                        </p>
+                      </div>
+
+                      <div class="p-3.5 bg-card/60 border border-border/50 rounded-2xl space-y-2">
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-bold text-foreground">علی رضایی</span>
+                          <span class="text-[10px] text-muted-foreground font-mono">۱ ساعت پیش</span>
+                        </div>
+                        <p class="text-xs text-foreground/80 leading-relaxed">
+                          پاسخ در چت هوشمند تاپیک توضیح داده شده، تمامی اسناد در پیام‌های سنجاق‌شده قرار می‌گیرند.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 2. Full Topic AI Chat Subview -->
+                  <div v-else class="w-full max-w-[420px] bg-card/80 border border-border/70 rounded-[32px] shadow-2xl overflow-hidden flex flex-col h-[650px] relative text-start">
+                    <TopicAiChatView
+                      :topic="{ id: 101, title: 'کانون تفکر و نوآوری', name: 'کانون تفکر و نوآوری', description: 'بحث و تبادل نظر پیرامون تفکر نقادانه و حل مسئله' }"
+                      :is-owner="simulatorFaqIsOwner"
+                      :is-admin="simulatorFaqIsOwner"
+                      :simulated="true"
+                      :initial-faqs="simulatorMockFaqs"
+                      @back="simulatorFaqViewMode = 'feed'; logEvent('Back to topic feed clicked', {})"
+                    />
                   </div>
                 </div>
 

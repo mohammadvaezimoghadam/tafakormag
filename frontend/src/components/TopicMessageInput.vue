@@ -67,12 +67,18 @@ const props = withDefaults(defineProps<{
   initialText?: string
   initialAttachments?: Attachment[]
   isEditMode?: boolean
+  allowAttachments?: boolean
+  allowVoice?: boolean
+  allowPlugins?: boolean
 }>(), {
   placeholder: 'پیام خود را بنویسید...',
   disabled: false,
   initialText: '',
   initialAttachments: () => [],
-  isEditMode: false
+  isEditMode: false,
+  allowAttachments: true,
+  allowVoice: true,
+  allowPlugins: true
 })
 
 const emit = defineEmits<{
@@ -767,7 +773,7 @@ const quranTokenCache = new Map<string, string>()
 
 // Watch text changes to trigger slash modal when user types '/'
 watch(text, (newVal) => {
-  if (props.disabled) return
+  if (props.disabled || !props.allowPlugins) return
   if (newVal && (newVal.endsWith('/') || newVal.endsWith(' /') || newVal.endsWith('\n/'))) {
     if (!isSlashModalOpen.value) {
       isSlashModalOpen.value = true
@@ -1043,12 +1049,13 @@ const handlePluginInsert = (insertedMarkdown: string) => {
 
         <!-- Action Buttons (Attach & Plus) -->
         <div 
-          v-else 
+          v-else-if="props.allowPlugins || props.allowAttachments" 
           key="action-buttons" 
           class="flex items-center gap-1.5 shrink-0"
         >
           <!-- Plus / More Actions Button -->
           <Button 
+            v-if="props.allowPlugins"
             key="plus-btn"
             variant="outline"
             :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
@@ -1062,6 +1069,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
 
           <!-- Normal Attach Button -->
           <Button 
+            v-if="props.allowAttachments"
             key="attach-file"
             variant="outline"
             :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
@@ -1201,7 +1209,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
 
         <!-- Record Voice Button -->
         <Button 
-          v-else
+          v-else-if="props.allowVoice"
           key="record-voice"
           variant="outline"
           :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
@@ -1211,6 +1219,22 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           @click="startRecording"
         >
           <MicIcon class="transition-transform duration-200 group-hover:scale-110" />
+        </Button>
+
+        <!-- Send message button (disabled when empty & voice is off) -->
+        <Button 
+          v-else
+          key="send-disabled"
+          variant="outline"
+          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+          class="group text-muted-foreground/40 bg-white dark:bg-muted/20 border border-border/40 cursor-not-allowed opacity-45"
+          disabled
+          :title="languageStore.t('ارسال پیام', 'Send message')"
+        >
+          <SendIcon 
+            class="-rotate-45" 
+            :class="[languageStore.isFa ? 'scale-x-[-1]' : '']"
+          />
         </Button>
       </transition>
 
@@ -1462,6 +1486,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
 
               <!-- Plugins Slash Command Button in Modal Footer -->
               <Button
+                v-if="props.allowPlugins"
                 variant="outline"
                 size="icon"
                 class="rounded-xl border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all duration-200 cursor-pointer outline-none shrink-0"

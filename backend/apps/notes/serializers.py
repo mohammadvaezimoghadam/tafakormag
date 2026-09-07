@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin
+from .models import (
+    Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin, TopicFAQ,
+    TopicChatSession, TopicChatMessage
+)
 from apps.accounts.models import MessagingTarget
 
 User = get_user_model()
@@ -31,6 +34,7 @@ class TopicSerializer(serializers.ModelSerializer):
         model = Topic
         fields = [
             'id', 'name', 'image', 'description', 'post_badge', 'telegram_post_badge', 'bale_post_badge',
+            'telegram_post_link_mode', 'bale_post_link_mode',
             'created_by', 'created_by_phone',
             'created_at', 'telegram_bot_active', 'bale_bot_active',
             'telegram_connections', 'bale_connections', 'post_count'
@@ -47,13 +51,17 @@ class PostCommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PostComment
-        fields = ['id', 'post', 'user', 'user_phone', 'user_name', 'content', 'created_at']
+        fields = ['id', 'post', 'user', 'user_phone', 'user_name', 'content', 'is_anonymous', 'author_name', 'created_at']
         read_only_fields = ['id', 'user', 'created_at']
 
     def get_user_phone(self, obj):
+        if obj.is_anonymous or not obj.user:
+            return None
         return obj.user.phone
 
     def get_user_name(self, obj):
+        if obj.is_anonymous or not obj.user:
+            return obj.author_name.strip() if obj.author_name else "کاربر ناشناس"
         if obj.user.first_name or obj.user.last_name:
             return f"{obj.user.first_name} {obj.user.last_name}".strip()
         return obj.user.phone
@@ -74,11 +82,15 @@ class PostSerializer(serializers.ModelSerializer):
     user_reaction = serializers.SerializerMethodField(read_only=True)
     comments_count = serializers.SerializerMethodField(read_only=True)
     donation_campaign = serializers.SerializerMethodField(read_only=True)
+    topic_name = serializers.SerializerMethodField(read_only=True)
+    topic_image = serializers.SerializerMethodField(read_only=True)
+    topic_description = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Post
         fields = [
-            'id', 'topic', 'author', 'author_phone', 'author_name', 'author_avatar', 'content',
+            'id', 'topic', 'topic_name', 'topic_image', 'topic_description',
+            'author', 'author_phone', 'author_name', 'author_avatar', 'content',
             'media_type', 'media_file', 'created_at', 'updated_at',
             'reactions_summary', 'user_reaction', 'comments_count',
             'telegram_message_ids', 'bale_message_ids',
@@ -86,7 +98,8 @@ class PostSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids',
-            'content_hash', 'published_platforms', 'donation_campaign'
+            'content_hash', 'published_platforms', 'donation_campaign',
+            'topic_name', 'topic_image', 'topic_description'
         ]
 
     def get_author_phone(self, obj):
@@ -142,6 +155,21 @@ class PostSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def get_topic_name(self, obj):
+        return obj.topic.name if obj.topic else None
+
+    def get_topic_image(self, obj):
+        if obj.topic and obj.topic.image:
+            request = self.context.get('request')
+            url = obj.topic.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        return None
+
+    def get_topic_description(self, obj):
+        return obj.topic.description if obj.topic else None
+
 
 class ImportTaskStatusSerializer(serializers.ModelSerializer):
     class Meta:
@@ -151,3 +179,37 @@ class ImportTaskStatusSerializer(serializers.ModelSerializer):
             'error_message', 'created_at'
         ]
         read_only_fields = fields
+
+
+class TopicFAQSerializer(serializers.ModelSerializer):
+    created_by = UserSimpleSerializer(read_only=True)
+    topic = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(), required=False)
+
+    class Meta:
+        model = TopicFAQ
+        fields = [
+            'id', 'topic', 'question', 'answer', 'order', 'is_published',
+            'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+
+
+class TopicChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TopicChatMessage
+        fields = ['id', 'session', 'role', 'content', 'sources', 'created_at']
+        read_only_fields = ['id', 'session', 'role', 'sources', 'created_at']
+
+
+class TopicChatSessionSerializer(serializers.ModelSerializer):
+    messages = TopicChatMessageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = TopicChatSession
+        fields = ['id', 'topic', 'user', 'created_at', 'updated_at', 'messages']
+        read_only_fields = ['id', 'topic', 'user', 'created_at', 'updated_at', 'messages']
+
+
+class TopicChatPromptSerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=3000, required=True)
+    session_id = serializers.UUIDField(required=False, allow_null=True)

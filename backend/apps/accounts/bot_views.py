@@ -20,12 +20,16 @@ def register_destination(request):
     platform = request.data.get("platform")
     chat_id = request.data.get("chat_id")
     label = request.data.get("label")
+    username = (request.data.get("username") or "").strip()
 
     if not user_id or not _valid_platform(platform) or not chat_id or not label:
         return Response(
             {"error": "user_id, platform, chat_id and label are required"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    if not username and str(chat_id).startswith('@'):
+        username = str(chat_id).lstrip('@')
 
     try:
         user = User.objects.get(pk=user_id)
@@ -39,6 +43,8 @@ def register_destination(request):
     if existing:
         existing.label = label
         existing.is_active = True
+        if username:
+            existing.username = username
         existing.save()
         target = existing
     else:
@@ -49,6 +55,7 @@ def register_destination(request):
             user=user,
             platform=platform,
             chat_id=str(chat_id),
+            username=username,
             label=label,
             is_default=not has_default,
             is_active=True,
@@ -58,6 +65,8 @@ def register_destination(request):
         {
             "id": target.id,
             "chat_id": target.chat_id,
+            "username": target.username,
+            "auto_badge": target.auto_badge,
             "label": target.label,
             "is_default": target.is_default,
             "is_active": target.is_active,
@@ -84,6 +93,8 @@ def list_destinations(request):
         {
             "id": t.id,
             "chat_id": t.chat_id,
+            "username": t.username,
+            "auto_badge": t.auto_badge,
             "label": t.label,
             "is_default": t.is_default,
             "is_active": t.is_active,

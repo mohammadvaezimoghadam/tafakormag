@@ -3,7 +3,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.db import IntegrityError
 from apps.accounts.models import User, MessagingTarget
-from apps.notes.models import Topic, Post, PostReaction, PostComment, BotTask, ImportTask
+from apps.notes.models import Topic, Post, PostReaction, PostComment, BotTask, ImportTask, TopicAdmin, TopicFAQ
 
 
 class NotesModelTests(TestCase):
@@ -1007,6 +1007,387 @@ class TelegramBaleBotLifecycleTests(APITestCase):
 
         self.assertIsNotNone(bale_del)
         self.assertEqual(bale_del.chat_id, "bale_chat_2002")
+
+    def test_anonymous_comment_submission_unauthenticated(self):
+        """ثبت نظر ناشناس توسط کاربر مهمان بدون لاگین"""
+        self.client.force_authenticate(user=None)
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای کامنت ناشناس"
+        )
+        url = f"/api/notes/{post.id}/comments/"
+        # بدون توکن احراز هویت
+        response = self.client.post(
+            url,
+            {"content": "این یک نظر ناشناس عالی است!", "author_name": "سهراب"},
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["is_anonymous"])
+        self.assertEqual(response.data["user_name"], "سهراب")
+        self.assertIsNone(response.data["user_phone"])
+        self.assertIsNone(response.data["user"])
+
+        # بررسی در دیتابیس
+        comment = PostComment.objects.get(id=response.data["id"])
+        self.assertTrue(comment.is_anonymous)
+        self.assertEqual(comment.author_name, "سهراب")
+        self.assertIsNone(comment.user)
+
+    def test_anonymous_comment_default_name(self):
+        """ثبت نظر ناشناس بدون وارد کردن نام باید پیش‌فرض 'کاربر ناشناس' باشد"""
+        self.client.force_authenticate(user=None)
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای کامنت ناشناس بدون نام"
+        )
+        url = f"/api/notes/{post.id}/comments/"
+        response = self.client.post(
+            url,
+            {"content": "بدون نام ارسال شد"},
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["user_name"], "کاربر ناشناس")
+        self.assertTrue(response.data["is_anonymous"])
+        self.assertIsNone(response.data["user_phone"])
+
+    def test_anonymous_comment_authenticated_opt_in(self):
+        """کاربر لاگین کرده می‌تواند با ارسال is_anonymous=True نظر ناشناس ثبت کند"""
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="پست برای کامنت کاربر لاگین کرده به صورت ناشناس"
+        )
+        url = f"/api/notes/{post.id}/comments/"
+        response = self.client.post(
+            url,
+            {"content": "نظر از کاربر لاگین اما به صورت ناشناس", "is_anonymous": True, "author_name": "ناشناس محترم"},
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["is_anonymous"])
+        self.assertEqual(response.data["user_name"], "ناشناس محترم")
+        self.assertIsNone(response.data["user_phone"])
+
+    def test_long_post_truncation_and_preview_link(self):
+        """پست‌های طولانی‌تر از آستانه مجاز باید با لینک پیش‌نمایش به بات ارسال شوند"""
+        from apps.notes.services import _post_markdown_text
+
+        # متن بیش از ۱۰۰۰ کاراکتر
+        long_content = "لورم ایپسوم " * 120
+        post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content=long_content
+        )
+
+        formatted_tg = _post_markdown_text(post, platform="telegram")
+        # باید حاوی لینک کوتاه به /p/{id} و متن راهنما باشد
+        expected_link = f"/p/{post.id}"
+        self.assertIn(expected_link, formatted_tg)
+        self.assertIn("مشاهده و ثبت نظر در تفکر", formatted_tg)
+        self.assertIn("...", formatted_tg)
+
+    def test_post_link_mode_always_on_short_post(self):
+        """در حالت always، حتی پست‌های کوتاه هم باید لینک و متن راهنما داشته باشند"""
+        from apps.notes.services import _post_markdown_text
+
+        self.topic.telegram_post_link_mode = 'always'
+        self.topic.save()
+
+        short_post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="یک پیام کوتاه تستی"
+        )
+
+        formatted_tg = _post_markdown_text(short_post, platform="telegram")
+        expected_link = f"/p/{short_post.id}"
+        self.assertIn(expected_link, formatted_tg)
+        self.assertIn("مشاهده و ثبت نظر در تفکر", formatted_tg)
+        self.assertIn("یک پیام کوتاه تستی", formatted_tg)
+
+    def test_post_link_mode_auto_long_on_short_post(self):
+        """در حالت auto_long، پست کوتاه نباید لینک داشته باشد"""
+        from apps.notes.services import _post_markdown_text
+
+        self.topic.telegram_post_link_mode = 'auto_long'
+        self.topic.save()
+
+        short_post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="یک پیام کوتاه تستی دیگر"
+        )
+
+        formatted_tg = _post_markdown_text(short_post, platform="telegram")
+        expected_link = f"/p/{short_post.id}"
+        self.assertNotIn(expected_link, formatted_tg)
+        self.assertNotIn("مشاهده و ثبت نظر در تفکر", formatted_tg)
+        self.assertIn("یک پیام کوتاه تستی دیگر", formatted_tg)
+
+    def test_post_link_mode_disabled(self):
+        """در حالت disabled، لینک حتی برای پست‌های طولانی درج نمی‌شود"""
+        from apps.notes.services import _post_markdown_text
+
+        self.topic.telegram_post_link_mode = 'disabled'
+        self.topic.save()
+
+        long_post = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="متن بلند " * 150
+        )
+
+        formatted_tg = _post_markdown_text(long_post, platform="telegram")
+        expected_link = f"/p/{long_post.id}"
+        self.assertNotIn(expected_link, formatted_tg)
+        self.assertNotIn("مشاهده و ثبت نظر در تفکر", formatted_tg)
+
+
+class TopicFAQTests(APITestCase):
+    """تست‌های جامع مدل، سطوح دسترسی و اندپوینت‌های TopicFAQ"""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(phone="09121111111", password="password")
+        self.admin_user = User.objects.create_user(phone="09122222222", password="password")
+        self.regular_user = User.objects.create_user(phone="09123333333", password="password")
+
+        self.topic = Topic.objects.create(name="تاپیک پرسش و پاسخ", created_by=self.owner)
+        TopicAdmin.objects.create(topic=self.topic, user=self.admin_user, custom_title="مدیر کمکی")
+
+        # ایجاد چند سوال تستی
+        self.faq1 = TopicFAQ.objects.create(
+            topic=self.topic,
+            question="هدف از ایجاد این تاپیک چیست؟",
+            answer="این تاپیک برای پاسخ به سوالات اساسی ایجاد شده است.",
+            order=1,
+            is_published=True,
+            created_by=self.owner
+        )
+        self.faq2 = TopicFAQ.objects.create(
+            topic=self.topic,
+            question="قوانین گفتگو چگونه است؟",
+            answer="رعایت احترام به اعضا الزامی است.",
+            order=2,
+            is_published=True,
+            created_by=self.owner
+        )
+        self.faq_draft = TopicFAQ.objects.create(
+            topic=self.topic,
+            question="پیش‌نویس سوال هنوز منتشر نشده",
+            answer="پاسخ پیش‌نویس",
+            order=3,
+            is_published=False,
+            created_by=self.owner
+        )
+
+    def test_public_can_view_only_published_faqs(self):
+        """کاربر عادی و مهمان تنها سوالات منتشر شده را می‌بینند"""
+        url = f"/api/notes/topics/{self.topic.id}/faqs/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # فقط ۲ سوال منتشر شده باید برگردد
+        self.assertEqual(len(response.data), 2)
+        questions = [item['question'] for item in response.data]
+        self.assertIn("هدف از ایجاد این تاپیک چیست؟", questions)
+        self.assertNotIn("پیش‌نویس سوال هنوز منتشر نشده", questions)
+
+    def test_owner_can_view_all_faqs_including_drafts(self):
+        """مالک تاپیک پیش‌نویس‌ها را نیز می‌بیند"""
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/faqs/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+    def test_owner_can_create_faq(self):
+        """سازنده تاپیک می‌تواند سوال جدید اضافه کند"""
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/topics/{self.topic.id}/faqs/"
+        payload = {
+            "question": "آیا شرکت در جلسات رایگان است؟",
+            "answer": "بله تمامی جلسات عمومی رایگان هستند.",
+            "order": 4
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["question"], payload["question"])
+        self.assertTrue(TopicFAQ.objects.filter(question=payload["question"]).exists())
+
+    def test_topic_admin_can_create_faq(self):
+        """ادمین تاپیک مجاز به ثبت سوال جدید است"""
+        self.client.force_authenticate(user=self.admin_user)
+        url = f"/api/notes/topics/{self.topic.id}/faqs/"
+        payload = {
+            "question": "سوال ثبت شده توسط ادمین",
+            "answer": "پاسخ از طرف ادمین",
+            "order": 5
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_regular_user_cannot_create_faq(self):
+        """کاربر غریبه و غیرادمین اجازه ثبت سوال رسمی ندارد (403)"""
+        self.client.force_authenticate(user=self.regular_user)
+        url = f"/api/notes/topics/{self.topic.id}/faqs/"
+        payload = {
+            "question": "تلاش برای ثبت سوال توسط کاربر عادی",
+            "answer": "پاسخ نامعتبر",
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_can_update_and_delete_faq(self):
+        """ویرایش و حذف سوال توسط مالک تاپیک"""
+        self.client.force_authenticate(user=self.owner)
+        
+        # ویرایش
+        edit_url = f"/api/notes/faqs/{self.faq1.id}/"
+        response = self.client.patch(edit_url, {"question": "عنوان ویرایش شده سوال"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.faq1.refresh_from_db()
+        self.assertEqual(self.faq1.question, "عنوان ویرایش شده سوال")
+
+        # حذف
+        del_url = f"/api/notes/faqs/{self.faq2.id}/"
+        del_response = self.client.delete(del_url)
+        self.assertEqual(del_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TopicFAQ.objects.filter(id=self.faq2.id).exists())
+
+    def test_faq_reordering(self):
+        """تغییر چیدمان و ترتیب سوالات توسط مالک تاپیک"""
+        self.client.force_authenticate(user=self.owner)
+        reorder_url = "/api/notes/faqs/reorder/"
+        payload = {
+            "topic_id": self.topic.id,
+            "orders": [
+                {"id": self.faq1.id, "order": 10},
+                {"id": self.faq2.id, "order": 1}
+            ]
+        }
+        response = self.client.post(reorder_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.faq1.refresh_from_db()
+        self.faq2.refresh_from_db()
+        self.assertEqual(self.faq1.order, 10)
+        self.assertEqual(self.faq2.order, 1)
+
+    def test_faq_search_filter(self):
+        """فیلتر سرچ سوالات بر اساس کلمات کلیدی"""
+        url = f"/api/notes/topics/{self.topic.id}/faqs/?search=قوانین"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.faq2.id)
+
+
+from apps.notes.models import TopicChatSession, TopicChatMessage
+
+
+class TopicAIChatTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(phone="09121111111", password="password")
+        self.topic = Topic.objects.create(name="هوش مصنوعی و یادگیری ماشین", description="مباحث تخصصی یادگیری عمیق")
+        
+        # ثبت FAQ
+        self.faq = TopicFAQ.objects.create(
+            topic=self.topic,
+            question="پیش‌نیاز یادگیری ماشین چیست؟",
+            answer="جبر خطی، حساب دیفرانسیل و پایتون مقدماتی.",
+            is_published=True
+        )
+
+        # ثبت چند پست
+        self.post1 = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="کتابخانه PyTorch بهترین گزینه برای توسعه مدل‌های یادگیری عمیق و ترنسفورمرها است."
+        )
+        self.post2 = Post.objects.create(
+            topic=self.topic,
+            author=self.user,
+            content="جلسه بررسی شبکه‌های کانولوشنی این هفته دوشنبه ساعت ۱۸ برگزار می‌شود."
+        )
+
+    def test_ai_chat_creates_session_and_messages(self):
+        """تست اینکه ارسال پیام به اندپوینت چت، سشن و پیام‌های کاربر و هوش مصنوعی را می‌سازد"""
+        url = f"/api/notes/topics/{self.topic.id}/chat/"
+        payload = {"message": "پیش‌نیاز این تاپیک چیه؟"}
+        response = self.client.post(url, payload, format="json")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("session_id", response.data)
+        self.assertIn("user_message", response.data)
+        self.assertIn("assistant_message", response.data)
+
+        # بررسی در دیتابیس
+        session_id = response.data["session_id"]
+        session = TopicChatSession.objects.get(id=session_id)
+        self.assertEqual(session.topic, self.topic)
+        self.assertEqual(session.messages.count(), 2)
+        
+        user_msg = session.messages.filter(role="user").first()
+        assistant_msg = session.messages.filter(role="assistant").first()
+        self.assertEqual(user_msg.content, "پیش‌نیاز این تاپیک چیه؟")
+        self.assertTrue(len(assistant_msg.content) > 0)
+        self.assertTrue(len(assistant_msg.sources) > 0)
+
+    def test_ai_chat_session_continuation(self):
+        """تست ادامه گفت‌وگو در یک سشن مشخص"""
+        url = f"/api/notes/topics/{self.topic.id}/chat/"
+        res1 = self.client.post(url, {"message": "سلام"}, format="json")
+        session_id = res1.data["session_id"]
+
+        res2 = self.client.post(url, {"message": "درباره PyTorch توضیح بده", "session_id": session_id}, format="json")
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.data["session_id"], session_id)
+
+        session = TopicChatSession.objects.get(id=session_id)
+        self.assertEqual(session.messages.count(), 4)
+
+    def test_ai_chat_history_retrieval(self):
+        """تست دریافت تاریخچه پیام‌های سشن"""
+        url = f"/api/notes/topics/{self.topic.id}/chat/"
+        res = self.client.post(url, {"message": "جلسه کی برگزار میشه؟"}, format="json")
+        session_id = res.data["session_id"]
+
+        hist_url = f"/api/notes/topics/{self.topic.id}/chat-history/?session_id={session_id}"
+        hist_res = self.client.get(hist_url)
+        self.assertEqual(hist_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(hist_res.data["messages"]), 2)
+
+    def test_ai_chat_clear(self):
+        """تست پاکسازی تاریخچه گفت‌وگو"""
+        url = f"/api/notes/topics/{self.topic.id}/chat/"
+        res = self.client.post(url, {"message": "پیام برای پاک شدن"}, format="json")
+        session_id = res.data["session_id"]
+
+        clear_url = f"/api/notes/topics/{self.topic.id}/chat-clear/"
+        clear_res = self.client.post(clear_url, {"session_id": session_id}, format="json")
+        self.assertEqual(clear_res.status_code, status.HTTP_200_OK)
+        self.assertFalse(TopicChatSession.objects.filter(id=session_id).exists())
+
+    def test_ai_chat_topic_isolation(self):
+        """تست عدم تداخل اطلاعات و ارجاعات بین دو تاپیک متفاوت"""
+        other_topic = Topic.objects.create(name="تاپیک آشپزی و شیرینی‌پزی")
+        Post.objects.create(topic=other_topic, author=self.user, content="دستور پخت کیک هویج")
+
+        url = f"/api/notes/topics/{self.topic.id}/chat/"
+        res = self.client.post(url, {"message": "کیک هویج"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        
+        # ارجاعات نباید پست تاپیک آشپزی را داشته باشد
+        sources = res.data["assistant_message"]["sources"]
+        for s in sources:
+            if s.get("type") == "post":
+                post_obj = Post.objects.get(id=s["id"])
+                self.assertEqual(post_obj.topic, self.topic)
+
 
 
 

@@ -13,7 +13,10 @@ import {
   SaveIcon, 
   RefreshCwIcon, 
   CheckCircle2Icon,
-  ChevronRightIcon 
+  ChevronRightIcon,
+  SparklesIcon,
+  RotateCcwIcon,
+  LinkIcon
 } from '@lucide/vue'
 import * as api from '@/api'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -26,8 +29,10 @@ const props = defineProps<{
     title: string
     telegram_bot_active?: boolean
     telegram_post_badge?: string
+    telegram_post_link_mode?: 'auto_long' | 'always' | 'disabled'
     bale_bot_active?: boolean
     bale_post_badge?: string
+    bale_post_link_mode?: 'auto_long' | 'always' | 'disabled'
     telegram_connections?: any[]
     bale_connections?: any[]
     [key: string]: any
@@ -46,6 +51,8 @@ const emit = defineEmits<{
     bale_connections: number[]
     telegram_post_badge: string
     bale_post_badge: string
+    telegram_post_link_mode: 'auto_long' | 'always' | 'disabled'
+    bale_post_link_mode: 'auto_long' | 'always' | 'disabled'
   }): void
 }>()
 
@@ -56,6 +63,14 @@ const baleActive = ref(props.topic.bale_bot_active || false)
 // Platform Badge Refs
 const telegramPostBadge = ref(props.topic.telegram_post_badge || '')
 const balePostBadge = ref(props.topic.bale_post_badge || '')
+
+// Platform Post Link Mode Refs
+const telegramPostLinkMode = ref<'auto_long' | 'always' | 'disabled'>(props.topic.telegram_post_link_mode || 'auto_long')
+const balePostLinkMode = ref<'auto_long' | 'always' | 'disabled'>(props.topic.bale_post_link_mode || 'auto_long')
+
+// Flags to track whether the user has deliberately edited the badge manually
+const tgBadgeManuallyEdited = ref(!!props.topic.telegram_post_badge)
+const baleBadgeManuallyEdited = ref(!!props.topic.bale_post_badge)
 
 // Verification Connection States (Retrieved from global or profiles)
 const telegramConnected = ref(props.telegramConnected || false)
@@ -82,6 +97,19 @@ const selectedBaleConnections = ref<number[]>([])
 
 const isSaving = ref(false)
 const saveSuccess = ref(false)
+
+// Auto-badge resolution helpers from registered destinations
+const getAutoBadgeForTelegram = () => {
+  if (tgDestinations.value.length === 0) return ''
+  const selected = tgDestinations.value.find(d => selectedTgConnections.value.includes(d.id))
+  return selected?.auto_badge || tgDestinations.value[0]?.auto_badge || ''
+}
+
+const getAutoBadgeForBale = () => {
+  if (baleDestinations.value.length === 0) return ''
+  const selected = baleDestinations.value.find(d => selectedBaleConnections.value.includes(d.id))
+  return selected?.auto_badge || baleDestinations.value[0]?.auto_badge || ''
+}
 
 const loadConnectionsData = async () => {
   try {
@@ -125,6 +153,16 @@ const loadConnectionsData = async () => {
       selectedBaleConnections.value = props.topic.bale_connections.map(c => c.id || c)
     }
 
+    // If badges are currently blank, auto-populate from destinations
+    if (!telegramPostBadge.value.trim() && !tgBadgeManuallyEdited.value) {
+      const autoTg = getAutoBadgeForTelegram()
+      if (autoTg) telegramPostBadge.value = autoTg
+    }
+    if (!balePostBadge.value.trim() && !baleBadgeManuallyEdited.value) {
+      const autoBale = getAutoBadgeForBale()
+      if (autoBale) balePostBadge.value = autoBale
+    }
+
   } catch (err) {
     console.error('Failed to load destinations channels:', err)
     loadingTg.value = false
@@ -142,6 +180,11 @@ const toggleTgChannel = (id: number) => {
     selectedTgConnections.value.splice(idx, 1)
   } else {
     selectedTgConnections.value.push(id)
+    const ch = tgDestinations.value.find(d => d.id === id)
+    // If badge is empty or unedited, automatically set to this channel's auto_badge
+    if (ch?.auto_badge && (!telegramPostBadge.value.trim() || !tgBadgeManuallyEdited.value)) {
+      telegramPostBadge.value = ch.auto_badge
+    }
   }
 }
 
@@ -151,6 +194,11 @@ const toggleBaleChannel = (id: number) => {
     selectedBaleConnections.value.splice(idx, 1)
   } else {
     selectedBaleConnections.value.push(id)
+    const ch = baleDestinations.value.find(d => d.id === id)
+    // If badge is empty or unedited, automatically set to this channel's auto_badge
+    if (ch?.auto_badge && (!balePostBadge.value.trim() || !baleBadgeManuallyEdited.value)) {
+      balePostBadge.value = ch.auto_badge
+    }
   }
 }
 
@@ -160,6 +208,8 @@ watch(() => props.topic, (newTopic) => {
     baleActive.value = newTopic.bale_bot_active || false
     telegramPostBadge.value = newTopic.telegram_post_badge || ''
     balePostBadge.value = newTopic.bale_post_badge || ''
+    telegramPostLinkMode.value = newTopic.telegram_post_link_mode || 'auto_long'
+    balePostLinkMode.value = newTopic.bale_post_link_mode || 'auto_long'
     if (newTopic.telegram_connections) {
       selectedTgConnections.value = newTopic.telegram_connections.map((c: any) => c.id || c)
     }
@@ -180,7 +230,9 @@ const handleSave = () => {
       telegram_connections: selectedTgConnections.value,
       bale_connections: selectedBaleConnections.value,
       telegram_post_badge: telegramPostBadge.value.trim(),
-      bale_post_badge: balePostBadge.value.trim()
+      bale_post_badge: balePostBadge.value.trim(),
+      telegram_post_link_mode: telegramPostLinkMode.value,
+      bale_post_link_mode: balePostLinkMode.value
     })
     
     setTimeout(() => {
@@ -271,7 +323,10 @@ const handleSave = () => {
                       <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
                     </div>
                     <div class="flex flex-col text-start">
-                      <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
+                        <span v-if="ch.auto_badge" class="text-[9px] font-medium text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded-md dir-ltr font-mono">{{ ch.auto_badge }}</span>
+                      </div>
                       <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start">{{ ch.chat_id }}</span>
                     </div>
                   </div>
@@ -286,24 +341,170 @@ const handleSave = () => {
             </div>
 
             <!-- Telegram Post Badge / Signature -->
-            <div class="flex flex-col gap-1.5 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
+            <div class="flex flex-col gap-2 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
               <div class="flex items-center justify-between">
-                <Label for="tg-post-badge" class="text-[11px] font-bold text-foreground/85">
-                  {{ languageStore.t('امضای پست‌ها در تلگرام (بج منبع)', 'Telegram Post Signature (Source Badge)') }}
-                </Label>
+                <div class="flex items-center gap-1.5">
+                  <Label for="tg-post-badge" class="text-[11px] font-bold text-foreground/85">
+                    {{ languageStore.t('امضای پست‌ها در تلگرام (بج منبع)', 'Telegram Post Signature (Source Badge)') }}
+                  </Label>
+                  <span 
+                    v-if="telegramPostBadge && telegramPostBadge === getAutoBadgeForTelegram()"
+                    class="text-[8.5px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded-md"
+                  >
+                    {{ languageStore.t('تگ خودکار', 'Auto Tag') }}
+                  </span>
+                  <span 
+                    v-else-if="telegramPostBadge"
+                    class="text-[8.5px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md"
+                  >
+                    {{ languageStore.t('تگ سفارشی', 'Custom Tag') }}
+                  </span>
+                </div>
                 <span class="text-[9.5px] text-muted-foreground">{{ languageStore.t('اختیاری', 'Optional') }}</span>
               </div>
               <Input 
                 id="tg-post-badge" 
                 v-model="telegramPostBadge" 
+                @input="tgBadgeManuallyEdited = true"
                 :placeholder="languageStore.t('مثال: @my_channel یا 📌 منبع: کانال تلگرام تفکر', 'e.g., @my_channel or 📌 Source: Tafakor Telegram')" 
                 class="h-9.5 rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 text-xs font-medium text-start"
                 dir="auto"
                 maxlength="100"
               />
+
+              <!-- Auto-tag recommendation & reset pill -->
+              <div 
+                v-if="getAutoBadgeForTelegram()" 
+                class="flex items-center justify-between text-[10px] bg-sky-50/60 dark:bg-sky-950/20 border border-sky-200/40 dark:border-sky-800/40 px-2.5 py-1.5 rounded-xl"
+              >
+                <div class="flex items-center gap-1.5 text-sky-700 dark:text-sky-300">
+                  <SparklesIcon class="size-3.5 shrink-0 text-sky-500" />
+                  <span class="text-[10px]">{{ languageStore.t('تگ خودکار کانال:', 'Auto channel tag:') }}</span>
+                  <code class="font-mono font-bold dir-ltr bg-sky-100 dark:bg-sky-900/50 px-1.5 py-0.5 rounded text-[9.5px] text-sky-800 dark:text-sky-200">{{ getAutoBadgeForTelegram() }}</code>
+                </div>
+                <button 
+                  type="button" 
+                  @click="telegramPostBadge = getAutoBadgeForTelegram(); tgBadgeManuallyEdited = false"
+                  class="text-[9.5px] font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-sky-100/50 dark:hover:bg-sky-900/30 transition-colors"
+                >
+                  <RotateCcwIcon class="size-3" />
+                  <span>{{ languageStore.t('اعمال مجدد تگ خودکار', 'Reset to Auto Tag') }}</span>
+                </button>
+              </div>
+
               <span class="text-[9.5px] text-muted-foreground leading-normal">
                 {{ languageStore.t('این متن کوتاه به صورت خودکار به انتهای پیام‌های ارسالی به تلگرام اضافه خواهد شد.', 'This text will be automatically appended to posts sent to Telegram.') }}
               </span>
+            </div>
+
+            <!-- Telegram Post Link Mode -->
+            <div class="flex flex-col gap-2.5 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <LinkIcon class="size-3.5 text-sky-500 shrink-0" />
+                  <Label class="text-[11px] font-bold text-foreground/85">
+                    {{ languageStore.t('لینک مشاهده و ثبت نظر در تلگرام', 'Preview & Comment Link in Telegram') }}
+                  </Label>
+                </div>
+                <span 
+                  class="text-[8.5px] px-2 py-0.5 rounded-md font-semibold"
+                  :class="[
+                    telegramPostLinkMode === 'auto_long' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20' :
+                    telegramPostLinkMode === 'always' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                    'bg-muted/50 text-muted-foreground border border-border/40'
+                  ]"
+                >
+                  {{ 
+                    telegramPostLinkMode === 'auto_long' ? languageStore.t('خودکار (متن‌های طولانی)', 'Auto (Long Posts)') :
+                    telegramPostLinkMode === 'always' ? languageStore.t('همیشه فعال', 'Always Active') :
+                    languageStore.t('غیرفعال', 'Disabled')
+                  }}
+                </span>
+              </div>
+
+              <span class="text-[9.5px] text-muted-foreground leading-normal">
+                {{ languageStore.t('تنظیم نحوه درج لینک وب‌اپلیکیشن تفکر در انتهای پیام‌های بازنشر جهت مطالعه کامل پست و ثبت نظر ناشناس:', 'Choose how to attach the Tafakor preview link at the end of reposted messages for full reading and anonymous comments:') }}
+              </span>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-0.5">
+                <!-- Auto Long Option -->
+                <button
+                  type="button"
+                  @click="telegramPostLinkMode = 'auto_long'"
+                  class="flex flex-col items-start p-2.5 rounded-xl border text-start transition-all cursor-pointer relative"
+                  :class="[
+                    telegramPostLinkMode === 'auto_long'
+                      ? 'border-sky-500 bg-sky-500/10 text-foreground ring-1 ring-sky-500/30'
+                      : 'border-border/50 bg-background/50 hover:bg-muted/40 text-muted-foreground'
+                  ]"
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-[10.5px] font-bold" :class="[telegramPostLinkMode === 'auto_long' ? 'text-sky-600 dark:text-sky-400' : 'text-foreground']">
+                      {{ languageStore.t('خودکار', 'Automatic') }}
+                    </span>
+                    <span class="text-[8px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 px-1.5 py-0.2 rounded-full">
+                      {{ languageStore.t('پیش‌فرض', 'Default') }}
+                    </span>
+                  </div>
+                  <span class="text-[9px] mt-1 leading-snug" :class="[telegramPostLinkMode === 'auto_long' ? 'text-sky-800/80 dark:text-sky-200/80' : 'text-muted-foreground']">
+                    {{ languageStore.t('فقط برای پیام‌های طولانی که کوتاه می‌شوند', 'Only for long posts exceeding limits') }}
+                  </span>
+                </button>
+
+                <!-- Always Option -->
+                <button
+                  type="button"
+                  @click="telegramPostLinkMode = 'always'"
+                  class="flex flex-col items-start p-2.5 rounded-xl border text-start transition-all cursor-pointer relative"
+                  :class="[
+                    telegramPostLinkMode === 'always'
+                      ? 'border-sky-500 bg-sky-500/10 text-foreground ring-1 ring-sky-500/30'
+                      : 'border-border/50 bg-background/50 hover:bg-muted/40 text-muted-foreground'
+                  ]"
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-[10.5px] font-bold" :class="[telegramPostLinkMode === 'always' ? 'text-sky-600 dark:text-sky-400' : 'text-foreground']">
+                      {{ languageStore.t('همیشه فعال', 'Always') }}
+                    </span>
+                  </div>
+                  <span class="text-[9px] mt-1 leading-snug" :class="[telegramPostLinkMode === 'always' ? 'text-sky-800/80 dark:text-sky-200/80' : 'text-muted-foreground']">
+                    {{ languageStore.t('برای تمامی پست‌ها حتی پست‌های کوتاه', 'Attach link to all posts even short ones') }}
+                  </span>
+                </button>
+
+                <!-- Disabled Option -->
+                <button
+                  type="button"
+                  @click="telegramPostLinkMode = 'disabled'"
+                  class="flex flex-col items-start p-2.5 rounded-xl border text-start transition-all cursor-pointer relative"
+                  :class="[
+                    telegramPostLinkMode === 'disabled'
+                      ? 'border-destructive/60 bg-destructive/10 text-destructive ring-1 ring-destructive/20'
+                      : 'border-border/50 bg-background/50 hover:bg-muted/40 text-muted-foreground'
+                  ]"
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-[10.5px] font-bold" :class="[telegramPostLinkMode === 'disabled' ? 'text-destructive' : 'text-foreground']">
+                      {{ languageStore.t('غیرفعال', 'Disabled') }}
+                    </span>
+                  </div>
+                  <span class="text-[9px] mt-1 leading-snug" :class="[telegramPostLinkMode === 'disabled' ? 'text-destructive/80' : 'text-muted-foreground']">
+                    {{ languageStore.t('عدم درج هیچ لینکی در انتهای پیام‌ها', 'Do not attach any preview link') }}
+                  </span>
+                </button>
+              </div>
+
+              <!-- Preview snippet of bottom guide text -->
+              <div v-if="telegramPostLinkMode !== 'disabled'" class="mt-1 p-2 rounded-xl bg-sky-50/50 dark:bg-sky-950/20 border border-sky-100 dark:border-sky-900/30 flex flex-col gap-1 text-[9px]">
+                <div class="flex items-center gap-1 font-bold text-sky-800 dark:text-sky-300">
+                  <SparklesIcon class="size-3 text-sky-500" />
+                  <span>{{ languageStore.t('نمونه متن راهنما و لینک در پایین پست:', 'Preview of guide text & link at post bottom:') }}</span>
+                </div>
+                <div class="text-[9px] text-muted-foreground bg-background/70 p-1.5 rounded-lg border border-border/40 dir-auto font-sans">
+                  🔗 {{ languageStore.t('مشاهده و ثبت نظر در تفکر:', 'View and comment on Tafakor:') }}<br />
+                  <span class="dir-ltr inline-block font-mono text-[8.5px] text-sky-600 dark:text-sky-400 mt-0.5">https://.../p/123</span>
+                </div>
+              </div>
             </div>
           </div>
         </transition>
@@ -369,7 +570,10 @@ const handleSave = () => {
                       <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
                     </div>
                     <div class="flex flex-col text-start">
-                      <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
+                        <span v-if="ch.auto_badge" class="text-[9px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md dir-ltr font-mono">{{ ch.auto_badge }}</span>
+                      </div>
                       <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start">{{ ch.chat_id }}</span>
                     </div>
                   </div>
@@ -384,24 +588,170 @@ const handleSave = () => {
             </div>
 
             <!-- Bale Post Badge / Signature -->
-            <div class="flex flex-col gap-1.5 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
+            <div class="flex flex-col gap-2 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
               <div class="flex items-center justify-between">
-                <Label for="bale-post-badge" class="text-[11px] font-bold text-foreground/85">
-                  {{ languageStore.t('امضای پست‌ها در بله (بج منبع)', 'Bale Post Signature (Source Badge)') }}
-                </Label>
+                <div class="flex items-center gap-1.5">
+                  <Label for="bale-post-badge" class="text-[11px] font-bold text-foreground/85">
+                    {{ languageStore.t('امضای پست‌ها در بله (بج منبع)', 'Bale Post Signature (Source Badge)') }}
+                  </Label>
+                  <span 
+                    v-if="balePostBadge && balePostBadge === getAutoBadgeForBale()"
+                    class="text-[8.5px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md"
+                  >
+                    {{ languageStore.t('تگ خودکار', 'Auto Tag') }}
+                  </span>
+                  <span 
+                    v-else-if="balePostBadge"
+                    class="text-[8.5px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md"
+                  >
+                    {{ languageStore.t('تگ سفارشی', 'Custom Tag') }}
+                  </span>
+                </div>
                 <span class="text-[9.5px] text-muted-foreground">{{ languageStore.t('اختیاری', 'Optional') }}</span>
               </div>
               <Input 
                 id="bale-post-badge" 
                 v-model="balePostBadge" 
+                @input="baleBadgeManuallyEdited = true"
                 :placeholder="languageStore.t('مثال: ble.ir/my_channel یا 📌 منبع: کانال بله تفکر', 'e.g., ble.ir/my_channel or 📌 Source: Tafakor Bale')" 
                 class="h-9.5 rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 text-xs font-medium text-start"
                 dir="auto"
                 maxlength="100"
               />
+
+              <!-- Auto-tag recommendation & reset pill -->
+              <div 
+                v-if="getAutoBadgeForBale()" 
+                class="flex items-center justify-between text-[10px] bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/40 dark:border-emerald-800/40 px-2.5 py-1.5 rounded-xl"
+              >
+                <div class="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                  <SparklesIcon class="size-3.5 shrink-0 text-emerald-500" />
+                  <span class="text-[10px]">{{ languageStore.t('تگ خودکار کانال:', 'Auto channel tag:') }}</span>
+                  <code class="font-mono font-bold dir-ltr bg-emerald-100 dark:bg-emerald-900/50 px-1.5 py-0.5 rounded text-[9.5px] text-emerald-800 dark:text-emerald-200">{{ getAutoBadgeForBale() }}</code>
+                </div>
+                <button 
+                  type="button" 
+                  @click="balePostBadge = getAutoBadgeForBale(); baleBadgeManuallyEdited = false"
+                  class="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-colors"
+                >
+                  <RotateCcwIcon class="size-3" />
+                  <span>{{ languageStore.t('اعمال مجدد تگ خودکار', 'Reset to Auto Tag') }}</span>
+                </button>
+              </div>
+
               <span class="text-[9.5px] text-muted-foreground leading-normal">
                 {{ languageStore.t('این متن کوتاه به صورت خودکار به انتهای پیام‌های ارسالی به بله اضافه خواهد شد.', 'This text will be automatically appended to posts sent to Bale.') }}
               </span>
+            </div>
+
+            <!-- Bale Post Link Mode -->
+            <div class="flex flex-col gap-2.5 p-3.5 bg-background/30 rounded-2xl border border-border/40 text-start">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <LinkIcon class="size-3.5 text-emerald-500 shrink-0" />
+                  <Label class="text-[11px] font-bold text-foreground/85">
+                    {{ languageStore.t('لینک مشاهده و ثبت نظر در بله', 'Preview & Comment Link in Bale') }}
+                  </Label>
+                </div>
+                <span 
+                  class="text-[8.5px] px-2 py-0.5 rounded-md font-semibold"
+                  :class="[
+                    balePostLinkMode === 'auto_long' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                    balePostLinkMode === 'always' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                    'bg-muted/50 text-muted-foreground border border-border/40'
+                  ]"
+                >
+                  {{ 
+                    balePostLinkMode === 'auto_long' ? languageStore.t('خودکار (متن‌های طولانی)', 'Auto (Long Posts)') :
+                    balePostLinkMode === 'always' ? languageStore.t('همیشه فعال', 'Always Active') :
+                    languageStore.t('غیرفعال', 'Disabled')
+                  }}
+                </span>
+              </div>
+
+              <span class="text-[9.5px] text-muted-foreground leading-normal">
+                {{ languageStore.t('تنظیم نحوه درج لینک وب‌اپلیکیشن تفکر در انتهای پیام‌های بازنشر جهت مطالعه کامل پست و ثبت نظر ناشناس:', 'Choose how to attach the Tafakor preview link at the end of reposted messages for full reading and anonymous comments:') }}
+              </span>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-0.5">
+                <!-- Auto Long Option -->
+                <button
+                  type="button"
+                  @click="balePostLinkMode = 'auto_long'"
+                  class="flex flex-col items-start p-2.5 rounded-xl border text-start transition-all cursor-pointer relative"
+                  :class="[
+                    balePostLinkMode === 'auto_long'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-foreground ring-1 ring-emerald-500/30'
+                      : 'border-border/50 bg-background/50 hover:bg-muted/40 text-muted-foreground'
+                  ]"
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-[10.5px] font-bold" :class="[balePostLinkMode === 'auto_long' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground']">
+                      {{ languageStore.t('خودکار', 'Automatic') }}
+                    </span>
+                    <span class="text-[8px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded-full">
+                      {{ languageStore.t('پیش‌فرض', 'Default') }}
+                    </span>
+                  </div>
+                  <span class="text-[9px] mt-1 leading-snug" :class="[balePostLinkMode === 'auto_long' ? 'text-emerald-800/80 dark:text-emerald-200/80' : 'text-muted-foreground']">
+                    {{ languageStore.t('فقط برای پیام‌های طولانی که کوتاه می‌شوند', 'Only for long posts exceeding limits') }}
+                  </span>
+                </button>
+
+                <!-- Always Option -->
+                <button
+                  type="button"
+                  @click="balePostLinkMode = 'always'"
+                  class="flex flex-col items-start p-2.5 rounded-xl border text-start transition-all cursor-pointer relative"
+                  :class="[
+                    balePostLinkMode === 'always'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-foreground ring-1 ring-emerald-500/30'
+                      : 'border-border/50 bg-background/50 hover:bg-muted/40 text-muted-foreground'
+                  ]"
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-[10.5px] font-bold" :class="[balePostLinkMode === 'always' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground']">
+                      {{ languageStore.t('همیشه فعال', 'Always') }}
+                    </span>
+                  </div>
+                  <span class="text-[9px] mt-1 leading-snug" :class="[balePostLinkMode === 'always' ? 'text-emerald-800/80 dark:text-emerald-200/80' : 'text-muted-foreground']">
+                    {{ languageStore.t('برای تمامی پست‌ها حتی پست‌های کوتاه', 'Attach link to all posts even short ones') }}
+                  </span>
+                </button>
+
+                <!-- Disabled Option -->
+                <button
+                  type="button"
+                  @click="balePostLinkMode = 'disabled'"
+                  class="flex flex-col items-start p-2.5 rounded-xl border text-start transition-all cursor-pointer relative"
+                  :class="[
+                    balePostLinkMode === 'disabled'
+                      ? 'border-destructive/60 bg-destructive/10 text-destructive ring-1 ring-destructive/20'
+                      : 'border-border/50 bg-background/50 hover:bg-muted/40 text-muted-foreground'
+                  ]"
+                >
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-[10.5px] font-bold" :class="[balePostLinkMode === 'disabled' ? 'text-destructive' : 'text-foreground']">
+                      {{ languageStore.t('غیرفعال', 'Disabled') }}
+                    </span>
+                  </div>
+                  <span class="text-[9px] mt-1 leading-snug" :class="[balePostLinkMode === 'disabled' ? 'text-destructive/80' : 'text-muted-foreground']">
+                    {{ languageStore.t('عدم درج هیچ لینکی در انتهای پیام‌ها', 'Do not attach any preview link') }}
+                  </span>
+                </button>
+              </div>
+
+              <!-- Preview snippet of bottom guide text -->
+              <div v-if="balePostLinkMode !== 'disabled'" class="mt-1 p-2 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex flex-col gap-1 text-[9px]">
+                <div class="flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300">
+                  <SparklesIcon class="size-3 text-emerald-500" />
+                  <span>{{ languageStore.t('نمونه متن راهنما و لینک در پایین پست:', 'Preview of guide text & link at post bottom:') }}</span>
+                </div>
+                <div class="text-[9px] text-muted-foreground bg-background/70 p-1.5 rounded-lg border border-border/40 dir-auto font-sans">
+                  🔗 {{ languageStore.t('مشاهده و ثبت نظر در تفکر:', 'View and comment on Tafakor:') }}<br />
+                  <span class="dir-ltr inline-block font-mono text-[8.5px] text-emerald-600 dark:text-emerald-400 mt-0.5">https://.../p/123</span>
+                </div>
+              </div>
             </div>
           </div>
         </transition>

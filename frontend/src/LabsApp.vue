@@ -8,7 +8,8 @@ import {
   FlaskConicalIcon,
   BookOpenIcon,
   LayersIcon,
-  HeartIcon
+  HeartIcon,
+  HelpCircleIcon
 } from '@lucide/vue'
 
 // Dark/Light theme manager via VueUse
@@ -75,11 +76,11 @@ const toggleDark = useToggle(isDark)
             </router-link>
 
             <router-link 
-              to="/playground/create-donation" 
+              to="/playground/topic-faq" 
               class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50 [&.router-link-active]:bg-primary/10 [&.router-link-active]:text-primary [&.router-link-active]:font-bold border border-transparent [&.router-link-active]:border-primary/20"
             >
-              <HeartIcon class="size-3.5 text-rose-500" />
-              <span>پویش مهربانی</span>
+              <HelpCircleIcon class="size-3.5 text-amber-500" />
+              <span>سوالات متداول (FAQ)</span>
             </router-link>
           </nav>
 

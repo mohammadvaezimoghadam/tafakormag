@@ -960,7 +960,11 @@ async def task_processor():
                                     files = {file_field_name: (filename, file_content, mime_type)}
                                     data = {"chat_id": chat_id, "parse_mode": "HTML"}
                                     if text:
-                                        data["caption"] = format_text_for_telegram(text)
+                                        caption_html = format_text_for_telegram(text)
+                                        # Telegram caption limit is 1024 chars
+                                        if len(caption_html) > 1024:
+                                            caption_html = caption_html[:950].rsplit(' ', 1)[0] + "..."
+                                        data["caption"] = caption_html
                                     
                                     if media_type == "image":
                                         url = f"{base_url}{bot_token}/sendPhoto"
@@ -984,7 +988,10 @@ async def task_processor():
                                     # Fallback: if file couldn't be downloaded, send as text-only
                                     logger.warning(f"Could not download media for task {tid}, falling back to text-only send")
                                     url = f"{base_url}{bot_token}/sendMessage"
-                                    payload = {"chat_id": chat_id, "text": format_text_for_telegram(text or "[فایل یافت نشد]"), "parse_mode": "HTML"}
+                                    fallback_text = format_text_for_telegram(text or "[فایل یافت نشد]")
+                                    if len(fallback_text) > 4096:
+                                        fallback_text = fallback_text[:4000].rsplit(' ', 1)[0] + "..."
+                                    payload = {"chat_id": chat_id, "text": fallback_text, "parse_mode": "HTML"}
                                     res = await post_with_retry(http_client, url, json_payload=payload)
                                     if res.status_code == 200:
                                         success = True
@@ -996,7 +1003,10 @@ async def task_processor():
                                             success = True
                             else:
                                 url = f"{base_url}{bot_token}/sendMessage"
-                                payload = {"chat_id": chat_id, "text": format_text_for_telegram(text), "parse_mode": "HTML"}
+                                msg_text = format_text_for_telegram(text)
+                                if len(msg_text) > 4096:
+                                    msg_text = msg_text[:4000].rsplit(' ', 1)[0] + "..."
+                                payload = {"chat_id": chat_id, "text": msg_text, "parse_mode": "HTML"}
                                 res = await post_with_retry(http_client, url, json_payload=payload)
                                 if res.status_code == 200:
                                     success = True

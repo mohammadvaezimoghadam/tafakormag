@@ -55,7 +55,7 @@ class APIClient:
             return False
 
     async def register_destination(
-        self, user_id: int, platform: str, chat_id: str, label: str
+        self, user_id: int, platform: str, chat_id: str, label: str, username: str = ""
     ) -> dict:
         url = f"{BACKEND_API_URL}/bot/register-destination/"
         payload = {
@@ -63,6 +63,7 @@ class APIClient:
             "platform": platform,
             "chat_id": str(chat_id),
             "label": label,
+            "username": username,
         }
         try:
             resp = await self.client.post(url, json=payload)

@@ -14,11 +14,28 @@ class Topic(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    POST_LINK_MODE_CHOICES = [
+        ('auto_long', 'فقط پست‌های طولانی (خودکار)'),
+        ('always', 'همیشه (حتی برای پست‌های کوتاه)'),
+        ('disabled', 'غیرفعال'),
+    ]
+
     # تنظیمات اتصال ربات‌ها
     telegram_bot_active = models.BooleanField(default=False)
     telegram_post_badge = models.CharField(max_length=100, blank=True, default='')
+    telegram_post_link_mode = models.CharField(
+        max_length=20,
+        choices=POST_LINK_MODE_CHOICES,
+        default='auto_long'
+    )
+
     bale_bot_active = models.BooleanField(default=False)
     bale_post_badge = models.CharField(max_length=100, blank=True, default='')
+    bale_post_link_mode = models.CharField(
+        max_length=20,
+        choices=POST_LINK_MODE_CHOICES,
+        default='auto_long'
+    )
 
     telegram_connections = models.ManyToManyField(
         MessagingTarget,
@@ -135,15 +152,18 @@ class PostReaction(models.Model):
 
 class PostComment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     content = models.TextField()
+    is_anonymous = models.BooleanField(default=False)
+    author_name = models.CharField(max_length=100, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['created_at']
 
     def __str__(self):
-        return f"Comment by {self.user.phone} on Post {self.post.id}"
+        author_display = self.author_name if self.author_name else ("Anonymous" if self.is_anonymous else (self.user.phone if self.user else "Anonymous"))
+        return f"Comment by {author_display} on Post {self.post.id}"
 
 
 class BotTask(models.Model):
@@ -229,4 +249,86 @@ class TopicAdmin(models.Model):
         ordering = ['created_at']
 
     def __str__(self):
-        return f"{self.user.phone} - Admin of {self.topic.name}"
+        return f"{self.user.phone} - Admin of {self.topic.name}"
+
+
+class TopicFAQ(models.Model):
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name='faqs'
+    )
+    question = models.CharField(max_length=300)
+    answer = models.TextField()
+    order = models.PositiveIntegerField(default=0, db_index=True)
+    is_published = models.BooleanField(default=True, db_index=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_faqs'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+        indexes = [
+            models.Index(fields=['topic', 'order']),
+            models.Index(fields=['topic', 'is_published']),
+        ]
+
+    def __str__(self):
+        return f"FAQ: {self.question[:50]} ({self.topic.name})"
+
+
+class TopicChatSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name='chat_sessions'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='topic_chat_sessions'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        user_display = self.user.phone if self.user else "Anonymous"
+        return f"ChatSession {self.id} ({self.topic.name}) by {user_display}"
+
+
+class TopicChatMessage(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'User'),
+        ('assistant', 'Assistant'),
+        ('system', 'System'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        TopicChatSession,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField()
+    sources = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.role}] {self.content[:40]}"
+

@@ -5,7 +5,9 @@ import {
   ArrowLeftIcon,
   SearchIcon,
   MoreVerticalIcon,
-  XIcon
+  XIcon,
+  HelpCircleIcon,
+  SparklesIcon
 } from '@lucide/vue'
 import TopicSettingsMenu from './TopicSettingsMenu.vue'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,7 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   error?: boolean
   showOptionsButton?: boolean
+  showFaqButton?: boolean
   showSearchButton?: boolean
   searchQuery?: string
   isOwner?: boolean
@@ -31,6 +34,7 @@ const props = withDefaults(defineProps<{
   loading: false,
   error: false,
   showOptionsButton: true,
+  showFaqButton: true,
   showSearchButton: false,
   searchQuery: '',
   isOwner: false
@@ -44,6 +48,7 @@ const emit = defineEmits<{
   (e: 'topic-connections'): void
   (e: 'topic-import'): void
   (e: 'topic-admins'): void
+  (e: 'topic-faq'): void
   (e: 'update:searchQuery', val: string): void
 }>()
 
@@ -251,6 +256,21 @@ watch(() => props.showSearchButton, (newVal) => {
 
     </div>
 
+    <!-- Detachable AI Assistant / FAQ Button (same animation & styling as 3-dots) -->
+    <button
+      @click="emit('topic-faq')"
+      :class="[
+        'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-muted/80 active:scale-95 transition-all duration-300 ease-out shrink-0 cursor-pointer shadow-xs p-0 border outline-none',
+        props.isInnerPage && props.showFaqButton
+          ? 'w-11 opacity-100 border-border/60' 
+          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none',
+        props.isInnerPage && props.showFaqButton ? 'ms-1' : ''
+      ]"
+      :title="languageStore.t('دستیار هوشمند و سوالات تاپیک', 'Topic AI Assistant & Questions')"
+    >
+      <HelpCircleIcon class="size-4 text-foreground/80 hover:text-amber-500 transition-colors" />
+    </button>
+
     <!-- Detachable Options Button -->
     <button
       @click="handleOptionsClick"
@@ -278,6 +298,7 @@ watch(() => props.showSearchButton, (newVal) => {
       @connections="emit('topic-connections')"
       @import="emit('topic-import')"
       @admins="emit('topic-admins')"
+      @faq="emit('topic-faq')"
       @delete="emit('delete-topic')"
     />
   </Teleport>
