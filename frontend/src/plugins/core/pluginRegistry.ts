@@ -37,10 +37,15 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
   initLocalInstalledState()
 
   // API helper with token authorization
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  const apiBase = import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== ''
+    ? import.meta.env.VITE_API_BASE_URL
+    : (import.meta.env.DEV ? 'http://localhost:8000' : '')
   const getApiUrl = (endpoint: string) => {
+    if (!apiBase || apiBase === '/') {
+      return endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+    }
     const base = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase
-    return `${base}${endpoint}`
+    return `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
   }
 
   const getHeaders = () => {

@@ -22,19 +22,25 @@ const bundledSampleAyahs: any[] = (bundledSampleRaw as any).data || []
 
 // Smart dynamic API base resolver supporting localhost, LAN IPs, and custom env
 const getApiBase = () => {
-  if (import.meta.env.VITE_API_BASE_URL) {
+  if (import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '') {
     return import.meta.env.VITE_API_BASE_URL
   }
-  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost') {
-    return `${window.location.protocol}//${window.location.hostname}:8000`
+  if (import.meta.env.DEV) {
+    if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost') {
+      return `${window.location.protocol}//${window.location.hostname}:8000`
+    }
+    return 'http://localhost:8000'
   }
-  return 'http://localhost:8000'
+  return ''
 }
 
 const getApiUrl = (endpoint: string) => {
   const base = getApiBase()
+  if (!base || base === '/') {
+    return endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+  }
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base
-  return `${cleanBase}${endpoint}`
+  return `${cleanBase}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
 }
 
 const getHeaders = () => {

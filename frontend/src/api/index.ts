@@ -2,8 +2,15 @@ import axios from 'axios'
 import { useToastStore } from '../stores/toastStore'
 import { useUserStore } from '../stores/userStore'
 
+export const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '') {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+  return import.meta.env.DEV ? 'http://localhost:8000' : ''
+}
+
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: getApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000
 })

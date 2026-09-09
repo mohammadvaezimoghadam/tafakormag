@@ -45,9 +45,11 @@ export const useTopicStore = defineStore('topic', () => {
     if (url.startsWith('//')) {
       url = url.slice(1)
     }
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-    if (apiBase === '/') {
-      return url
+    const apiBase = import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== ''
+      ? import.meta.env.VITE_API_BASE_URL
+      : (import.meta.env.DEV ? 'http://localhost:8000' : '')
+    if (!apiBase || apiBase === '/') {
+      return url.startsWith('/') ? url : '/' + url
     }
     const base = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase
     const path = url.startsWith('/') ? url : '/' + url
