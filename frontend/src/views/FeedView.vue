@@ -303,6 +303,10 @@ const headerIsInnerPage = computed(() => {
 
 const headerInnerTitle = computed(() => {
   if (currentTab.value === 'home') {
+    if (activeTopicSubView.value === 'faq') {
+      const topicName = selectedTopic.value?.title || ''
+      return languageStore.t(`دستیار هوشمند ${topicName}`, `${topicName} AI Assistant`)
+    }
     return selectedTopic.value?.title || ''
   } else {
     return languageStore.t('مدیریت اتصالات', 'Connections Management')
@@ -1101,29 +1105,25 @@ const toggleTheme = useToggle(isDark)
   >
     
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
-    <div 
-      v-if="currentTab === 'profile' || currentTab === 'donate' || currentTab === 'marketplace' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
-      class="sticky top-0 z-40 bg-background/60 dark:bg-background/50 backdrop-blur-md pt-4 pb-2.5"
-    >
-      <PlatformHeader 
-        :is-inner-page="headerIsInnerPage" 
-        :inner-title="headerInnerTitle" 
-        :title="headerTitle" 
-        :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
-        :show-options-button="!!(currentTab === 'home' && selectedTopic !== null)"
-        :show-faq-button="!!(currentTab === 'home' && selectedTopic !== null)"
-        :is-owner="isTopicCreator"
-        :show-search-button="(currentTab === 'home' && selectedTopic === null) || currentTab === 'donate'"
-        v-model:search-query="searchQuery"
-        @back="handleHeaderBack"
-        @edit-topic="handleEditTopic"
-        @delete-topic="handleDeleteTopic"
-        @topic-connections="handleTopicConnections"
-        @topic-import="handleTopicImport"
-        @topic-admins="activeTopicSubView = 'admins'"
-        @topic-faq="activeTopicSubView = 'faq'"
-      />
-    </div>
+    <PlatformHeader 
+      v-if="currentTab === 'profile' || currentTab === 'donate' || currentTab === 'marketplace' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && (activeTopicSubView === 'feed' || activeTopicSubView === 'faq'))"
+      :is-inner-page="headerIsInnerPage" 
+      :inner-title="headerInnerTitle" 
+      :title="headerTitle" 
+      :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
+      :show-options-button="!!(currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      :show-faq-button="!!(currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      :is-owner="isTopicCreator"
+      :show-search-button="(currentTab === 'home' && selectedTopic === null) || currentTab === 'donate'"
+      v-model:search-query="searchQuery"
+      @back="handleHeaderBack"
+      @edit-topic="handleEditTopic"
+      @delete-topic="handleDeleteTopic"
+      @topic-connections="handleTopicConnections"
+      @topic-import="handleTopicImport"
+      @topic-admins="activeTopicSubView = 'admins'"
+      @topic-faq="activeTopicSubView = 'faq'"
+    />
 
     <!-- MAIN CONTENT AREA -->
     <div class="w-full flex-1">
@@ -1361,11 +1361,12 @@ const toggleTheme = useToggle(isDark)
             </div>
 
             <!-- Topic FAQ / AI Assistant Subview Page -->
-            <div v-else-if="activeTopicSubView === 'faq'" key="faq" class="w-full">
+            <div v-else-if="activeTopicSubView === 'faq'" key="faq" class="w-full flex-1 flex flex-col">
               <TopicAiChatView 
                 :topic="selectedTopic"
                 :is-owner="isTopicCreator"
                 :is-admin="isTopicCreator"
+                :show-header="false"
                 @back="activeTopicSubView = 'feed'"
               />
             </div>

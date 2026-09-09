@@ -15,28 +15,13 @@ import TopicMessageInput from '@/components/TopicMessageInput.vue'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-  MessageHeader,
-  MessageFooter
-} from '@/components/ui/message'
-import {
-  Bubble,
-  BubbleContent
-} from '@/components/ui/bubble'
-import {
   Marker,
   MarkerContent,
   MarkerIcon
 } from '@/components/ui/marker'
 import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback
-} from '@/components/ui/avatar'
-import {
   SparklesIcon,
+  HelpCircleIcon,
   SendIcon,
   ArrowRightIcon,
   Trash2Icon,
@@ -45,7 +30,8 @@ import {
   BookOpenIcon,
   FileTextIcon,
   BotIcon,
-  UserIcon
+  UserIcon,
+  ChevronDownIcon
 } from '@lucide/vue'
 
 interface Props {
@@ -54,13 +40,15 @@ interface Props {
   isAdmin?: boolean
   simulated?: boolean
   initialFaqs?: Array<{ id: number | string; question: string; answer?: string }>
+  showHeader?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isOwner: false,
   isAdmin: false,
   simulated: false,
-  initialFaqs: () => []
+  initialFaqs: () => [],
+  showHeader: false
 })
 
 const emit = defineEmits<{
@@ -95,7 +83,9 @@ const formatTime = (dateStr?: string) => {
   if (!dateStr) return ''
   try {
     const d = new Date(dateStr)
-    return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+    const hours = d.getHours().toString().padStart(2, '0')
+    const minutes = d.getMinutes().toString().padStart(2, '0')
+    return languageStore.n(`${hours}:${minutes}`)
   } catch {
     return ''
   }
@@ -108,22 +98,15 @@ const scrollToBottom = async () => {
   }
 }
 
+const expandedSources = ref<Record<string | number, boolean>>({})
+const toggleSources = (msgId: string | number) => {
+  expandedSources.value[msgId] = !expandedSources.value[msgId]
+}
+
 // Load History
 const loadHistory = async () => {
   if (props.simulated) {
-    if (messages.value.length === 0) {
-      messages.value = [
-        {
-          id: 'welcome-1',
-          role: 'assistant',
-          content: `سلام! من دستیار هوشمند تاپیک **${topicName.value}** هستم.\n\nمن به تمام محتوای تاپیک، یادداشت‌ها و اسناد دسترسی دارم. هر سوالی درباره این تاپیک، اهداف، برنامه‌ها یا موضوعات مطرح‌شده دارید بپرسید تا با استناد به پایگاه دانش تاپیک پاسخ دهم.`,
-          sources: [
-            { type: 'post', id: 1, title: 'مرام‌نامه و اهداف تاپیک', preview: 'اهداف کلی و ضوابط حضور در جلسات تاپیک' }
-          ],
-          created_at: new Date().toISOString()
-        }
-      ]
-    }
+    // In simulated mode, start clean with empty messages to show welcome state
     return
   }
 
@@ -136,29 +119,11 @@ const loadHistory = async () => {
       if (Array.isArray(res.data.messages) && res.data.messages.length > 0) {
         messages.value = res.data.messages
       } else {
-        // Welcome message
-        messages.value = [
-          {
-            id: 'welcome-default',
-            role: 'assistant',
-            content: `سلام! من دستیار هوشمند تاپیک **${topicName.value}** هستم.\n\nهر سوالی درباره اهداف، نوشته‌ها، جلسات یا ضوابط این تاپیک دارید مطرح فرمایید.`,
-            sources: [],
-            created_at: new Date().toISOString()
-          }
-        ]
+        messages.value = []
       }
     }
   } catch (err) {
-    // Fallback welcome message
-    messages.value = [
-      {
-        id: 'welcome-fallback',
-        role: 'assistant',
-        content: `سلام! من دستیار هوشمند تاپیک **${topicName.value}** هستم. می‌توانید سوال خود را درباره این تاپیک مطرح کنید.`,
-        sources: [],
-        created_at: new Date().toISOString()
-      }
-    ]
+    messages.value = []
   } finally {
     isLoadingHistory.value = false
     scrollToBottom()
@@ -239,14 +204,7 @@ const handleTopicInputSend = (message: { text: string }) => {
 // Clear chat history
 const handleClearHistory = async () => {
   if (props.simulated) {
-    messages.value = [
-      {
-        id: 'welcome-reset',
-        role: 'assistant',
-        content: `تاریخچه پاک شد. هر سوالی درباره تاپیک **${topicName.value}** دارید می‌توانید بپرسید.`,
-        created_at: new Date().toISOString()
-      }
-    ]
+    messages.value = []
     return
   }
 
@@ -280,23 +238,43 @@ onMounted(() => {
 
 <template>
   <div 
-    class="w-full h-full flex flex-col gap-3 text-start font-sans select-none relative" 
+    class="w-full flex-1 flex flex-col text-start font-sans select-none relative" 
+    :class="[showHeader ? 'min-h-[calc(100vh-4rem)]' : 'h-[calc(100vh-6.5rem)]']"
     :dir="languageStore.dir"
   >
-    <!-- Internal Header: Identical to other subviews and internal pages -->
+    <!-- Internal Header: Rendered only when requested by parent -->
     <PlatformHeader 
+      v-if="showHeader"
       is-inner-page
-      :inner-title="languageStore.t('دستیار هوشمند تاپیک', 'Topic AI Assistant')"
+      :inner-title="languageStore.t(`دستیار هوشمند ${topicName}`, `${topicName} AI Assistant`)"
       :show-options-button="false"
       :show-faq-button="false"
       @back="emit('back')"
     />
 
-    <!-- Chat Messages Scroll Area: Rendered via shadcn-vue Message & Bubble -->
+    <!-- Chat Messages Scroll Area -->
     <div 
       ref="messagesContainerRef"
-      class="flex-1 overflow-y-auto px-4 py-2 space-y-4 text-start scroll-smooth"
+      class="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-7 text-start scroll-smooth"
     >
+      <!-- Empty State: Welcome in center with simple icon & waving hand 👋, disappears after first message -->
+      <div 
+        v-if="messages.length === 0 && !isLoadingHistory" 
+        class="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto gap-2 select-none animate-in fade-in zoom-in-95 duration-300"
+      >
+        <div class="size-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+          <BotIcon class="size-8" />
+        </div>
+
+        <h3 class="text-base font-extrabold text-foreground">
+          {{ languageStore.t(`دستیار هوشمند ${topicName}`, `${topicName} AI Assistant`) }}
+        </h3>
+        
+        <p class="text-xs text-muted-foreground/80 max-w-[280px] leading-relaxed">
+          {{ languageStore.t('سلام! هر پرسشی درباره مطالب، اهداف یا اسناد این تاپیک دارید بپرسید تا با هوش مصنوعی پاسخ دهم.', 'Hello! Ask any question about this topic\'s content, goals, or documents.') }}
+        </p>
+      </div>
+
       <!-- Subtle Clear History Action when messages exist -->
       <div v-if="messages.length > 1" class="flex justify-center pb-2">
         <button
@@ -310,88 +288,83 @@ onMounted(() => {
         </button>
       </div>
       <template v-for="msg in messages" :key="msg.id">
-        <!-- 1. USER MESSAGE -->
-        <Message v-if="msg.role === 'user'" align="end" class="items-end">
-          <MessageAvatar>
-            <Avatar class="size-7 ring-1 ring-primary/20">
-              <AvatarImage v-if="userProfile?.avatar" :src="userProfile.avatar" :alt="userProfile.name" />
-              <AvatarFallback class="text-[10px] font-bold bg-primary text-primary-foreground">
-                {{ userInitial }}
-              </AvatarFallback>
-            </Avatar>
-          </MessageAvatar>
-          <MessageContent class="items-end">
-            <Bubble variant="default">
-              <BubbleContent class="rounded-2xl rounded-bl-none text-xs font-medium leading-relaxed shadow-xs text-right" dir="rtl">
-                {{ msg.content }}
-              </BubbleContent>
-            </Bubble>
-            <MessageFooter v-if="msg.created_at" class="pe-1 text-[9.5px] text-muted-foreground/60 font-mono">
-              {{ formatTime(msg.created_at) }}
-            </MessageFooter>
-          </MessageContent>
-        </Message>
+        <!-- 1. USER MESSAGE (Aligned to Right in RTL, No Avatar, Post-like Card Background) -->
+        <div v-if="msg.role === 'user'" class="flex flex-col items-start gap-1 w-full max-w-[85%] sm:max-w-[75%] pt-1">
+          <div class="rounded-2xl px-4 py-2.5 text-xs font-medium leading-relaxed bg-card text-card-foreground border border-border/50 shadow-2xs text-right" dir="rtl">
+            {{ msg.content }}
+          </div>
+          <span v-if="msg.created_at" class="pe-1 text-[10px] text-muted-foreground/70 font-sans font-medium">
+            {{ formatTime(msg.created_at) }}
+          </span>
+        </div>
 
-        <!-- 2. ASSISTANT MESSAGE -->
-        <Message v-else align="start" class="items-start">
-          <MessageAvatar>
-            <div class="size-7 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-              <SparklesIcon class="size-3.5" />
+        <!-- 2. ASSISTANT MESSAGE (No background, icon at top in front of title with topic name) -->
+        <div v-else class="flex flex-col items-start gap-2.5 w-full text-right pb-1" dir="rtl">
+          <!-- Assistant Header: Icon + Title + AI/RAG Badge -->
+          <div class="flex items-center gap-2 pb-0.5 text-[11px]">
+            <div class="size-6 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+              <HelpCircleIcon class="size-3.5" />
             </div>
-          </MessageAvatar>
-          <MessageContent class="items-start max-w-[92%] sm:max-w-[85%]">
-            <MessageHeader class="ps-1 gap-1.5 text-[10px]">
-              <span class="font-black text-foreground/90">دستیار هوشمند تاپیک</span>
-              <Badge variant="outline" class="text-[8.5px] px-1 py-0 h-4 border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5 font-mono">
-                AI • RAG
-              </Badge>
-            </MessageHeader>
+            <span class="font-bold text-xs text-foreground/90">دستیار هوشمند {{ topicName }}</span>
+            <Badge variant="secondary" class="text-[8.5px] px-1.5 py-0 h-4 border-none border-0 text-amber-600 dark:text-amber-400 bg-amber-500/10 font-mono shadow-none">
+              AI • RAG
+            </Badge>
+          </div>
 
-            <Bubble variant="outline" class="w-full max-w-full">
-              <BubbleContent class="rounded-2xl rounded-br-none text-right bg-card border-border/60 text-foreground text-xs leading-relaxed p-3.5 space-y-2.5 shadow-xs w-full" dir="rtl">
-                <!-- Markdown Rendered Content -->
-                <FormattedText :content="msg.content" class-name="text-right" />
+          <!-- Pure Markdown Generated Text (No background container) -->
+          <div class="w-full text-foreground text-xs leading-relaxed ps-1 py-0.5">
+            <FormattedText :content="msg.content" class-name="text-right" />
+          </div>
 
-                <!-- RAG Sources / Citations Pill List -->
-                <div v-if="msg.sources && msg.sources.length > 0" class="pt-2 border-t border-border/40 space-y-1.5">
-                  <span class="text-[9.5px] font-bold text-muted-foreground flex items-center gap-1">
-                    <BookOpenIcon class="size-3 text-primary" />
-                    <span>منابع استناد شده از تاپیک:</span>
-                  </span>
-                  <div class="flex flex-wrap gap-1.5">
-                    <div
-                      v-for="(source, sIdx) in msg.sources"
-                      :key="sIdx"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/40 border border-border/40 text-[9px] text-foreground/80"
-                      :title="source.preview || source.title"
-                    >
-                      <FileTextIcon class="size-2.5 text-blue-500 shrink-0" />
-                      <span class="font-semibold">{{ source.title }}</span>
-                    </div>
-                  </div>
-                </div>
-              </BubbleContent>
-            </Bubble>
-
-            <!-- Message Footer: Actions and Timestamp -->
-            <MessageFooter class="ps-1 gap-2 pt-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-6 rounded-md hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                @click="copyMessage(msg)"
-                :title="languageStore.t('کپی کردن پاسخ', 'Copy answer')"
-                aria-label="Copy answer"
-              >
-                <CheckIcon v-if="copiedMessageId === msg.id" class="size-3 text-emerald-500" />
-                <CopyIcon v-else class="size-3" />
-              </Button>
-              <span v-if="msg.created_at" class="text-[9.5px] font-mono text-muted-foreground/60">
-                {{ formatTime(msg.created_at) }}
+          <!-- RAG Sources / Citations Pill List: Collapsible/Expandable -->
+          <div v-if="msg.sources && msg.sources.length > 0" class="w-full mt-2 pt-1 ps-1 flex flex-col gap-2">
+            <button
+              type="button"
+              @click="toggleSources(msg.id)"
+              class="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none self-start py-0.5"
+            >
+              <BookOpenIcon class="size-3.5 text-amber-600 dark:text-amber-400" />
+              <span>{{ languageStore.t('منابع استناد شده از تاپیک', 'Cited Topic Sources') }}</span>
+              <span class="text-[9.5px] px-1.5 py-0.2 rounded-full bg-muted/70 text-muted-foreground font-mono">
+                {{ languageStore.n(msg.sources.length) }}
               </span>
-            </MessageFooter>
-          </MessageContent>
-        </Message>
+              <ChevronDownIcon 
+                class="size-3.5 text-muted-foreground/70 transition-transform duration-200" 
+                :class="{ 'rotate-180': expandedSources[msg.id] }" 
+              />
+            </button>
+
+            <div v-if="expandedSources[msg.id]" class="flex flex-wrap gap-2 pt-1 animate-in fade-in duration-200">
+              <div
+                v-for="(source, sIdx) in msg.sources"
+                :key="sIdx"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card border border-border/50 text-[10px] text-foreground/85 shadow-2xs hover:bg-muted/40 transition-colors"
+                :title="source.preview || source.title"
+              >
+                <FileTextIcon class="size-3 text-blue-500 shrink-0" />
+                <span class="font-semibold">{{ source.title }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assistant Footer: Actions and Timestamp -->
+          <div class="flex items-center gap-2 pt-1 ps-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-6 rounded-md hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              @click="copyMessage(msg)"
+              :title="languageStore.t('کپی کردن پاسخ', 'Copy answer')"
+              aria-label="Copy answer"
+            >
+              <CheckIcon v-if="copiedMessageId === msg.id" class="size-3 text-emerald-500" />
+              <CopyIcon v-else class="size-3" />
+            </Button>
+            <span v-if="msg.created_at" class="text-[10px] font-sans font-medium text-muted-foreground/70">
+              {{ formatTime(msg.created_at) }}
+            </span>
+          </div>
+        </div>
       </template>
 
       <!-- 3. Thinking / Typing State via Marker -->
@@ -406,9 +379,9 @@ onMounted(() => {
     </div>
 
     <!-- 5. Message Input Bar: Matching Topic page design, without file, voice, and plugins -->
-    <div class="sticky bottom-0 inset-x-0 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-2.5 sm:p-3.5 z-30 w-full shrink-0">
+    <div class="sticky bottom-0 inset-x-0 bg-background/65 dark:bg-background/55 backdrop-blur-md p-2.5 sm:p-3.5 z-30 w-full shrink-0">
       <TopicMessageInput
-        :placeholder="languageStore.t('پرسش خود را درباره این تاپیک بنویسید...', 'Ask a question about this topic...')"
+        :placeholder="languageStore.t('پرسش خود را درباره این تاپیک بنویسید...\u200F', 'Ask a question about this topic...')"
         :disabled="isSending"
         :allow-attachments="false"
         :allow-voice="false"

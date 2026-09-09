@@ -1,4 +1,5 @@
 import asyncio
+import re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram import Update
 from telegram.ext import (
@@ -21,6 +22,7 @@ from config import (
 )
 from api_client import APIClient
 from logger_config import setup_logger
+from main import format_text_for_telegram
 
 logger = setup_logger("bale_bot", "bale.log")
 api_client = APIClient()
@@ -579,20 +581,46 @@ async def task_processor(app: Application):
 
                 try:
                     dest_chat_id = int(chat_id) if str(chat_id).lstrip("-").isdigit() else chat_id
+                    post_reply_markup = None
+                    if text:
+                        match = re.search(r'https?://[^\s<>"\'`]+/p/\S+', text)
+                        if match:
+                            p_url = match.group(0).rstrip('.,;:!?؛،؟)')
+                            from urllib.parse import urlparse
+                            bale_host = (urlparse(p_url).hostname or "").lower()
+                            if "." in bale_host and bale_host != "localhost":
+                                post_reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 مشاهده و ثبت نظر در تفکر", url=p_url)]])
+
                     if action == "send":
-                        msg = await app.bot.send_message(
-                            dest_chat_id, text, parse_mode="Markdown"
-                        )
+                        try:
+                            msg = await app.bot.send_message(
+                                dest_chat_id, text, parse_mode="Markdown", reply_markup=post_reply_markup
+                            )
+                        except Exception as e:
+                            logger.warning(f"Bale send with markup failed ({e}), retrying without reply_markup...")
+                            msg = await app.bot.send_message(
+                                dest_chat_id, text, parse_mode="Markdown"
+                            )
                         await api_client.complete_task(tid, str(msg.message_id))
                         logger.info(f"Sent message for task {tid}")
 
                     elif action == "edit" and message_id:
-                        await app.bot.edit_message_text(
-                            text=text,
-                            chat_id=dest_chat_id,
-                            message_id=int(message_id),
-                            parse_mode="Markdown"
-                        )
+                        try:
+                            await app.bot.edit_message_text(
+                                text=text,
+                                chat_id=dest_chat_id,
+                                message_id=int(message_id),
+                                parse_mode="Markdown",
+                                reply_markup=post_reply_markup
+                            )
+                        except Exception as e:
+                            logger.warning(f"Bale edit with markup failed ({e}), retrying without reply_markup...")
+                            await app.bot.edit_message_text(
+                                text=text,
+                                chat_id=dest_chat_id,
+                                message_id=int(message_id),
+                                parse_mode="Markdown"
+                            )
                         await api_client.complete_task(tid, message_id)
                         logger.info(f"Edited message for task {tid}")
 

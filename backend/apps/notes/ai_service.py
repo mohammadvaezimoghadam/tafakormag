@@ -124,8 +124,12 @@ class TopicRAGService:
         context = cls.retrieve_topic_context(topic, query)
 
         api_key = getattr(settings, "AI_API_KEY", os.getenv("AI_API_KEY", ""))
-        api_base = getattr(settings, "AI_API_BASE_URL", os.getenv("AI_API_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
-        model = getattr(settings, "AI_MODEL", os.getenv("AI_MODEL", "gpt-4o-mini"))
+        api_base = getattr(settings, "AI_API_BASE_URL", os.getenv("AI_API_BASE_URL", "https://openrouter.ai/api/v1")).rstrip("/")
+        model = getattr(settings, "AI_MODEL", os.getenv("AI_MODEL", "google/gemma-4-31b-it:free"))
+
+        # تصحیح خودکار آدرس اندپوینت OpenRouter در صورتی که کاربر لینک مدل یا آدرس بدون نسخه را وارد کرده باشد
+        if "openrouter.ai" in api_base and not api_base.endswith("/api/v1"):
+            api_base = "https://openrouter.ai/api/v1"
 
         if api_key:
             faq_text = "\n".join([f"سوال: {f.question}\nپاسخ: {f.answer}" for f in context["faqs"]])
@@ -151,31 +155,52 @@ class TopicRAGService:
             messages.append({"role": "user", "content": query})
 
             payload = {
-                "model": model,
                 "messages": messages,
                 "temperature": 0.4,
                 "max_tokens": 800
             }
 
+            # در صورتی که مدل اوپن‌روتر و از نوع رایگان باشد، مدل‌های جایگزین برای جلوگیری از Rate-Limit قرار داده می‌شود (حداکثر ۳ مدل)
+            if "openrouter.ai" in api_base:
+                if ":free" in model:
+                    payload["models"] = [
+                        model,
+                        "nvidia/nemotron-3.5-lightning:free",
+                        "google/gemma-4-26b-a4b-it:free"
+                    ][:3]
+                else:
+                    payload["model"] = model
+            else:
+                payload["model"] = model
+
+            endpoint_url = api_base if api_base.endswith("/chat/completions") else f"{api_base}/chat/completions"
             req = urllib.request.Request(
-                f"{api_base}/chat/completions",
+                endpoint_url,
                 data=json.dumps(payload).encode("utf-8"),
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {api_key}",
-                    "User-Agent": "Tafakor-AI/1.0"
+                    "User-Agent": "Tafakor-AI/1.0",
+                    "HTTP-Referer": "https://tafakor.ir",
+                    "X-Title": "Tafakor Topic Assistant",
                 },
                 method="POST"
             )
 
             try:
-                with urllib.request.urlopen(req, timeout=12) as response:
+                with urllib.request.urlopen(req, timeout=15) as response:
                     res_body = json.loads(response.read().decode("utf-8"))
                     answer = res_body["choices"][0]["message"]["content"].strip()
                     return {
                         "answer": answer,
                         "sources": context["sources"]
                     }
+            except urllib.error.HTTPError as e:
+                try:
+                    err_msg = e.read().decode("utf-8")
+                except Exception:
+                    err_msg = str(e)
+                logger.warning(f"LLM API HTTPError {e.code}: {err_msg}. Falling back to local synthesizer.")
             except Exception as e:
                 logger.warning(f"LLM API call failed: {e}. Falling back to local synthesizer.")
 

@@ -291,42 +291,21 @@ const logEvent = (name: string, data: any) => {
         </div>
       </aside>
 
-      <!-- Mock Device Frame -->
-      <section class="lg:col-span-7 flex flex-col items-center">
-        <div class="w-full max-w-[420px] bg-card/80 border border-border/70 rounded-[32px] shadow-2xl overflow-hidden flex flex-col min-h-[640px] relative">
-          <!-- Mock Phone Status Bar -->
-          <div class="w-full bg-background/90 px-5 py-2 border-b border-border/30 flex items-center justify-between text-[11px] font-mono text-muted-foreground select-none">
-            <span>۱۹:۴۵</span>
-            <div class="flex items-center gap-2">
-              <span class="size-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-              <span>4G</span>
-              <span>95%</span>
-            </div>
-          </div>
+      <!-- Main Interactive View: Matches real app pages -->
+      <section class="lg:col-span-7 flex flex-col">
+        <div class="w-full bg-card/40 border border-border/60 rounded-2xl shadow-xs overflow-hidden flex flex-col min-h-[640px] relative">
+          <!-- Topic Header with PlatformHeader (Seamless Transition) -->
+          <PlatformHeader
+            :is-inner-page="true"
+            :inner-title="activeSubView === 'faq' ? 'دستیار هوشمند کانون تفکر و نوآوری' : 'کانون تفکر و نوآوری'"
+            :show-faq-button="activeSubView === 'feed'"
+            :show-options-button="activeSubView === 'feed'"
+            @topic-faq="activeSubView = 'faq'; logEvent('Header FAQ/AI button clicked -> Open AI Chat', {})"
+            @back="activeSubView === 'faq' ? (activeSubView = 'feed') : logEvent('Header back clicked', {})"
+          />
 
           <!-- Feed Mode -->
           <div v-if="activeSubView === 'feed'" class="flex-1 flex flex-col text-start relative">
-            <!-- Topic Header with PlatformHeader -->
-            <div class="px-3 py-2 bg-background/95 border-b border-border/50 sticky top-0 z-20 backdrop-blur-md">
-              <PlatformHeader
-                :is-inner-page="true"
-                inner-title="کانون تفکر و نوآوری"
-                :show-faq-button="true"
-                :show-options-button="true"
-                @topic-faq="activeSubView = 'faq'; logEvent('Header FAQ/AI button clicked -> Open AI Chat', {})"
-                @back="logEvent('Header back clicked', {})"
-              />
-            </div>
-
-            <!-- Highlight banner pointing to the header button -->
-            <div class="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-[10px]">
-              <span class="text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1">
-                <HelpCircleIcon class="size-3 text-amber-500 shrink-0" />
-                <span>دکمه علامت سوال در هدر (سمت راست سه‌نقطه) فعال است 👆</span>
-              </span>
-              <Badge variant="outline" class="text-[9px] bg-background/50">فید تاپیک</Badge>
-            </div>
-
             <!-- Mock Feed Posts -->
             <div class="flex-1 p-4 space-y-3.5 overflow-y-auto">
               <div class="p-3.5 bg-card/60 border border-border/50 rounded-2xl space-y-2">
@@ -369,6 +348,7 @@ const logEvent = (name: string, data: any) => {
               :is-admin="isOwner"
               :simulated="true"
               :initial-faqs="mockFaqs"
+              :show-header="false"
               @back="activeSubView = 'feed'; logEvent('Back to topic feed clicked', {})"
             />
           </div>

@@ -5,13 +5,15 @@ import { cn } from '@/lib/utils'
 
 const props = withDefaults(defineProps<{
   content?: string
+  text?: string
   className?: string
 }>(), {
   content: '',
+  text: '',
   className: ''
 })
 
-const parsedContent = computed(() => parseMarkdownToHtml(props.content || ''))
+const parsedContent = computed(() => parseMarkdownToHtml(props.content || props.text || ''))
 </script>
 
 <template>

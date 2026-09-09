@@ -35,8 +35,48 @@ def format_text_for_telegram(text: str) -> str:
     escaped = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', escaped)
     # italic: *italic* -> <i>italic</i>
     escaped = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', escaped)
+    # markdown link: [text](url) -> <a href="url">text</a>
+    escaped = re.sub(r'\[([^\]]+)\]\((https?://[^\s\)]+)\)', r'<a href="\2">\1</a>', escaped)
     
-    return escaped
+    # 3. Convert standalone/raw URLs (http/https) to clickable <a href="url">url</a> links
+    # Avoid replacing URLs already inside HTML tags (like <a href="...">) or <code>/<pre> blocks
+    parts = re.split(r'(</?[a-zA-Z][^>]*>)', escaped)
+    in_tag_name = None
+    url_pattern = re.compile(r'(https?://[^\s<>"\'`]+)')
+
+    def link_repl(match):
+        url = match.group(1)
+        trailing = ""
+        while url and url[-1] in '.,;:!?؛،؟)':
+            if url[-1] == ')' and url.count('(') >= url.count(')'):
+                break
+            trailing = url[-1] + trailing
+            url = url[:-1]
+        if not url:
+            return match.group(0)
+        return f'<a href="{url}">{url}</a>{trailing}'
+
+    result_parts = []
+    for part in parts:
+        if not part:
+            continue
+        tag_match = re.match(r'^<(/)?([a-zA-Z0-9]+)', part)
+        if tag_match:
+            is_closing = bool(tag_match.group(1))
+            tag_name = tag_match.group(2).lower()
+            if not is_closing:
+                in_tag_name = tag_name
+            else:
+                if in_tag_name == tag_name:
+                    in_tag_name = None
+            result_parts.append(part)
+        else:
+            if in_tag_name not in ('code', 'pre', 'a'):
+                result_parts.append(url_pattern.sub(link_repl, part))
+            else:
+                result_parts.append(part)
+
+    return "".join(result_parts)
 
 # تنظیم لاگر
 logger = setup_logger("bot_runner", "runner.log")
@@ -934,6 +974,26 @@ async def task_processor():
                         msg_id = message_id
                         res = None
                         
+                        # استخراج آدرس لینک پیش‌نمایش پست جهت ایجاد دکمه شیشه‌ای (Inline Keyboard)
+                        preview_url = None
+                        if text:
+                            match = re.search(r'https?://[^\s<>"\'`]+/p/\S+', text)
+                            if match:
+                                preview_url = match.group(0).rstrip('.,;:!?؛،؟)')
+                        
+                        post_inline_kb = None
+                        if preview_url:
+                            parsed_u = urlparse(preview_url)
+                            hostname = (parsed_u.hostname or "").lower()
+                            # تلگرام و بله برای دکمه شیشه‌ای نیاز به دامنه با پسوند معتبر دارند؛ localhost موجب خطای 400 می‌شود
+                            if "." in hostname and hostname != "localhost":
+                                post_inline_kb = {"inline_keyboard": [[{"text": "🔗 مشاهده و ثبت نظر در تفکر", "url": preview_url}]]}
+
+                        # تنظیم پارس‌مود و فرمت متن بر اساس پلتفرم (بله از مارک‌داون پشتیبانی می‌کند و HTML را ناقص رندر می‌کند)
+                        is_telegram = (platform == "telegram")
+                        parse_mode = "HTML" if is_telegram else "Markdown"
+                        formatted_msg_text = format_text_for_telegram(text) if is_telegram else text
+
                         if action == "send":
                             if media_type in ("image", "video", "audio") and media_url:
                                 internal_url = get_internal_media_url(media_url)
@@ -958,13 +1018,16 @@ async def task_processor():
                                             mime_type = "application/octet-stream"
                                             
                                     files = {file_field_name: (filename, file_content, mime_type)}
-                                    data = {"chat_id": chat_id, "parse_mode": "HTML"}
+                                    data = {"chat_id": chat_id, "parse_mode": parse_mode}
                                     if text:
-                                        caption_html = format_text_for_telegram(text)
+                                        caption_formatted = formatted_msg_text
                                         # Telegram caption limit is 1024 chars
-                                        if len(caption_html) > 1024:
-                                            caption_html = caption_html[:950].rsplit(' ', 1)[0] + "..."
-                                        data["caption"] = caption_html
+                                        if len(caption_formatted) > 1024:
+                                            caption_formatted = caption_formatted[:950].rsplit(' ', 1)[0] + "..."
+                                        data["caption"] = caption_formatted
+                                    if post_inline_kb:
+                                        import json
+                                        data["reply_markup"] = json.dumps(post_inline_kb)
                                     
                                     if media_type == "image":
                                         url = f"{base_url}{bot_token}/sendPhoto"
@@ -975,6 +1038,12 @@ async def task_processor():
                                         url = f"{base_url}{bot_token}/{method}"
                                     
                                     res = await post_with_retry(http_client, url, data=data, files=files)
+                                    if res.status_code != 200 and post_inline_kb and "reply_markup" in data:
+                                        logger.warning(f"Send media with markup failed ({res.text}), retrying without reply_markup...")
+                                        data_no_markup = {k: v for k, v in data.items() if k != "reply_markup"}
+                                        files_retry = {file_field_name: (filename, file_content, mime_type)}
+                                        res = await post_with_retry(http_client, url, data=data_no_markup, files=files_retry)
+
                                     if res.status_code == 200:
                                         success = True
                                         msg_id = str(res.json().get("result", {}).get("message_id", ""))
@@ -988,11 +1057,19 @@ async def task_processor():
                                     # Fallback: if file couldn't be downloaded, send as text-only
                                     logger.warning(f"Could not download media for task {tid}, falling back to text-only send")
                                     url = f"{base_url}{bot_token}/sendMessage"
-                                    fallback_text = format_text_for_telegram(text or "[فایل یافت نشد]")
+                                    fallback_raw = text or "[فایل یافت نشد]"
+                                    fallback_text = format_text_for_telegram(fallback_raw) if is_telegram else fallback_raw
                                     if len(fallback_text) > 4096:
                                         fallback_text = fallback_text[:4000].rsplit(' ', 1)[0] + "..."
-                                    payload = {"chat_id": chat_id, "text": fallback_text, "parse_mode": "HTML"}
+                                    payload = {"chat_id": chat_id, "text": fallback_text, "parse_mode": parse_mode}
+                                    if post_inline_kb:
+                                        payload["reply_markup"] = post_inline_kb
                                     res = await post_with_retry(http_client, url, json_payload=payload)
+                                    if res.status_code != 200 and post_inline_kb and "reply_markup" in payload:
+                                        logger.warning(f"Fallback send with markup failed ({res.text}), retrying without reply_markup...")
+                                        payload_no_markup = {k: v for k, v in payload.items() if k != "reply_markup"}
+                                        res = await post_with_retry(http_client, url, json_payload=payload_no_markup)
+
                                     if res.status_code == 200:
                                         success = True
                                         msg_id = str(res.json().get("result", {}).get("message_id", ""))
@@ -1003,11 +1080,18 @@ async def task_processor():
                                             success = True
                             else:
                                 url = f"{base_url}{bot_token}/sendMessage"
-                                msg_text = format_text_for_telegram(text)
+                                msg_text = formatted_msg_text
                                 if len(msg_text) > 4096:
                                     msg_text = msg_text[:4000].rsplit(' ', 1)[0] + "..."
-                                payload = {"chat_id": chat_id, "text": msg_text, "parse_mode": "HTML"}
+                                payload = {"chat_id": chat_id, "text": msg_text, "parse_mode": parse_mode}
+                                if post_inline_kb:
+                                    payload["reply_markup"] = post_inline_kb
                                 res = await post_with_retry(http_client, url, json_payload=payload)
+                                if res.status_code != 200 and post_inline_kb and "reply_markup" in payload:
+                                    logger.warning(f"Send with markup failed ({res.text}), retrying without reply_markup...")
+                                    payload_no_markup = {k: v for k, v in payload.items() if k != "reply_markup"}
+                                    res = await post_with_retry(http_client, url, json_payload=payload_no_markup)
+
                                 if res.status_code == 200:
                                     success = True
                                     msg_id = str(res.json().get("result", {}).get("message_id", ""))
@@ -1022,12 +1106,18 @@ async def task_processor():
                             if media_type != "text" and media_url:
                                 # ویرایش کپشن پیام‌های چندرسانه‌ای
                                 url = f"{base_url}{bot_token}/editMessageCaption"
-                                payload = {"chat_id": chat_id, "message_id": int(message_id), "caption": format_text_for_telegram(text), "parse_mode": "HTML"}
+                                payload = {"chat_id": chat_id, "message_id": int(message_id), "caption": formatted_msg_text, "parse_mode": parse_mode}
                             else:
                                 url = f"{base_url}{bot_token}/editMessageText"
-                                payload = {"chat_id": chat_id, "message_id": int(message_id), "text": format_text_for_telegram(text), "parse_mode": "HTML"}
- 
+                                payload = {"chat_id": chat_id, "message_id": int(message_id), "text": formatted_msg_text, "parse_mode": parse_mode}
+
+                            if post_inline_kb:
+                                payload["reply_markup"] = post_inline_kb
                             res = await post_with_retry(http_client, url, json_payload=payload)
+                            if res.status_code != 200 and post_inline_kb and "reply_markup" in payload:
+                                logger.warning(f"Edit with markup failed ({res.text}), retrying without reply_markup...")
+                                payload_no_markup = {k: v for k, v in payload.items() if k != "reply_markup"}
+                                res = await post_with_retry(http_client, url, json_payload=payload_no_markup)
                             if res.status_code == 200:
                                 success = True
                             else:

@@ -35,7 +35,7 @@ import {
   VolumeXIcon,
   MusicIcon,
   Loader2Icon,
-  SparklesIcon,
+  EyeIcon,
   AlertCircleIcon,
   LockIcon
 } from '@lucide/vue'
@@ -251,7 +251,7 @@ onMounted(() => {
     :dir="languageStore.dir"
   >
     <!-- TOP APP BAR -->
-    <header class="w-full flex items-center justify-between pb-2 border-b border-border/40">
+    <header class="w-full flex items-center justify-between pb-2">
       <div class="flex items-center gap-2">
         <Button 
           variant="ghost" 
@@ -485,8 +485,11 @@ onMounted(() => {
         <!-- Post Content Text (Full Markdown Text) -->
         <div class="px-5 py-4 text-start">
           <FormattedText 
+            v-if="post.content"
+            :content="post.content"
             :text="post.content" 
-            class="text-xs text-foreground/95 leading-relaxed tracking-normal break-words"
+            class-name="text-xs font-normal text-foreground/95 leading-relaxed tracking-normal break-words"
+            dir="auto"
           />
         </div>
 
@@ -522,11 +525,11 @@ onMounted(() => {
       <!-- CTA TO TOPIC -->
       <div 
         @click="navigateToTopic"
-        class="w-full p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center justify-between gap-3 cursor-pointer hover:border-primary/40 transition-all select-none group"
+        class="w-full p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent flex items-center justify-between gap-3 cursor-pointer transition-all select-none group"
       >
         <div class="flex items-center gap-3 min-w-0">
           <div class="size-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            <SparklesIcon class="size-4.5" />
+            <EyeIcon class="size-4.5" />
           </div>
           <div class="flex flex-col min-w-0">
             <span class="text-xs font-extrabold text-foreground">{{ languageStore.t('مشاهده یادداشت در تاپیک اصلی تفکر', 'View post in main Tafakor topic') }}</span>

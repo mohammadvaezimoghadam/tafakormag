@@ -24,6 +24,16 @@ def test_format_text_for_telegram():
     assert format_text_for_telegram("hello `code`") == "hello <code>code</code>"
     # Escaping HTML characters
     assert format_text_for_telegram("hello <world>") == "hello &lt;world&gt;"
+    # Markdown link conversion
+    assert format_text_for_telegram("Click [here](https://example.com) now") == 'Click <a href="https://example.com">here</a> now'
+    # Standalone URL conversion
+    assert format_text_for_telegram("Visit https://example.com/p/123 today") == 'Visit <a href="https://example.com/p/123">https://example.com/p/123</a> today'
+    # Bot post guide link with raw URL
+    assert format_text_for_telegram("🔗 مشاهده و ثبت نظر در تفکر:\nhttp://localhost:5173/p/abc") == '🔗 مشاهده و ثبت نظر در تفکر:\n<a href="http://localhost:5173/p/abc">http://localhost:5173/p/abc</a>'
+    # URLs inside code tags should remain unlinked
+    assert format_text_for_telegram("Use `https://example.com` in code") == 'Use <code>https://example.com</code> in code'
+    # Trailing punctuation should stay outside the link
+    assert format_text_for_telegram("See https://example.com/p/1.") == 'See <a href="https://example.com/p/1">https://example.com/p/1</a>.'
 
 class StopTestLoop(BaseException):
     """Exception raised to safely break out of the infinite task_processor/bot_manager loop."""

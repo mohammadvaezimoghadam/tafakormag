@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/notes/', include('apps.notes.urls')),
     path('api/bot/', include('apps.notes.bot_urls')),
     path('api/v1/donations/', include('apps.donations.urls')),
+    path('api/donations/', include('apps.donations.urls')),
     path('api/plugins/quran/', include('plugins.quran.urls')),
     path('api/plugins/', include('apps.plugin_system.urls')),
     

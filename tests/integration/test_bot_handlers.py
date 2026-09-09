@@ -136,7 +136,7 @@ def test_register_chat_success(mock_api_client, mock_update_context):
     # Should register destination with label and user_id
     mock_api_client.get_user_id_by_chat.assert_called_once_with("telegram", 555)
     mock_api_client.register_destination.assert_called_once_with(
-        12, "telegram", "-987654", "گروه تستی تفکر"
+        12, "telegram", "-987654", "گروه تستی تفکر", username=update.effective_chat.username
     )
     # Should send private success message to the registering user
     context.bot.send_message.assert_called_once()

@@ -133,7 +133,7 @@ watch(() => props.showSearchButton, (newVal) => {
 
 <template>
   <div 
-    class="w-full flex items-center select-none font-sans" 
+    class="w-full flex items-center select-none font-sans sticky top-0 z-40 bg-background/60 dark:bg-background/50 backdrop-blur-md pt-4 pb-2.5" 
     :dir="languageStore.dir"
   >
     
@@ -184,10 +184,15 @@ watch(() => props.showSearchButton, (newVal) => {
               :title="languageStore.t('خطای ارتباطی', 'Connection Error')"
             />
             
-            <div class="flex flex-col text-start">
-              <span class="text-xs font-extrabold text-foreground transition-all duration-300">
-                {{ isInnerPage ? innerTitle : (title === 'تفکر' ? languageStore.t('تفکر', 'Tafakor') : title) }}
-              </span>
+            <div class="flex flex-col text-start overflow-hidden">
+              <transition name="header-title-fade" mode="out-in">
+                <span 
+                  :key="isInnerPage ? innerTitle : (title === 'تفکر' ? languageStore.t('تفکر', 'Tafakor') : title)"
+                  class="text-xs font-extrabold text-foreground truncate block"
+                >
+                  {{ isInnerPage ? innerTitle : (title === 'تفکر' ? languageStore.t('تفکر', 'Tafakor') : title) }}
+                </span>
+              </transition>
               <transition name="status-fade">
                 <span 
                   v-if="loading"
@@ -262,9 +267,8 @@ watch(() => props.showSearchButton, (newVal) => {
       :class="[
         'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-muted/80 active:scale-95 transition-all duration-300 ease-out shrink-0 cursor-pointer shadow-xs p-0 border outline-none',
         props.isInnerPage && props.showFaqButton
-          ? 'w-11 opacity-100 border-border/60' 
-          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none',
-        props.isInnerPage && props.showFaqButton ? 'ms-1' : ''
+          ? 'w-11 opacity-100 border-border/60 ms-1' 
+          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none ms-0'
       ]"
       :title="languageStore.t('دستیار هوشمند و سوالات تاپیک', 'Topic AI Assistant & Questions')"
     >
@@ -277,9 +281,8 @@ watch(() => props.showSearchButton, (newVal) => {
       :class="[
         'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-muted/80 active:scale-95 transition-all duration-300 ease-out shrink-0 cursor-pointer shadow-xs p-0 border outline-none',
         props.isInnerPage && props.showOptionsButton
-          ? 'w-11 opacity-100 border-border/60' 
-          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none',
-        props.isInnerPage && props.showOptionsButton ? 'ms-1' : ''
+          ? 'w-11 opacity-100 border-border/60 ms-1' 
+          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none ms-0'
       ]"
       :title="languageStore.t('تنظیمات تاپیک', 'Topic settings')"
     >
@@ -354,5 +357,21 @@ watch(() => props.showSearchButton, (newVal) => {
 .header-content-fade-leave-from {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Header title smooth transition between topic and assistant */
+.header-title-fade-enter-active,
+.header-title-fade-leave-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header-title-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
+.header-title-fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
 }
 </style>

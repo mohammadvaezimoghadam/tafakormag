@@ -199,10 +199,12 @@ def _post_markdown_text(post: Post, platform: Optional[str] = None, target: Opti
 
     # الصاق لینک خودکار به همراه متن راهنمای کوتاه در پایین پست
     if should_include_link:
-        frontend_base = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:5173').rstrip('/')
+        frontend_base = (getattr(settings, 'FRONTEND_BASE_URL', None) or os.getenv('FRONTEND_BASE_URL') or 'http://localhost:5001').strip().rstrip('/')
+        if frontend_base and not frontend_base.startswith(('http://', 'https://')):
+            frontend_base = f"https://{frontend_base}"
         post_id = post.id if post.id else ''
         preview_url = f"{frontend_base}/p/{post_id}"
-        short_guide = f"🔗 مشاهده و ثبت نظر در تفکر:\n{preview_url}"
+        short_guide = f"🔗 [مشاهده و ثبت نظر در تفکر]({preview_url})\n{preview_url}"
         content = f"{content}\n\n{short_guide}" if content else short_guide
 
     if topic:

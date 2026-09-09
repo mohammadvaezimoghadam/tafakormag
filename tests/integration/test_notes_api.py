@@ -294,9 +294,12 @@ class TestNotesAPIIntegration:
         assert response.data["content"] == "This is a comment"
         assert response.data["user_phone"] == "09111111111"
 
-        # Anonymous cannot post comment
+        # Anonymous can post comment (anonymous comment feature)
         response = self.anon_client.post(f"/api/notes/{post.id}/comments/", payload, format="json")
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["content"] == "This is a comment"
+        assert response.data["user_name"] == "کاربر ناشناس"
+        assert response.data["user_phone"] is None
 
     def test_post_reaction(self):
         topic = Topic.objects.create(name="Topic A", created_by=self.user1)

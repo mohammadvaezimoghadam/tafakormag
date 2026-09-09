@@ -20,7 +20,13 @@ SECRET_KEY = os.getenv('SECRET_KEY', config('SECRET_KEY', default='django-insecu
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # ==============================================================================
 # اپلیکیشن‌ها
@@ -81,7 +87,7 @@ KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', config('KAVENEGAR_SENDER', defa
 # ==============================================================================
 ZARINPAL_SANDBOX = os.getenv('ZARINPAL_SANDBOX', config('ZARINPAL_SANDBOX', default='True')) == 'True'
 ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', config('ZARINPAL_MERCHANT_ID', default='00000000-0000-0000-0000-000000000000'))
-FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', config('FRONTEND_BASE_URL', default='http://localhost:5173'))
+FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', config('FRONTEND_BASE_URL', default='http://localhost:5001')).strip().rstrip('/')
 BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', config('BACKEND_BASE_URL', default='http://localhost:8000'))
 
 # ==============================================================================
@@ -227,4 +233,9 @@ LOGGING = {
     },
 }
 
-
+# ==============================================================================
+# هوش مصنوعی و دستیار تاپیک (Topic AI Assistant & RAG)
+# ==============================================================================
+AI_API_KEY = os.getenv('AI_API_KEY', config('AI_API_KEY', default=''))
+AI_API_BASE_URL = os.getenv('AI_API_BASE_URL', config('AI_API_BASE_URL', default='https://openrouter.ai/api/v1'))
+AI_MODEL = os.getenv('AI_MODEL', config('AI_MODEL', default='openai/gpt-4o-mini'))

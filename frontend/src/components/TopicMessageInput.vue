@@ -761,6 +761,18 @@ const recordingStatusClasses = computed(() => {
 import { useLanguageStore } from '@/stores/languageStore'
 const languageStore = useLanguageStore()
 
+const resolvedPlaceholder = computed(() => {
+  let ph = props.placeholder === 'پیام خود را بنویسید...'
+    ? languageStore.t('پیام خود را بنویسید...\u200F', 'Type your message...')
+    : (props.placeholder || '')
+  if (ph && (ph.endsWith('...') || ph.endsWith('…')) && languageStore.dir === 'rtl') {
+    if (!ph.endsWith('\u200F')) {
+      ph = ph + '\u200F'
+    }
+  }
+  return ph
+})
+
 const pluginRegistry = usePluginRegistryStore()
 const router = useRouter()
 const pluginComposerActions = computed(() => pluginRegistry.composerActions)
@@ -1134,10 +1146,10 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             ref="textareaRef"
             v-model="text"
             :disabled="props.disabled"
-            :placeholder="props.placeholder === 'پیام خود را بنویسید...' ? languageStore.t('پیام خود را بنویسید...', 'Type your message...') : props.placeholder"
+            :placeholder="resolvedPlaceholder"
             rows="1"
             :class="textareaClasses"
-            dir="auto"
+            :dir="text ? 'auto' : (languageStore.dir || 'rtl')"
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
@@ -1347,9 +1359,9 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           <textarea
             ref="expandedTextareaRef"
             v-model="text"
-            :placeholder="languageStore.t('پیام خود را بنویسید...', 'Type your message...')"
+            :placeholder="resolvedPlaceholder"
             class="w-full flex-1 bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-sm font-semibold leading-relaxed text-foreground placeholder:text-muted-foreground/50 resize-none overflow-y-auto scrollbar-thin text-start"
-            dir="auto"
+            :dir="text ? 'auto' : (languageStore.dir || 'rtl')"
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"

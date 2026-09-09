@@ -16,6 +16,16 @@ const router = createRouter({
       component: () => import('@/views/FeedView.vue')
     },
     {
+      path: '/p/:id',
+      name: 'post-preview',
+      component: () => import('@/views/PostPreviewView.vue')
+    },
+    {
+      path: '/preview/:id',
+      name: 'post-preview-alias',
+      component: () => import('@/views/PostPreviewView.vue')
+    },
+    {
       path: '/topic/:id',
       name: 'topic',
       component: () => import('@/views/FeedView.vue')

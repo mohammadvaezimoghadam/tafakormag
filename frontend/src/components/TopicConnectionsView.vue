@@ -256,15 +256,13 @@ const handleSave = () => {
       @back="emit('back')"
     />
 
-    <!-- Main Card wrapper -->
-    <div class="w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-5 shadow-xs flex flex-col gap-5">
-      
-      <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed text-start">
-        {{ languageStore.t('💡 با فعال‌سازی بازنشر، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.', '💡 By enabling auto-repost, your posts in this topic will be automatically published via dedicated bots in the selected groups and channels.') }}
-      </div>
+    <!-- Notice Banner -->
+    <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed text-start">
+      {{ languageStore.t('💡 با فعال‌سازی بازنشر، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.', '💡 By enabling auto-repost, your posts in this topic will be automatically published via dedicated bots in the selected groups and channels.') }}
+    </div>
 
-      <!-- Telegram Section -->
-      <div class="flex flex-col gap-4">
+    <!-- Telegram Card: In a dedicated card with slightly lighter background -->
+    <div class="w-full bg-card/65 dark:bg-card/40 border border-border/60 rounded-3xl p-5 shadow-xs flex flex-col gap-4">
         <div class="flex items-center justify-between p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 transition-all duration-300">
           <div class="flex flex-col text-start pe-4">
             <span class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
@@ -508,10 +506,10 @@ const handleSave = () => {
             </div>
           </div>
         </transition>
-      </div>
+    </div>
 
-      <!-- Bale Section -->
-      <div class="flex flex-col gap-4">
+    <!-- Bale Card: Separated in its own card with slightly lighter background -->
+    <div class="w-full bg-card/65 dark:bg-card/40 border border-border/60 rounded-3xl p-5 shadow-xs flex flex-col gap-4">
         <div class="flex items-center justify-between p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 transition-all duration-300">
           <div class="flex flex-col text-start pe-4">
             <span class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
@@ -755,34 +753,30 @@ const handleSave = () => {
             </div>
           </div>
         </transition>
-      </div>
-
-      <div class="h-[1px] bg-border/40 my-1" />
-
-      <!-- Save Button -->
-      <Button 
-        @click="handleSave"
-        :disabled="isSaving || saveSuccess"
-        class="w-full h-11 rounded-xl font-bold transition-all relative overflow-hidden active:scale-[0.98] cursor-pointer"
-        :variant="saveSuccess ? 'secondary' : 'default'"
-      >
-        <transition name="btn-content" mode="out-in">
-          <div v-if="isSaving" class="flex items-center gap-2 justify-center">
-            <RefreshCwIcon class="size-4 animate-spin" />
-            <span>{{ languageStore.t('در حال ذخیره‌سازی...', 'Saving...') }}</span>
-          </div>
-          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-650 dark:text-emerald-400">
-            <CheckCircle2Icon class="size-4" />
-            <span>{{ languageStore.t('اتصالات با موفقیت به روز رسانی شد', 'Connections updated successfully') }}</span>
-          </div>
-          <div v-else class="flex items-center gap-2 justify-center">
-            <SaveIcon class="size-4" />
-            <span>{{ languageStore.t('ذخیره تنظیمات اتصالات', 'Save Connections Settings') }}</span>
-          </div>
-        </transition>
-      </Button>
-
     </div>
+
+    <!-- Save Button -->
+    <Button 
+      @click="handleSave"
+      :disabled="isSaving || saveSuccess"
+      class="w-full h-11 rounded-xl font-bold transition-all relative overflow-hidden active:scale-[0.98] cursor-pointer"
+      :variant="saveSuccess ? 'secondary' : 'default'"
+    >
+      <transition name="btn-content" mode="out-in">
+        <div v-if="isSaving" class="flex items-center gap-2 justify-center">
+          <RefreshCwIcon class="size-4 animate-spin" />
+          <span>{{ languageStore.t('در حال ذخیره‌سازی...', 'Saving...') }}</span>
+        </div>
+        <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-650 dark:text-emerald-400">
+          <CheckCircle2Icon class="size-4" />
+          <span>{{ languageStore.t('اتصالات با موفقیت به روز رسانی شد', 'Connections updated successfully') }}</span>
+        </div>
+        <div v-else class="flex items-center gap-2 justify-center">
+          <SaveIcon class="size-4" />
+          <span>{{ languageStore.t('ذخیره تنظیمات اتصالات', 'Save Connections Settings') }}</span>
+        </div>
+      </transition>
+    </Button>
   </div>
 </template>
 

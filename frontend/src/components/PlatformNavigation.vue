@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { HomeIcon, HandHeartIcon, UserIcon, LayersIcon } from '@lucide/vue'
-import { Badge } from '@/components/ui/badge'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const languageStore = useLanguageStore()
@@ -54,22 +53,17 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
       <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
     </button>
 
-    <!-- Marketplace Tab (New) -->
+    <!-- Marketplace Tab -->
     <button
       @click="selectTab('marketplace')"
       :class="[
-        'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent relative',
+        'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent',
         activeTab === 'marketplace'
           ? 'bg-primary/10 text-primary font-bold shadow-xs'
           : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
       ]"
       :title="languageStore.t('بازارچه', 'Marketplace')"
     >
-      <!-- Floating 'New' Badge on Top (Green) -->
-      <span class="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] px-1.5 py-0.2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold rounded-full shadow-2xs backdrop-blur-xs whitespace-nowrap pointer-events-none leading-tight">
-        {{ languageStore.t('جدید', 'New') }}
-      </span>
-
       <LayersIcon class="size-3.5 shrink-0" />
       <span>{{ languageStore.t('بازارچه', 'Marketplace') }}</span>
     </button>

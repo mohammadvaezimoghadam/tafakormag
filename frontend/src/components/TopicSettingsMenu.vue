@@ -3,11 +3,9 @@ import { computed } from 'vue'
 import { 
   PencilIcon, 
   LinkIcon, 
-  Trash2Icon,
-  UploadCloudIcon,
-  ShieldCheckIcon,
-  HelpCircleIcon,
-  SparklesIcon
+  Trash2Icon, 
+  UploadCloudIcon, 
+  ShieldCheckIcon 
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -97,15 +95,6 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         @click.stop
         :dir="languageStore.dir"
       >
-        <!-- Topic AI Assistant -->
-        <button 
-          @click="handleAction('faq')" 
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
-        >
-          <span>{{ languageStore.t('دستیار هوشمند تاپیک', 'Topic AI Assistant') }}</span>
-          <SparklesIcon class="size-3.5 text-amber-500" />
-        </button>
-
         <!-- Topic Admins -->
         <button 
           @click="handleAction('admins')" 

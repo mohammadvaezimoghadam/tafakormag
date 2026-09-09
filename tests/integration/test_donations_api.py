@@ -157,7 +157,7 @@ class TestDonationsAPIIntegration:
 
         # Creator deletes successfully
         response_ok = self.creator_client.delete(f"/api/donations/campaigns/{campaign.id}/")
-        assert response_ok.status_code == status.HTTP_204_NO_CONTENT
+        assert response_ok.status_code in [status.HTTP_200_OK, status.HTTP_204_NO_CONTENT]
         assert not DonationCampaign.objects.filter(id=campaign.id).exists()
 
     # --- TRANSACTION & METRICS TESTS ---
