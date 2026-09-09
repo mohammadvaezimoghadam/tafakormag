@@ -7,11 +7,21 @@ FROM ${REGISTRY}node:22-alpine AS development
 
 WORKDIR /app
 
+ARG NPM_REGISTRY="https://registry.npmmirror.com"
+
 COPY package*.json ./
-RUN (sed -i 's|https://npm.devneeds.ir/repository/npm/|https://registry.npmjs.org/|g' package-lock.json && npm install) || \
-    (echo "Primary npm registry failed/unreachable. Falling back to devneeds mirror..." && \
-     sed -i 's|https://registry.npmjs.org/|https://npm.devneeds.ir/repository/npm/|g' package-lock.json && \
-     npm install --registry=https://npm.devneeds.ir/)
+RUN ( \
+      echo "Using fast npm mirror: ${NPM_REGISTRY}..." && \
+      npm config set registry ${NPM_REGISTRY} && \
+      sed -i "s|https://registry.npmjs.org/|${NPM_REGISTRY}/|g" package-lock.json && \
+      sed -i "s|https://npm.devneeds.ir/repository/npm/|${NPM_REGISTRY}/|g" package-lock.json && \
+      (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
+    ) || ( \
+      echo "Fast mirror failed, falling back to official npmjs registry..." && \
+      npm config set registry https://registry.npmjs.org && \
+      sed -i "s|${NPM_REGISTRY}/|https://registry.npmjs.org/|g" package-lock.json && \
+      (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
+    )
 
 COPY . .
 
@@ -24,11 +34,21 @@ FROM ${REGISTRY}node:22-alpine AS build
 
 WORKDIR /app
 
+ARG NPM_REGISTRY="https://registry.npmmirror.com"
+
 COPY package*.json ./
-RUN (sed -i 's|https://npm.devneeds.ir/repository/npm/|https://registry.npmjs.org/|g' package-lock.json && npm install) || \
-    (echo "Primary npm registry failed/unreachable. Falling back to devneeds mirror..." && \
-     sed -i 's|https://registry.npmjs.org/|https://npm.devneeds.ir/repository/npm/|g' package-lock.json && \
-     npm install --registry=https://npm.devneeds.ir/)
+RUN ( \
+      echo "Using fast npm mirror: ${NPM_REGISTRY}..." && \
+      npm config set registry ${NPM_REGISTRY} && \
+      sed -i "s|https://registry.npmjs.org/|${NPM_REGISTRY}/|g" package-lock.json && \
+      sed -i "s|https://npm.devneeds.ir/repository/npm/|${NPM_REGISTRY}/|g" package-lock.json && \
+      (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
+    ) || ( \
+      echo "Fast mirror failed, falling back to official npmjs registry..." && \
+      npm config set registry https://registry.npmjs.org && \
+      sed -i "s|${NPM_REGISTRY}/|https://registry.npmjs.org/|g" package-lock.json && \
+      (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
+    )
 
 COPY . .
 

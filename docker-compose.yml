@@ -60,6 +60,7 @@ services:
       args:
         - VITE_API_BASE_URL=/
         - VITE_BALE_OTP_BOT_URL=${VITE_BALE_OTP_BOT_URL:-https://ble.ir/tafakor_otp_bot}
+        - NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: tafakor_frontend
     profiles:
       - vue
