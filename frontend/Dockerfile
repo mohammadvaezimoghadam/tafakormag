@@ -35,30 +35,31 @@ FROM ${REGISTRY}node:22-alpine AS build
 WORKDIR /app
 
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
-
-COPY package*.json ./
-RUN ( \
-      echo "Using fast npm mirror: ${NPM_REGISTRY}..." && \
-      npm config set registry ${NPM_REGISTRY} && \
-      sed -i "s|https://registry.npmjs.org/|${NPM_REGISTRY}/|g" package-lock.json && \
-      sed -i "s|https://npm.devneeds.ir/repository/npm/|${NPM_REGISTRY}/|g" package-lock.json && \
-      (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
-    ) || ( \
-      echo "Fast mirror failed, falling back to official npmjs registry..." && \
-      npm config set registry https://registry.npmjs.org && \
-      sed -i "s|${NPM_REGISTRY}/|https://registry.npmjs.org/|g" package-lock.json && \
-      (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
-    )
-
-COPY . .
-
 ARG VITE_API_BASE_URL=/
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
 ARG VITE_BALE_OTP_BOT_URL=https://ble.ir/tafakor_otp_bot
 ENV VITE_BALE_OTP_BOT_URL=$VITE_BALE_OTP_BOT_URL
 
-RUN npm run build
+COPY . .
+
+# در صورت وجود فایل‌های بیلد در فولدر dist، بدون نیاز به اینترنت و نصب پکیج مستقیماً از آن استفاده می‌شود
+RUN if [ -f "./dist/index.html" ]; then \
+      echo "=== [OFFLINE DEPLOY READY] Prebuilt dist/index.html found! Skipping npm install & build completely ===" ; \
+    else \
+      echo "=== Building from source using registry: ${NPM_REGISTRY} ===" && \
+      ( \
+        npm config set registry ${NPM_REGISTRY} && \
+        sed -i "s|https://registry.npmjs.org/|${NPM_REGISTRY}/|g" package-lock.json && \
+        sed -i "s|https://npm.devneeds.ir/repository/npm/|${NPM_REGISTRY}/|g" package-lock.json && \
+        (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
+      ) || ( \
+        echo "Mirror failed, falling back to official npmjs registry..." && \
+        npm config set registry https://registry.npmjs.org && \
+        sed -i "s|${NPM_REGISTRY}/|https://registry.npmjs.org/|g" package-lock.json && \
+        (npm ci --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund) \
+      ) && \
+      npm run build ; \
+    fi
 
 # ============================================
 # Stage 3: production (Nginx)
