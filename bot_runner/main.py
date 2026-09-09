@@ -974,6 +974,15 @@ async def task_processor():
                         msg_id = message_id
                         res = None
                         
+                        frontend_domain = (os.getenv("FRONTEND_BASE_URL") or "https://tafakormag.ir").strip().rstrip('/')
+                        if not frontend_domain.startswith(('http://', 'https://')):
+                            frontend_domain = f"https://{frontend_domain}"
+
+                        if text:
+                            for local_prefix in ("http://localhost:5001", "http://localhost:5173", "http://127.0.0.1:5001", "http://127.0.0.1:5173"):
+                                if local_prefix in text:
+                                    text = text.replace(local_prefix, frontend_domain)
+
                         # استخراج آدرس لینک پیش‌نمایش پست جهت ایجاد دکمه شیشه‌ای (Inline Keyboard)
                         preview_url = None
                         if text:

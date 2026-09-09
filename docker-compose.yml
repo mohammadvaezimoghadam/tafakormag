@@ -43,7 +43,7 @@ services:
       - AI_API_KEY=${AI_API_KEY:-}
       - AI_API_BASE_URL=${AI_API_BASE_URL:-https://openrouter.ai/api/v1}
       - AI_MODEL=${AI_MODEL:-google/gemma-4-31b-it:free}
-      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-https://tafakormag.ir}
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
@@ -107,6 +107,7 @@ services:
       - BOT_API_KEY=${BOT_API_KEY:-}
       - ENABLE_TELEGRAM=${ENABLE_TELEGRAM:-false}
       - TELEGRAM_API_URL=${TELEGRAM_API_URL:-https://api.telegram.org/bot}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-https://tafakormag.ir}
     depends_on:
       - backend
     networks:

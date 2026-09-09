@@ -581,6 +581,15 @@ async def task_processor(app: Application):
 
                 try:
                     dest_chat_id = int(chat_id) if str(chat_id).lstrip("-").isdigit() else chat_id
+                    frontend_domain = (os.getenv("FRONTEND_BASE_URL") or "https://tafakormag.ir").strip().rstrip('/')
+                    if not frontend_domain.startswith(('http://', 'https://')):
+                        frontend_domain = f"https://{frontend_domain}"
+
+                    if text:
+                        for local_prefix in ("http://localhost:5001", "http://localhost:5173", "http://127.0.0.1:5001", "http://127.0.0.1:5173"):
+                            if local_prefix in text:
+                                text = text.replace(local_prefix, frontend_domain)
+
                     post_reply_markup = None
                     if text:
                         match = re.search(r'https?://[^\s<>"\'`]+/p/\S+', text)

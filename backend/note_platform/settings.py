@@ -87,7 +87,24 @@ KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', config('KAVENEGAR_SENDER', defa
 # ==============================================================================
 ZARINPAL_SANDBOX = os.getenv('ZARINPAL_SANDBOX', config('ZARINPAL_SANDBOX', default='True')) == 'True'
 ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', config('ZARINPAL_MERCHANT_ID', default='00000000-0000-0000-0000-000000000000'))
-FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', config('FRONTEND_BASE_URL', default='http://localhost:5001')).strip().rstrip('/')
+def _resolve_frontend_base_url() -> str:
+    env_url = (os.getenv('FRONTEND_BASE_URL') or config('FRONTEND_BASE_URL', default='')).strip().rstrip('/')
+    if env_url:
+        if not env_url.startswith(('http://', 'https://')):
+            env_url = f"https://{env_url}"
+        return env_url
+
+    for host in ALLOWED_HOSTS:
+        h = host.strip().lower()
+        if h and h not in ('*', 'localhost', '127.0.0.1', 'backend', 'web', 'frontend', 'db') and '.' in h:
+            return f"https://{h}"
+
+    if not DEBUG or os.getenv('PRODUCTION') == 'True' or os.getenv('DOCKER_CONTAINER') == 'True':
+        return 'https://tafakormag.ir'
+
+    return 'http://localhost:5001'
+
+FRONTEND_BASE_URL = _resolve_frontend_base_url()
 BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', config('BACKEND_BASE_URL', default='http://localhost:8000'))
 
 # ==============================================================================

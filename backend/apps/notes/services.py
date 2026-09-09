@@ -199,7 +199,10 @@ def _post_markdown_text(post: Post, platform: Optional[str] = None, target: Opti
 
     # الصاق لینک خودکار به همراه متن راهنمای کوتاه در پایین پست
     if should_include_link:
-        frontend_base = (getattr(settings, 'FRONTEND_BASE_URL', None) or os.getenv('FRONTEND_BASE_URL') or 'http://localhost:5001').strip().rstrip('/')
+        frontend_base = getattr(settings, 'FRONTEND_BASE_URL', None) or os.getenv('FRONTEND_BASE_URL')
+        if not frontend_base:
+            frontend_base = 'https://tafakormag.ir'
+        frontend_base = str(frontend_base).strip().rstrip('/')
         if frontend_base and not frontend_base.startswith(('http://', 'https://')):
             frontend_base = f"https://{frontend_base}"
         post_id = post.id if post.id else ''
