@@ -108,9 +108,6 @@ const menuStyle = computed(() => {
       :style="menuStyle"
       :dir="languageStore.dir"
       @mousedown.prevent
-      @pointerdown.prevent
-      @touchstart.stop
-      @touchend.stop
     >
       <!-- Small Arrow Pointer -->
       <div 
@@ -133,7 +130,6 @@ const menuStyle = computed(() => {
           class="h-7.5 px-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
           :title="languageStore.t('جایگذاری (Paste)', 'Paste (Ctrl+V)')"
           @click="handleAction('paste')"
-          @pointerdown.prevent
         >
           <ClipboardPasteIcon class="size-3.5 text-primary stroke-[2.2]" />
           <span>{{ languageStore.t('جایگذاری', 'Paste') }}</span>
@@ -148,7 +144,6 @@ const menuStyle = computed(() => {
           class="h-7.5 px-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
           :title="languageStore.t('انتخاب همه (Select All)', 'Select All (Ctrl+A)')"
           @click="handleAction('select-all')"
-          @pointerdown.prevent
         >
           <CheckCheckIcon class="size-3.5 text-muted-foreground stroke-[2.2]" />
           <span>{{ languageStore.t('انتخاب همه', 'Select All') }}</span>
@@ -165,7 +160,6 @@ const menuStyle = computed(() => {
           class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
           :title="languageStore.t('کپی (Copy)', 'Copy (Ctrl+C)')"
           @click="handleAction('copy')"
-          @pointerdown.prevent
         >
           <CopyIcon class="size-3.5 stroke-[2.2]" />
         </Button>
@@ -178,7 +172,6 @@ const menuStyle = computed(() => {
           class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
           :title="languageStore.t('برش (Cut)', 'Cut (Ctrl+X)')"
           @click="handleAction('cut')"
-          @pointerdown.prevent
         >
           <ScissorsIcon class="size-3.5 stroke-[2.2]" />
         </Button>
@@ -191,7 +184,6 @@ const menuStyle = computed(() => {
           class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
           :title="languageStore.t('انتخاب همه (Select All)', 'Select All (Ctrl+A)')"
           @click="handleAction('select-all')"
-          @pointerdown.prevent
         >
           <CheckCheckIcon class="size-3.5 stroke-[2.2]" />
         </Button>
@@ -204,7 +196,6 @@ const menuStyle = computed(() => {
           class="h-7 w-7 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 active:scale-95 transition-all cursor-pointer shrink-0"
           :title="languageStore.t('جایگذاری (Paste)', 'Paste (Ctrl+V)')"
           @click="handleAction('paste')"
-          @pointerdown.prevent
         >
           <ClipboardPasteIcon class="size-3.5 stroke-[2.2]" />
         </Button>
@@ -226,7 +217,6 @@ const menuStyle = computed(() => {
           ]"
           :title="languageStore.t('بولد (Ctrl+B)', 'Bold (Ctrl+B)')"
           @click="handleFormat('bold')"
-          @pointerdown.prevent
         >
           <BoldIcon class="size-3.5 stroke-[2.5]" />
         </Button>
@@ -244,7 +234,6 @@ const menuStyle = computed(() => {
           ]"
           :title="languageStore.t('ایتالیک (Ctrl+I)', 'Italic (Ctrl+I)')"
           @click="handleFormat('italic')"
-          @pointerdown.prevent
         >
           <ItalicIcon class="size-3.5 stroke-[2.5]" />
         </Button>
@@ -262,7 +251,6 @@ const menuStyle = computed(() => {
           ]"
           :title="languageStore.t('زیرخط (Ctrl+U)', 'Underline (Ctrl+U)')"
           @click="handleFormat('underline')"
-          @pointerdown.prevent
         >
           <UnderlineIcon class="size-3.5 stroke-[2.5]" />
         </Button>
@@ -280,7 +268,6 @@ const menuStyle = computed(() => {
           ]"
           :title="languageStore.t('خط‌خورده (Ctrl+Shift+X)', 'Strikethrough (Ctrl+Shift+X)')"
           @click="handleFormat('strikethrough')"
-          @pointerdown.prevent
         >
           <StrikethroughIcon class="size-3.5 stroke-[2.5]" />
         </Button>
@@ -301,7 +288,6 @@ const menuStyle = computed(() => {
           ]"
           :title="languageStore.t('کد (Ctrl+`)', 'Code (Ctrl+`)')"
           @click="handleFormat('code')"
-          @pointerdown.prevent
         >
           <CodeIcon class="size-3.5 stroke-[2.5]" />
         </Button>
@@ -319,7 +305,6 @@ const menuStyle = computed(() => {
           ]"
           :title="languageStore.t('نقل‌قول (Ctrl+Shift+Q)', 'Quote (Ctrl+Shift+Q)')"
           @click="handleFormat('quote')"
-          @pointerdown.prevent
         >
           <QuoteIcon class="size-3.5 stroke-[2.5]" />
         </Button>

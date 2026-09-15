@@ -379,7 +379,7 @@ onMounted(() => {
     </div>
 
     <!-- 5. Message Input Bar: Matching Topic page design, without file, voice, and plugins -->
-    <div class="sticky bottom-0 inset-x-0 bg-background/65 dark:bg-background/55 backdrop-blur-md p-2.5 sm:p-3.5 z-30 w-full shrink-0">
+    <div class="sticky bottom-0 inset-x-0 bg-background/65 dark:bg-background/55 backdrop-blur-md p-2.5 sm:p-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-30 w-full shrink-0">
       <TopicMessageInput
         :placeholder="languageStore.t('پرسش خود را درباره این تاپیک بنویسید...\u200F', 'Ask a question about this topic...')"
         :disabled="isSending"

@@ -11,26 +11,20 @@ from rest_framework.exceptions import PermissionDenied
 from apps.accounts.models import User
 from .models import (
     Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin, TopicFAQ,
-    TopicChatSession, TopicChatMessage
+    TopicChatSession, TopicChatMessage, PostEditProposal, PostEditHistory
 )
 from .serializers import (
     TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer,
     TopicAdminSerializer, UserSimpleSerializer, TopicFAQSerializer,
-    TopicChatMessageSerializer, TopicChatSessionSerializer, TopicChatPromptSerializer
+    TopicChatMessageSerializer, TopicChatSessionSerializer, TopicChatPromptSerializer,
+    PostEditProposalSerializer, PostEditHistorySerializer
 )
 from .permissions import IsTopicOwnerOrAdmin
-from .services import create_bot_tasks, execute_external_platform_deletion, check_duplicate_message
+from .services import (
+    create_bot_tasks, execute_external_platform_deletion, check_duplicate_message,
+    update_topic_description, create_edit_proposal, update_edit_proposal, apply_edit_proposal, reject_edit_proposal, bulk_approve_proposals
+)
 from .ai_service import TopicRAGService
-
-
-def update_topic_description(topic):
-    latest_post = topic.posts.all().order_by('-created_at').first()
-    if latest_post:
-        snippet = latest_post.content[:150] + "..." if len(latest_post.content) > 150 else latest_post.content
-        topic.description = snippet
-    else:
-        topic.description = ""
-    topic.save()
 
 
 class TopicViewSet(viewsets.ModelViewSet):
@@ -734,4 +728,139 @@ class TopicFAQViewSet(viewsets.ModelViewSet):
                 TopicFAQ.objects.filter(id=faq_id, topic=topic).update(order=new_order)
 
         return Response({"message": "ترتیب سوالات با موفقیت به‌روز شد."}, status=status.HTTP_200_OK)
+
+
+class PostEditProposalViewSet(viewsets.ModelViewSet):
+    serializer_class = PostEditProposalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = PostEditProposal.objects.select_related('post', 'editor', 'reviewed_by', 'post__topic').all()
+
+        topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
+        if topic_id:
+            queryset = queryset.filter(post__topic_id=topic_id)
+
+        post_id = self.request.query_params.get('post_id') or self.request.query_params.get('post')
+        if post_id:
+            queryset = queryset.filter(post_id=post_id)
+
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        # Non-superusers see their own proposals OR proposals for topics they administer/own
+        if not user.is_superuser:
+            queryset = queryset.filter(
+                Q(editor=user) |
+                Q(post__topic__created_by=user) |
+                Q(post__topic__admins__user=user)
+            ).distinct()
+
+        return queryset
+
+    def perform_create(self, serializer):
+        post = serializer.validated_data['post']
+        proposed_content = serializer.validated_data['proposed_content']
+        reason = serializer.validated_data.get('reason', '')
+
+        try:
+            proposal = create_edit_proposal(
+                post=post,
+                editor=self.request.user,
+                proposed_content=proposed_content,
+                reason=reason
+            )
+            serializer.instance = proposal
+        except ValueError as e:
+            from rest_framework import serializers as drf_serializers
+            raise drf_serializers.ValidationError({"detail": str(e)})
+
+    def perform_update(self, serializer):
+        proposal = self.get_object()
+        proposed_content = serializer.validated_data.get('proposed_content', proposal.proposed_content)
+        reason = serializer.validated_data.get('reason', proposal.reason)
+
+        try:
+            update_edit_proposal(
+                proposal=proposal,
+                user=self.request.user,
+                proposed_content=proposed_content,
+                reason=reason
+            )
+        except PermissionDenied as e:
+            raise e
+        except ValueError as e:
+            from rest_framework import serializers as drf_serializers
+            raise drf_serializers.ValidationError({"detail": str(e)})
+
+    @action(detail=True, methods=['post'], url_path='approve')
+    def approve(self, request, pk=None):
+        proposal = get_object_or_404(PostEditProposal.objects.select_related('post__topic', 'editor'), pk=pk)
+        topic = proposal.post.topic
+        user = request.user
+
+        is_owner = (topic.created_by == user) if topic and topic.created_by else False
+        if not (is_owner or user.is_superuser):
+            raise PermissionDenied("تنها سازنده و ادمین اصلی تاپیک مجاز به تایید پیشنهادات ویرایش است. سایر ادمین‌ها فقط دسترسی مشاهده دارند.")
+
+        review_note = request.data.get('review_note', request.data.get('reviewNote', ''))
+        try:
+            approved_proposal = apply_edit_proposal(proposal, reviewer=user, review_note=review_note)
+            serializer = self.get_serializer(approved_proposal)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='reject')
+    def reject(self, request, pk=None):
+        proposal = get_object_or_404(PostEditProposal.objects.select_related('post__topic', 'editor'), pk=pk)
+        topic = proposal.post.topic
+        user = request.user
+
+        is_owner = (topic.created_by == user) if topic and topic.created_by else False
+        if not (is_owner or user.is_superuser):
+            raise PermissionDenied("تنها سازنده و ادمین اصلی تاپیک مجاز به رد پیشنهادات ویرایش است. سایر ادمین‌ها فقط دسترسی مشاهده دارند.")
+
+        review_note = request.data.get('review_note', request.data.get('reviewNote', ''))
+        try:
+            rejected_proposal = reject_edit_proposal(proposal, reviewer=user, review_note=review_note)
+            serializer = self.get_serializer(rejected_proposal)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='approve-all')
+    def approve_all(self, request):
+        topic_id = request.data.get('topic_id') or request.data.get('topicId')
+        if not topic_id:
+            return Response({"error": "شناسه تاپیک (topic_id) الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        topic = get_object_or_404(Topic, id=topic_id)
+        user = request.user
+        is_owner = (topic.created_by == user) if topic.created_by else False
+        if not (is_owner or user.is_superuser):
+            raise PermissionDenied("تنها سازنده و ادمین اصلی تاپیک مجاز به تایید گروهی پیشنهادات است. سایر ادمین‌ها فقط دسترسی مشاهده دارند.")
+
+        count = bulk_approve_proposals(topic_id=topic.id, reviewer=user)
+        return Response({"message": f"{count} پیشنهاد با موفقیت تایید و اعمال شد.", "approved_count": count}, status=status.HTTP_200_OK)
+
+
+class PostEditHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PostEditHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = PostEditHistory.objects.select_related('post', 'proposal', 'editor', 'approved_by').all()
+        post_id = self.request.query_params.get('post_id') or self.request.query_params.get('post')
+        if post_id:
+            queryset = queryset.filter(post_id=post_id)
+
+        topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
+        if topic_id:
+            queryset = queryset.filter(post__topic_id=topic_id)
+
+        return queryset
+
 

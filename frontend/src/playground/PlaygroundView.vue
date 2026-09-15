@@ -31,6 +31,11 @@ import PaymentReceiptModal from '@/components/kindness/PaymentReceiptModal.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import MarketplaceAppIcon from '@/components/marketplace/MarketplaceAppIcon.vue'
 import TopicAiChatView from '@/components/TopicAiChatView.vue'
+import EditorialDiffCard from '@/components/editorial/EditorialDiffCard.vue'
+import EditorialQueueDialog from '@/components/editorial/EditorialQueueDialog.vue'
+import PostHistoryDialog from '@/components/editorial/PostHistoryDialog.vue'
+import TopicEditorialView from '@/components/TopicEditorialView.vue'
+import type { PostEditProposal, PostEditHistoryItem } from '@/types/editorial'
 import type { TopicFAQ } from '@/api'
 import type { DonationCampaignProps, CreateDonationPayload, CampaignCategory } from '@/types/kindness'
 import type { MarketplaceApp, AppIconSize } from '@/types/marketplace'
@@ -95,11 +100,12 @@ import {
   DownloadCloudIcon,
   TypeIcon,
   ReceiptTextIcon,
-  HelpCircleIcon
+  HelpCircleIcon,
+  InboxIcon
 } from '@lucide/vue'
 
 // Simulator configs
-const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'payment-receipt-modal' | 'under-dev' | 'marketplace-icon' | 'topic-faq'>('topic-faq')
+const currentComponent = ref<'profile' | 'login' | 'header' | 'nav' | 'topic' | 'search' | 'profile-option' | 'profile-card-header' | 'post' | 'create-topic-modal' | 'bot-connection' | 'topic-input' | 'topic-edit' | 'topic-connections' | 'loading-dialog' | 'topic-import' | 'confirm-modal' | 'duplicate-warning-dialog' | 'topic-admins' | 'edit-profile-modal' | 'changelog-modal' | 'ai-refiner-drawer' | 'donation-card' | 'donation-chat-card' | 'create-donation-dialog' | 'payment-receipt-modal' | 'under-dev' | 'marketplace-icon' | 'topic-faq' | 'editorial-workflow'>('editorial-workflow')
 
 // MarketplaceAppIcon simulation state
 const simulatorMarketplaceIconTitle = ref('افزونه قرآن کریم')
@@ -683,6 +689,7 @@ const currentComponentFile = computed(() => {
     case 'under-dev': return 'UnderDevelopmentCard.vue'
     case 'marketplace-icon': return 'MarketplaceAppIcon.vue'
     case 'topic-faq': return 'TopicAiChatView.vue & PlatformHeader.vue'
+    case 'editorial-workflow': return 'EditorialDiffCard.vue & EditorialQueueDialog.vue'
     default: return ''
   }
 })
@@ -1514,6 +1521,151 @@ const openDuplicateWarningSimulation = () => {
     platforms: simulatorDuplicatePlatforms.value
   })
 }
+
+// Editorial Workflow simulation state
+const isSimulatorQueueOpen = ref(false)
+const isSimulatorHistoryOpen = ref(false)
+const simulatorHistoryLoading = ref(false)
+const simulatorHistoryEmpty = ref(false)
+const simulatorEditorialTab = ref<'page' | 'diff-card' | 'dialogs' | 'composer-proposal'>('page')
+const simulatorDiffCompact = ref(false)
+
+const activeSimulatorHistory = computed(() => {
+  if (simulatorHistoryEmpty.value) return []
+  return simulatorEditorialHistory.value
+})
+
+const simulatorEditorialProposals = ref<PostEditProposal[]>([
+  {
+    id: 'prop-1',
+    postId: 101,
+    topicId: 'topic-1',
+    editor: {
+      id: 'ed-1',
+      name: 'علیرضا حسینی',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+      role: 'ویراستار ارشد'
+    },
+    originalContent: 'سلام دوستان جلسه‌ی فردا ساعت ۱۰ برگزار میشود و حضور همه الزامی است.',
+    proposedContent: 'سلام دوستان گرامی،\n\nجلسه‌ی فردا **ساعت ۱۰:۰۰** برگزار می‌شود و حضور تمامی اعضا الزامی است.\n\n*لطفاً سر وقت تشریف بیاورید.*',
+    status: 'pending',
+    createdAt: '۱۰ دقیقه پیش',
+    reason: 'اصلاح نیم‌فاصله‌ها، بهینه‌سازی لحن و ساختاربندی متن'
+  },
+  {
+    id: 'prop-2',
+    postId: 102,
+    topicId: 'topic-1',
+    editor: {
+      id: 'ed-2',
+      name: 'زهرا کاظمی',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+      role: 'ویراستار متون'
+    },
+    originalContent: 'فایل صوتی ضمیمه شد برای دانلود کلیک کنید',
+    proposedContent: 'فایل صوتی جلسه ضمیمه شد.\nجهت دریافت و شنیدن صوت روی لینک زیر کلیک فرمایید.',
+    status: 'pending',
+    createdAt: '۲۵ دقیقه پیش',
+    reason: 'اصلاح غلط‌های املایی و نگارش روان‌تر'
+  }
+])
+
+const simulatorEditorialHistory = ref<PostEditHistoryItem[]>([
+  {
+    id: 'hist-2',
+    postId: 101,
+    editor: {
+      id: 'ed-1',
+      name: 'علیرضا حسینی',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+      role: 'ویراستار ارشد'
+    },
+    approver: {
+      id: 'app-1',
+      name: 'سید رضا حسینی (مدیر ارشد)',
+      role: 'ادمین تاپیک'
+    },
+    content: 'سلام دوستان گرامی،\nجلسه‌ی فردا ساعت ۱۰:۰۰ برگزار می‌شود و حضور تمامی اعضا الزامی است.',
+    createdAt: 'امروز، ساعت ۱۱:۲۰',
+    note: 'تصحیح نگارش و افزودن تاکید بر زمان برگزاری'
+  },
+  {
+    id: 'hist-1',
+    postId: 101,
+    editor: {
+      id: 'ed-0',
+      name: 'نویسنده اصلی (پست اولیه)',
+      role: 'نویسنده'
+    },
+    content: 'سلام دوستان جلسه‌ی فردا ساعت ۱۰ برگزار میشود و حضور همه الزامی است.',
+    createdAt: 'دیروز، ساعت ۱۸:۳۰',
+    note: 'انتشار نسخه اولیه پست'
+  }
+])
+
+const handleSimulatorProposalApprove = (proposal: PostEditProposal) => {
+  proposal.status = 'approved'
+  logEvent('Editorial: Proposal Approved', { proposalId: proposal.id, editor: proposal.editor.name })
+}
+
+const handleSimulatorProposalReject = (proposal: PostEditProposal) => {
+  proposal.status = 'rejected'
+  logEvent('Editorial: Proposal Rejected', { proposalId: proposal.id, editor: proposal.editor.name })
+}
+
+const handleSimulatorApproveAll = () => {
+  simulatorEditorialProposals.value.forEach(p => {
+    if (p.status === 'pending') p.status = 'approved'
+  })
+  logEvent('Editorial: Approved All Pending Proposals', { count: simulatorEditorialProposals.value.length })
+}
+
+const resetSimulatorEditorial = () => {
+  simulatorEditorialProposals.value.forEach(p => {
+    p.status = 'pending'
+  })
+  logEvent('Editorial: Reset All Proposals to Pending', {})
+}
+
+const composerProposalText = ref('سلام دوستان، جلسه فردا رأس ساعت ۱۰ برگزار می‌شود. لطفاً همه رأس موعد حضور به هم رسانید.')
+
+const handleSimulatorProposalUpdate = (proposal: PostEditProposal, newContent: string) => {
+  proposal.proposedContent = newContent
+  proposal.proposed_content = newContent
+  logEvent('Editorial: Proposal Corrected by Editor', { proposalId: proposal.id, newContent })
+}
+
+const handleComposerProposalSubmit = (payload: { text: string }) => {
+  const newProp: PostEditProposal = {
+    id: `sim-prop-${Date.now()}`,
+    postId: 101,
+    postTitle: 'کانون تفکر و نوآوری',
+    editor: {
+      id: 99,
+      name: 'شما (ویراستار)',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      role: 'ویراستار'
+    },
+    originalContent: 'سلام دوستان جلسه‌ی فردا ساعت ۱۰ برگزار میشود و حضور همه الزامی است.',
+    original_content: 'سلام دوستان جلسه‌ی فردا ساعت ۱۰ برگزار میشود و حضور همه الزامی است.',
+    proposedContent: payload.text,
+    proposed_content: payload.text,
+    status: 'pending',
+    createdAt: 'هم‌اکنون'
+  }
+  simulatorEditorialProposals.value.unshift(newProp)
+  logEvent('Editorial: Proposal Submitted from TopicMessageInput -> Sent to Desk', { text: payload.text })
+}
+
+const handleSimulatorProposalEdit = (proposal: PostEditProposal) => {
+  composerProposalText.value = proposal.proposedContent
+  simulatorEditorialTab.value = 'composer-proposal'
+  logEvent('Editorial: Editing Proposal via Composer', { proposalId: proposal.id })
+}
+
+const handleComposerProposalCancel = () => {
+  logEvent('Editorial: Proposal Cancelled in TopicMessageInput', {})
+}
 </script>
 
 <template>
@@ -1988,6 +2140,22 @@ const openDuplicateWarningSimulation = () => {
                 </span>
                 <CheckCircle2Icon v-if="currentComponent === 'topic-faq'" class="size-3.5 text-primary" />
               </button>
+              <!-- Editorial Workflow Review Card & Queue (VERY LAST ITEM) -->
+              <button 
+                @click="handleComponentChange('editorial-workflow')"
+                :class="[
+                  'w-full text-right px-3 py-2.5 text-xs font-medium rounded-lg border transition-all flex items-center justify-between cursor-pointer',
+                  currentComponent === 'editorial-workflow' 
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/50 font-black shadow-xs' 
+                    : 'bg-emerald-500/5 border-emerald-500/30 text-foreground hover:bg-emerald-500/15'
+                ]"
+              >
+                <span class="flex items-center gap-2">
+                  <CheckCircle2Icon class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  بررسی و تایید ویراستاری (Editorial Workflow) 📝✨
+                </span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">جدید</span>
+              </button>
             </div>
           </div>
 
@@ -2296,7 +2464,7 @@ const openDuplicateWarningSimulation = () => {
 
             <!-- Component-Specific Configurations Section -->
             <div 
-              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon' || currentComponent === 'payment-receipt-modal' || currentComponent === 'topic-faq'"
+              v-if="currentComponent === 'header' || currentComponent === 'nav' || currentComponent === 'topic' || currentComponent === 'search' || currentComponent === 'profile-option' || currentComponent === 'profile-card-header' || currentComponent === 'post' || currentComponent === 'create-topic-modal' || currentComponent === 'bot-connection' || currentComponent === 'topic-input' || currentComponent === 'topic-edit' || currentComponent === 'topic-connections' || currentComponent === 'loading-dialog' || currentComponent === 'topic-import' || currentComponent === 'confirm-modal' || currentComponent === 'under-dev' || currentComponent === 'donation-chat-card' || currentComponent === 'create-donation-dialog' || currentComponent === 'marketplace-icon' || currentComponent === 'payment-receipt-modal' || currentComponent === 'topic-faq' || currentComponent === 'editorial-workflow'"
               class="border-t border-border/40 pt-4 mt-1 flex flex-col gap-3"
             >
               <Label class="text-[10.5px] font-extrabold text-foreground/80 block">تنظیمات اختصاصی کامپوننت {{ currentComponentFile }}:</Label>
@@ -3334,6 +3502,104 @@ const openDuplicateWarningSimulation = () => {
                       <span>بازنشانی سوالات و نشست چت</span>
                     </Button>
                   </div>
+                </div>
+              </div>
+
+              <!-- Editorial Workflow Specific Controls -->
+              <div v-if="currentComponent === 'editorial-workflow'" class="flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/30">
+                  <div class="flex items-center gap-2">
+                    <Label class="text-[10px] font-semibold text-muted-foreground">حالت نمایش در پلی‌گراند:</Label>
+                      <Button 
+                        size="xs" 
+                        :variant="simulatorEditorialTab === 'page' ? 'default' : 'outline'" 
+                        class="text-[11px] h-7 cursor-pointer" 
+                        @click="simulatorEditorialTab = 'page'; logEvent('Editorial: Switched to page mode', {})"
+                      >
+                        <span>۱. صفحه کامل میز ویراستاری (TopicEditorialView)</span>
+                      </Button>
+                      <Button 
+                        size="xs" 
+                        :variant="simulatorEditorialTab === 'diff-card' ? 'default' : 'outline'" 
+                        class="text-[11px] h-7 cursor-pointer" 
+                        @click="simulatorEditorialTab = 'diff-card'; logEvent('Editorial: Switched to diff-card mode', {})"
+                      >
+                        <span>۲. کارت‌های مقایسه (EditorialDiffCard)</span>
+                      </Button>
+                      <Button 
+                        size="xs" 
+                        :variant="simulatorEditorialTab === 'dialogs' ? 'default' : 'outline'" 
+                        class="text-[11px] h-7 cursor-pointer" 
+                        @click="simulatorEditorialTab = 'dialogs'; logEvent('Editorial: Switched to dialogs mode', {})"
+                      >
+                        <span>۳. مودال‌ها (Modals)</span>
+                      </Button>
+                      <Button 
+                        size="xs" 
+                        :variant="simulatorEditorialTab === 'composer-proposal' ? 'default' : 'outline'" 
+                        class="text-[11px] h-7 cursor-pointer" 
+                        @click="simulatorEditorialTab = 'composer-proposal'; logEvent('Editorial: Switched to composer-proposal mode', {})"
+                      >
+                        <span>۴. ورودی پیام در حالت پیشنهاد (In-Composer)</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      class="h-7 text-[10px] font-medium gap-1 cursor-pointer" 
+                      @click="resetSimulatorEditorial"
+                    >
+                      <RefreshCwIcon class="size-3" />
+                      <span>بازنشانی وضعیت پیشنهادات</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <!-- Open Queue Dialog Button -->
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    class="h-9 text-xs font-bold flex items-center justify-between px-3 cursor-pointer bg-primary/10 text-primary hover:bg-primary/20"
+                    @click="isSimulatorQueueOpen = true; logEvent('Editorial: Opened Queue Dialog', {})"
+                  >
+                    <span class="flex items-center gap-1.5">
+                      <InboxIcon class="size-3.5" />
+                      <span>میز بررسی پیشنهادات</span>
+                    </span>
+                    <Badge class="text-[9px] px-1.5 h-4 bg-primary text-primary-foreground">
+                      {{ simulatorEditorialProposals.filter(p => p.status === 'pending').length }}
+                    </Badge>
+                  </Button>
+
+                  <!-- Open History Dialog Button -->
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    class="h-9 text-xs font-bold flex items-center justify-between px-3 cursor-pointer"
+                    @click="isSimulatorHistoryOpen = true; logEvent('Editorial: Opened History Dialog', {})"
+                  >
+                    <span class="flex items-center gap-1.5">
+                      <HistoryIcon class="size-3.5 text-primary" />
+                      <span>تاریخچه ویرایش‌های پست</span>
+                    </span>
+                    <Badge variant="secondary" class="text-[9px] px-1.5 h-4">
+                      {{ simulatorEditorialHistory.length }}
+                    </Badge>
+                  </Button>
+
+                  <!-- Compact Diff Toggle -->
+                  <button
+                    @click="simulatorDiffCompact = !simulatorDiffCompact; logEvent('Editorial: Compact toggle', { compact: simulatorDiffCompact })"
+                    class="h-9 px-3 rounded-lg border text-xs font-bold flex items-center justify-between cursor-pointer transition-colors"
+                    :class="simulatorDiffCompact ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-muted/20 border-border/60 text-muted-foreground'"
+                  >
+                    <span>حالت فشرده (Compact Diff)</span>
+                    <CheckCircle2Icon v-if="simulatorDiffCompact" class="size-3.5 text-primary" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -4563,6 +4829,162 @@ const openDuplicateWarningSimulation = () => {
                   </div>
                 </div>
 
+                <!-- Editorial Workflow Preview -->
+                <div 
+                  v-else-if="currentComponent === 'editorial-workflow'"
+                  class="w-full flex flex-col items-center gap-6 py-2"
+                  :dir="languageStore.dir"
+                >
+                  <!-- 1. Full Page View -->
+                  <div v-if="simulatorEditorialTab === 'page'" class="w-full">
+                    <TopicEditorialView
+                      :initial-proposals="simulatorEditorialProposals"
+                      topic-title="کانون تفکر و نوآوری"
+                      is-owner
+                      @back="logEvent('Editorial: Back button clicked in TopicEditorialView', {})"
+                      @proposals-updated="logEvent('Editorial: Proposals updated', {})"
+                    />
+                  </div>
+
+                  <!-- 2. Diff Card View -->
+                  <div v-else-if="simulatorEditorialTab === 'diff-card'" class="w-full flex flex-col gap-5">
+                    <div class="flex items-center justify-between border-b border-border/40 pb-2">
+                      <div class="flex items-center gap-2">
+                        <CheckCircle2Icon class="size-4 text-emerald-500" />
+                        <span class="text-xs font-bold text-foreground">کارت مقایسه ویرایش پیشنهادی (EditorialDiffCard)</span>
+                      </div>
+                      <Badge variant="secondary" class="text-[10px]">
+                        {{ simulatorEditorialProposals.filter(p => p.status === 'pending').length }} پیشنهاد در انتظار
+                      </Badge>
+                    </div>
+
+                    <div class="flex flex-col gap-4 w-full">
+                      <EditorialDiffCard
+                        v-for="prop in simulatorEditorialProposals"
+                        :key="prop.id"
+                        :proposal="prop"
+                        :is-compact="simulatorDiffCompact"
+                        @approve="handleSimulatorProposalApprove"
+                        @reject="handleSimulatorProposalReject"
+                        @edit="handleSimulatorProposalEdit"
+                        @update="handleSimulatorProposalUpdate"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- 4. In-Composer Proposal Mode View -->
+                  <div v-else-if="simulatorEditorialTab === 'composer-proposal'" class="w-full flex flex-col gap-6">
+                    <div class="flex items-center justify-between border-b border-border/40 pb-2">
+                      <div class="flex items-center gap-2">
+                        <SparklesIcon class="size-4 text-amber-500" />
+                        <span class="text-xs font-bold text-foreground">تدوین پیشنهاد ویرایش در ورودی پیام اصلی (TopicMessageInput)</span>
+                      </div>
+                      <Badge variant="outline" class="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                        پیشنهاد به میز ویراستاری ارسال خواهد شد
+                      </Badge>
+                    </div>
+
+                    <!-- Input Box -->
+                    <div class="w-full max-w-2xl mx-auto p-4 bg-muted/20 border border-border/40 rounded-3xl">
+                      <TopicMessageInput
+                        :is-proposal-mode="true"
+                        :proposal-banner-text="'پیشنهاد ویراستاری برای پست #101: تصحیح نگارش و رسم‌الخط'"
+                        :initial-text="composerProposalText"
+                        @submit-proposal="handleComposerProposalSubmit"
+                        @cancel-proposal="handleComposerProposalCancel"
+                      />
+                    </div>
+
+                    <!-- Realtime List of Proposals -->
+                    <div class="w-full flex flex-col gap-3 mt-4">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-muted-foreground">پیشنهادهای ثبت‌شده در میز ویراستاری:</span>
+                        <span class="text-[11px] text-muted-foreground">{{ simulatorEditorialProposals.length }} مورد</span>
+                      </div>
+                      <div class="flex flex-col gap-4">
+                        <EditorialDiffCard
+                          v-for="prop in simulatorEditorialProposals"
+                          :key="prop.id"
+                          :proposal="prop"
+                          @approve="handleSimulatorProposalApprove"
+                          @reject="handleSimulatorProposalReject"
+                          @edit="handleSimulatorProposalEdit"
+                          @update="handleSimulatorProposalUpdate"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 3. Dialogs View -->
+                  <div v-else class="w-full flex flex-col items-center justify-center py-10 gap-5 text-center">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+                      <Button 
+                        @click="isSimulatorQueueOpen = true; logEvent('Editorial: Opened Queue Dialog', {})"
+                        class="h-12 flex items-center justify-center gap-2 font-bold text-xs bg-primary text-primary-foreground rounded-xl cursor-pointer shadow-md hover:bg-primary/90"
+                      >
+                        <InboxIcon class="size-4" />
+                        <span>صف بررسی پیشنهادات (Queue)</span>
+                        <Badge class="bg-white/20 text-white text-[10px] ml-1">
+                          {{ simulatorEditorialProposals.filter(p => p.status === 'pending').length }}
+                        </Badge>
+                      </Button>
+
+                      <div class="flex flex-col gap-2 w-full">
+                        <Button 
+                          @click="simulatorHistoryEmpty = false; simulatorHistoryLoading = false; isSimulatorHistoryOpen = true; logEvent('Editorial: Opened History (Filled)', {})"
+                          variant="outline"
+                          class="h-12 flex items-center justify-center gap-2 font-bold text-xs rounded-xl cursor-pointer border-border/80 hover:bg-muted/40"
+                        >
+                          <HistoryIcon class="size-4 text-primary" />
+                          <span>تاریخچه ویرایش‌ها (داده‌دار)</span>
+                          <Badge variant="secondary" class="text-[9px] px-1.5 h-4 ml-1">
+                            {{ simulatorEditorialHistory.length }}
+                          </Badge>
+                        </Button>
+                        <div class="grid grid-cols-2 gap-2">
+                          <Button 
+                            @click="simulatorHistoryEmpty = true; simulatorHistoryLoading = false; isSimulatorHistoryOpen = true; logEvent('Editorial: Opened History (Empty State)', {})"
+                            variant="secondary"
+                            size="xs"
+                            class="text-[11px] h-8 rounded-lg cursor-pointer"
+                          >
+                            <span>تست حالت خالی (Empty)</span>
+                          </Button>
+                          <Button 
+                            @click="simulatorHistoryEmpty = false; simulatorHistoryLoading = true; isSimulatorHistoryOpen = true; logEvent('Editorial: Opened History (Loading State)', {})"
+                            variant="secondary"
+                            size="xs"
+                            class="text-[11px] h-8 rounded-lg cursor-pointer"
+                          >
+                            <span>تست لودینگ (Loading)</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p class="text-[11px] text-muted-foreground max-w-md leading-relaxed">
+                      دیالوگ‌های مدیریت ویراستاری را تست کنید. وضعیت‌های خالی (Empty)، در حال بارگذاری (Loading) و داده‌دار به طور کامل شبیه‌سازی شده‌اند.
+                    </p>
+                  </div>
+
+                  <!-- Always-Mounted Interactive Dialogs -->
+                  <EditorialQueueDialog
+                    v-model:open="isSimulatorQueueOpen"
+                    :proposals="simulatorEditorialProposals"
+                    topic-title="کانون تفکر و نوآوری"
+                    @approve="handleSimulatorProposalApprove"
+                    @reject="handleSimulatorProposalReject"
+                    @approve-all="handleSimulatorApproveAll"
+                  />
+
+                  <PostHistoryDialog
+                    v-model:open="isSimulatorHistoryOpen"
+                    :history="activeSimulatorHistory"
+                    :loading="simulatorHistoryLoading"
+                    :post-id="101"
+                  />
+                </div>
+
               </div>
             </div>
           </div>
@@ -4703,7 +5125,6 @@ const openDuplicateWarningSimulation = () => {
     />
 
     </div>
-  </div>
 </template>
 
 <style scoped>

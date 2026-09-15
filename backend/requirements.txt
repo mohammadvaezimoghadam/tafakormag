@@ -12,3 +12,4 @@ python-decouple
 kavenegar
 gunicorn>=20.1.0
 Pillow>=10.0.0
+jsonschema>=4.0

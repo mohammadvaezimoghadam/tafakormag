@@ -520,15 +520,43 @@ const getUserDisplayName = (user: UserSimple) => {
 
               <div class="flex flex-col gap-2 text-start">
                 <Label for="admin-custom-title" class="text-xs font-bold text-foreground/80">
-                  {{ languageStore.t('عنوان اختصاصی (اختیاری)', 'Custom Title (Optional)') }}
+                  {{ languageStore.t('عنوان و نقش اختصاصی (اختیاری)', 'Custom Title & Role (Optional)') }}
                 </Label>
                 <Input 
                   id="admin-custom-title"
                   v-model="customTitle"
                   type="text"
-                  :placeholder="languageStore.t('مثال: مدیر محتوا / Moderator', 'e.g. Content Manager / Moderator')"
+                  :placeholder="languageStore.t('مثال: ویراستار تاپیک / Editor', 'e.g. Topic Editor / Editor')"
                   class="h-10.5 text-xs font-semibold focus-visible:ring-primary/20 bg-background/25 border-border/60 rounded-xl text-start"
                 />
+                <!-- Quick Role Suggestions -->
+                <div class="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  <span class="text-[10px] text-muted-foreground">{{ languageStore.t('نقش‌های پیشنهادی:', 'Suggested:') }}</span>
+                  <button 
+                    type="button" 
+                    @click="customTitle = 'ویراستار تاپیک'"
+                    class="text-[10px] px-2 py-0.5 rounded-lg border border-border/60 hover:bg-primary/10 hover:border-primary/30 transition-all cursor-pointer"
+                    :class="customTitle === 'ویراستار تاپیک' ? 'bg-primary/15 border-primary/40 text-primary font-bold' : 'text-foreground/80'"
+                  >
+                    ✏️ {{ languageStore.t('ویراستار تاپیک', 'Topic Editor') }}
+                  </button>
+                  <button 
+                    type="button" 
+                    @click="customTitle = 'مدیر محتوا'"
+                    class="text-[10px] px-2 py-0.5 rounded-lg border border-border/60 hover:bg-primary/10 hover:border-primary/30 transition-all cursor-pointer"
+                    :class="customTitle === 'مدیر محتوا' ? 'bg-primary/15 border-primary/40 text-primary font-bold' : 'text-foreground/80'"
+                  >
+                    📝 {{ languageStore.t('مدیر محتوا', 'Content Manager') }}
+                  </button>
+                  <button 
+                    type="button" 
+                    @click="customTitle = 'پشتیبان فنی'"
+                    class="text-[10px] px-2 py-0.5 rounded-lg border border-border/60 hover:bg-primary/10 hover:border-primary/30 transition-all cursor-pointer"
+                    :class="customTitle === 'پشتیبان فنی' ? 'bg-primary/15 border-primary/40 text-primary font-bold' : 'text-foreground/80'"
+                  >
+                    🛠️ {{ languageStore.t('پشتیبان فنی', 'Technical Support') }}
+                  </button>
+                </div>
               </div>
 
               <!-- Submit CTA Button -->

@@ -3,7 +3,10 @@ from django.conf import settings
 from django.test import TestCase
 from django.db import IntegrityError
 from apps.accounts.models import User, MessagingTarget
-from apps.notes.models import Topic, Post, PostReaction, PostComment, BotTask, ImportTask, TopicAdmin, TopicFAQ
+from apps.notes.models import (
+    Topic, Post, PostReaction, PostComment, BotTask, ImportTask, TopicAdmin, TopicFAQ,
+    PostEditProposal, PostEditHistory
+)
 
 
 class NotesModelTests(TestCase):
@@ -1387,6 +1390,249 @@ class TopicAIChatTests(APITestCase):
             if s.get("type") == "post":
                 post_obj = Post.objects.get(id=s["id"])
                 self.assertEqual(post_obj.topic, self.topic)
+
+
+from apps.notes.services import create_edit_proposal, apply_edit_proposal, reject_edit_proposal, bulk_approve_proposals
+
+
+class EditorialWorkflowTests(APITestCase):
+    def setUp(self):
+        # 1. Topic Owner
+        self.owner = User.objects.create_user(phone="09121111111", password="password")
+        # 2. Topic Admin
+        self.admin_user = User.objects.create_user(phone="09122222222", password="password")
+        # 3. Editor (regular user)
+        self.editor = User.objects.create_user(phone="09123333333", password="password")
+        # 4. Another random user
+        self.random_user = User.objects.create_user(phone="09124444444", password="password")
+
+        # Create topic with Telegram connection
+        self.topic = Topic.objects.create(
+            name="تاپیک مدیریت محتوا",
+            description="بررسی و تولید محتوای تخصصی",
+            created_by=self.owner,
+            telegram_bot_active=True,
+            bale_bot_active=False
+        )
+        self.owner.telegram_bot_token = "123456:telegram_test_token"
+        self.owner.save()
+
+        # Add admin to topic
+        TopicAdmin.objects.create(topic=self.topic, user=self.admin_user, promoted_by=self.owner)
+
+        # Messaging target
+        self.target = MessagingTarget.objects.create(
+            user=self.owner,
+            chat_id="100200300",
+            label="کانال رسمی",
+            platform="telegram"
+        )
+        self.topic.telegram_connections.add(self.target)
+
+        # Create a published post
+        self.post = Post.objects.create(
+            topic=self.topic,
+            author=self.owner,
+            content="متن اولیه و خام پست قبل از هرگونه ویرایش ادبی.",
+            telegram_message_ids={"100200300": "5555"}
+        )
+
+    def test_create_edit_proposal_service(self):
+        """تست ایجاد موفقیت‌آمیز پیشنهاد ویرایش توسط سرویس"""
+        proposal = create_edit_proposal(
+            post=self.post,
+            editor=self.editor,
+            proposed_content="متن ویرایش‌شده و بهینه‌سازی شده پست.",
+            reason="اصلاح ساختار جملات"
+        )
+        self.assertEqual(proposal.status, "pending")
+        self.assertEqual(proposal.post, self.post)
+        self.assertEqual(proposal.editor, self.editor)
+        self.assertEqual(proposal.original_content, "متن اولیه و خام پست قبل از هرگونه ویرایش ادبی.")
+        self.assertEqual(proposal.proposed_content, "متن ویرایش‌شده و بهینه‌سازی شده پست.")
+        self.assertEqual(proposal.reason, "اصلاح ساختار جملات")
+
+    def test_create_edit_proposal_identical_fails(self):
+        """پیشنهاد ویرایش با متن یکسان با پست فعلی باید خطا بدهد"""
+        with self.assertRaises(ValueError):
+            create_edit_proposal(
+                post=self.post,
+                editor=self.editor,
+                proposed_content=self.post.content,
+                reason="هیچ تغییری داده نشده"
+            )
+
+    def test_apply_edit_proposal_updates_post_and_creates_history_and_bottask(self):
+        """تست تایید پیشنهاد ویرایش: آپدیت پست، ساخت تاریخچه و ایجاد BotTask ویرایش تلگرام"""
+        proposal = create_edit_proposal(
+            post=self.post,
+            editor=self.editor,
+            proposed_content="متن جدید و تاییدشده نهایی برای ارسال.",
+            reason="ویراستاری رسمی"
+        )
+
+        # Apply approval
+        approved = apply_edit_proposal(proposal, reviewer=self.owner, review_note="عالی است، تایید شد")
+        self.assertEqual(approved.status, "approved")
+        self.assertEqual(approved.reviewed_by, self.owner)
+        self.assertIsNotNone(approved.reviewed_at)
+
+        # Verify post content updated
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.content, "متن جدید و تاییدشده نهایی برای ارسال.")
+
+        # Verify PostEditHistory created
+        history = PostEditHistory.objects.filter(post=self.post).first()
+        self.assertIsNotNone(history)
+        self.assertEqual(history.editor, self.editor)
+        self.assertEqual(history.approved_by, self.owner)
+        self.assertEqual(history.previous_content, "متن اولیه و خام پست قبل از هرگونه ویرایش ادبی.")
+        self.assertEqual(history.new_content, "متن جدید و تاییدشده نهایی برای ارسال.")
+
+        # Verify BotTask with action='edit' was created for telegram
+        edit_task = BotTask.objects.filter(
+            post_id=self.post,
+            platform="telegram",
+            action="edit",
+            message_id="5555"
+        ).first()
+        self.assertIsNotNone(edit_task)
+        self.assertEqual(edit_task.chat_id, "100200300")
+
+    def test_reject_edit_proposal(self):
+        """تست رد پیشنهاد ویرایش: عدم تغییر متن پست و عدم ساخت BotTask"""
+        proposal = create_edit_proposal(
+            post=self.post,
+            editor=self.editor,
+            proposed_content="متن نامناسب.",
+            reason="تغییرات ضعیف"
+        )
+
+        initial_tasks = BotTask.objects.count()
+        rejected = reject_edit_proposal(proposal, reviewer=self.admin_user, review_note="محتوا مورد تایید نیست")
+
+        self.assertEqual(rejected.status, "rejected")
+        self.assertEqual(rejected.reviewed_by, self.admin_user)
+
+        # Post content must remain unchanged
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.content, "متن اولیه و خام پست قبل از هرگونه ویرایش ادبی.")
+
+        # No new BotTask
+        self.assertEqual(BotTask.objects.count(), initial_tasks)
+        self.assertEqual(PostEditHistory.objects.count(), 0)
+
+    def test_api_submit_proposal(self):
+        """تست اندپوینت POST /api/notes/editorial/proposals/"""
+        self.client.force_authenticate(user=self.editor)
+        url = "/api/notes/editorial/proposals/"
+        payload = {
+            "post_id": self.post.id,
+            "proposed_content": "متن ارسال شده از کلاینت فرانت‌اند.",
+            "reason": "تصحیح علائم نگارشی"
+        }
+        res = self.client.post(url, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["status"], "pending")
+        self.assertEqual(res.data["proposedContent"], "متن ارسال شده از کلاینت فرانت‌اند.")
+        self.assertEqual(res.data["postId"], self.post.id)
+
+    def test_api_approve_proposal_permission(self):
+        """تست مجوزهای تایید پیشنهاد از طریق API"""
+        proposal = create_edit_proposal(
+            post=self.post,
+            editor=self.editor,
+            proposed_content="متن تستی برای تست دسترسی",
+            reason="تست"
+        )
+
+        # کاربر تصادفی نباید بتواند تایید کند (403 Forbidden)
+        self.client.force_authenticate(user=self.random_user)
+        url = f"/api/notes/editorial/proposals/{proposal.id}/approve/"
+        res = self.client.post(url, {"review_note": "تلاش غیرمجاز"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+        # سایر ادمین‌های تاپیک فقط دسترسی مشاهده دارند و نباید بتوانند تایید کنند (403 Forbidden)
+        self.client.force_authenticate(user=self.admin_user)
+        res_admin = self.client.post(url, {"review_note": "تلاش ادمین دیگر"}, format="json")
+        self.assertEqual(res_admin.status_code, status.HTTP_403_FORBIDDEN)
+
+        # ادمین‌های دیگر تاپیک می‌توانند لیست را مشاهده کنند (200 OK)
+        res_list = self.client.get(f"/api/notes/editorial/proposals/?topic_id={self.topic.id}")
+        self.assertEqual(res_list.status_code, status.HTTP_200_OK)
+
+        # تنها سازنده / ادمین اصلی تاپیک مجاز به تایید است (200 OK)
+        self.client.force_authenticate(user=self.owner)
+        res_owner = self.client.post(url, {"review_note": "تایید ادمین اصلی"}, format="json")
+        self.assertEqual(res_owner.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_owner.data["status"], "approved")
+
+    def test_api_bulk_approve(self):
+        """تست اندپوینت تایید گروهی پیشنهادات معلق یک تاپیک"""
+        post2 = Post.objects.create(
+            topic=self.topic,
+            author=self.owner,
+            content="پست دوم تاپیک"
+        )
+        prop1 = create_edit_proposal(self.post, self.editor, "ویرایش ۱", "دلیل ۱")
+        prop2 = create_edit_proposal(post2, self.editor, "ویرایش ۲", "دلیل ۲")
+
+        self.client.force_authenticate(user=self.owner)
+        url = "/api/notes/editorial/proposals/approve-all/"
+        res = self.client.post(url, {"topic_id": self.topic.id}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["approved_count"], 2)
+
+        prop1.refresh_from_db()
+        prop2.refresh_from_db()
+        self.assertEqual(prop1.status, "approved")
+        self.assertEqual(prop2.status, "approved")
+
+    def test_api_post_history_retrieval(self):
+        """تست دریافت تاریخچه تغییرات پست از طریق اندپوینت تاریخچه"""
+        prop = create_edit_proposal(self.post, self.editor, "محتوای جدید ویرایش‌شده", "تغییر اول")
+        apply_edit_proposal(prop, reviewer=self.owner)
+
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/notes/editorial/history/?post_id={self.post.id}"
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]["newContent"], "محتوای جدید ویرایش‌شده")
+        self.assertEqual(res.data[0]["editor"]["name"], self.editor.phone)
+
+    def test_api_update_pending_proposal(self):
+        """تست به‌روزرسانی و ویرایش مجدد یک پیشنهاد معلق توسط ویراستار"""
+        prop = create_edit_proposal(self.post, self.editor, "متن پیشنهادی اولیه ویراستار", "دلیل اولیه")
+        self.client.force_authenticate(user=self.editor)
+        url = f"/api/notes/editorial/proposals/{prop.id}/"
+        
+        # 1. Successful update by editor
+        res = self.client.patch(url, {"proposed_content": "متن پیشنهادی اصلاح‌شده و دقیق‌تر"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        prop.refresh_from_db()
+        self.assertEqual(prop.proposed_content, "متن پیشنهادی اصلاح‌شده و دقیق‌تر")
+
+        # 2. Cannot update to empty content
+        res_empty = self.client.patch(url, {"proposed_content": "   "}, format="json")
+        self.assertEqual(res_empty.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 3. Cannot update to content matching original post
+        res_same = self.client.patch(url, {"proposed_content": self.post.content}, format="json")
+        self.assertEqual(res_same.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 4. Stranger cannot update proposal
+        stranger = User.objects.create_user(phone="09998887766", password="password")
+        self.client.force_authenticate(user=stranger)
+        res_forbidden = self.client.patch(url, {"proposed_content": "تغییر غیرمجاز"}, format="json")
+        self.assertIn(res_forbidden.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+        # 5. Cannot update already approved proposal
+        apply_edit_proposal(prop, reviewer=self.owner)
+        self.client.force_authenticate(user=self.editor)
+        res_approved = self.client.patch(url, {"proposed_content": "تلاش برای ویرایش پیشنهاد تاییدشده"}, format="json")
+        self.assertEqual(res_approved.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 
 

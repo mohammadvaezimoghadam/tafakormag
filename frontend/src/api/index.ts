@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useToastStore } from '../stores/toastStore'
 import { useUserStore } from '../stores/userStore'
+import type { PostEditProposal, PostEditHistoryItem } from '@/types/editorial'
 
 export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '') {
@@ -331,6 +332,58 @@ export const clearTopicChatHistory = (
 ) =>
   instance.post(`/api/notes/topics/${topicId}/chat-clear/`, {
     session_id: sessionId || undefined
+  })
+
+// --- Editorial Workflow API ---
+export const fetchEditProposals = (params?: {
+  topic_id?: string | number
+  post_id?: string | number
+  status?: string
+}) =>
+  instance.get<PostEditProposal[]>('/api/notes/editorial/proposals/', { params })
+
+export const submitEditProposal = (payload: {
+  post_id: string | number
+  proposed_content: string
+  reason?: string
+}) =>
+  instance.post<PostEditProposal>('/api/notes/editorial/proposals/', payload)
+
+export const updateEditProposal = (
+  proposalId: string | number,
+  payload: {
+    proposed_content?: string
+    proposedContent?: string
+    reason?: string
+  }
+) =>
+  instance.patch<PostEditProposal>(`/api/notes/editorial/proposals/${proposalId}/`, payload)
+
+export const approveEditProposal = (
+  proposalId: string | number,
+  reviewNote?: string
+) =>
+  instance.post<PostEditProposal>(`/api/notes/editorial/proposals/${proposalId}/approve/`, {
+    review_note: reviewNote || undefined
+  })
+
+export const rejectEditProposal = (
+  proposalId: string | number,
+  reviewNote?: string
+) =>
+  instance.post<PostEditProposal>(`/api/notes/editorial/proposals/${proposalId}/reject/`, {
+    review_note: reviewNote || undefined
+  })
+
+export const approveAllEditProposals = (topicId: string | number) =>
+  instance.post<{ message: string; approved_count: number }>(
+    '/api/notes/editorial/proposals/approve-all/',
+    { topic_id: topicId }
+  )
+
+export const fetchPostEditHistory = (postId: string | number) =>
+  instance.get<PostEditHistoryItem[]>('/api/notes/editorial/history/', {
+    params: { post_id: postId }
   })
 
 export default instance

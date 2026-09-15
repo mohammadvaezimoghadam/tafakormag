@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Topic, Post, PostReaction, PostComment, BotTask
+from .models import Topic, Post, PostReaction, PostComment, BotTask, PostEditProposal, PostEditHistory
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
@@ -28,3 +28,16 @@ class PostCommentAdmin(admin.ModelAdmin):
 class BotTaskAdmin(admin.ModelAdmin):
     list_display = ('id', 'action', 'platform', 'chat_id', 'processed', 'created_at')
     list_filter = ('platform', 'action', 'processed', 'created_at')
+
+@admin.register(PostEditProposal)
+class PostEditProposalAdmin(admin.ModelAdmin):
+    list_display = ('id', 'post', 'editor', 'status', 'reviewed_by', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('proposed_content', 'original_content', 'reason', 'editor__phone')
+
+@admin.register(PostEditHistory)
+class PostEditHistoryAdmin(admin.ModelAdmin):
+    list_display = ('id', 'post', 'editor', 'approved_by', 'applied_at')
+    list_filter = ('applied_at',)
+    search_fields = ('new_content', 'previous_content', 'summary_of_changes', 'editor__phone')
+

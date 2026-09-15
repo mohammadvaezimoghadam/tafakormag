@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin, TopicFAQ,
-    TopicChatSession, TopicChatMessage
+    TopicChatSession, TopicChatMessage, PostEditProposal, PostEditHistory
 )
 from apps.accounts.models import MessagingTarget
 
@@ -212,4 +212,105 @@ class TopicChatSessionSerializer(serializers.ModelSerializer):
 
 class TopicChatPromptSerializer(serializers.Serializer):
     message = serializers.CharField(max_length=3000, required=True)
-    session_id = serializers.UUIDField(required=False, allow_null=True)
+    session_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class EditorialUserSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'avatar', 'role']
+
+    def get_name(self, obj):
+        full_name = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
+        return full_name if full_name else obj.phone
+
+    def get_avatar(self, obj):
+        if obj.profile_image:
+            return obj.profile_image.url
+        return None
+
+    def get_role(self, obj):
+        topic = self.context.get('topic')
+        if topic and topic.created_by_id == obj.id:
+            return 'creator'
+        if topic and topic.admins.filter(user_id=obj.id).exists():
+            return 'admin'
+        return 'editor'
+
+
+class PostEditProposalSerializer(serializers.ModelSerializer):
+    editor = EditorialUserSerializer(read_only=True)
+    reviewed_by = EditorialUserSerializer(read_only=True)
+    post_id = serializers.PrimaryKeyRelatedField(
+        queryset=Post.objects.all(),
+        source='post',
+        write_only=True,
+        required=False
+    )
+    postId = serializers.IntegerField(source='post.id', read_only=True)
+    originalContent = serializers.CharField(source='original_content', read_only=True)
+    proposedContent = serializers.CharField(source='proposed_content', read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+    reviewedAt = serializers.DateTimeField(source='reviewed_at', read_only=True)
+    reviewNote = serializers.CharField(source='review_note', required=False, allow_blank=True)
+    postTitle = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PostEditProposal
+        fields = [
+            'id', 'post_id', 'postId', 'postTitle', 'editor',
+            'original_content', 'originalContent',
+            'proposed_content', 'proposedContent',
+            'reason', 'status', 'reviewed_by', 'reviewedAt', 'reviewNote',
+            'created_at', 'createdAt', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'editor', 'original_content', 'originalContent', 'proposedContent', 'status',
+            'reviewed_by', 'reviewed_at', 'created_at', 'updated_at'
+        ]
+
+    def validate(self, attrs):
+        if self.instance is None and 'post' not in attrs:
+            raise serializers.ValidationError({"post_id": "شناسه پست الزامی است."})
+        return super().validate(attrs)
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        if 'proposedContent' in data and 'proposed_content' not in data:
+            data['proposed_content'] = data['proposedContent']
+        if 'postId' in data and 'post_id' not in data:
+            data['post_id'] = data['postId']
+        return super().to_internal_value(data)
+
+    def get_postTitle(self, obj):
+        if obj.post and obj.post.topic:
+            return obj.post.topic.name
+        return ""
+
+
+class PostEditHistorySerializer(serializers.ModelSerializer):
+    editor = EditorialUserSerializer(read_only=True)
+    approved_by = EditorialUserSerializer(read_only=True)
+    approvedBy = EditorialUserSerializer(source='approved_by', read_only=True)
+    postId = serializers.IntegerField(source='post.id', read_only=True)
+    proposalId = serializers.UUIDField(source='proposal.id', read_only=True)
+    previousContent = serializers.CharField(source='previous_content', read_only=True)
+    newContent = serializers.CharField(source='new_content', read_only=True)
+    summaryOfChanges = serializers.CharField(source='summary_of_changes', read_only=True)
+    appliedAt = serializers.DateTimeField(source='applied_at', read_only=True)
+
+    class Meta:
+        model = PostEditHistory
+        fields = [
+            'id', 'postId', 'proposalId', 'editor', 'approved_by', 'approvedBy',
+            'previous_content', 'previousContent',
+            'new_content', 'newContent',
+            'summary_of_changes', 'summaryOfChanges',
+            'applied_at', 'appliedAt'
+        ]
+        read_only_fields = fields
+

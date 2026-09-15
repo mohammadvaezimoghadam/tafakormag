@@ -67,6 +67,8 @@ const props = withDefaults(defineProps<{
   initialText?: string
   initialAttachments?: Attachment[]
   isEditMode?: boolean
+  isProposalMode?: boolean
+  proposalBannerText?: string
   allowAttachments?: boolean
   allowVoice?: boolean
   allowPlugins?: boolean
@@ -76,6 +78,8 @@ const props = withDefaults(defineProps<{
   initialText: '',
   initialAttachments: () => [],
   isEditMode: false,
+  isProposalMode: false,
+  proposalBannerText: '',
   allowAttachments: true,
   allowVoice: true,
   allowPlugins: true
@@ -86,12 +90,15 @@ const emit = defineEmits<{
   (e: 'input-change', text: string): void
   (e: 'update:text', text: string): void
   (e: 'attach'): void
+  (e: 'attach-file', file: File): void
   (e: 'plus'): void
   (e: 'create-donation'): void
   (e: 'recordVoice'): void
   (e: 'removeAttachment', id: string | number): void
   (e: 'save', message: { text: string }): void
   (e: 'cancel-edit'): void
+  (e: 'submit-proposal', message: { text: string }): void
+  (e: 'cancel-proposal'): void
 }>()
 
 // Local state
@@ -362,11 +369,13 @@ onMounted(() => {
   })
   document.addEventListener('selectionchange', handleGlobalSelectionChange)
   window.addEventListener('pointerdown', handleOutsidePointer)
+  window.addEventListener('touchstart', handleOutsidePointer, { passive: true })
 })
 
 onUnmounted(() => {
   document.removeEventListener('selectionchange', handleGlobalSelectionChange)
   window.removeEventListener('pointerdown', handleOutsidePointer)
+  window.removeEventListener('touchstart', handleOutsidePointer)
   if (typeof window !== 'undefined') {
     if (window.visualViewport) {
       window.visualViewport.removeEventListener('resize', handleVisualViewportChange)
@@ -411,6 +420,13 @@ const handleSend = async () => {
 
   const resolvedText = await resolveTokens(text.value.trim())
 
+  if (props.isProposalMode) {
+    emit('submit-proposal', {
+      text: resolvedText
+    })
+    return
+  }
+
   if (props.isEditMode) {
     emit('save', {
       text: resolvedText
@@ -447,6 +463,10 @@ const menuMode = ref<'full' | 'context' | 'auto'>('auto')
 const menuCoords = ref<MenuCoords | null>(null)
 const selectedText = ref('')
 const expandedSelectedText = ref('')
+const lastSelectionStart = ref(0)
+const lastSelectionEnd = ref(0)
+const expandedLastSelectionStart = ref(0)
+const expandedLastSelectionEnd = ref(0)
 
 // Helpers to detect active formats on selected text
 const isBoldActive = (isExpanded = false) => {
@@ -487,6 +507,14 @@ const handleTextareaSelect = (isExpanded = false) => {
   const start = el.selectionStart ?? 0
   const end = el.selectionEnd ?? 0
 
+  if (isExpanded) {
+    expandedLastSelectionStart.value = start
+    expandedLastSelectionEnd.value = end
+  } else {
+    lastSelectionStart.value = start
+    lastSelectionEnd.value = end
+  }
+
   if (start >= end) {
     if (isExpanded) {
       expandedSelectedText.value = ''
@@ -515,22 +543,16 @@ const handleTextareaSelect = (isExpanded = false) => {
     return
   }
 
-  // Collapsed input: only show floating toolbar on desktop (no touch interference)
-  if (isMobile()) {
-    showFormatMenu.value = false
-    selectedText.value = ''
-    return
-  }
-
   const rect = getSelectionPixelRect(el, start, end)
-  const menuWidth = 330
+  const menuWidth = Math.min(330, (typeof window !== 'undefined' ? window.innerWidth - 32 : 300))
   const menuHeight = 40
   const verticalGap = 10
 
+  const containerWidth = el.clientWidth || 320
   const centerX = rect.left + (rect.width / 2)
-  const minX = (menuWidth / 2) + 12
-  const maxX = Math.max(minX, el.clientWidth - (menuWidth / 2) - 12)
-  const clampedX = Math.min(Math.max(centerX, minX), maxX)
+  const minX = Math.min((menuWidth / 2) + 8, containerWidth / 2)
+  const maxX = Math.max(minX, containerWidth - (menuWidth / 2) - 8)
+  const clampedX = Math.min(Math.max(centerX, 24), Math.max(24, containerWidth - 24))
 
   const top = Math.min(rect.top - menuHeight - verticalGap, -menuHeight - 6)
 
@@ -562,8 +584,15 @@ const handleMenuAction = async (action: ActionType, isExpanded = false) => {
   const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
   if (!el) return
 
-  const start = el.selectionStart ?? 0
-  const end = el.selectionEnd ?? 0
+  let start = el.selectionStart ?? 0
+  let end = el.selectionEnd ?? 0
+  const savedStart = isExpanded ? expandedLastSelectionStart.value : lastSelectionStart.value
+  const savedEnd = isExpanded ? expandedLastSelectionEnd.value : lastSelectionEnd.value
+  if (start === end && savedEnd > savedStart) {
+    start = savedStart
+    end = savedEnd
+  }
+
   const sel = el.value.substring(start, end)
 
   if (action === 'copy') {
@@ -621,10 +650,47 @@ const applyFormat = (format: FormatType, isExpanded = false) => {
   const el = isExpanded ? expandedTextareaRef.value : textareaRef.value
   if (!el) return
 
-  const start = el.selectionStart ?? 0
-  const end = el.selectionEnd ?? 0
-  const res = wrapSelection(text.value, start, end, format)
+  let start = el.selectionStart ?? 0
+  let end = el.selectionEnd ?? 0
+  const savedStart = isExpanded ? expandedLastSelectionStart.value : lastSelectionStart.value
+  const savedEnd = isExpanded ? expandedLastSelectionEnd.value : lastSelectionEnd.value
+
+  // If selection in element collapsed or lost on mobile/click, use saved selection
+  if (start === end && savedEnd > savedStart) {
+    start = savedStart
+    end = savedEnd
+  }
+
+  const currentVal = text.value || ''
+  // If still collapsed, check if cursor is on/inside a word and wrap the word
+  if (start === end && currentVal) {
+    const cur = start
+    let wordStart = cur
+    let wordEnd = cur
+    while (wordStart > 0 && !/\s|[.,!?;:()[\]{}]/.test(currentVal.charAt(wordStart - 1))) {
+      wordStart--
+    }
+    while (wordEnd < currentVal.length && !/\s|[.,!?;:()[\]{}]/.test(currentVal.charAt(wordEnd))) {
+      wordEnd++
+    }
+    if (wordEnd > wordStart) {
+      start = wordStart
+      end = wordEnd
+    }
+  }
+
+  const res = wrapSelection(currentVal, start, end, format)
   text.value = res.newText
+
+  if (isExpanded) {
+    expandedLastSelectionStart.value = res.newCursorStart
+    expandedLastSelectionEnd.value = res.newCursorEnd
+    expandedSelectedText.value = (res.newText || '').substring(res.newCursorStart, res.newCursorEnd)
+  } else {
+    lastSelectionStart.value = res.newCursorStart
+    lastSelectionEnd.value = res.newCursorEnd
+    selectedText.value = (res.newText || '').substring(res.newCursorStart, res.newCursorEnd)
+  }
 
   nextTick(() => {
     el.focus()
@@ -674,6 +740,16 @@ const handleKeydown = (event: KeyboardEvent, isExpanded = false) => {
   }
 }
 
+// Voice Recording & Touch Gestures State
+const isVoiceLocked = ref(false)
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const touchCurrentX = ref(0)
+const touchCurrentY = ref(0)
+const isSwipingToCancel = ref(false)
+const isSwipingToLock = ref(false)
+const voiceTouchStartTime = ref(0)
+
 // Start Voice Recording
 const startRecording = () => {
   if (props.disabled) return
@@ -682,9 +758,82 @@ const startRecording = () => {
   emit('recordVoice')
 }
 
+// Touch Gestures for Voice (Hold to Record, Swipe Left to Cancel, Swipe Up to Lock)
+const handleVoiceTouchStart = (e: TouchEvent) => {
+  if (props.disabled || !props.allowVoice) return
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+  touchCurrentX.value = touch.clientX
+  touchCurrentY.value = touch.clientY
+  voiceTouchStartTime.value = Date.now()
+  isSwipingToCancel.value = false
+  isSwipingToLock.value = false
+  isVoiceLocked.value = false
+
+  startRecording()
+}
+
+const handleVoiceTouchMove = (e: TouchEvent) => {
+  if (!isRecording.value || isVoiceLocked.value) return
+  const touch = e.touches[0]
+  if (!touch) return
+  touchCurrentX.value = touch.clientX
+  touchCurrentY.value = touch.clientY
+
+  const deltaX = touch.clientX - touchStartX.value
+  const deltaY = touch.clientY - touchStartY.value
+  const absDeltaX = Math.abs(deltaX)
+
+  // Swiping sideways (> 50px) to cancel
+  if (absDeltaX > 50 && Math.abs(deltaY) < 60) {
+    isSwipingToCancel.value = true
+  } else {
+    isSwipingToCancel.value = false
+  }
+
+  // Swiping upwards (< -50px) locks hands-free recording
+  if (deltaY < -50 && absDeltaX < 60) {
+    isSwipingToLock.value = true
+  } else {
+    isSwipingToLock.value = false
+  }
+}
+
+const handleVoiceTouchEnd = () => {
+  if (!isRecording.value) return
+  const holdDuration = Date.now() - voiceTouchStartTime.value
+
+  if (isSwipingToCancel.value) {
+    cancelRecording()
+    return
+  }
+
+  if (isSwipingToLock.value) {
+    isVoiceLocked.value = true
+    isSwipingToLock.value = false
+    return
+  }
+
+  if (isVoiceLocked.value) {
+    return
+  }
+
+  if (holdDuration > 500) {
+    completeRecording()
+  } else {
+    // Quick tap (< 500ms): stay recording in hands-free mode so normal tap also works
+    isVoiceLocked.value = true
+  }
+}
+
 // Cancel / Discard Voice Recording
 const cancelRecording = () => {
   isRecording.value = false
+  isVoiceLocked.value = false
+  isSwipingToCancel.value = false
+  isSwipingToLock.value = false
   stopTimer()
   recordingSeconds.value = 0
 }
@@ -694,6 +843,9 @@ const completeRecording = () => {
   if (props.disabled) return
   const durationStr = formattedTime.value
   isRecording.value = false
+  isVoiceLocked.value = false
+  isSwipingToCancel.value = false
+  isSwipingToLock.value = false
   stopTimer()
 
   // Generate a mock audio attachment to represent the voice recording
@@ -711,6 +863,50 @@ const completeRecording = () => {
     text: '',
     attachments: [voiceAttachment]
   })
+}
+
+// Add pasted file directly to attachments
+const addAttachmentFromFile = (file: File) => {
+  if (!props.allowAttachments) return
+  let fileType: 'image' | 'video' | 'audio' | 'file' = 'file'
+  if (file.type.startsWith('image/')) fileType = 'image'
+  else if (file.type.startsWith('video/')) fileType = 'video'
+  else if (file.type.startsWith('audio/')) fileType = 'audio'
+
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+  const previewUrl = fileType === 'image' ? URL.createObjectURL(file) : ''
+
+  const newAttachment: Attachment = {
+    id: `paste_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    name: file.name || 'Pasted Media',
+    type: fileType,
+    url: previewUrl,
+    size: sizeMB,
+    status: 'completed',
+    progress: 100
+  }
+  attachments.value.push(newAttachment)
+  emit('attach-file', file)
+  nextTick(() => {
+    adjustHeight()
+  })
+}
+
+// Intercept clipboard paste to handle pasted screenshots/images on touch & desktop
+const handlePaste = (e: ClipboardEvent) => {
+  const items = e.clipboardData?.items
+  if (!items) return
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+    if (item && item.kind === 'file') {
+      const file = item.getAsFile()
+      if (file) {
+        e.preventDefault()
+        addAttachmentFromFile(file)
+      }
+    }
+  }
 }
 
 const handleAttachClick = () => {
@@ -738,14 +934,19 @@ const handleRemoveAttachment = (id: string | number) => {
 
 // Dynamic classes based on attachment status
 const containerClasses = computed(() => {
-  if (hasAttachments.value || (isLongText.value && !isRecording.value) || props.isEditMode || isSlashModalOpen.value) {
-    return 'w-full flex flex-col relative bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 rounded-3xl p-1.5 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-white focus-within:dark:bg-muted/25'
+  if (hasAttachments.value || (isLongText.value && !isRecording.value) || props.isEditMode || props.isProposalMode || isSlashModalOpen.value) {
+    const borderAccent = props.isProposalMode
+      ? 'border-orange-500/40 dark:border-orange-500/30 focus-within:border-orange-500/60 shadow-xs'
+      : (props.isEditMode
+          ? 'border-emerald-500/40 dark:border-emerald-500/30 focus-within:border-emerald-500/60 shadow-xs'
+          : 'border-border/40 dark:border-border/20 focus-within:border-primary/40')
+    return `w-full flex flex-col relative bg-white dark:bg-muted/20 border rounded-3xl p-1.5 transition-all duration-300 focus-within:bg-white focus-within:dark:bg-muted/25 ${borderAccent} animate-in fade-in slide-in-from-bottom-2 duration-300`
   }
   return 'w-full flex flex-col relative transition-all duration-300'
 })
 
 const textareaClasses = computed(() => {
-  if (hasAttachments.value || (isLongText.value && !isRecording.value) || isSlashModalOpen.value) {
+  if (hasAttachments.value || (isLongText.value && !isRecording.value) || isSlashModalOpen.value || props.isEditMode || props.isProposalMode) {
     return 'w-full bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-1.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
   }
   return 'w-full bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
@@ -762,15 +963,38 @@ import { useLanguageStore } from '@/stores/languageStore'
 const languageStore = useLanguageStore()
 
 const resolvedPlaceholder = computed(() => {
-  let ph = props.placeholder === 'پیام خود را بنویسید...'
-    ? languageStore.t('پیام خود را بنویسید...\u200F', 'Type your message...')
-    : (props.placeholder || '')
+  let ph = ''
+  if (props.isProposalMode && props.placeholder === 'پیام خود را بنویسید...') {
+    ph = languageStore.t('پیشنهاد ویرایش خود را بنویسید...\u200F', 'Write your edit proposal...')
+  } else {
+    ph = props.placeholder === 'پیام خود را بنویسید...'
+      ? languageStore.t('پیام خود را بنویسید...\u200F', 'Type your message...')
+      : (props.placeholder || '')
+  }
   if (ph && (ph.endsWith('...') || ph.endsWith('…')) && languageStore.dir === 'rtl') {
     if (!ph.endsWith('\u200F')) {
       ph = ph + '\u200F'
     }
   }
   return ph
+})
+
+// Smart text direction to avoid jarring jumping on mixed Persian/English/commands
+const computedTextDirection = computed(() => {
+  if (!text.value || !text.value.trim()) {
+    return languageStore.dir || 'rtl'
+  }
+  // Check if text contains any Persian or Arabic characters
+  const hasPersianArabic = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text.value)
+  if (hasPersianArabic) {
+    return 'rtl'
+  }
+  // If text starts with Latin characters and has no Persian/Arabic, then LTR
+  const startsWithLatin = /^[a-zA-Z]/.test(text.value.trim())
+  if (startsWithLatin) {
+    return 'ltr'
+  }
+  return languageStore.dir || 'rtl'
 })
 
 const pluginRegistry = usePluginRegistryStore()
@@ -1010,7 +1234,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
     <transition name="attachments-slide">
       <div 
         v-if="isSlashModalOpen && !showExpanded"
-        class="w-full z-20 text-start pb-2 px-1"
+        class="w-full z-20 text-start pb-2 px-1 max-h-[35vh] overflow-y-auto scrollbar-thin"
       >
         <PluginSlashCommandModal
           :is-open="isSlashModalOpen && !showExpanded"
@@ -1031,24 +1255,11 @@ const handlePluginInsert = (insertedMarkdown: string) => {
       :dir="languageStore.dir"
     >
       
-      <!-- Right Element: Attach File Button / Plus Menu Button / Cancel Recording Button / Cancel Edit Button -->
+      <!-- Start Element: Cancel Recording OR Action Buttons (Plus & Attach) -->
       <transition name="button-pop" mode="out-in">
-        <!-- Cancel Edit Button -->
-        <Button
-          v-if="props.isEditMode"
-          key="cancel-edit-btn"
-          variant="outline"
-          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-destructive/20 rounded-2xl"
-          :title="languageStore.t('لغو ویرایش', 'Cancel edit')"
-          @click="emit('cancel-edit')"
-        >
-          <XIcon class="transition-transform duration-200 group-hover:scale-110" />
-        </Button>
-
         <!-- Cancel Recording Button -->
         <Button 
-          v-else-if="isRecording"
+          v-if="isRecording"
           key="cancel-record"
           variant="destructive"
           :size="hasAttachments ? 'icon' : 'icon-lg'"
@@ -1134,7 +1345,17 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           >
             <div class="flex items-center gap-2">
               <span class="size-1.5 bg-destructive rounded-full animate-pulse" />
-              <span class="text-[10px] font-bold text-destructive/80">{{ languageStore.t('در حال ضبط صدا...', 'Recording voice...') }}</span>
+              <span class="text-[10px] font-bold text-destructive/80">
+                <template v-if="isSwipingToCancel">
+                  {{ languageStore.t('رها کنید تا لغو شود...', 'Release to cancel...') }}
+                </template>
+                <template v-else-if="!isVoiceLocked">
+                  {{ languageStore.t('‹ برای لغو به چپ بکشید', '‹ Slide left to cancel') }}
+                </template>
+                <template v-else>
+                  {{ languageStore.t('در حال ضبط صدا...', 'Recording voice...') }}
+                </template>
+              </span>
             </div>
             <span class="font-mono text-[11px] font-bold text-destructive/90">{{ formattedTime }}</span>
           </div>
@@ -1149,12 +1370,13 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             :placeholder="resolvedPlaceholder"
             rows="1"
             :class="textareaClasses"
-            :dir="text ? 'auto' : (languageStore.dir || 'rtl')"
+            :dir="computedTextDirection"
             @select="handleTextareaSelect(false)"
             @mouseup="handleTextareaSelect(false)"
             @keyup="handleTextareaSelect(false)"
             @blur="handleTextareaBlur(false)"
             @keydown="(e) => handleKeydown(e, false)"
+            @paste="handlePaste"
           />
         </transition>
 
@@ -1170,21 +1392,81 @@ const handlePluginInsert = (insertedMarkdown: string) => {
         />
       </div>
 
-      <!-- Left Element: Send Button / Record Voice Button / Save Edit Button -->
+      <!-- End Element: Send Button / Record Voice Button / Save Edit Button / Submit Proposal Button -->
       <transition name="button-pop" mode="out-in">
-        <!-- Save Edit Button -->
-        <Button
-          v-if="props.isEditMode"
-          key="save-edit-btn"
-          variant="default"
-          :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all duration-200 rounded-2xl border-none"
-          :disabled="props.disabled || !hasContent"
-          :title="languageStore.t('ذخیره تغییرات', 'Save changes')"
-          @click="handleSend"
+        <!-- Submit Proposal Button Group (Editorial Mode) -->
+        <div
+          v-if="props.isProposalMode"
+          key="submit-proposal-group"
+          class="flex items-center gap-1 shrink-0"
         >
-          <CheckIcon class="transition-transform duration-200 group-hover:scale-110" />
-        </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="size-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all cursor-pointer"
+            :title="languageStore.t('انصراف از پیشنهاد', 'Cancel proposal')"
+            @click="emit('cancel-proposal')"
+          >
+            <XIcon class="size-4" />
+          </Button>
+
+          <Button
+            type="button"
+            variant="default"
+            :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+            class="group bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white shadow-md shadow-orange-500/25 active:scale-95 transition-all duration-200 rounded-2xl border-none cursor-pointer"
+            :disabled="props.disabled || !hasContent"
+            :title="languageStore.t('ارسال به میز ویراستاری', 'Send to Editorial Desk')"
+            @click="handleSend"
+          >
+            <SendIcon 
+              class="-rotate-45 transition-transform duration-200 group-hover:scale-110" 
+              :class="[
+                languageStore.isFa 
+                  ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
+                  : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
+              ]"
+            />
+          </Button>
+        </div>
+
+        <!-- Save Edit Button Group (Edit Mode) -->
+        <div
+          v-else-if="props.isEditMode"
+          key="save-edit-group"
+          class="flex items-center gap-1 shrink-0"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="size-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all cursor-pointer"
+            :title="languageStore.t('انصراف از ویرایش', 'Cancel edit')"
+            @click="emit('cancel-edit')"
+          >
+            <XIcon class="size-4" />
+          </Button>
+
+          <Button
+            type="button"
+            variant="default"
+            :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
+            class="group bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/25 active:scale-95 transition-all duration-200 rounded-2xl border-none cursor-pointer"
+            :disabled="props.disabled || !hasContent"
+            :title="languageStore.t('ذخیره تغییرات', 'Save changes')"
+            @click="handleSend"
+          >
+            <SendIcon 
+              class="-rotate-45 transition-transform duration-200 group-hover:scale-110" 
+              :class="[
+                languageStore.isFa 
+                  ? 'scale-x-[-1] group-hover:translate-x-[-2px] group-hover:translate-y-[1px]' 
+                  : 'group-hover:translate-x-[2px] group-hover:translate-y-[-1px]'
+              ]"
+            />
+          </Button>
+        </div>
 
         <!-- Stop/Send Recording Button -->
         <Button 
@@ -1225,10 +1507,15 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           key="record-voice"
           variant="outline"
           :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
+          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40 touch-none select-none"
           :disabled="props.disabled"
-          :title="languageStore.t('ضبط صدا', 'Record voice')"
+          :title="languageStore.t('ضبط صدا (برای ضبط نگه دارید)', 'Record voice (Hold to record)')"
           @click="startRecording"
+          @touchstart.passive="handleVoiceTouchStart"
+          @touchmove.passive="handleVoiceTouchMove"
+          @touchend="handleVoiceTouchEnd"
+          @touchcancel="cancelRecording"
+          @contextmenu.prevent
         >
           <MicIcon class="transition-transform duration-200 group-hover:scale-110" />
         </Button>
@@ -1310,7 +1597,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
         <!-- Header -->
         <div class="px-6 pb-3 border-b border-border/40 flex items-center justify-between shrink-0">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-black text-foreground">{{ props.isEditMode ? languageStore.t('ویرایش پیام', 'Edit Message') : languageStore.t('ویرایش پیام طولانی', 'Edit Long Message') }}</span>
+            <span class="text-sm font-black text-foreground">{{ props.isProposalMode ? languageStore.t('پیشنهاد ویراستاری', 'Editorial Proposal') : (props.isEditMode ? languageStore.t('ویرایش پیام', 'Edit Message') : languageStore.t('ویرایش پیام طولانی', 'Edit Long Message')) }}</span>
             <span class="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">{{ languageStore.t('نمای بزرگ', 'Expanded View') }}</span>
           </div>
           
@@ -1361,13 +1648,14 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             v-model="text"
             :placeholder="resolvedPlaceholder"
             class="w-full flex-1 bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-sm font-semibold leading-relaxed text-foreground placeholder:text-muted-foreground/50 resize-none overflow-y-auto scrollbar-thin text-start"
-            :dir="text ? 'auto' : (languageStore.dir || 'rtl')"
+            :dir="computedTextDirection"
             @select="handleTextareaSelect(true)"
             @mouseup="handleTextareaSelect(true)"
             @keyup="handleTextareaSelect(true)"
             @focus="handleExpandedTextareaFocus"
             @blur="handleExpandedTextareaBlur"
             @keydown="(e) => handleKeydown(e, true)"
+            @paste="handlePaste"
           />
         </div>
 
@@ -1375,7 +1663,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
         <transition name="attachments-slide">
           <div 
             v-if="isSlashModalOpen" 
-            class="px-6 pb-2 z-30 shrink-0"
+            class="px-6 pb-2 z-30 shrink-0 max-h-[35vh] overflow-y-auto scrollbar-thin"
           >
             <PluginSlashCommandModal
               :is-open="isSlashModalOpen"
@@ -1526,12 +1814,14 @@ const handlePluginInsert = (insertedMarkdown: string) => {
                 size="icon"
                 class="group rounded-xl active:scale-95 transition-all duration-200 cursor-pointer outline-none disabled:pointer-events-none disabled:opacity-50 shrink-0"
                 :class="[
-                  hasContent 
-                    ? 'bg-primary text-primary-foreground border-none' 
-                    : 'border border-border/40 text-muted-foreground'
+                  props.isProposalMode && hasContent
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white border-none shadow-md shadow-orange-500/20'
+                    : (hasContent 
+                        ? 'bg-primary text-primary-foreground border-none' 
+                        : 'border border-border/40 text-muted-foreground')
                 ]"
                 :disabled="props.disabled || !hasContent"
-                :title="props.isEditMode ? languageStore.t('ذخیره تغییرات', 'Save Changes') : languageStore.t('ارسال پیام', 'Send Message')"
+                :title="props.isProposalMode ? languageStore.t('ارسال به میز ویراستاری', 'Send to Editorial Desk') : (props.isEditMode ? languageStore.t('ذخیره تغییرات', 'Save Changes') : languageStore.t('ارسال پیام', 'Send Message'))"
                 @click="handleSendFromModal"
               >
                 <SendIcon 

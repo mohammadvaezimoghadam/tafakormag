@@ -275,6 +275,9 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
 
   // --- Active & Installed Status Checks ---
   const isPluginInstalled = (identifier: string): boolean => {
+    // Quran is universally active and installed globally for all users
+    if (identifier === 'quran') return true
+
     if (identifier in localInstalledMap.value) {
       return Boolean(localInstalledMap.value[identifier])
     }
@@ -292,12 +295,13 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
       return backend.is_installed
     }
 
-    // Default for officially registered plugins is installed unless uninstalled
-    if (identifier === 'quran') return true
     return false
   }
 
   const isPluginActive = (identifier: string): boolean => {
+    // Quran is universally active globally for all slash commands
+    if (identifier === 'quran') return true
+
     const registered = registeredPlugins.value.get(identifier)
     if (registered?.manifest.is_core) return true
 

@@ -7,7 +7,8 @@ import {
   PencilIcon, 
   CopyIcon, 
   Trash2Icon,
-  SendIcon
+  SendIcon,
+  HistoryIcon
 } from '@lucide/vue'
 
 const props = withDefaults(defineProps<{
@@ -29,12 +30,14 @@ const emit = defineEmits<{
   (e: 'pin', id: string | number): void
   (e: 'react', id: string | number, emoji: string): void
   (e: 'copy', id: string | number): void
+  (e: 'history', id: string | number): void
+  (e: 'propose-edit', id: string | number): void
 }>()
 
 // Calculate dynamic styles for the floating menu based on touch position or trigger card
 const menuWidth = 224 // w-56 is 224px
 const menuHeight = computed(() => {
-  const baseHeight = 76 // Copy + Publication Status
+  const baseHeight = 114 // Copy + Publication Status + History
   const ownerExtra = props.isOwner ? 80 : 0 // Edit + Delete + Divider
   return baseHeight + ownerExtra
 })
@@ -129,7 +132,7 @@ const copyToClipboard = async (text: string) => {
   }
 }
 
-const handleAction = async (action: 'edit' | 'delete' | 'copy' | 'publication-status') => {
+const handleAction = async (action: 'edit' | 'delete' | 'copy' | 'publication-status' | 'history' | 'propose-edit') => {
   if (action === 'copy') {
     if (props.postText) {
       await copyToClipboard(props.postText)
@@ -141,6 +144,10 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy' | 'publication-st
     emit('delete', props.postId)
   } else if (action === 'publication-status') {
     emit('publication-status', props.postId)
+  } else if (action === 'history') {
+    emit('history', props.postId)
+  } else if (action === 'propose-edit') {
+    emit('propose-edit', props.postId)
   }
   emit('close')
 }
@@ -181,6 +188,25 @@ const handleAction = async (action: 'edit' | 'delete' | 'copy' | 'publication-st
           >
             <span>{{ languageStore.t('وضعیت انتشار', 'Publication Status') }}</span>
             <SendIcon class="size-3.5 text-primary" />
+          </button>
+
+          <!-- Edit History -->
+          <button 
+            @click="handleAction('history')" 
+            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          >
+            <span>{{ languageStore.t('تاریخچه ویرایش‌ها', 'Edit History') }}</span>
+            <HistoryIcon class="size-3.5 text-muted-foreground" />
+          </button>
+
+          <!-- Suggest Edit (Editorial proposal for non-owner members/editors) -->
+          <button 
+            v-if="!isOwner"
+            @click="handleAction('propose-edit')" 
+            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          >
+            <span>{{ languageStore.t('پیشنهاد ویرایش (ویراستاری)', 'Suggest Edit') }}</span>
+            <PencilIcon class="size-3.5 text-primary" />
           </button>
 
           <template v-if="isOwner">

@@ -53,7 +53,8 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
       <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
     </button>
 
-    <!-- Marketplace Tab -->
+    <!-- Marketplace Tab (Temporarily disabled as requested) -->
+    <!--
     <button
       @click="selectTab('marketplace')"
       :class="[
@@ -67,6 +68,7 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
       <LayersIcon class="size-3.5 shrink-0" />
       <span>{{ languageStore.t('بازارچه', 'Marketplace') }}</span>
     </button>
+    -->
 
     <!-- Profile Tab -->
     <button

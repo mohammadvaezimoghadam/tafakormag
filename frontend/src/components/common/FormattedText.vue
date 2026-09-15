@@ -34,4 +34,27 @@ const parsedContent = computed(() => parseMarkdownToHtml(props.content || props.
   direction: ltr;
   unicode-bidi: embed;
 }
+
+:deep(strong) {
+  font-weight: 800 !important;
+  color: inherit;
+}
+
+:deep(em) {
+  font-style: italic;
+  display: inline;
+  font-synthesis: style;
+  letter-spacing: 0.01em;
+}
+
+:deep(u) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+:deep(del) {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
 </style>

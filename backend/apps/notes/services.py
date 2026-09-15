@@ -12,7 +12,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware, is_aware, now as tz_now
 from django.db import close_old_connections
 from apps.accounts.models import MessagingTarget
-from .models import BotTask, Post, ImportTask
+from .models import BotTask, Post, ImportTask, PostEditProposal, PostEditHistory
 
 logger = logging.getLogger("notes.services")
 
@@ -24,6 +24,21 @@ def safe_close_old_connections():
             close_old_connections()
         except Exception:
             pass
+
+
+def update_topic_description(topic):
+    """
+    Updates topic description based on the latest post in the topic.
+    """
+    if not topic:
+        return
+    latest_post = topic.posts.all().order_by('-created_at').first()
+    if latest_post and latest_post.content:
+        snippet = latest_post.content[:150] + "..." if len(latest_post.content) > 150 else latest_post.content
+        topic.description = snippet
+    else:
+        topic.description = ""
+    topic.save()
 
 
 def check_duplicate_message(topic_id: str | int, content_hash: str) -> tuple[bool, Optional[Post]]:
@@ -765,3 +780,145 @@ def process_telegram_zip_import(task_id: str, zip_filepath: str) -> None:
                 logger.info(f"Cleaned up temp ZIP file: {zip_filepath}")
             except Exception as e:
                 logger.warning(f"Failed to remove temp ZIP file {zip_filepath}: {str(e)}")
+
+
+def create_edit_proposal(post: Post, editor: Any, proposed_content: str, reason: str = "") -> PostEditProposal:
+    """
+    Creates a new edit proposal for a post.
+    Validates that proposed_content is provided and not identical to current post.content.
+    """
+    if not proposed_content or not proposed_content.strip():
+        raise ValueError("متن پیشنهادی نمی‌تواند خالی باشد.")
+    
+    proposed_content = proposed_content.strip()
+    if proposed_content == (post.content or "").strip():
+        raise ValueError("متن پیشنهادی با متن فعلی پست یکسان است.")
+    
+    proposal = PostEditProposal.objects.create(
+        post=post,
+        editor=editor,
+        original_content=post.content or "",
+        proposed_content=proposed_content,
+        reason=reason.strip() if reason else "",
+        status='pending'
+    )
+    return proposal
+
+
+def update_edit_proposal(proposal: PostEditProposal, user: Any, proposed_content: str, reason: Optional[str] = None) -> PostEditProposal:
+    """
+    Updates an existing pending edit proposal.
+    Only the editor who submitted the proposal, the topic creator, or a superuser can update it.
+    """
+    from rest_framework.exceptions import PermissionDenied
+
+    if proposal.status != 'pending':
+        raise ValueError("تنها پیشنهادات در وضعیت در انتظار بررسی قابل ویرایش هستند.")
+
+    topic = proposal.post.topic if proposal.post else None
+    is_owner = (topic.created_by == user) if topic and topic.created_by else False
+    is_editor = proposal.editor == user
+    if not (is_editor or is_owner or getattr(user, 'is_superuser', False)):
+        raise PermissionDenied("شما مجاز به ویرایش این پیشنهاد نیستید.")
+
+    if not proposed_content or not proposed_content.strip():
+        raise ValueError("متن پیشنهادی نمی‌تواند خالی باشد.")
+
+    proposed_content = proposed_content.strip()
+    if proposed_content == (proposal.original_content or "").strip():
+        raise ValueError("متن پیشنهادی با متن اصلی یکسان است.")
+
+    proposal.proposed_content = proposed_content
+    if reason is not None:
+        proposal.reason = reason.strip()
+    proposal.save()
+    return proposal
+
+
+def apply_edit_proposal(proposal: PostEditProposal, reviewer: Any, review_note: str = "") -> PostEditProposal:
+    """
+    Applies an approved edit proposal:
+    1. Updates post.content with proposed_content
+    2. Recomputes content_hash and saves post
+    3. Records entry in PostEditHistory
+    4. Sets proposal status to 'approved' with reviewer metadata
+    5. Dispatches BotTask records to sync updated post to Telegram and Bale
+    6. Updates topic description
+    """
+    import copy
+    from django.db import transaction
+
+    if proposal.status != 'pending':
+        raise ValueError(f"پیشنهاد در وضعیت {proposal.status} است و امکان تایید مجدد آن وجود ندارد.")
+
+    with transaction.atomic():
+        post = proposal.post
+        # Snapshot current post state before modifying
+        old_post = copy.copy(post)
+
+        # Update post content
+        post.content = proposal.proposed_content
+        post.save()
+
+        # Record history
+        PostEditHistory.objects.create(
+            post=post,
+            proposal=proposal,
+            editor=proposal.editor,
+            approved_by=reviewer,
+            previous_content=proposal.original_content,
+            new_content=proposal.proposed_content,
+            summary_of_changes=proposal.reason or "",
+        )
+
+        # Mark proposal approved
+        proposal.status = 'approved'
+        proposal.reviewed_by = reviewer
+        proposal.reviewed_at = tz_now()
+        proposal.review_note = review_note.strip() if review_note else ""
+        proposal.save()
+
+        # Queue bot tasks for Telegram and Bale edit sync
+        create_bot_tasks(post, old_instance=old_post)
+
+        # Update topic description
+        try:
+            update_topic_description(post.topic)
+        except Exception as e:
+            logger.warning(f"Failed to update topic description after applying proposal {proposal.id}: {str(e)}")
+
+    return proposal
+
+
+def reject_edit_proposal(proposal: PostEditProposal, reviewer: Any, review_note: str = "") -> PostEditProposal:
+    """
+    Rejects an edit proposal with reviewer metadata.
+    """
+    if proposal.status != 'pending':
+        raise ValueError(f"پیشنهاد در وضعیت {proposal.status} است و امکان تغییر وضعیت آن وجود ندارد.")
+
+    proposal.status = 'rejected'
+    proposal.reviewed_by = reviewer
+    proposal.reviewed_at = tz_now()
+    proposal.review_note = review_note.strip() if review_note else ""
+    proposal.save()
+    return proposal
+
+
+def bulk_approve_proposals(topic_id: int | str, reviewer: Any) -> int:
+    """
+    Applies all pending proposals for a given topic.
+    Returns count of successfully approved proposals.
+    """
+    pending_proposals = PostEditProposal.objects.filter(
+        post__topic_id=topic_id,
+        status='pending'
+    ).select_related('post', 'editor')
+
+    approved_count = 0
+    for proposal in pending_proposals:
+        apply_edit_proposal(proposal, reviewer=reviewer, review_note="تایید همگانی")
+        approved_count += 1
+
+    return approved_count
+

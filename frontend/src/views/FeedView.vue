@@ -14,7 +14,7 @@ import CreateTopicModal from '@/components/CreateTopicModal.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import DuplicateWarningDialog from '@/components/DuplicateWarningDialog.vue'
-import { checkDuplicatePost, createDonationCampaign, updateDonationCampaign, deleteDonationCampaign, donateToCampaign } from '@/api'
+import { checkDuplicatePost, createDonationCampaign, updateDonationCampaign, deleteDonationCampaign, donateToCampaign, submitEditProposal, updateEditProposal } from '@/api'
 import BotConnectionCard from '@/components/BotConnectionCard.vue'
 import TopicEditView from '@/components/TopicEditView.vue'
 import TopicConnectionsView from '@/components/TopicConnectionsView.vue'
@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon, LayersIcon, CheckCircle2Icon } from '@lucide/vue'
+import TopicEditorialView from '@/components/TopicEditorialView.vue'
 
 import {
   Dialog,
@@ -57,8 +58,8 @@ const currentTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
 // Subview connection state
 const showConnections = ref(false)
 
-// Active topic subview ('feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq')
-const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq'>('feed')
+// Active topic subview ('feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq' | 'editorial')
+const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq' | 'editorial'>('feed')
 
 // Initialize Pinia stores
 const botStore = useBotStore()
@@ -724,7 +725,6 @@ const handleCreateTopicClick = () => {
 }
 
 
-
 const handleProfileEdit = () => {
   isEditProfileOpen.value = true
 }
@@ -948,6 +948,43 @@ const handleCancelEdit = () => {
   editingPost.value = null
 }
 
+const proposingPost = ref<{ id: string | number; content: string; proposalId?: string | number } | null>(null)
+
+const handleProposeEdit = (payload: { id: string | number; content: string; proposalId?: string | number }) => {
+  editingPost.value = null
+  proposingPost.value = {
+    id: payload.id,
+    content: payload.content,
+    proposalId: payload.proposalId
+  }
+}
+
+const handleCancelProposal = () => {
+  proposingPost.value = null
+}
+
+const handleSaveProposal = async (message: { text: string }) => {
+  if (!proposingPost.value) return
+  try {
+    if (proposingPost.value.proposalId) {
+      await updateEditProposal(proposingPost.value.proposalId, {
+        proposed_content: message.text
+      })
+      triggerToast(languageStore.t('پیشنهاد ویرایش با موفقیت به‌روزرسانی شد.', 'Edit proposal updated successfully.'), 'success')
+    } else {
+      await submitEditProposal({
+        post_id: proposingPost.value.id,
+        proposed_content: message.text
+      })
+      triggerToast(languageStore.t('پیشنهاد با موفقیت به میز ویراستاری ارسال شد.', 'Proposal submitted to Editorial Desk successfully.'), 'success')
+    }
+    proposingPost.value = null
+  } catch (err: any) {
+    const errorMsg = err.response?.data?.detail || err.response?.data?.error || err.message || languageStore.t('خطا در ثبت پیشنهاد', 'Failed to submit proposal')
+    triggerToast(errorMsg, 'error')
+  }
+}
+
 const isTopicCreator = computed<boolean>(() => {
   if (!selectedTopic.value || !userProfile.value) return false
   if (!selectedTopic.value.created_by) return true
@@ -989,6 +1026,63 @@ const handleFileInputChange = (e: Event) => {
   }]
 }
 
+const handlePastedFile = (file: File) => {
+  selectedAttachmentFile.value = file
+  let fileType: 'image' | 'video' | 'audio' | 'file' = 'file'
+  if (file.type.startsWith('image/')) fileType = 'image'
+  else if (file.type.startsWith('video/')) fileType = 'video'
+  else if (file.type.startsWith('audio/')) fileType = 'audio'
+
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+  const previewUrl = fileType === 'image' ? URL.createObjectURL(file) : ''
+
+  postAttachments.value = [{
+    id: `paste_${Date.now()}`,
+    name: file.name || 'Pasted File',
+    type: fileType,
+    url: previewUrl,
+    size: sizeMB,
+    status: 'completed',
+    progress: 100
+  }]
+}
+
+// Touch keyboard height tracking for mobile browsers (iOS Safari / mobile Chrome)
+const feedKeyboardOffset = ref(0)
+
+const handleFeedVisualViewportChange = () => {
+  if (typeof window === 'undefined') return
+  const vv = window.visualViewport
+  if (!vv) {
+    feedKeyboardOffset.value = 0
+    return
+  }
+  const offsetFromBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop))
+  feedKeyboardOffset.value = offsetFromBottom > 40 ? offsetFromBottom : 0
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined' && window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleFeedVisualViewportChange)
+    window.visualViewport.addEventListener('scroll', handleFeedVisualViewportChange)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined' && window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', handleFeedVisualViewportChange)
+    window.visualViewport.removeEventListener('scroll', handleFeedVisualViewportChange)
+  }
+})
+
+const feedInputBarStyle = computed(() => {
+  const bottomPx = feedKeyboardOffset.value > 0 ? `${feedKeyboardOffset.value}px` : '0px'
+  return {
+    bottom: bottomPx,
+    transition: 'bottom 0.15s ease-out'
+  }
+})
+
 const getTopicDraft = (topicId?: number | string | null) => {
   if (!topicId) return ''
   try {
@@ -1010,7 +1104,7 @@ const saveTopicDraft = (topicId: number | string | null, text: string) => {
 }
 
 const handleDraftChange = (newText: string) => {
-  if (!editingPost.value && selectedTopic.value) {
+  if (!editingPost.value && !proposingPost.value && selectedTopic.value) {
     saveTopicDraft(selectedTopic.value.id, newText)
   }
 }
@@ -1122,6 +1216,7 @@ const toggleTheme = useToggle(isDark)
       @topic-connections="handleTopicConnections"
       @topic-import="handleTopicImport"
       @topic-admins="activeTopicSubView = 'admins'"
+      @topic-editorial="activeTopicSubView = 'editorial'"
       @topic-faq="activeTopicSubView = 'faq'"
     />
 
@@ -1275,6 +1370,7 @@ const toggleTheme = useToggle(isDark)
                     @react="handlePostReact"
                     @delete="handlePostDelete"
                     @edit="handlePostEdit"
+                    @propose-edit="handleProposeEdit"
                   />
                 </div>
               </template>
@@ -1284,18 +1380,26 @@ const toggleTheme = useToggle(isDark)
               </div>
 
               <!-- Message Input component at the bottom of the feed -->
-              <div class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] w-full">
+              <div 
+                class="fixed left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] w-full"
+                :style="feedInputBarStyle"
+              >
                 <TopicMessageInput 
-                  :key="selectedTopic ? `topic-${selectedTopic.id}-${editingPost ? 'edit' : 'create'}` : 'no-topic'"
-                  :disabled="!isTopicCreator"
-                  :placeholder="languageStore.t('یادداشت خود را بنویسید...', 'Write your note...')"
+                  :key="selectedTopic ? `topic-${selectedTopic.id}-${editingPost ? 'edit' : (proposingPost ? 'propose' : 'create')}` : 'no-topic'"
+                  :disabled="!isTopicCreator && !proposingPost"
+                  :placeholder="proposingPost ? languageStore.t('پیشنهاد ویرایش خود را بنویسید...', 'Write your edit proposal...') : languageStore.t('یادداشت خود را بنویسید...', 'Write your note...')"
                   :isEditMode="!!editingPost"
-                  :initialText="editingPost ? editingPost.content : (selectedTopic ? getTopicDraft(selectedTopic.id) : '')"
+                  :isProposalMode="!!proposingPost"
+                  :proposalBannerText="proposingPost ? (proposingPost.proposalId ? languageStore.t('ویرایش پیشنهاد ویراستاری', 'Edit editorial proposal') : languageStore.t('پیشنهاد ویراستاری برای این یادداشت', 'Draft edit proposal for this note')) : ''"
+                  :initialText="editingPost ? editingPost.content : (proposingPost ? proposingPost.content : (selectedTopic ? getTopicDraft(selectedTopic.id) : ''))"
                   @input-change="handleDraftChange"
                   @send="handleSendPost"
                   @save="handleSaveEdit"
                   @cancel-edit="handleCancelEdit"
+                  @submit-proposal="handleSaveProposal"
+                  @cancel-proposal="handleCancelProposal"
                   @attach="triggerFileSelect"
+                  @attach-file="handlePastedFile"
                   @create-donation="handleOpenCreateDonation"
                   :initialAttachments="postAttachments"
                   @removeAttachment="removePostAttachment"
@@ -1370,6 +1474,21 @@ const toggleTheme = useToggle(isDark)
                 @back="activeTopicSubView = 'feed'"
               />
             </div>
+
+            <!-- Topic Editorial Desk Subview Page -->
+            <div v-else-if="activeTopicSubView === 'editorial'" key="editorial" class="w-full">
+              <TopicEditorialView 
+                :topic-id="selectedTopic?.id"
+                :topic-title="selectedTopic?.title"
+                :is-owner="isTopicCreator"
+                @back="activeTopicSubView = 'feed'"
+                @proposals-updated="async () => {
+                  if (selectedTopic) {
+                    await postStore.loadPosts(selectedTopic.id);
+                  }
+                }"
+              />
+            </div>
           </transition>
 
         </div>
@@ -1387,10 +1506,12 @@ const toggleTheme = useToggle(isDark)
           />
         </div>
 
-        <!-- TAB 3: MARKETPLACE -->
+        <!-- TAB 3: MARKETPLACE (Temporarily disabled as requested) -->
+        <!--
         <div v-else-if="currentTab === 'marketplace'" key="marketplace" class="w-full flex flex-col gap-4">
           <MarketplaceView />
         </div>
+        -->
 
         <!-- TAB 3: PROFILE -->
         <div v-else-if="currentTab === 'profile'" key="profile" class="w-full flex flex-col gap-4.5">
@@ -1684,6 +1805,7 @@ const toggleTheme = useToggle(isDark)
       :ref-id="paymentResultData.ref_id"
       :authority="paymentResultData.authority"
     />
+
 
   </div>
 </template>

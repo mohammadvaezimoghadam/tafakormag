@@ -5,7 +5,8 @@ import {
   LinkIcon, 
   Trash2Icon, 
   UploadCloudIcon, 
-  ShieldCheckIcon 
+  ShieldCheckIcon,
+  InboxIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   (e: 'connections'): void
   (e: 'import'): void
   (e: 'admins'): void
+  (e: 'editorial'): void
   (e: 'faq'): void
   (e: 'delete'): void
 }>()
@@ -62,7 +64,7 @@ const menuStyle = computed(() => {
   }
 })
 
-const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'admins' | 'faq') => {
+const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'admins' | 'editorial' | 'faq') => {
   if (action === 'edit') {
     emit('edit')
   } else if (action === 'connections') {
@@ -71,6 +73,8 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
     emit('import')
   } else if (action === 'admins') {
     emit('admins')
+  } else if (action === 'editorial') {
+    emit('editorial')
   } else if (action === 'faq') {
     emit('faq')
   } else if (action === 'delete') {
@@ -102,6 +106,15 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         >
           <span>{{ isOwner ? languageStore.t('مدیریت ادمین‌ها', 'Manage Admins') : languageStore.t('اطلاعات و ادمین‌ها', 'Admins & Info') }}</span>
           <ShieldCheckIcon class="size-3.5 text-primary" />
+        </button>
+
+        <!-- Editorial Review Queue (میز ویراستاری) -->
+        <button 
+          @click="handleAction('editorial')" 
+          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+        >
+          <span>{{ languageStore.t('میز ویراستاری تاپیک', 'Editorial Review Queue') }}</span>
+          <InboxIcon class="size-3.5 text-primary" />
         </button>
 
         <!-- Edit Topic -->

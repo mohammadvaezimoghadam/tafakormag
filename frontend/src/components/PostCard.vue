@@ -25,6 +25,10 @@ import {
   ClipboardIcon,
   CircleFadingArrowUpIcon
 } from '@lucide/vue'
+import PostHistoryDialog from '@/components/editorial/PostHistoryDialog.vue'
+import EditProposalDialog from '@/components/editorial/EditProposalDialog.vue'
+import { fetchPostEditHistory } from '@/api'
+import type { PostEditHistoryItem } from '@/types/editorial'
 
 // Interfaces
 export interface Comment {
@@ -88,6 +92,7 @@ const emit = defineEmits<{
   (e: 'pin', id: string | number): void
   (e: 'react', id: string | number, emoji: string, currentReactions: PostReaction[]): void
   (e: 'copy', id: string | number): void
+  (e: 'propose-edit', payload: { id: string | number; content: string }): void
 }>()
 
 import { useLanguageStore } from '@/stores/languageStore'
@@ -167,6 +172,31 @@ const handleEditStart = () => {
   console.log('[PostCard] handleEditStart emitting edit for postId:', props.id)
   emit('edit', props.id)
   isContextMenuOpen.value = false
+}
+
+const isHistoryModalOpen = ref(false)
+const postHistoryList = ref<PostEditHistoryItem[]>([])
+const isLoadingHistory = ref(false)
+
+const isProposeEditModalOpen = ref(false)
+
+const handleOpenHistory = async () => {
+  isContextMenuOpen.value = false
+  isHistoryModalOpen.value = true
+  isLoadingHistory.value = true
+  try {
+    const res = await fetchPostEditHistory(props.id)
+    postHistoryList.value = res.data || []
+  } catch (err) {
+    console.error('Failed to load post edit history:', err)
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
+const handleOpenProposeEdit = () => {
+  isContextMenuOpen.value = false
+  emit('propose-edit', { id: props.id, content: props.content || '' })
 }
 
 const isInteractiveElement = (target: HTMLElement) => {
@@ -809,6 +839,8 @@ const formatTime = (timeInSeconds: number) => {
       @pin="emit('pin', id)"
       @react="(postId, emoji) => handleReactionClick(emoji)"
       @copy="emit('copy', id)"
+      @history="handleOpenHistory"
+      @propose-edit="handleOpenProposeEdit"
     />
   </Teleport>
 
@@ -821,6 +853,21 @@ const formatTime = (timeInSeconds: number) => {
     :bale-message-ids="baleMessageIds"
     :created-at="timestamp"
     @close="isPublicationStatusOpen = false"
+  />
+
+  <!-- Post Edit History Modal -->
+  <PostHistoryDialog
+    v-model:open="isHistoryModalOpen"
+    :history="postHistoryList"
+    :post-id="id"
+    :loading="isLoadingHistory"
+  />
+
+  <!-- Propose Edit Modal -->
+  <EditProposalDialog
+    v-model:open="isProposeEditModalOpen"
+    :post-id="id"
+    :current-content="content || ''"
   />
 
   <!-- Teleported Edit Textarea Context Menu (Removed) -->

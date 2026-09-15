@@ -331,4 +331,96 @@ class TopicChatMessage(models.Model):
 
     def __str__(self):
         return f"[{self.role}] {self.content[:40]}"
+
+
+class PostEditProposal(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='proposals'
+    )
+    editor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='editor_proposals'
+    )
+    original_content = models.TextField()
+    proposed_content = models.TextField()
+    reason = models.CharField(max_length=500, blank=True, default='')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_proposals'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['post', 'status']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"Proposal {self.id} for Post {self.post_id} by {self.editor.phone} ({self.status})"
+
+
+class PostEditHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='edit_history'
+    )
+    proposal = models.ForeignKey(
+        PostEditProposal,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='history_records'
+    )
+    editor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='applied_edits'
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_edits'
+    )
+    previous_content = models.TextField()
+    new_content = models.TextField()
+    summary_of_changes = models.CharField(max_length=500, blank=True, default='')
+    applied_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+        indexes = [
+            models.Index(fields=['post', '-applied_at']),
+        ]
+
+    def __str__(self):
+        return f"History {self.id} on Post {self.post_id} at {self.applied_at}"
+
 

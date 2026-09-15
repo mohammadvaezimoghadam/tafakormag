@@ -9,7 +9,8 @@ import {
   BookOpenIcon,
   LayersIcon,
   HeartIcon,
-  HelpCircleIcon
+  HelpCircleIcon,
+  SparklesIcon
 } from '@lucide/vue'
 
 // Dark/Light theme manager via VueUse

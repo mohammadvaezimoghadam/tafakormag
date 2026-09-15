@@ -48,6 +48,7 @@ const emit = defineEmits<{
   (e: 'topic-connections'): void
   (e: 'topic-import'): void
   (e: 'topic-admins'): void
+  (e: 'topic-editorial'): void
   (e: 'topic-faq'): void
   (e: 'update:searchQuery', val: string): void
 }>()
@@ -261,19 +262,26 @@ watch(() => props.showSearchButton, (newVal) => {
 
     </div>
 
-    <!-- Detachable AI Assistant / FAQ Button (same animation & styling as 3-dots) -->
-    <button
-      @click="emit('topic-faq')"
+    <!-- Detachable AI Assistant / FAQ Button with Floating Coming Soon Badge -->
+    <div
       :class="[
-        'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground hover:bg-muted/80 active:scale-95 transition-all duration-300 ease-out shrink-0 cursor-pointer shadow-xs p-0 border outline-none',
+        'h-11 rounded-2xl bg-background/60 backdrop-blur-md flex items-center justify-center text-foreground/80 transition-all duration-300 ease-out shrink-0 shadow-xs border border-border/60 select-none cursor-default relative',
         props.isInnerPage && props.showFaqButton
-          ? 'w-11 opacity-100 border-border/60 ms-1' 
-          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none ms-0'
+          ? 'w-11 opacity-100 ms-1' 
+          : 'w-0 opacity-0 border-transparent overflow-hidden pointer-events-none ms-0 p-0'
       ]"
-      :title="languageStore.t('دستیار هوشمند و سوالات تاپیک', 'Topic AI Assistant & Questions')"
+      :title="languageStore.t('دستیار هوشمند و سوالات تاپیک (به‌زودی)', 'Topic AI Assistant & Questions (Coming Soon)')"
     >
-      <HelpCircleIcon class="size-4 text-foreground/80 hover:text-amber-500 transition-colors" />
-    </button>
+      <!-- Floating Badge on the top rim/center -->
+      <span 
+        v-if="props.isInnerPage && props.showFaqButton"
+        class="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-muted/95 dark:bg-muted text-muted-foreground border border-border/70 shadow-2xs whitespace-nowrap leading-none pointer-events-none z-10 select-none tracking-tight"
+      >
+        {{ languageStore.t('به‌زودی', 'Soon') }}
+      </span>
+
+      <HelpCircleIcon class="size-4 text-muted-foreground/80 shrink-0" />
+    </div>
 
     <!-- Detachable Options Button -->
     <button
@@ -301,6 +309,7 @@ watch(() => props.showSearchButton, (newVal) => {
       @connections="emit('topic-connections')"
       @import="emit('topic-import')"
       @admins="emit('topic-admins')"
+      @editorial="emit('topic-editorial')"
       @faq="emit('topic-faq')"
       @delete="emit('delete-topic')"
     />
