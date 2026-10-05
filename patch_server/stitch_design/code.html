@@ -1,0 +1,276 @@
+<!DOCTYPE html><html dir="rtl" lang="fa" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>
+@font-face {
+  font-family: 'IRANSansX';
+  src: local('IRANSansX'), local('IRANSans'), local('IranSans'), url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IRANSansX';
+  src: local('IRANSansX-Bold'), local('IRANSans-Bold'), url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@layer base{
+  html,body{margin:0;padding:0;}
+  body{
+    overscroll-behavior:none;
+    font-family:'IRANSansX', 'IRANSans', 'IranSans', -apple-system, BlinkMacSystemFont, Tahoma, Arial, sans-serif;
+  }
+  main>:first-child{margin-top:0!important;}
+  main>:last-child{margin-bottom:0!important;}
+}
+::-webkit-scrollbar{display:none;}
+</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      "colors": {
+        "primary": "#1e3a5f",                /* Deep Slate Navy */
+        "primary-container": "#2563eb",      /* Clean Engineering Blue Accent */
+        "on-primary": "#ffffff",
+        "on-primary-container": "#eff6ff",
+        "primary-fixed": "#e0eefe",
+        "primary-fixed-dim": "#bfdbfe",
+        "on-primary-fixed": "#0f172a",
+        "on-primary-fixed-variant": "#1d4ed8",
+        
+        "secondary": "#64748b",              /* Cool Slate Grey */
+        "secondary-container": "#f1f5f9",
+        "on-secondary": "#ffffff",
+        "on-secondary-container": "#334155",
+        "secondary-fixed": "#e2e8f0",
+        "secondary-fixed-dim": "#cbd5e1",
+        "on-secondary-fixed": "#0f172a",
+        "on-secondary-fixed-variant": "#475569",
+
+        "background": "#f8fafc",             /* Soothing Neutral Base */
+        "surface": "#f8fafc",
+        "on-background": "#0f172a",          /* Neutral Charcoal Dark Text */
+        "on-surface": "#0f172a",
+        "on-surface-variant": "#475569",
+        "outline": "#94a3b8",
+        "outline-variant": "#e2e8f0",
+        
+        "surface-bright": "#ffffff",
+        "surface-container-lowest": "#ffffff",
+        "surface-container-low": "#f1f5f9",
+        "surface-container": "#e2e8f0",
+        "surface-container-high": "#cbd5e1",
+        "surface-container-highest": "#94a3b8",
+        "surface-dim": "#f1f5f9",
+
+        /* Kill Switch Critical Red preserved precisely */
+        "tertiary": "#b91c1c",
+        "tertiary-container": "#dc2626",
+        "on-tertiary": "#ffffff",
+        "on-tertiary-container": "#fee2e2",
+        "tertiary-fixed": "#fee2e2",
+        "tertiary-fixed-dim": "#fca5a5",
+        "on-tertiary-fixed": "#7f1d1d",
+        "on-tertiary-fixed-variant": "#991b1b",
+
+        "error": "#dc2626",
+        "on-error": "#ffffff",
+        "error-container": "#fee2e2",
+        "on-error-container": "#7f1d1d"
+      },
+      "borderRadius": {
+        "DEFAULT": "0.125rem",
+        "lg": "0.375rem",
+        "xl": "0.5rem",
+        "full": "0.75rem"
+      },
+      "spacing": {
+        "gutter": "1rem",
+        "margin": "1.5rem",
+        "space-sm": "0.5rem",
+        "space-xs": "0.25rem",
+        "space-lg": "1.25rem",
+        "gutter-lg": "1.5rem",
+        "margin-mobile": "1rem",
+        "space-md": "0.75rem",
+        "space-xl": "2rem"
+      },
+      "fontFamily": {
+        "sans": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "headline-md": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "headline-xl": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "headline-sm": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "body-lg": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "body-md": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "headline-xl-mobile": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "label-md": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "code-md": ["JetBrains Mono", "monospace"],
+        "headline-lg": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "label-lg": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "label-sm": ["JetBrains Mono", "IRANSansX", "monospace"],
+        "body-sm": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"],
+        "headline-lg-mobile": ["IRANSansX", "IRANSans", "IranSans", "Tahoma", "sans-serif"]
+      },
+      "fontSize": {
+        "headline-md": [ "18px", { "lineHeight": "28px", "fontWeight": "700" } ],
+        "headline-xl": [ "30px", { "lineHeight": "40px", "fontWeight": "800" } ],
+        "headline-sm": [ "15px", { "lineHeight": "24px", "fontWeight": "600" } ],
+        "body-lg": [ "15px", { "lineHeight": "26px", "fontWeight": "400" } ],
+        "body-md": [ "13px", { "lineHeight": "22px", "fontWeight": "400" } ],
+        "headline-xl-mobile": [ "24px", { "lineHeight": "34px", "fontWeight": "800" } ],
+        "label-md": [ "11px", { "lineHeight": "16px", "fontWeight": "600" } ],
+        "code-md": [ "12px", { "lineHeight": "18px", "fontWeight": "500" } ],
+        "headline-lg": [ "22px", { "lineHeight": "32px", "fontWeight": "700" } ],
+        "label-lg": [ "13px", { "lineHeight": "18px", "fontWeight": "600" } ],
+        "label-sm": [ "10px", { "lineHeight": "14px", "fontWeight": "500" } ],
+        "body-sm": [ "12px", { "lineHeight": "20px", "fontWeight": "400" } ],
+        "headline-lg-mobile": [ "19px", { "lineHeight": "28px", "fontWeight": "700" } ]
+      }
+    }
+  }
+};
+</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed right-0 top-0 h-full w-64 bg-surface-container-lowest z-50 flex flex-col justify-between border-l border-slate-200/80 shadow-[0_1px_8px_rgba(15,23,42,0.03)]"><div class="flex flex-col"><div class="h-16 px-gutter flex items-center justify-between bg-surface-container-lowest border-b border-slate-100"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary font-bold">فلاتر او‌تی‌ای</span><span class="font-label-sm text-label-sm text-secondary tracking-wider" dir="ltr">Flutter OTA Hub</span></div><div class="h-2.5 w-2.5 rounded-full bg-blue-600 ring-4 ring-blue-50"></div></div><div class="p-gutter"><div class="relative"><button class="w-full flex items-center justify-between px-space-md py-space-sm bg-surface-container-low hover:bg-slate-200/60 rounded-lg text-right transition-colors border border-slate-200/60" type="button"><div class="flex items-center gap-space-sm truncate"><div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-headline-sm shadow-xs shrink-0">TM</div><div class="flex flex-col truncate ml-2 text-right"><span class="font-label-lg text-label-lg text-on-surface truncate" id="sidebar-app-name">اپلیکیشن تفکرمگ</span><span class="font-code-md text-code-md text-secondary truncate" dir="ltr" id="sidebar-app-pkg">com.tafakor.mag</span></div></div><span class="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span></button></div></div><div class="px-gutter mb-space-sm"><span class="font-label-md text-label-md text-secondary uppercase tracking-wider">کنترل پنل مرکزی</span></div><nav class="flex flex-col gap-space-xs px-space-sm" data-active-classes="bg-blue-600 text-white font-headline-sm"><a aria-current="page" class="flex items-center justify-between px-space-md py-space-sm rounded-lg transition-all bg-blue-600 text-white shadow-sm shadow-blue-500/10 font-headline-sm" data-path="live-dashboard" href="#"><span class="font-label-lg text-label-lg">داشبورد و وضعیت زنده</span><span class="material-symbols-outlined text-[16px]">chevron_left</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-slate-100 hover:text-on-surface transition-all" data-path="publish-patch" href="#"><span class="font-label-lg text-label-lg">انتشار پچ جدید</span><span class="material-symbols-outlined text-[16px]">chevron_left</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-slate-100 hover:text-on-surface transition-all" data-path="rollback-matrix" href="#"><span class="font-label-lg text-label-lg">تاریخچه و رول‌بک</span><span class="material-symbols-outlined text-[16px]">chevron_left</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-slate-100 hover:text-on-surface transition-all" data-path="live-logs" href="#"><span class="font-label-lg text-label-lg">لاگ‌های زنده کلاینت</span><span class="material-symbols-outlined text-[16px]">chevron_left</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-slate-100 hover:text-on-surface transition-all" data-path="key-settings" href="#"><span class="font-label-lg text-label-lg">تنظیمات کلیدها</span><span class="material-symbols-outlined text-[16px]">chevron_left</span></a></nav></div><div class="p-gutter bg-surface-container-low border border-slate-200/60 mx-space-sm mb-space-md rounded-xl flex flex-col gap-space-xs"><div class="flex items-center justify-between"><span class="font-label-md text-label-md text-secondary">نسخه موتور فلاتر</span><span class="font-code-md text-code-md text-blue-600 font-bold" dir="ltr">v3.24.3</span></div><div class="flex items-center justify-between"><span class="font-label-md text-label-md text-secondary">سیستم استقرار OTA</span><span class="font-label-sm text-label-sm text-blue-700 bg-blue-50 border border-blue-200/60 px-space-xs py-0.5 rounded font-bold">ACTIVE</span></div></div></aside><div class="pr-64"><header class="fixed top-0 right-64 left-0 h-16 bg-surface-container-lowest/95 backdrop-blur-md border-b border-slate-200/80 z-40 flex items-center justify-between px-margin shadow-[0_1px_8px_rgba(15,23,42,0.03)]"><div class="flex items-center gap-gutter"><div class="flex items-center gap-space-sm bg-surface-container-low border border-slate-200/60 px-space-md py-space-xs rounded-full"><span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span><span class="font-label-sm text-label-sm text-on-secondary-container">محیط عملیاتی</span><span class="font-code-md text-code-md text-blue-600 font-bold px-space-xs bg-surface-container-lowest rounded">Production</span></div><div class="hidden lg:flex items-center gap-space-xs text-secondary"><span class="font-label-sm text-label-sm">سرویس توزیع وصله:</span><span class="font-label-sm text-label-sm text-on-surface font-semibold">نرمال و متصل (99.98%)</span></div></div><div class="flex items-center gap-gutter"><div class="hidden md:flex flex-col text-left" dir="ltr"><span class="font-label-md text-label-md text-on-surface font-semibold">DevOps Admin</span><span class="font-code-md text-code-md text-secondary">admin@tafakor.app</span></div><div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-white text-[18px]">person</span></div></div></header><main class="relative pt-16 w-full px-gutter-lg pb-space-xl bg-background"><div class="flex flex-col w-full">
+<!-- Multi-App Workspace Context Ribbon -->
+<div class="w-full bg-surface-container-lowest border border-slate-200/70 rounded-xl p-gutter mb-gutter-lg flex flex-col md:flex-row md:items-center justify-between gap-space-md shadow-sm"><div class="flex items-center gap-space-md flex-wrap"><div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-blue-500 text-white flex items-center justify-center font-bold text-headline-md shadow-sm shrink-0 ring-2 ring-blue-100" id="active-app-avatar">TM</div><div class="flex flex-col justify-center"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-surface font-bold whitespace-nowrap" id="header-app-name">تفکرمگ</span><span class="font-code-md text-code-md text-secondary whitespace-nowrap" dir="ltr" id="header-app-pkg">(com.tafakor.mag)</span></div><div class="flex items-center gap-space-sm mt-0.5 flex-wrap"><span class="font-label-sm text-label-sm text-secondary whitespace-nowrap">شناسه سیستمی:</span><span class="font-code-md text-code-md text-blue-600 font-bold whitespace-nowrap" dir="ltr">app_8829_tfk</span><span class="w-1 h-1 rounded-full bg-slate-300"></span><span class="font-label-sm text-label-sm text-secondary whitespace-nowrap">پلتفرم:</span><span class="font-label-sm text-label-sm bg-slate-100 text-slate-700 px-space-xs py-0.5 rounded border border-slate-200/60 font-medium whitespace-nowrap">Android + iOS</span></div></div><div class="h-8 w-px bg-slate-200 hidden md:block mx-space-sm"></div><div class="flex flex-col justify-center"><span class="font-label-sm text-label-sm text-secondary whitespace-nowrap">بیلد نیتیو فعال تارگت:</span><div class="flex items-center gap-space-xs mt-0.5 flex-wrap"><span class="font-headline-sm text-headline-sm text-on-surface font-bold whitespace-nowrap">کد ۱۰۴</span><span class="font-code-md text-code-md text-blue-600 font-bold whitespace-nowrap" dir="ltr">v2.4.0</span><span class="w-1 h-1 rounded-full bg-slate-300"></span><span class="font-label-sm text-label-sm text-secondary font-medium whitespace-nowrap">موتور فلاتر ۳.۲۴.۳</span></div></div></div><div class="flex items-center gap-space-sm self-start md:self-auto shrink-0"><button class="h-10 px-space-md bg-slate-100 hover:bg-slate-200 text-on-surface rounded-lg font-label-lg text-label-lg transition-colors border border-slate-200/70 inline-flex items-center justify-center whitespace-nowrap" id="btn-switch-app" type="button">تغییر برنامه</button><button class="h-10 px-space-md bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-label-lg text-label-lg transition-colors shadow-sm inline-flex items-center justify-center whitespace-nowrap" id="btn-new-app" type="button">+ برنامه جدید</button></div></div>
+<!-- Operational Core: 2 Columns (Active Release & Killswitch | Live Metrics) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-lg mb-gutter-lg">
+<!-- Active Patch & Emergency Override Module -->
+<div class="lg:col-span-8 flex flex-col justify-between bg-surface-container-lowest border border-slate-200/70 rounded-xl p-margin shadow-sm">
+<div>
+<div class="flex items-center justify-between flex-wrap gap-space-sm pb-space-md mb-space-md border-b border-slate-100"><div class="flex flex-col"><span class="font-label-md text-secondary uppercase tracking-wider">وضعیت چرخه استقرار کد-پوش فعال</span><div class="flex items-center gap-space-sm mt-space-xs"><span class="font-headline-lg text-on-surface font-bold whitespace-nowrap">پچ فعال جاری:</span><span class="font-headline-lg text-blue-600 font-bold whitespace-nowrap" dir="ltr">v1.0.4-patch.2</span></div></div><div class="flex items-center gap-space-xs flex-wrap"><span class="h-8 px-space-sm rounded bg-blue-50 text-blue-700 border border-blue-200/60 font-label-md font-bold whitespace-nowrap inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span><span class="">Serving Live (فعال)</span></span><span class="h-8 px-space-sm rounded bg-slate-100 text-slate-700 border border-slate-200/70 font-label-md font-bold whitespace-nowrap inline-flex items-center font-code-md" dir="ltr">Policy: Force Update</span></div></div>
+<!-- Patch Metadata Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-md py-space-md bg-surface-container-low border border-slate-200/60 rounded-lg px-space-md mb-space-lg"><div class="flex flex-col justify-center"><span class="font-label-sm text-secondary whitespace-nowrap">بیلد مقصد نیتیو</span><span class="font-headline-sm text-on-surface font-bold mt-0.5 whitespace-nowrap">۱۰۴ <span class="font-code-md text-secondary font-normal text-label-sm" dir="ltr">(v2.4.0)</span></span></div><div class="flex flex-col justify-center"><span class="font-label-sm text-secondary whitespace-nowrap">حجم بسته انتقال</span><span class="font-code-md text-on-surface font-bold mt-0.5 whitespace-nowrap" dir="ltr">1.8 MB</span></div><div class="flex flex-col justify-center"><span class="font-label-sm text-secondary whitespace-nowrap">زمان دقیق استقرار</span><span class="font-label-lg text-on-surface font-semibold mt-0.5 whitespace-nowrap">امروز ۱۱:۲۰ (۲ ساعت پیش)</span></div><div class="flex flex-col justify-center"><span class="font-label-sm text-secondary whitespace-nowrap">هش یکپارچگی (MD5)</span><span class="font-code-md text-blue-600 font-bold truncate mt-0.5 whitespace-nowrap" dir="ltr">d41d8cd9...4d2</span></div></div>
+<div class="flex flex-col gap-space-xs text-secondary font-body-sm text-body-sm">
+<div class=""><strong class="text-on-surface font-semibold">یادداشت فنی مهندسی:</strong> رفع کرش حیاتی در ماژول بازگشت از درگاه پرداخت شاپرک در کلاینت‌های اندروید ۱۴ و تثبیت توکن‌های سشن کاربر.</div>
+<div class="font-code-md text-code-md text-on-surface-variant" dir="ltr">target_diff: libapp.so [symbol delta: +12KB / stripped: OK]</div>
+</div>
+</div>
+<!-- Emergency Safeguard Bar (Kill-Switch Panel) -->
+
+</div>
+<!-- Live Client Synch & Telemetry Overview -->
+<div class="lg:col-span-4 flex flex-col justify-between bg-surface-container-lowest border border-slate-200/70 rounded-xl p-margin shadow-sm">
+<div class="flex flex-col">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm border-b border-slate-100">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">سلامت توزیع زنده</span>
+<span class="flex items-center gap-space-xs font-label-sm text-label-sm text-blue-600 font-bold">
+<span class="w-2 h-2 rounded-full bg-blue-600"></span>
+            پوشش ۹۱.۴٪
+          </span>
+</div>
+<div class="flex items-baseline justify-between mt-space-sm mb-space-xs">
+<span class="font-headline-xl text-headline-xl text-on-surface font-extrabold">۲۴,۸۹۱</span>
+<span class="font-label-sm text-label-sm text-secondary">کلاینت به‌روزشده</span>
+</div>
+<!-- Telemetry Progress Bar with soothing slate-blue tones -->
+<div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex my-space-xs border border-slate-200/60">
+<div class="h-full bg-blue-600 rounded-r-full" style="width: 91.4%;"></div>
+<div class="h-full bg-slate-300" style="width: 8.6%;"></div>
+</div>
+<div class="flex justify-between font-label-sm text-label-sm text-secondary mt-space-xs">
+<span class="">نسخه v1.0.4-patch.2 (۹۱.۴٪)</span>
+<span class="">نسخه‌های پیشین (۸.۶٪)</span>
+</div>
+<!-- Compact Stats Triad -->
+<div class="grid grid-cols-2 gap-space-sm mt-space-lg">
+<div class="p-space-sm bg-surface-container-low border border-slate-200/60 rounded-lg">
+<span class="font-label-sm text-label-sm text-secondary">نرخ همگام‌سازی</span>
+<div class="font-code-md text-code-md text-on-surface font-bold mt-1" dir="ltr">184 req/sec</div>
+</div>
+<div class="p-space-sm bg-surface-container-low border border-slate-200/60 rounded-lg">
+<span class="font-label-sm text-label-sm text-secondary">نرخ خطای پچ</span>
+<div class="font-code-md text-code-md text-blue-600 font-bold mt-1" dir="ltr">0.01% (نرمال)</div>
+</div>
+<div class="p-space-sm bg-surface-container-low border border-slate-200/60 rounded-lg">
+<span class="font-label-sm text-label-sm text-secondary">پهنای باند توزیع</span>
+<div class="font-code-md text-code-md text-on-surface font-bold mt-1" dir="ltr">44.8 GB / امروز</div>
+</div>
+<div class="p-space-sm bg-surface-container-low border border-slate-200/60 rounded-lg">
+<span class="font-label-sm text-label-sm text-secondary">بررسی رول‌بک محلی</span>
+<div class="font-label-sm text-label-sm text-on-surface font-bold mt-1">تایید خودکار (۰ کرش)</div>
+</div>
+</div>
+</div>
+<!-- Quick Action Reference -->
+<div class="mt-space-lg pt-space-sm flex items-center justify-between text-secondary font-label-sm text-label-sm border-t border-slate-100">
+<span class="">پایش توسط کاناری فلاتر</span>
+<span class="font-code-md text-code-md text-blue-600 font-bold" dir="ltr">engine-sync: 100% OK</span>
+</div>
+</div>
+</div>
+<!-- Patch Publisher Form Module -->
+<div class="w-full bg-surface-container-lowest border border-slate-200/70 rounded-xl p-margin mb-gutter-lg shadow-sm">
+<div class="flex items-center justify-between pb-space-md mb-space-lg border-b border-slate-100">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-on-surface font-bold">انتشار پچ جدید فلاتر (Deploy OTA Patch)</span>
+<span class="font-body-sm text-body-sm text-secondary mt-0.5">
+          بارگذاری باینری دلتای فلاتر بدون نیاز به بازبینی و تاخیر کافه‌بازار، مایکت یا اپ‌استور.
+        </span>
+</div>
+<div class="hidden sm:flex items-center gap-space-xs font-code-md text-code-md text-secondary bg-slate-100 px-space-md py-1 rounded-lg border border-slate-200/60" dir="ltr">
+<span class="">flutter build patch --release</span>
+</div>
+</div>
+<!-- Drag & Drop Zone -->
+<div class="w-full bg-surface-container-low hover:bg-slate-200/50 transition-colors border-2 border-dashed border-slate-300 rounded-xl p-space-xl flex flex-col items-center justify-center text-center cursor-pointer mb-space-lg" id="drop-zone"><div class="flex flex-col items-center justify-center text-center gap-space-xs"><div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-space-xs border border-blue-200/60"><span class="material-symbols-outlined text-[20px]">cloud_upload</span></div><span class="font-headline-sm text-on-surface font-bold">فایل پچ فلاتر (.zip یا .bundle) را به اینجا بکشید یا برای انتخاب کلیک کنید</span><span class="font-body-sm text-secondary max-w-xl">حداکثر حجم مجاز: ۲۰ مگابایت — شامل دلتای کدهای دارت کامپایل‌شده (libapp.so) و منابع Asset جدید</span><div class="mt-space-sm flex items-center gap-space-sm flex-wrap justify-center"><span class="font-code-md text-code-md bg-white border border-blue-200 text-blue-600 px-space-sm py-1 rounded shadow-xs font-bold whitespace-nowrap" dir="ltr">patch_v1.0.4_b3.bundle (آماده بارگذاری)</span><span class="font-label-sm text-secondary font-medium whitespace-nowrap">سایز: ۱.۹۴ مگابایت</span></div></div></div>
+<!-- Form Inputs Matrix -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-space-lg bg-slate-50/50 p-gutter rounded-xl border border-slate-200/60"><!-- Col 1: Patch Version --><div class="flex flex-col gap-space-xs"><div class="flex items-center justify-between"><label class="font-label-md text-on-surface font-semibold text-right">برچسب نسخه پچ <span class="font-code-md text-secondary font-normal text-label-sm" dir="ltr">(SemVer)</span></label><span class="font-code-md text-label-sm text-secondary bg-slate-200/70 border border-slate-300 px-space-xs py-0.5 rounded font-medium whitespace-nowrap" dir="ltr">vX.Y.Z</span></div><div class="h-10 w-full"><input class="w-full h-full px-space-md bg-white text-on-surface font-code-md text-code-md rounded-lg border border-slate-200/80 focus:outline-none focus:border-blue-500 transition-all font-bold" dir="ltr" type="text" value="v1.0.4-patch.3"></div><span class="font-code-md text-label-sm text-secondary truncate" dir="ltr">الگوی استاندارد: v{X}.{Y}.{Z}-patch.{N}</span></div><!-- Col 2: Target Build --><div class="flex flex-col gap-space-xs"><div class="flex items-center justify-between"><label class="font-label-md text-on-surface font-semibold text-right">کد بیلد مقصد <span class="font-code-md text-secondary font-normal text-label-sm" dir="ltr">(Build)</span></label><span class="font-code-md text-label-sm text-blue-700 bg-blue-50 border border-blue-200/60 px-space-xs py-0.5 rounded font-bold whitespace-nowrap" dir="ltr">۱۰۴</span></div><div class="h-10 w-full"><input class="w-full h-full px-space-md bg-white text-on-surface font-code-md text-code-md rounded-lg border border-slate-200/80 focus:outline-none focus:border-blue-500 transition-all font-bold" dir="ltr" type="text" value="104"></div><span class="font-body-sm text-label-sm text-secondary truncate">فقط کلاینت‌های بیلد ۱۰۴ پچ را دریافت می‌کنند</span></div><!-- Col 3: Delivery Policy --><div class="flex flex-col gap-space-xs"><div class="flex items-center justify-between"><label class="font-label-md text-on-surface font-semibold text-right">سیاست دریافت پچ <span class="font-code-md text-secondary font-normal text-label-sm" dir="ltr">(Policy)</span></label><span class="font-label-sm text-secondary bg-slate-200/70 border border-slate-300 px-space-xs py-0.5 rounded font-medium whitespace-nowrap">الزام آپدیت</span></div><div class="h-10 w-full"><select class="w-full h-full px-space-md bg-white text-on-surface font-label-md rounded-lg border border-slate-200/80 focus:outline-none focus:border-blue-500 transition-all"><option selected="" value="force">اجباری (Force Update - دانلود و اعمال آنی)</option><option value="optional">اختیاری (اعمال در اجرای بعدی)</option><option value="canary">کاناری (۲۰٪ کلاینت‌های تصادفی)</option></select></div><span class="font-body-sm text-label-sm text-secondary truncate">دانلود و اعمال بلافاصله پس از شروع اپلیکیشن</span></div><!-- Col 4: Auto-Deploy Mode --><div class="flex flex-col gap-space-xs"><div class="flex items-center justify-between"><label class="font-label-md text-on-surface font-semibold text-right">نوع انتشار <span class="font-code-md text-secondary font-normal text-label-sm" dir="ltr">(Deploy)</span></label><span class="font-label-sm text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-space-xs py-0.5 rounded font-bold whitespace-nowrap">Live Deploy</span></div><div class="h-10 w-full flex items-center justify-between px-space-md bg-white border border-slate-200/80 rounded-lg"><label class="font-label-md text-on-surface cursor-pointer select-none font-medium whitespace-nowrap" for="auto-deploy">انتشار خودکار و آنی (Live)</label><input checked="" class="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer" id="auto-deploy" type="checkbox"></div><span class="font-body-sm text-label-sm text-secondary truncate">فعال‌سازی آنی پس از بارگذاری کامل باینری</span></div></div>
+<!-- Release Notes Textarea -->
+<div class="flex flex-col mb-space-lg">
+<label class="font-label-lg text-label-lg text-on-surface mb-space-xs font-medium">یادداشت فنی تغییرات پچ (Technical Release Notes)</label>
+<textarea class="w-full px-space-md py-space-sm bg-surface-container-low text-on-surface font-body-sm text-body-sm rounded-lg border border-slate-200/70 focus:outline-none focus:border-blue-500 focus:bg-white placeholder:text-secondary transition-all" placeholder="توضیحاتی درباره رفع ایرادات، تغییرات در متدها و دلایل استقرار اضطراری برای اعضای تیم بنویسید..." rows="2"></textarea>
+</div><div class="flex items-center justify-between pt-space-md border-t border-slate-100 flex-wrap gap-space-md"><div class="flex items-center gap-space-sm flex-wrap"><button class="h-10 px-gutter-lg bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-label-lg transition-colors shadow-sm inline-flex items-center gap-space-xs font-semibold whitespace-nowrap" id="btn-deploy-patch" type="button"><span class="material-symbols-outlined text-[18px]">publish</span><span class="">بارگذاری و انتشار پچ جدید (Live Deploy)</span></button><button class="h-10 px-space-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 rounded-lg font-label-md transition-colors inline-flex items-center gap-space-xs whitespace-nowrap" id="btn-staging-preview" type="button"><span class="material-symbols-outlined text-[18px]">science</span><span class="">تست و بررسی در Staging</span></button></div><div class="flex items-center gap-space-xs text-secondary font-label-sm bg-slate-100/70 border border-slate-200/60 px-space-md py-1.5 rounded-lg whitespace-nowrap"><span class="material-symbols-outlined text-emerald-700 text-[18px]">verified</span><span class="font-code-md text-slate-700 font-bold" dir="ltr">SHA-256 Verified</span><span class="w-1 h-1 rounded-full bg-slate-300 mx-space-xs"></span><span class="">اعتبارسنجی خودکار امضای دیجیتال و هش باینری فعال است</span></div></div>
+<!-- Form CTA Footer -->
+
+</div>
+<!-- Version Rollback Matrix (Dense Tabular Structure) -->
+<div class="w-full bg-surface-container-lowest border border-slate-200/70 rounded-xl p-margin mb-gutter-lg flex flex-col shadow-sm">
+<div class="flex items-center justify-between pb-space-md mb-space-md border-b border-slate-100">
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-on-surface font-bold">تاریخچه پچ‌ها و ماتریس بازگشت به عقب (Rollback Matrix)</span>
+<span class="font-body-sm text-body-sm text-secondary mt-0.5">
+          امکان لغو آنی نسخه جاری و فعال‌سازی فوری بسته‌های آزموده‌شده قبلی بدون وقفه در کارکرد کاربران.
+        </span>
+</div>
+<span class="font-label-md text-label-md bg-slate-100 text-slate-700 border border-slate-200/60 px-space-md py-space-xs rounded-full font-medium">
+        ۴ نسخه ثبت‌شده در این بیلد
+      </span>
+</div>
+<!-- Table Container -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-right border-collapse"><thead class=""><tr class="bg-surface-container-low text-secondary font-label-md text-label-md border-b border-slate-200/60"><th class="py-space-md px-space-md rounded-r-lg whitespace-nowrap text-right">Patch Version <span class="font-code-md text-label-sm font-normal">(SemVer)</span></th><th class="py-space-md px-space-md whitespace-nowrap text-center">Target Build</th><th class="py-space-md px-space-md whitespace-nowrap text-center">Bundle Size</th><th class="py-space-md px-space-md whitespace-nowrap text-center">Deployment Status</th><th class="py-space-md px-space-md whitespace-nowrap text-center">Delivery Policy</th><th class="py-space-md px-space-md whitespace-nowrap font-code-md text-left" dir="ltr">MD5 Checksum</th><th class="py-space-md px-space-md whitespace-nowrap text-right">تاریخ انتشار</th><th class="py-space-md px-space-md whitespace-nowrap text-right">Release Notes</th><th class="py-space-md px-space-md text-left rounded-l-lg whitespace-nowrap" dir="ltr">Actions</th></tr></thead><tbody class="font-body-sm text-body-sm divide-y divide-slate-100"><tr class="bg-blue-50/50 hover:bg-blue-50 transition-colors"><td class="py-space-md px-space-md whitespace-nowrap"><span class="font-code-md text-code-md text-blue-600 font-bold" dir="ltr">v1.0.4-patch.2</span></td><td class="py-space-md px-space-md font-code-md text-code-md whitespace-nowrap text-center">۱۰۴</td><td class="py-space-md px-space-md font-code-md text-code-md whitespace-nowrap text-center" dir="ltr">1.8 MB</td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-blue-100 text-blue-700 border border-blue-200 px-space-sm rounded font-bold whitespace-nowrap">فعال کنونی (Live)</span></td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-200/70 text-slate-800 px-space-sm rounded font-medium whitespace-nowrap">اجباری</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-left" dir="ltr">d41d8cd98f00b204...</td><td class="py-space-md px-space-md text-on-surface font-medium whitespace-nowrap">امروز ۱۱:۲۰</td><td class="py-space-md px-space-md text-on-surface truncate max-w-xs">رفع کرش در صفحه بازگشت از پرداخت</td><td class="py-space-md px-space-md text-left whitespace-nowrap" dir="ltr"><div class="flex items-center gap-space-xs justify-end"><button class="h-8 px-space-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 rounded font-label-sm text-label-sm transition-colors inline-flex items-center justify-center whitespace-nowrap" type="button">تغییر به اختیاری</button><button class="h-8 px-space-md bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white rounded font-label-sm text-label-sm transition-colors font-medium inline-flex items-center justify-center whitespace-nowrap" type="button">غیرفعال‌سازی</button></div></td></tr><tr class="hover:bg-slate-50 transition-colors"><td class="py-space-md px-space-md whitespace-nowrap"><span class="font-code-md text-code-md text-on-surface" dir="ltr">v1.0.4-patch.1</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-center">۱۰۴</td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-center" dir="ltr">1.7 MB</td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-100 text-slate-600 px-space-sm rounded whitespace-nowrap">آرشیو شده</span></td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-100 text-slate-600 px-space-sm rounded whitespace-nowrap">اختیاری</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-left" dir="ltr">c4ca4238a0b92382...</td><td class="py-space-md px-space-md text-secondary whitespace-nowrap">دیروز ۱۶:۴۰</td><td class="py-space-md px-space-md text-secondary truncate max-w-xs">بهبود رندرینگ فونت‌های فارسی و کش آیکون‌ها</td><td class="py-space-md px-space-md text-left whitespace-nowrap" dir="ltr"><div class="flex items-center justify-end"><button class="h-8 px-space-md bg-blue-600 text-white hover:bg-blue-700 rounded font-label-sm text-label-sm transition-colors shadow-xs font-medium inline-flex items-center justify-center whitespace-nowrap" type="button">رول‌بک به این نسخه (Rollback)</button></div></td></tr><tr class="hover:bg-slate-50 transition-colors"><td class="py-space-md px-space-md whitespace-nowrap"><span class="font-code-md text-code-md text-on-surface" dir="ltr">v1.0.3-patch.5</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-center">۱۰۳</td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-center" dir="ltr">2.1 MB</td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-100 text-slate-600 px-space-sm rounded whitespace-nowrap">آرشیو شده</span></td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-100 text-slate-600 px-space-sm rounded whitespace-nowrap">اجباری</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-left" dir="ltr">eccbc87e4b5ce2fe...</td><td class="py-space-md px-space-md text-secondary whitespace-nowrap">۳ روز پیش</td><td class="py-space-md px-space-md text-secondary truncate max-w-xs">رفع باگ دریافت اعلان‌های پوش وب‌سوکت</td><td class="py-space-md px-space-md text-left whitespace-nowrap" dir="ltr"><div class="flex items-center justify-end"><button class="h-8 px-space-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 rounded font-label-sm text-label-sm transition-colors inline-flex items-center justify-center whitespace-nowrap" type="button">رول‌بک (پچ قدیمی)</button></div></td></tr><tr class="hover:bg-slate-50 transition-colors opacity-75"><td class="py-space-md px-space-md whitespace-nowrap"><span class="font-code-md text-code-md text-secondary" dir="ltr">v1.0.3-patch.4</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-center">۱۰۳</td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-center" dir="ltr">1.9 MB</td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-100 text-slate-500 px-space-sm rounded whitespace-nowrap">منقضی شده</span></td><td class="py-space-md px-space-md whitespace-nowrap text-center"><span class="h-8 inline-flex items-center justify-center font-label-sm text-label-sm bg-slate-100 text-slate-500 px-space-sm rounded whitespace-nowrap">اختیاری</span></td><td class="py-space-md px-space-md font-code-md text-code-md text-secondary whitespace-nowrap text-left" dir="ltr">a87ff679a2f3e71d...</td><td class="py-space-md px-space-md text-secondary whitespace-nowrap">هفته پیش</td><td class="py-space-md px-space-md text-secondary truncate max-w-xs">تست داخلی تغییرات درگاه خرید اشتراک</td><td class="py-space-md px-space-md text-left whitespace-nowrap" dir="ltr"><div class="flex items-center justify-end"><button class="h-8 px-space-md bg-transparent hover:bg-slate-100 text-secondary hover:text-slate-800 rounded font-label-sm text-label-sm transition-colors inline-flex items-center justify-center whitespace-nowrap" type="button">حذف دائمی فایل پچ</button></div></td></tr></tbody></table>
+</div>
+</div>
+<!-- Live Client Activity Feed (Terminal Monitor) -->
+
+</div>
+<script>
+  // Simple micro-interactions for killswitch safety confirmation & drag zone
+  document.getElementById('killswitch-btn')?.addEventListener('click', function() {
+    const confirmed = confirm('هشدار بحرانی: آیا از غیرفعال‌سازی آنی تمام پچ‌ها و رول‌بک اجباری کلاینت‌ها اطمینان دارید؟ این عمل تمام بسته‌های فعال را معلق خواهد کرد.');
+    if (confirmed) {
+      alert('دستور رول‌بک سراسری با موفقیت صادر شد. کلاینت‌ها طی درخواست بعدی به کدهای خام نیتیو ارجاع داده می‌شوند.');
+    }
+  });
+
+  const dropZone = document.getElementById('drop-zone');
+  if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('bg-blue-50/50');
+      dropZone.classList.add('border-blue-400');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('bg-blue-50/50');
+      dropZone.classList.remove('border-blue-400');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('bg-blue-50/50');
+      dropZone.classList.remove('border-blue-400');
+      alert('بسته پچ دریافت شد. آماده بررسی هش یکپارچگی.');
+    });
+  }
+</script></main></div>
+
+<div class="fixed bottom-6 left-6 z-50 flex flex-col gap-space-sm pointer-events-none" id="toast-container"></div><div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="app-switcher-modal"><div class="bg-surface-container-lowest rounded-xl border border-slate-200/80 p-margin w-full max-w-md shadow-xl text-right"><div class="flex items-center justify-between pb-space-sm border-b border-slate-100 mb-space-md"><span class="font-headline-sm text-headline-sm text-on-surface font-bold">انتخاب برنامه فعال</span><button class="text-secondary hover:text-on-surface" id="close-app-modal" type="button"><span class="material-symbols-outlined text-[20px]">close</span></button></div><div class="flex flex-col gap-space-sm mb-space-md"><div class="flex items-center justify-between p-space-sm rounded-lg border border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-50 app-item" data-code="app_8829_tfk" data-name="تفکرمگ" data-pkg="com.tafakor.mag"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-label-lg">TM</div><div><div class="font-label-lg font-bold text-on-surface">تفکرمگ</div><div class="font-code-md text-label-sm text-secondary" dir="ltr">com.tafakor.mag</div></div></div><span class="font-label-sm text-blue-700 font-bold bg-blue-100 px-space-xs py-0.5 rounded">انتخاب شده</span></div><div class="flex items-center justify-between p-space-sm rounded-lg border border-slate-200/70 hover:bg-slate-50 cursor-pointer app-item" data-code="app_1102_qrn" data-name="قرآن کریم و مفاتیح" data-pkg="com.quran.daily"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-lg bg-emerald-700 text-white font-bold flex items-center justify-center text-label-lg">QD</div><div><div class="font-label-lg font-bold text-on-surface">قرآن کریم و مفاتیح</div><div class="font-code-md text-label-sm text-secondary" dir="ltr">com.quran.daily</div></div></div><span class="font-label-sm text-secondary font-medium">انتخاب</span></div><div class="flex items-center justify-between p-space-sm rounded-lg border border-slate-200/70 hover:bg-slate-50 cursor-pointer app-item" data-code="app_9934_exc" data-name="صرافی آنلاین تفکر" data-pkg="com.exchange.app"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-label-lg">EX</div><div><div class="font-label-lg font-bold text-on-surface">صرافی آنلاین تفکر</div><div class="font-code-md text-label-sm text-secondary" dir="ltr">com.exchange.app</div></div></div><span class="font-label-sm text-secondary font-medium">انتخاب</span></div></div></div></div><div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="new-app-modal"><div class="bg-surface-container-lowest rounded-xl border border-slate-200/80 p-margin w-full max-w-md shadow-xl text-right"><div class="flex items-center justify-between pb-space-sm border-b border-slate-100 mb-space-md"><span class="font-headline-sm text-headline-sm text-on-surface font-bold">ثبت و اتصال برنامه فلاتر جدید</span><button class="text-secondary hover:text-on-surface" id="close-new-modal" type="button"><span class="material-symbols-outlined text-[20px]">close</span></button></div><form class="flex flex-col gap-space-md" id="new-app-form"><div class="flex flex-col gap-space-xs"><label class="font-label-md text-on-surface font-semibold">نام برنامه</label><input class="w-full px-space-md py-space-sm bg-surface-container-low text-on-surface text-body-sm rounded-lg border border-slate-200/70 focus:outline-none focus:border-blue-500" id="new-app-name-input" placeholder="مثلا: فروشگاه آنلاین" required="" type="text"></div><div class="flex flex-col gap-space-xs"><label class="font-label-md text-on-surface font-semibold">Package Name / Bundle ID</label><input class="w-full px-space-md py-space-sm bg-surface-container-low text-on-surface font-code-md text-code-md rounded-lg border border-slate-200/70 focus:outline-none focus:border-blue-500" dir="ltr" id="new-app-pkg-input" placeholder="com.company.shop" required="" type="text"></div><div class="flex justify-end gap-space-sm mt-space-sm"><button class="px-space-md py-space-sm bg-slate-100 text-secondary hover:bg-slate-200 rounded-lg text-label-lg" id="cancel-new-app" type="button">انصراف</button><button class="px-space-lg py-space-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-label-lg font-bold" type="submit">افزودن و اتصال</button></div></form></div></div><script class="">function showToast(msg, type='info') { const c = document.getElementById('toast-container'); if(!c) return; const t = document.createElement('div'); const bg = type === 'success' ? 'bg-emerald-950 text-white border-emerald-800/60' : type === 'error' ? 'bg-red-600 text-white border-red-700' : 'bg-slate-900 text-white border-slate-700'; t.className = 'pointer-events-auto px-space-lg py-space-sm rounded-xl shadow-lg border text-body-sm flex items-center gap-space-sm transition-all duration-300'; t.innerHTML = '<span class="material-symbols-outlined text-[18px]">' + (type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info') + '</span><span>' + msg + '</span>'; c.appendChild(t); setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3800); } const appModal = document.getElementById('app-switcher-modal'); const newModal = document.getElementById('new-app-modal'); document.getElementById('btn-switch-app')?.addEventListener('click', () => appModal?.classList.remove('hidden')); document.querySelector('aside button')?.addEventListener('click', () => appModal?.classList.remove('hidden')); document.getElementById('close-app-modal')?.addEventListener('click', () => appModal?.classList.add('hidden')); document.getElementById('btn-new-app')?.addEventListener('click', () => newModal?.classList.remove('hidden')); document.getElementById('close-new-modal')?.addEventListener('click', () => newModal?.classList.add('hidden')); document.getElementById('cancel-new-app')?.addEventListener('click', () => newModal?.classList.add('hidden')); document.querySelectorAll('.app-item').forEach(item => { item.addEventListener('click', () => { const name = item.dataset.name; const pkg = item.dataset.pkg; document.getElementById('header-app-name').textContent = name; document.getElementById('header-app-pkg').textContent = '(' + pkg + ')'; document.getElementById('sidebar-app-name').textContent = 'اپلیکیشن ' + name; document.getElementById('sidebar-app-pkg').textContent = pkg; const avatar = document.getElementById('active-app-avatar'); if(avatar) avatar.textContent = name.substring(0, 2); appModal?.classList.add('hidden'); showToast('برنامه فعال با موفقیت به ' + name + ' تغییر یافت.', 'success'); }); }); document.getElementById('new-app-form')?.addEventListener('submit', (e) => { e.preventDefault(); const name = document.getElementById('new-app-name-input').value; const pkg = document.getElementById('new-app-pkg-input').value; document.getElementById('header-app-name').textContent = name; document.getElementById('header-app-pkg').textContent = '(' + pkg + ')'; document.getElementById('sidebar-app-name').textContent = 'اپلیکیشن ' + name; document.getElementById('sidebar-app-pkg').textContent = pkg; newModal?.classList.add('hidden'); showToast('برنامه ' + name + ' اضافه و فعال گردید.', 'success'); }); document.getElementById('btn-staging-preview')?.addEventListener('click', () => { showToast('در حال راه‌اندازی شبیه‌ساز Staging برای بیلد ۱۰۴...', 'info'); }); const dz = document.getElementById('drop-zone'); dz?.addEventListener('click', () => { const info = dz.querySelector('.font-code-md'); if(info) info.textContent = 'patch_v1.0.4-patch.3.bundle (آماده بارگذاری)'; showToast('فایل patch_v1.0.4-patch.3.bundle با موفقیت انتخاب شد (۲.۱ MB)', 'success'); }); document.getElementById('btn-deploy-patch')?.addEventListener('click', function() { const btn = this; const origText = btn.textContent; btn.disabled = true; btn.textContent = 'در حال اعتبارسنجی SHA-256 و بارگذاری...'; setTimeout(() => { btn.disabled = false; btn.textContent = origText; const tbody = document.querySelector('table tbody'); const liveHeader = document.querySelector('.font-headline-lg.text-blue-600'); if(liveHeader) liveHeader.textContent = 'v1.0.4-patch.3'; if(tbody) { const firstRow = tbody.querySelector('tr'); if(firstRow) { firstRow.className = 'hover:bg-slate-50 transition-colors'; const statusCell = firstRow.querySelector('td:nth-child(4)'); if(statusCell) statusCell.innerHTML = '<span class="font-label-sm text-label-sm bg-slate-100 text-slate-600 px-space-xs py-0.5 rounded">آرشیو شده</span>'; const actionCell = firstRow.querySelector('td:last-child'); if(actionCell) actionCell.innerHTML = '<div class="flex items-center justify-end"><button class="rollback-btn px-space-md py-1 bg-blue-600 text-white hover:bg-blue-700 rounded font-label-sm text-label-sm transition-colors shadow-xs font-medium" type="button">رول‌بک به این نسخه (Rollback)</button></div>'; } const newRow = document.createElement('tr'); newRow.className = 'bg-blue-50/50 hover:bg-blue-50 transition-colors'; newRow.innerHTML = '<td class="py-space-sm px-space-md"><span class="font-code-md text-code-md text-blue-600 font-bold" dir="ltr">v1.0.4-patch.3</span></td><td class="py-space-sm px-space-md font-code-md text-code-md">۱۰۴</td><td class="py-space-sm px-space-md font-code-md text-code-md" dir="ltr">2.1 MB</td><td class="py-space-sm px-space-md"><span class="font-label-sm text-label-sm bg-blue-100 text-blue-700 border border-blue-200 px-space-xs py-0.5 rounded font-bold">فعال کنونی (Live)</span></td><td class="py-space-sm px-space-md"><span class="font-label-sm text-label-sm bg-slate-200/70 text-slate-800 px-space-xs py-0.5 rounded font-medium">اجباری</span></td><td class="py-space-sm px-space-md font-code-md text-code-md text-secondary" dir="ltr">b94d27b9934d3e08...</td><td class="py-space-sm px-space-md text-on-surface font-medium">هم‌اکنون</td><td class="py-space-sm px-space-md text-on-surface truncate max-w-xs">بهبود و استقرار پچ نسخه جدید</td><td class="py-space-sm px-space-md text-left" dir="ltr"><div class="flex items-center gap-space-xs justify-end"><button class="toggle-policy-btn px-space-sm py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 rounded font-label-sm text-label-sm transition-colors" type="button">تغییر به اختیاری</button><button class="disable-btn px-space-sm py-1 bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white rounded font-label-sm text-label-sm transition-colors font-medium" type="button">غیرفعال‌سازی</button></div></td>'; tbody.prepend(newRow); setupTableEvents(); } showToast('پچ v1.0.4-patch.3 با موفقیت منتشر و فعال شد!', 'success'); }, 1200); }); function setupTableEvents() { document.querySelectorAll('.rollback-btn, button:contains("رول‌بک")').forEach(b => { b.onclick = function() { const row = this.closest('tr'); const ver = row?.querySelector('td:first-child')?.innerText?.trim() || 'پچ انتخاب شده'; const liveHeader = document.querySelector('.font-headline-lg.text-blue-600'); if(liveHeader) liveHeader.textContent = ver; showToast('رول‌بک با موفقیت انجام شد. نسخه فعال: ' + ver, 'success'); }; }); document.querySelectorAll('button').forEach(btn => { if(btn.textContent.includes('تغییر به اختیاری') || btn.textContent.includes('تغییر به اجباری')) { btn.onclick = function() { const row = this.closest('tr'); const policyBadge = row?.querySelectorAll('td')[4]?.querySelector('span'); if(this.textContent.includes('اختیاری')) { this.textContent = 'تغییر به اجباری'; if(policyBadge) policyBadge.textContent = 'اختیاری'; showToast('سیاست استقرار به اختیاری تغییر یافت.', 'info'); } else { this.textContent = 'تغییر به اختیاری'; if(policyBadge) policyBadge.textContent = 'اجباری'; showToast('سیاست استقرار به اجباری ارتقا یافت.', 'info'); } }; } if(btn.textContent.includes('غیرفعال‌سازی')) { btn.onclick = function() { showToast('پچ با موفقیت موقتا غیرفعال شد.', 'info'); }; } if(btn.textContent.includes('حذف دائمی')) { btn.onclick = function() { const row = this.closest('tr'); row?.remove(); showToast('فایل باینری پچ با موفقیت حذف شد.', 'info'); }; } }); } setupTableEvents();</script></body></html>

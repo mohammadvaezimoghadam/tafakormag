@@ -7,6 +7,8 @@ db.sqlite3
 *.sqlite3*
 *.sqlite3-shm
 *.sqlite3-wal
+*.db
+patch_server/data/*.db
 /media/
 /staticfiles/
 backend/media/
@@ -20,8 +22,12 @@ frontend/node_modules/*
 !frontend/notede_modules/.gitkeep
 
 
-# Environment
-#.env
+# Environment & Local Secrets
+.env
+.env.*
+postgres-data/
+*.zip
+*.tar.gz
 .venv/
 venv/
 env/
