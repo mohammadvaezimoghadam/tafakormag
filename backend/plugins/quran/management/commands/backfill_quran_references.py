@@ -186,10 +186,11 @@ class Command(BaseCommand):
                 a_num = ayah['numberInSurah']
                 norm_a = normalize_text(ayah['text'])
                 words = set(w for w in norm_a.split() if len(w) > 2)
+                p4 = ' '.join(norm_a.split()[:4])
                 total_w = len(norm_a.split())
 
-                self.ayah_by_num.setdefault(a_num, []).append((s_num, norm_a, words, total_w))
-                self.all_ayahs.append((s_num, a_num, norm_a, words))
+                self.ayah_by_num.setdefault(a_num, []).append((s_num, norm_a, words, p4, total_w))
+                self.all_ayahs.append((s_num, a_num, norm_a, words, p4, total_w))
 
     def resolve_surah_name(self, text: str) -> int:
         clean = normalize_text(text)
@@ -252,26 +253,49 @@ class Command(BaseCommand):
                     except ValueError:
                         pass
 
-        # --- Tier 3: Hafs Matcher (Parenthesized numbers + word overlap) ---
-        norm = normalize_text(content)
-        pwords = set(w for w in norm.split() if len(w) > 2)
-        parens = [int(m) for m in re.findall(r'[\(（]([0-9۰-۹٠-٩]{1,3})[\)）]', content)]
+        # --- Tier 3: Hafs Matcher (ONLY if not found by Tier 1 & Tier 2) ---
+        if not found:
+            norm = normalize_text(content)
+            pwords = set(w for w in norm.split() if len(w) > 2)
+            parens = [int(m) for m in re.findall(r'[\(（]([0-9۰-۹٠-٩]{1,3})[\)）]', content)]
 
-        for pnum in parens:
-            candidates = self.ayah_by_num.get(pnum, [])
-            for s_num, norm_ayah, awords, total_w in candidates:
-                overlap = len(pwords.intersection(awords))
-                if (total_w <= 4 and overlap >= 2) or (total_w > 4 and overlap >= 3):
-                    add_ref(s_num, pnum)
+            for pnum in parens:
+                candidates = self.ayah_by_num.get(pnum, [])
+                best_cand = None
+                best_score = 0.0
+
+                for s_num, norm_ayah, awords, p4, total_w in candidates:
+                    if total_w == 0:
+                        continue
+                    overlap = len(pwords.intersection(awords))
+                    ratio = overlap / total_w
+                    has_prefix = p4 in norm and len(p4) >= 10
+
+                    if has_prefix:
+                        score = 100.0 + ratio
+                    elif ratio >= 0.60 and overlap >= 4:
+                        score = 50.0 + ratio
+                    elif total_w <= 4 and overlap >= 3:
+                        score = 40.0 + ratio
+                    else:
+                        continue
+
+                    if score > best_score:
+                        best_score = score
+                        best_cand = (s_num, pnum)
+
+                if best_cand:
+                    add_ref(best_cand[0], best_cand[1])
 
         # --- Tier 4: Hafs Fulltext scan for posts without Surah name and without numbers ---
-        if not found and len(pwords) >= 4:
+        if not found:
+            norm = normalize_text(content)
             first_line = content.split('\n')[0]
             first_part_words = set(w for w in normalize_text(first_line).split() if len(w) > 2)
             if len(first_part_words) >= 3:
-                for s_num, a_num, norm_ayah, awords in self.all_ayahs:
+                for s_num, a_num, norm_ayah, awords, p4, total_w in self.all_ayahs:
                     overlap = len(first_part_words.intersection(awords))
-                    if (len(awords) <= 4 and overlap >= 2) or (len(awords) > 4 and overlap >= 4):
+                    if (total_w <= 4 and overlap >= 2) or (total_w > 4 and overlap >= 4):
                         add_ref(s_num, a_num)
                         break
 
