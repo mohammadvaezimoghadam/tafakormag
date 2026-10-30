@@ -118,6 +118,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            '--file',
+            type=str,
+            default=None,
+            help='Path to verified JSON manifest file (e.g. quran_references_staging.json or quran_references_production.json) to directly inject into database.'
+        )
+        parser.add_argument(
             '--topics',
             type=str,
             default=None,
@@ -302,6 +308,68 @@ class Command(BaseCommand):
         # Return sorted list of tuples (surah_number, ayah_number)
         return sorted(list(found), key=lambda x: (x[0], x[1]))
 
+    def import_from_json(self, file_path: str, clear_existing: bool, dry_run: bool, batch_size: int):
+        path = Path(file_path)
+        if not path.is_absolute():
+            default_path = Path(__file__).resolve().parent.parent.parent / 'data' / file_path
+            if default_path.exists():
+                path = default_path
+            elif not path.exists():
+                raise CommandError(f"Manifest file not found at: {file_path}")
+
+        with open(path, 'r', encoding='utf-8') as f:
+            manifest_data = json.load(f)
+
+        self.stdout.write(self.style.SUCCESS(f"Loaded {len(manifest_data)} references from manifest: {path.name}"))
+
+        plugin = None
+        if not dry_run:
+            plugin, created = Plugin.objects.get_or_create(
+                identifier='quran',
+                defaults={
+                    'name': 'قرآن کریم',
+                    'description': 'افزونه رسمی اتصال یادداشت‌ها به آیات قرآن کریم',
+                    'version': '1.0.0',
+                    'is_active': True,
+                    'is_system': True,
+                }
+            )
+
+        if clear_existing and not dry_run and plugin:
+            post_ids = list(set(item['post_id'] for item in manifest_data))
+            deleted, _ = PostPluginReference.objects.filter(
+                post_id__in=post_ids,
+                plugin=plugin,
+                resource_type='ayah'
+            ).delete()
+            self.stdout.write(f"Cleared {deleted} existing references for {len(post_ids)} posts.")
+
+        refs = []
+        for item in manifest_data:
+            ref_obj = PostPluginReference(
+                post_id=item['post_id'],
+                plugin=plugin,
+                resource_type=item.get('resource_type', 'ayah'),
+                external_id=item['external_id'],
+                metadata={
+                    'surah_number': item['surah_number'],
+                    'ayah_number': item['ayah_number'],
+                    'surah_name': item['surah_name']
+                }
+            )
+            refs.append(ref_obj)
+
+        if not dry_run:
+            with transaction.atomic():
+                PostPluginReference.objects.bulk_create(
+                    refs,
+                    batch_size=batch_size,
+                    ignore_conflicts=True
+                )
+            self.stdout.write(self.style.SUCCESS(f"Successfully committed {len(refs)} references to PostPluginReference table!"))
+        else:
+            self.stdout.write(self.style.WARNING(f"Dry run complete. {len(refs)} references validated without database commit."))
+
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         clear_existing = options['clear_existing']
@@ -314,6 +382,12 @@ class Command(BaseCommand):
         self.stdout.write(f"Mode: {'DRY-RUN (Simulate only)' if dry_run else 'PRODUCTION COMMIT'}")
         self.stdout.write(f"Batch size: {batch_size}")
         self.stdout.write(f"Clear existing: {clear_existing}")
+
+        # If --file is provided, directly import from the curated JSON manifest
+        json_file = options.get('file')
+        if json_file:
+            self.import_from_json(json_file, clear_existing=clear_existing, dry_run=dry_run, batch_size=batch_size)
+            return
 
         # 1. Resolve Target Topics
         topic_qs = Topic.objects.all()
