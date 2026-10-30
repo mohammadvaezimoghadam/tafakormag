@@ -305,7 +305,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("No matching topics found."))
             return
 
-        self.stdout.write(f"Target Topics ({len(topics)}): {', '.join(f'#{t.id} ({getattr(t, \"name\", str(t))})' for t in topics)}")
+        topic_labels = [f"#{t.id} ({t.name})" for t in topics]
+        self.stdout.write(f"Target Topics ({len(topics)}): {', '.join(topic_labels)}")
 
         # 2. Ensure Quran Plugin exists in DB
         plugin = None
