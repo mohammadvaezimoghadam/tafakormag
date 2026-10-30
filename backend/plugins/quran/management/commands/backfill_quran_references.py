@@ -305,7 +305,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("No matching topics found."))
             return
 
-        self.stdout.write(f"Target Topics ({len(topics)}): {', '.join(f'#{t.id} ({t.title})' for t in topics)}")
+        self.stdout.write(f"Target Topics ({len(topics)}): {', '.join(f'#{t.id} ({getattr(t, \"name\", str(t))})' for t in topics)}")
 
         # 2. Ensure Quran Plugin exists in DB
         plugin = None
@@ -331,7 +331,8 @@ class Command(BaseCommand):
         # 3. Process Topic by Topic
         for topic in topics:
             self.stdout.write("\n" + "-" * 70)
-            self.stdout.write(f"Processing Topic #{topic.id}: {topic.title}")
+            topic_name = getattr(topic, 'name', str(topic))
+            self.stdout.write(f"Processing Topic #{topic.id}: {topic_name}")
 
             posts = Post.objects.filter(topic=topic).order_by('id')
             post_count = posts.count()
