@@ -465,10 +465,10 @@ const formatTime = (timeInSeconds: number) => {
   <div 
     ref="cardRef"
     :class="[
-      'w-full bg-card text-card-foreground border border-border/60 rounded-3xl shadow-none transition-all duration-300 flex flex-col overflow-hidden text-start',
-      props.isPinned ? 'border-primary/45 bg-primary/[0.01]' : '',
+      'w-full bg-card text-card-foreground border border-border/70 dark:border-border/60 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.20)] hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col overflow-hidden text-start',
+      props.isPinned ? 'border-amber-500/40 bg-amber-500/[0.02]' : '',
       isEditing ? 'select-text' : 'select-none',
-      isPressing ? 'scale-[0.96] shadow-inner bg-card/80 border-border/30 brightness-95' : 'scale-100'
+      isPressing ? 'scale-[0.98] shadow-inner bg-card/90 border-border/50 brightness-95' : 'scale-100'
     ]"
     :dir="languageStore.dir"
     @mousedown="handleMouseDown"
@@ -480,34 +480,42 @@ const formatTime = (timeInSeconds: number) => {
     @contextmenu="handleContextMenu"
   >
     <!-- Card Top Header -->
-    <div class="px-5 py-4 flex items-center justify-between">
+    <div class="px-4.5 py-3.5 flex items-center justify-between border-b border-border/30">
       <div class="flex items-center gap-3">
-        <!-- Avatar -->
-        <Avatar class="size-10 shadow-xs">
-          <AvatarImage :src="author.avatarUrl || ''" :alt="author.name" />
-          <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs">
-            {{ author.name.charAt(0) }}
+        <!-- Avatar (Squircle 14px radius, iOS 18 style) -->
+        <Avatar class="size-10 rounded-xl border border-border/40 shadow-xs shrink-0 overflow-hidden">
+          <AvatarImage :src="author.avatarUrl || ''" :alt="author.name" class="rounded-xl object-cover" />
+          <AvatarFallback class="bg-primary/10 text-primary font-black text-xs rounded-xl">
+            {{ author.name ? author.name.charAt(0) : 'ت' }}
           </AvatarFallback>
         </Avatar>
         
         <!-- Author Info -->
         <div class="flex flex-col text-start">
-          <span class="text-xs font-bold text-foreground">{{ author.name }}</span>
-          <span class="text-[10px] text-muted-foreground mt-0.5">{{ author.role || languageStore.t('عضو تاپیک', 'Topic Member') }}</span>
+          <span class="text-xs sm:text-[13px] font-bold text-foreground">{{ author.name }}</span>
+          <span class="text-[10px] text-muted-foreground/80 mt-0.5">{{ author.role || languageStore.t('عضو تاپیک', 'Topic Member') }}</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5">
+        <!-- Pinned indicator pill if pinned -->
+        <div
+          v-if="props.isPinned"
+          class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9.5px] font-bold me-1"
+        >
+          <span>{{ languageStore.t('پین‌شده', 'Pinned') }}</span>
+        </div>
+
         <!-- Timestamp -->
-        <div class="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-          <ClockIcon class="size-3.5 text-primary" />
+        <div class="flex items-center gap-1 text-[10.5px] font-bold text-muted-foreground/80">
+          <ClockIcon class="size-3 text-muted-foreground/70" />
           <span>{{ formatTimestamp(timestamp) }}</span>
         </div>
-        <!-- Options Menu (Simulated) -->
+        <!-- Options Menu Button -->
         <Button 
           variant="ghost" 
           size="icon" 
-          class="size-7 rounded-full text-muted-foreground hover:text-foreground cursor-pointer"
+          class="size-7 rounded-lg text-muted-foreground hover:text-foreground active:scale-90 cursor-pointer transition-all"
           @click="handleThreeDotsClick"
         >
           <MoreVerticalIcon class="size-4" />
@@ -516,12 +524,12 @@ const formatTime = (timeInSeconds: number) => {
     </div>
 
     <!-- Card Body Content -->
-    <div class="p-5 flex flex-col gap-4">
-      <!-- Post Text Content / Edit Box -->
+    <div class="p-4 sm:p-4.5 flex flex-col gap-3.5">
+      <!-- Post Text Content -->
       <FormattedText
         v-if="content"
         :content="content"
-        class-name="text-sm font-medium leading-relaxed text-foreground/90 text-start"
+        class-name="text-xs sm:text-[13px] font-medium leading-relaxed text-foreground/90 text-start"
         dir="auto"
       />
 
@@ -529,12 +537,13 @@ const formatTime = (timeInSeconds: number) => {
       <!-- 1. IMAGE POST -->
       <div 
         v-if="type === 'image' && mediaUrl" 
-        class="relative w-full rounded-2xl overflow-hidden shadow-xs group"
+        class="relative w-full rounded-xl overflow-hidden border border-border/40 shadow-xs group"
       >
         <img 
           :src="mediaUrl" 
           alt="Post Image" 
           class="w-full h-auto max-h-[350px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+          loading="lazy"
         />
         <div class="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
           <span class="text-[9px] bg-black/60 backdrop-blur-xs text-white px-2.5 py-1 rounded-md flex items-center gap-1 font-bold">
@@ -547,7 +556,7 @@ const formatTime = (timeInSeconds: number) => {
       <!-- 2. VIDEO POST -->
       <div 
         v-else-if="type === 'video' && mediaUrl" 
-        class="relative w-full rounded-2xl overflow-hidden shadow-xs bg-black/40 group"
+        class="relative w-full rounded-xl overflow-hidden border border-border/40 shadow-xs bg-black/40 group"
       >
         <video 
           ref="videoRef"
@@ -558,22 +567,21 @@ const formatTime = (timeInSeconds: number) => {
           @pause="onVideoPlayStateChange"
           controls
         />
-        <!-- Custom overlay play button for high-end aesthetic -->
         <div 
           v-if="!isVideoPlaying"
           @click="toggleVideoPlay"
-          class="absolute inset-0 flex items-center justify-center bg-black/15 group-hover:bg-black/25 transition-colors duration-300 cursor-pointer"
+          class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors duration-300 cursor-pointer"
         >
-          <div class="size-14 rounded-full bg-white/15 dark:bg-black/20 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-            <PlayIcon class="size-6 fill-white ml-0.5" />
+          <div class="size-13 rounded-full bg-white/20 dark:bg-black/30 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 active:scale-95 transition-transform duration-200">
+            <PlayIcon class="size-5.5 fill-white ml-0.5" />
           </div>
         </div>
       </div>
 
-      <!-- 3. AUDIO POST (Highly customized glassmorphic audio player) -->
+      <!-- 3. AUDIO POST (Refined audio player with iOS 18 geometry) -->
       <div 
         v-else-if="type === 'audio' && mediaUrl" 
-        class="w-full bg-muted/30 rounded-2xl p-4 flex flex-col gap-3"
+        class="w-full bg-muted/30 dark:bg-muted/15 border border-border/60 rounded-xl p-3.5 flex flex-col gap-2.5"
       >
         <audio 
           ref="audioRef"
@@ -583,15 +591,15 @@ const formatTime = (timeInSeconds: number) => {
           @ended="onAudioEnded"
         />
 
-        <div class="flex items-center gap-4">
-          <!-- Play/Pause Glassmorphic Button -->
+        <div class="flex items-center gap-3.5">
+          <!-- Play/Pause Button -->
           <button 
             @click="toggleAudioPlay"
             :aria-label="isAudioPlaying ? languageStore.t('توقف صوت', 'Pause audio') : languageStore.t('پخش صوت', 'Play audio')"
-            class="size-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xs shrink-0"
+            class="size-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xs shrink-0"
           >
-            <PlayIcon v-if="!isAudioPlaying" class="size-5 fill-primary ml-0.5" />
-            <PauseIcon v-else class="size-5 fill-primary" />
+            <PlayIcon v-if="!isAudioPlaying" class="size-4.5 fill-primary ml-0.5" />
+            <PauseIcon v-else class="size-4.5 fill-primary" />
           </button>
 
           <!-- Waveform / Info -->
@@ -601,7 +609,7 @@ const formatTime = (timeInSeconds: number) => {
                 <MusicIcon class="size-3 text-primary" />
                 {{ languageStore.t('فایل صوتی ضمیمه شده', 'Attached audio file') }}
               </span>
-              <span class="text-[10px] text-muted-foreground font-bold shrink-0">
+              <span class="text-[10px] text-muted-foreground/80 font-bold shrink-0">
                 {{ formatTime(audioCurrentTime) }} / {{ formatTime(audioDuration || parseFloat(duration || '0')) }}
               </span>
             </div>
@@ -623,7 +631,7 @@ const formatTime = (timeInSeconds: number) => {
           <!-- Mute/Unmute button -->
           <button 
             @click="toggleMute"
-            class="size-8 rounded-full hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+            class="size-7.5 rounded-lg hover:bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer shrink-0"
           >
             <Volume2Icon v-if="!isMuted" class="size-4" />
             <VolumeXIcon v-else class="size-4 text-destructive" />
@@ -632,10 +640,10 @@ const formatTime = (timeInSeconds: number) => {
       </div>
     </div>
 
-    <!-- Active Reactions (Telegram Style) -->
+    <!-- Active Reactions (iOS 18 pill badges) -->
     <div 
       v-if="localReactions.length > 0" 
-      class="px-5 pb-3 flex flex-wrap gap-1.5 justify-start"
+      class="px-4.5 pb-2.5 flex flex-wrap gap-1.5 justify-start"
       dir="rtl"
     >
       <button
@@ -643,10 +651,10 @@ const formatTime = (timeInSeconds: number) => {
         :key="reaction.emoji"
         @click="handleReactionClick(reaction.emoji)"
         :class="[
-          'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border',
+          'px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 cursor-pointer border active:scale-90 hover:scale-105 select-none',
           reaction.reacted
-            ? 'bg-primary/10 border-primary/20 text-primary shadow-xs'
-            : 'bg-muted/30 border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60'
+            ? 'bg-primary/10 border-primary/25 text-primary shadow-2xs font-bold'
+            : 'bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/70'
         ]"
       >
         <span>{{ reaction.emoji }}</span>
@@ -655,19 +663,19 @@ const formatTime = (timeInSeconds: number) => {
     </div>
 
     <!-- Card Footer Action Controls -->
-    <div class="px-5 py-3 bg-white/2 dark:bg-black/2 flex items-center justify-between gap-4">
+    <div class="px-4.5 py-2.5 border-t border-border/30 bg-muted/5 flex items-center justify-between gap-4">
       <div class="flex items-center gap-2">
         <!-- Like Action Button -->
         <button 
           @click="toggleLike"
           :class="[
-            'px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border',
+            'h-8 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border',
             isLiked 
-              ? 'bg-destructive/10 border-destructive/20 text-destructive shadow-xs' 
-              : 'bg-white/5 dark:bg-white/2 border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10'
+              ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400 shadow-2xs' 
+              : 'bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
           ]"
         >
-          <HeartIcon :class="['size-4 transition-transform duration-300', isLiked ? 'fill-destructive scale-110' : '']" />
+          <HeartIcon :class="['size-3.5 transition-transform duration-300', isLiked ? 'fill-rose-500 text-rose-500 scale-110' : '']" />
           <span class="text-[11px] font-bold">{{ toPersianDigits(localLikesCount) }}</span>
         </button>
 
@@ -675,18 +683,18 @@ const formatTime = (timeInSeconds: number) => {
         <button 
           @click="showComments = !showComments"
           :class="[
-            'px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer border',
+            'h-8 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border',
             showComments
-              ? 'bg-primary/10 border-primary/20 text-primary shadow-xs'
-              : 'bg-white/5 dark:bg-white/2 border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10'
+              ? 'bg-primary/10 border-primary/20 text-primary shadow-2xs'
+              : 'bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
           ]"
         >
-          <MessageCircleIcon class="size-4" />
+          <MessageCircleIcon class="size-3.5" />
           <span class="text-[11px] font-bold">{{ toPersianDigits(localComments.length) }}</span>
           <Badge 
             v-if="localComments.length > 0" 
             variant="secondary" 
-            class="h-4 px-1 rounded-sm text-[8px] bg-primary/20 text-primary border-0 font-bold"
+            class="h-4 px-1 rounded-md text-[8px] bg-primary/15 text-primary border-0 font-bold"
           >
             {{ languageStore.t('جدید', 'New') }}
           </Badge>
@@ -697,10 +705,10 @@ const formatTime = (timeInSeconds: number) => {
       <Button 
         variant="ghost" 
         size="icon" 
-        class="size-8 rounded-full text-muted-foreground hover:text-foreground"
+        class="size-8 rounded-xl text-muted-foreground hover:text-foreground active:scale-95 hover:bg-muted/50"
         @click="handleShare"
       >
-        <Share2Icon class="size-4" />
+        <Share2Icon class="size-3.5" />
       </Button>
     </div>
 
@@ -708,23 +716,23 @@ const formatTime = (timeInSeconds: number) => {
     <transition name="expand-comments">
       <div 
         v-if="showComments" 
-        class="bg-white/2 dark:bg-black/5 flex flex-col overflow-hidden"
+        class="border-t border-border/40 bg-muted/10 dark:bg-card/25 flex flex-col overflow-hidden"
       >
         <!-- Comments List -->
-        <div class="px-5 py-4 flex flex-col gap-3.5 max-h-[250px] overflow-y-auto scrollbar-thin">
+        <div class="px-4.5 py-3.5 flex flex-col gap-3 max-h-[260px] overflow-y-auto scrollbar-thin">
           <template v-if="commentsLoading">
             <div 
               v-for="i in 2" 
               :key="'comment-skeleton-' + i"
-              class="flex items-start gap-3 text-start animate-pulse"
+              class="flex items-start gap-2.5 text-start animate-pulse"
             >
-              <Skeleton class="size-8 rounded-full shrink-0" />
-              <div class="flex-1 flex flex-col gap-1.5 px-3.5 py-2.5 bg-white/5 dark:bg-black/15 rounded-2xl">
+              <Skeleton class="size-7.5 rounded-lg shrink-0" />
+              <div class="flex-1 flex flex-col gap-1.5 px-3 py-2 bg-card/60 rounded-xl border border-border/40">
                 <div class="flex justify-between items-center">
-                  <Skeleton class="h-3.5 w-16 rounded-md" />
+                  <Skeleton class="h-3 w-16 rounded-md" />
                   <Skeleton class="h-3 w-8 rounded-md" />
                 </div>
-                <Skeleton class="h-3.5 w-full rounded-md" />
+                <Skeleton class="h-3 w-full rounded-md" />
               </div>
             </div>
           </template>
@@ -735,25 +743,25 @@ const formatTime = (timeInSeconds: number) => {
             <div 
               v-for="comment in localComments" 
               :key="comment.id"
-              class="flex items-start gap-3 text-start"
+              class="flex items-start gap-2.5 text-start"
             >
               <!-- Commenter Avatar -->
-              <Avatar class="size-8">
-                <AvatarImage :src="comment.authorAvatar || ''" :alt="comment.authorName" />
-                <AvatarFallback class="bg-primary/5 text-primary text-[10px] font-bold">
-                  {{ comment.authorName.charAt(0) }}
+              <Avatar class="size-7.5 rounded-lg overflow-hidden shrink-0 border border-border/40">
+                <AvatarImage :src="comment.authorAvatar || ''" :alt="comment.authorName" class="rounded-lg object-cover" />
+                <AvatarFallback class="bg-primary/10 text-primary text-[10px] font-bold rounded-lg">
+                  {{ comment.authorName ? comment.authorName.charAt(0) : 'ک' }}
                 </AvatarFallback>
               </Avatar>
 
               <!-- Comment Content Box -->
-              <div class="flex-1 bg-white/5 dark:bg-black/15 rounded-2xl px-3.5 py-2.5 flex flex-col gap-1">
+              <div class="flex-1 bg-card/80 dark:bg-card/50 border border-border/50 rounded-xl px-3.5 py-2.5 flex flex-col gap-1 shadow-2xs">
                 <div class="flex justify-between items-center">
-                  <span class="text-[11.5px] font-extrabold text-foreground">{{ comment.authorName }}</span>
-                  <span class="text-[10px] text-muted-foreground font-semibold">{{ formatTimestamp(comment.timestamp) }}</span>
+                  <span class="text-[11.5px] font-bold text-foreground">{{ comment.authorName }}</span>
+                  <span class="text-[9.5px] text-muted-foreground/80 font-semibold">{{ formatTimestamp(comment.timestamp) }}</span>
                 </div>
                 <FormattedText
                   :content="comment.text"
-                  class-name="text-[12.5px] leading-relaxed text-foreground/90 font-medium text-start"
+                  class-name="text-xs leading-relaxed text-foreground/90 font-normal text-start"
                   dir="auto"
                 />
               </div>
@@ -762,9 +770,9 @@ const formatTime = (timeInSeconds: number) => {
         </div>
 
         <!-- Add Comment Form Input -->
-        <div class="p-3 bg-white/3 dark:bg-black/10 flex items-center gap-2">
-          <Avatar class="size-8 shrink-0">
-            <AvatarFallback class="bg-primary/10 text-primary text-[10px] font-bold">
+        <div class="p-3 border-t border-border/30 bg-muted/20 dark:bg-card/30 flex items-center gap-2">
+          <Avatar class="size-7.5 rounded-lg overflow-hidden shrink-0 border border-border/40">
+            <AvatarFallback class="bg-primary/10 text-primary text-[10px] font-bold rounded-lg">
               <UserIcon class="size-3" />
             </AvatarFallback>
           </Avatar>
@@ -772,7 +780,7 @@ const formatTime = (timeInSeconds: number) => {
             <Input 
               v-model="newCommentText"
               :placeholder="languageStore.t('دیدگاه خود را بنویسید...', 'Write a comment...')" 
-              class="py-1.5 h-8.5 text-xs font-semibold rounded-xl bg-white dark:bg-black/40 border border-border/80 dark:border-border/40 focus-visible:ring-primary/30 text-start"
+              class="py-1.5 h-8.5 text-xs font-medium rounded-xl bg-card border border-border/70 dark:border-border/60 focus-visible:ring-primary/30 text-start shadow-2xs"
               :class="[languageStore.isFa ? 'pr-3 pl-10' : 'pl-3 pr-10']"
               dir="auto"
               @keydown.enter="submitComment"
@@ -785,7 +793,7 @@ const formatTime = (timeInSeconds: number) => {
               class="absolute z-10 pointer-events-auto size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 active:scale-95 transition-all border-none"
               :class="[languageStore.isFa ? 'left-1.5' : 'right-1.5']"
             >
-              <CircleFadingArrowUpIcon class="size-4" />
+              <CircleFadingArrowUpIcon class="size-3.5" />
             </Button>
           </div>
         </div>

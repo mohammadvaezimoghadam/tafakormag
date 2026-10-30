@@ -151,7 +151,7 @@ const handleClose = () => {
   <Dialog v-model:open="localIsOpen">
     <DialogContent 
       :show-close-button="false" 
-      class="max-w-[420px] p-0 overflow-hidden flex flex-col text-start font-sans border-0 shadow-2xl" 
+      class="max-w-[420px] p-0 overflow-hidden flex flex-col text-start rounded-3xl bg-card/95 backdrop-blur-2xl border border-border/80 dark:border-border/60 shadow-[0_20px_50px_rgba(0,0,0,0.2)] font-sans" 
       :dir="languageStore.dir"
     >
       <!-- Header Banner -->
@@ -300,12 +300,12 @@ const handleClose = () => {
       </div>
 
       <!-- Footer -->
-      <DialogFooter class="px-5 py-3 bg-muted/30 border-t border-border/40 flex justify-end">
+      <DialogFooter class="px-5 py-3.5 bg-muted/20 border-t border-border/40 flex justify-end">
         <Button 
           type="button" 
           variant="outline" 
           size="sm" 
-          class="text-xs font-bold rounded-2xl cursor-pointer font-sans" 
+          class="h-9 text-xs font-semibold rounded-xl cursor-pointer font-sans" 
           @click="handleClose"
         >
           {{ languageStore.t('بستن', 'Close') }}

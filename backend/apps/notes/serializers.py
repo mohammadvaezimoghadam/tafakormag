@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin
 from apps.accounts.models import MessagingTarget
+from apps.plugin_system.models import Plugin, PostPluginReference
+from apps.plugin_system.validator import PluginReferenceValidator
 
 User = get_user_model()
 
@@ -19,8 +22,6 @@ class TopicAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = TopicAdmin
         fields = ['id', 'user', 'custom_title', 'promoted_by', 'created_at']
-
-
 
 
 class TopicSerializer(serializers.ModelSerializer):
@@ -65,6 +66,51 @@ class PostReactionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'created_at']
 
 
+class PostPluginReferenceSerializer(serializers.ModelSerializer):
+    plugin = serializers.CharField(required=False, write_only=True)
+    plugin_identifier = serializers.CharField(source='plugin.identifier', read_only=True)
+
+    class Meta:
+        model = PostPluginReference
+        fields = [
+            'id', 'plugin', 'plugin_identifier', 'resource_type',
+            'external_id', 'metadata', 'created_at'
+        ]
+        read_only_fields = ['id', 'plugin_identifier', 'created_at']
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        raw_plugin = data.get('plugin') or data.get('plugin_identifier') or 'quran'
+
+        if isinstance(raw_plugin, str) and len(raw_plugin) == 36 and '-' in raw_plugin:
+            plugin_obj = Plugin.objects.filter(Q(identifier=raw_plugin) | Q(id=raw_plugin)).first()
+        else:
+            plugin_obj = Plugin.objects.filter(identifier=str(raw_plugin)).first()
+
+        if not plugin_obj:
+            plugin_obj = Plugin.objects.filter(identifier='quran').first()
+            if not plugin_obj:
+                raise serializers.ValidationError({'plugin': f"پلاگین با شناسه '{raw_plugin}' یافت نشد."})
+
+        ret['plugin'] = plugin_obj
+
+        res_type = ret.get('resource_type', '')
+        ext_id = ret.get('external_id', '')
+        try:
+            canonical_id, default_meta = PluginReferenceValidator.normalize_and_validate(
+                plugin_obj.identifier, res_type, ext_id
+            )
+            ret['external_id'] = canonical_id
+            meta = ret.get('metadata') or {}
+            for k, v in default_meta.items():
+                meta.setdefault(k, v)
+            ret['metadata'] = meta
+        except ValueError as e:
+            raise serializers.ValidationError({'external_id': str(e)})
+
+        return ret
+
+
 class PostSerializer(serializers.ModelSerializer):
     author_phone = serializers.SerializerMethodField(read_only=True)
     author_name = serializers.SerializerMethodField(read_only=True)
@@ -73,6 +119,7 @@ class PostSerializer(serializers.ModelSerializer):
     user_reaction = serializers.SerializerMethodField(read_only=True)
     comments_count = serializers.SerializerMethodField(read_only=True)
     donation_campaign = serializers.SerializerMethodField(read_only=True)
+    plugin_references = PostPluginReferenceSerializer(many=True, required=False)
 
     class Meta:
         model = Post
@@ -81,12 +128,31 @@ class PostSerializer(serializers.ModelSerializer):
             'media_type', 'media_file', 'created_at', 'updated_at',
             'reactions_summary', 'user_reaction', 'comments_count',
             'telegram_message_ids', 'bale_message_ids',
-            'content_hash', 'published_platforms', 'donation_campaign'
+            'content_hash', 'published_platforms', 'donation_campaign',
+            'plugin_references'
         ]
         read_only_fields = [
             'id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids',
             'content_hash', 'published_platforms', 'donation_campaign'
         ]
+
+    def create(self, validated_data):
+        plugin_references_data = validated_data.pop('plugin_references', [])
+        post = super().create(validated_data)
+        for ref_data in plugin_references_data:
+            plugin = ref_data.pop('plugin')
+            PostPluginReference.objects.get_or_create(post=post, plugin=plugin, **ref_data)
+        return post
+
+    def update(self, instance, validated_data):
+        plugin_references_data = validated_data.pop('plugin_references', None)
+        post = super().update(instance, validated_data)
+        if plugin_references_data is not None:
+            instance.plugin_references.all().delete()
+            for ref_data in plugin_references_data:
+                plugin = ref_data.pop('plugin')
+                PostPluginReference.objects.get_or_create(post=post, plugin=plugin, **ref_data)
+        return post
 
     def get_author_phone(self, obj):
         return obj.author.phone

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 # ==============================================================================
 INSTALLED_TAFAKOR_PLUGINS = [
     'plugins.quran',
+    'plugins.marketplace',
 ]
 
 # الحاق پویا و ایمن اپلیکیشن‌های پلاگین به INSTALLED_APPS

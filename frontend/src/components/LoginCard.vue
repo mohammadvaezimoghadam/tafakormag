@@ -209,7 +209,7 @@ onUnmounted(() => {
 
 <template>
   <div 
-    class="w-full bg-card/80 dark:bg-card/50 border border-border/60 backdrop-blur-xl rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm transition-all duration-300 font-sans"
+    class="w-full bg-card/95 backdrop-blur-2xl border border-border/80 dark:border-border/60 rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.12)] transition-all duration-300 font-sans"
     :dir="languageStore.dir"
   >
     
@@ -261,7 +261,7 @@ onUnmounted(() => {
             maxlength="11"
             :disabled="isLoading"
             dir="ltr"
-            class="h-10 text-center font-mono font-bold tracking-widest text-sm rounded-xl bg-background/60 border-border/70 focus-visible:ring-primary/20 shadow-2xs"
+            class="h-11 text-center font-mono font-bold tracking-widest text-sm rounded-xl bg-muted/20 border-border/70 dark:border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-none"
             @keyup.enter="handleSubmitPhone"
           />
         </div>
@@ -270,7 +270,7 @@ onUnmounted(() => {
           type="submit"
           @click="handleSubmitPhone" 
           :disabled="isLoading" 
-          class="w-full h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs hover:scale-101 active:scale-98 transition-all"
+          class="w-full h-11 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-primary/20 active:scale-95 transition-all"
         >
           <span v-if="isLoading" class="flex items-center gap-1.5">
             <Loader2Icon class="size-4 animate-spin" />
@@ -293,11 +293,11 @@ onUnmounted(() => {
           
           <div dir="ltr" class="flex justify-center w-full">
             <InputOTP v-model="otp" :maxlength="4" :disabled="isLoading" @complete="handleSubmitOtp">
-              <InputOTPGroup class="gap-1.5">
-                <InputOTPSlot :index="0" class="rounded-lg! border shadow-2xs" />
-                <InputOTPSlot :index="1" class="rounded-lg! border shadow-2xs" />
-                <InputOTPSlot :index="2" class="rounded-lg! border shadow-2xs" />
-                <InputOTPSlot :index="3" class="rounded-lg! border shadow-2xs" />
+              <InputOTPGroup class="gap-2">
+                <InputOTPSlot :index="0" class="rounded-xl! border border-border/70 dark:border-border/60 bg-muted/20 shadow-none size-11 text-base font-bold" />
+                <InputOTPSlot :index="1" class="rounded-xl! border border-border/70 dark:border-border/60 bg-muted/20 shadow-none size-11 text-base font-bold" />
+                <InputOTPSlot :index="2" class="rounded-xl! border border-border/70 dark:border-border/60 bg-muted/20 shadow-none size-11 text-base font-bold" />
+                <InputOTPSlot :index="3" class="rounded-xl! border border-border/70 dark:border-border/60 bg-muted/20 shadow-none size-11 text-base font-bold" />
               </InputOTPGroup>
             </InputOTP>
           </div>

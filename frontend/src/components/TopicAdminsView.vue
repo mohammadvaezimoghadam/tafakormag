@@ -341,7 +341,7 @@ const getUserDisplayName = (user: UserSimple) => {
 
 <template>
   <div 
-    class="w-full flex flex-col gap-4 text-start font-sans select-none" 
+    class="w-full flex flex-col gap-4 text-start font-sans select-none pb-24" 
     :dir="languageStore.dir"
   >
     <!-- Subview Header -->
@@ -356,7 +356,7 @@ const getUserDisplayName = (user: UserSimple) => {
     />
 
     <!-- Main Glass Card Container -->
-    <div class="w-full bg-card/45 backdrop-blur-md border border-border/40 rounded-3xl p-5 shadow-xs flex flex-col gap-4">
+    <div class="w-full bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col gap-5">
       
       <!-- Loading Spinner -->
       <div v-if="loading" class="py-12 flex flex-col items-center justify-center gap-3">
@@ -370,11 +370,11 @@ const getUserDisplayName = (user: UserSimple) => {
       <div v-else class="flex flex-col gap-4">
         
         <!-- Owner Banner Card -->
-        <div v-if="owner" class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 flex items-center justify-between gap-3">
+        <div v-if="owner" class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 flex items-center justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0">
-            <Avatar class="size-9 border border-amber-500/30 shrink-0">
-              <AvatarImage v-if="owner.profile_image" :src="owner.profile_image" />
-              <AvatarFallback class="bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs">
+            <Avatar class="size-10 rounded-xl border border-amber-500/30 shrink-0 overflow-hidden">
+              <AvatarImage v-if="owner.profile_image" :src="owner.profile_image" class="w-full h-full object-cover" />
+              <AvatarFallback class="bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs rounded-xl">
                 <CrownIcon class="size-4" />
               </AvatarFallback>
             </Avatar>
@@ -398,16 +398,16 @@ const getUserDisplayName = (user: UserSimple) => {
         <Tabs v-model="activeTab" default-value="list" class="w-full">
           
           <!-- Pure Original shadcn TabsList -->
-          <TabsList v-if="isOwner" class="grid w-full grid-cols-2 bg-muted/60 dark:bg-muted/30 p-1 rounded-2xl mb-4">
+          <TabsList v-if="isOwner" class="grid w-full grid-cols-2 bg-muted/40 p-1 rounded-xl mb-4 border border-border/50">
             <TabsTrigger 
               value="list" 
-              class="rounded-xl text-xs font-bold"
+              class="rounded-lg text-xs font-bold py-1.5"
             >
               {{ languageStore.t('لیست ادمین‌ها', 'Admins List') }} ({{ languageStore.n(admins.length) }})
             </TabsTrigger>
             <TabsTrigger 
               value="add" 
-              class="rounded-xl text-xs font-bold"
+              class="rounded-lg text-xs font-bold py-1.5"
             >
               {{ languageStore.t('افزودن ادمین', 'Add Admin') }}
             </TabsTrigger>
@@ -421,12 +421,12 @@ const getUserDisplayName = (user: UserSimple) => {
               <div 
                 v-for="admin in admins" 
                 :key="admin.id"
-                class="bg-background/30 border border-border/40 hover:bg-muted/30 rounded-2xl p-3 flex items-center justify-between gap-3 transition-all"
+                class="bg-muted/20 hover:bg-muted/30 border border-border/60 rounded-xl p-3 flex items-center justify-between gap-3 transition-all"
               >
                 <div class="flex items-center gap-3 min-w-0">
-                  <Avatar class="size-9 shrink-0 border border-border/60">
-                    <AvatarImage v-if="admin.user.profile_image" :src="admin.user.profile_image" />
-                    <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs">
+                  <Avatar class="size-10 shrink-0 border border-border/60 rounded-xl overflow-hidden">
+                    <AvatarImage v-if="admin.user.profile_image" :src="admin.user.profile_image" class="w-full h-full object-cover" />
+                    <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs rounded-xl">
                       <UserIcon class="size-4" />
                     </AvatarFallback>
                   </Avatar>
@@ -452,7 +452,7 @@ const getUserDisplayName = (user: UserSimple) => {
                     @click="openTransferConfirmModal(admin.user)"
                     variant="outline" 
                     size="sm"
-                    class="h-8 px-2 rounded-xl text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/10 shrink-0 cursor-pointer text-xs font-semibold flex items-center gap-1.5"
+                    class="h-8 px-2.5 rounded-xl text-amber-600 dark:text-amber-400 border-amber-500/25 hover:bg-amber-500/10 shrink-0 cursor-pointer text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all"
                     :title="languageStore.t('انتقال مالکیت تاپیک به این کاربر', 'Transfer Ownership to this user')"
                   >
                     <ArrowRightLeftIcon class="size-3.5" />
@@ -464,7 +464,7 @@ const getUserDisplayName = (user: UserSimple) => {
                     :disabled="!!revokingUserIds[admin.user.id]"
                     variant="ghost" 
                     size="sm"
-                    class="h-8 px-2 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 cursor-pointer text-xs font-semibold flex items-center gap-1.5"
+                    class="h-8 px-2.5 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 cursor-pointer text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all"
                     :title="languageStore.t('حذف ادمین', 'Revoke Admin')"
                   >
                     <Loader2Icon v-if="revokingUserIds[admin.user.id]" class="size-3.5 animate-spin" />
@@ -478,7 +478,7 @@ const getUserDisplayName = (user: UserSimple) => {
             <!-- Zero Admins Empty State -->
             <div 
               v-else 
-              class="bg-muted/20 border border-dashed border-border/60 rounded-2xl p-7 text-center text-muted-foreground flex flex-col items-center justify-center gap-2"
+              class="bg-muted/15 border border-dashed border-border/60 rounded-xl p-7 text-center text-muted-foreground flex flex-col items-center justify-center gap-2"
             >
               <ShieldOffIcon class="size-6 text-muted-foreground/50" />
               <span class="text-xs font-semibold text-foreground">
@@ -495,7 +495,7 @@ const getUserDisplayName = (user: UserSimple) => {
             <transition name="fade-slide">
               <div 
                 v-if="errorMessage" 
-                class="p-3.5 mb-3.5 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 text-xs font-semibold text-start flex items-start gap-2.5 shadow-xs"
+                class="p-3.5 mb-3.5 bg-destructive/10 text-destructive rounded-xl border border-destructive/20 text-xs font-semibold text-start flex items-start gap-2.5 shadow-xs"
               >
                 <AlertTriangleIcon class="size-4 shrink-0 mt-0.5" />
                 <span class="leading-relaxed flex-1">{{ errorMessage }}</span>
@@ -514,7 +514,7 @@ const getUserDisplayName = (user: UserSimple) => {
                   v-model="targetUserId"
                   type="text"
                   :placeholder="languageStore.t('مثال: 1 یا 09123456789', 'e.g. 1 or 09123456789')"
-                  class="h-10.5 text-xs font-semibold focus-visible:ring-primary/20 bg-background/25 border-border/60 rounded-xl text-start"
+                  class="h-11 text-xs font-semibold focus-visible:ring-primary/20 bg-muted/20 border-border/70 dark:border-border/60 rounded-xl text-start shadow-none"
                 />
               </div>
 
@@ -527,7 +527,7 @@ const getUserDisplayName = (user: UserSimple) => {
                   v-model="customTitle"
                   type="text"
                   :placeholder="languageStore.t('مثال: مدیر محتوا / Moderator', 'e.g. Content Manager / Moderator')"
-                  class="h-10.5 text-xs font-semibold focus-visible:ring-primary/20 bg-background/25 border-border/60 rounded-xl text-start"
+                  class="h-11 text-xs font-semibold focus-visible:ring-primary/20 bg-muted/20 border-border/70 dark:border-border/60 rounded-xl text-start shadow-none"
                 />
               </div>
 
@@ -535,7 +535,7 @@ const getUserDisplayName = (user: UserSimple) => {
               <Button 
                 type="submit"
                 :disabled="isSubmitting || addSuccess || !targetUserId.trim()"
-                class="w-full h-11 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98] mt-1"
+                class="w-full h-11 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-primary/20 active:scale-[0.98] mt-1"
                 :variant="addSuccess ? 'secondary' : 'default'"
               >
                 <Loader2Icon v-if="isSubmitting" class="size-4 animate-spin" />
@@ -563,7 +563,7 @@ const getUserDisplayName = (user: UserSimple) => {
 
     <!-- Transfer Ownership Confirmation Dialog -->
     <Dialog :open="isTransferModalOpen" @update:open="(val) => isTransferModalOpen = val">
-      <DialogContent class="max-w-[400px] p-5 rounded-3xl" :dir="languageStore.dir">
+      <DialogContent class="max-w-[400px] p-6 rounded-2xl border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl shadow-2xl" :dir="languageStore.dir">
         <DialogHeader class="space-y-2">
           <DialogTitle class="text-xs font-bold text-foreground flex items-center gap-2">
             <ArrowRightLeftIcon class="size-4 text-amber-500" />
@@ -578,7 +578,7 @@ const getUserDisplayName = (user: UserSimple) => {
         </DialogHeader>
 
         <div class="flex items-center justify-end gap-2 mt-4">
-          <Button variant="outline" size="sm" @click="isTransferModalOpen = false" class="text-xs rounded-xl cursor-pointer">
+          <Button variant="outline" size="sm" @click="isTransferModalOpen = false" class="text-xs rounded-xl cursor-pointer active:scale-95 transition-all">
             {{ languageStore.t('انصراف', 'Cancel') }}
           </Button>
 
@@ -587,7 +587,7 @@ const getUserDisplayName = (user: UserSimple) => {
             size="sm" 
             :disabled="isTransferring"
             @click="handleExecuteTransferOwnership" 
-            class="text-xs rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5 cursor-pointer"
+            class="text-xs rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
           >
             <Loader2Icon v-if="isTransferring" class="size-3.5 animate-spin" />
             <CrownIcon v-else class="size-3.5" />

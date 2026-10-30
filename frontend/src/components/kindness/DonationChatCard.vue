@@ -180,17 +180,17 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
 <template>
   <Card 
     :class="cn(
-      'w-full overflow-hidden rounded-3xl border border-border/60 bg-card text-card-foreground shadow-none transition-all duration-300 dir-rtl text-right font-sans hover:border-primary/40 cursor-pointer py-0 gap-0 relative',
+      'w-full overflow-hidden rounded-2xl border border-border/70 dark:border-border/60 bg-card/95 backdrop-blur-md text-card-foreground shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all duration-300 dir-rtl text-right font-sans hover:border-primary/40 cursor-pointer py-0 gap-0 relative',
       isPreview && 'ring-2 ring-primary/20'
     )"
     @click="emit('card-click')"
   >
     <!-- Header: Creator/Author Profile & Actions -->
-    <CardHeader class="px-4 py-3 border-b border-border/40 bg-muted/20 flex flex-row items-center justify-between gap-2 space-y-0">
+    <CardHeader class="px-4 py-3 border-b border-border/60 bg-muted/20 flex flex-row items-center justify-between gap-2 space-y-0">
       <div class="flex items-center gap-2.5 min-w-0">
-        <Avatar class="size-8 border border-border/60 shrink-0">
-          <AvatarImage v-if="authorAvatar" :src="authorAvatar" :alt="authorName" />
-          <AvatarFallback class="bg-primary/10 text-primary text-xs font-bold">
+        <Avatar class="size-9 rounded-xl border border-border/60 shrink-0 overflow-hidden">
+          <AvatarImage v-if="authorAvatar" :src="authorAvatar" :alt="authorName" class="w-full h-full object-cover" />
+          <AvatarFallback class="bg-primary/10 text-primary text-xs font-bold rounded-xl">
             {{ authorName ? authorName.charAt(0) : 'پ' }}
           </AvatarFallback>
         </Avatar>
@@ -317,10 +317,10 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
       <Button 
         v-if="status === 'active'"
         size="sm" 
-        class="rounded-xl font-bold text-xs h-8 px-3.5 cursor-pointer shadow-none hover:shadow-none"
+        class="rounded-xl font-bold text-xs h-9 px-3.5 cursor-pointer shadow-md shadow-primary/20 active:scale-95 transition-all"
         @click.stop="emit('donate-click')"
       >
-        <HeartIcon class="fill-current" data-icon="inline-start" />
+        <HeartIcon class="fill-current size-3.5" data-icon="inline-start" />
         <span>مشارکت در پویش</span>
       </Button>
       <Button 
@@ -328,7 +328,7 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
         size="sm" 
         variant="secondary"
         disabled
-        class="rounded-xl font-bold text-xs h-8 px-3.5 opacity-70 bg-muted text-muted-foreground"
+        class="rounded-xl font-bold text-xs h-9 px-3.5 opacity-70 bg-muted text-muted-foreground"
       >
         <BanIcon class="size-3.5" data-icon="inline-start" />
         <span>متوقف شده</span>
@@ -338,7 +338,7 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
         size="sm" 
         variant="secondary"
         disabled
-        class="rounded-xl font-bold text-xs h-8 px-3.5 opacity-90"
+        class="rounded-xl font-bold text-xs h-9 px-3.5 opacity-90"
       >
         <span>تکمیل شده</span>
       </Button>
@@ -350,19 +350,19 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
     <Transition name="fade">
       <div 
         v-if="isMenuOpen" 
-        class="fixed inset-0 z-50 bg-black/35 dark:bg-black/55 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
+        class="fixed inset-0 z-50 bg-black/30 dark:bg-black/50 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
         @click="isMenuOpen = false"
         @contextmenu.prevent="isMenuOpen = false"
       >
         <div 
-          class="bg-white/90 dark:bg-card/90 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-52 text-start pointer-events-auto select-none animate-in zoom-in-95 duration-150"
+          class="bg-card/95 backdrop-blur-2xl border border-border/80 dark:border-border/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex flex-col gap-0.5 w-52 text-start pointer-events-auto select-none animate-in zoom-in-95 duration-150"
           dir="rtl"
           @click.stop
         >
           <!-- Share Campaign Link -->
           <button 
             @click="handleShareAction" 
-            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-foreground hover:bg-muted/80 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
           >
             <span>اشتراک‌گذاری و کپی لینک</span>
             <Share2Icon class="size-3.5 text-muted-foreground" />
@@ -371,7 +371,7 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
           <!-- Copy Info -->
           <button 
             @click="handleCopyAction" 
-            class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+            class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-foreground hover:bg-muted/80 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
           >
             <span>کپی متن پویش</span>
             <CopyIcon class="size-3.5 text-muted-foreground" />
@@ -379,12 +379,12 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
 
           <!-- Edit & Delete Campaign (Strictly For Creator) -->
           <template v-if="canEdit">
-            <div class="h-[1px] bg-border/40 my-0.5" />
+            <div class="h-[0.8px] bg-border/60 my-0.5 mx-1" />
 
             <button 
               v-if="status !== 'inactive'"
               @click="handleEditAction" 
-              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-primary hover:bg-primary/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+              class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-primary hover:bg-primary/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
               <span>ویرایش پویش</span>
               <PencilIcon class="size-3.5 text-primary" />
@@ -393,7 +393,7 @@ const formattedCollected = computed(() => formatCurrencyTomans(props.collectedAm
             <button 
               v-if="status !== 'inactive'"
               @click="handleDeleteAction" 
-              class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+              class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
             >
               <span>پاکسازی و حذف پویش</span>
               <Trash2Icon class="size-3.5 text-destructive" />

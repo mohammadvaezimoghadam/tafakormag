@@ -93,7 +93,7 @@ const nameLetter = computed(() => {
   <Dialog :open="isOpen" @update:open="(val) => { if (!val) handleCancel() }">
     <DialogContent 
       :show-close-button="false" 
-      class="max-w-[380px] p-0 overflow-hidden flex flex-col text-start" 
+      class="max-w-[400px] p-0 overflow-hidden flex flex-col text-start rounded-3xl bg-card/95 backdrop-blur-2xl border border-border/80 dark:border-border/60 shadow-[0_20px_50px_rgba(0,0,0,0.2)]" 
       :dir="languageStore.dir"
     >
       
@@ -103,19 +103,19 @@ const nameLetter = computed(() => {
       </DialogDescription>
 
       <!-- Header -->
-      <DialogHeader class="px-5 py-4 border-b border-border/40 flex flex-row items-center justify-between bg-gradient-to-br from-secondary/30 to-secondary/10 space-y-0">
-        <DialogTitle class="text-xs font-extrabold text-foreground">{{ languageStore.t('ایجاد تاپیک جدید', 'Create New Topic') }}</DialogTitle>
+      <DialogHeader class="px-6 py-4.5 border-b border-border/40 flex flex-row items-center justify-between bg-gradient-to-br from-secondary/30 via-secondary/15 to-transparent space-y-0">
+        <DialogTitle class="text-xs font-black text-foreground">{{ languageStore.t('ایجاد تاپیک جدید', 'Create New Topic') }}</DialogTitle>
         <button 
           @click="handleCancel"
-          class="size-6.5 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer border-0 outline-none"
+          class="size-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer border-0 outline-none"
           :title="languageStore.t('بستن', 'Close')"
         >
-          <XIcon class="size-3.5" />
+          <XIcon class="size-4" />
         </button>
       </DialogHeader>
 
       <!-- Body Form -->
-      <div class="p-5 flex flex-col gap-4">
+      <div class="p-6 flex flex-col gap-4">
 
         <!-- Avatar Uploader -->
         <div class="flex flex-col items-center gap-2">
@@ -123,7 +123,7 @@ const nameLetter = computed(() => {
           
           <div 
             @click="handleTriggerUpload"
-            class="size-16 rounded-full bg-primary/5 hover:bg-primary/10 border border-border/80 hover:border-primary/30 flex items-center justify-center cursor-pointer relative overflow-hidden group transition-all"
+            class="size-18 rounded-2xl bg-primary/5 hover:bg-primary/10 border border-border/70 hover:border-primary/40 flex items-center justify-center cursor-pointer relative overflow-hidden group transition-all shadow-xs"
             :title="languageStore.t('بارگذاری تصویر', 'Upload Image')"
           >
             <img 
@@ -163,7 +163,7 @@ const nameLetter = computed(() => {
             type="text" 
             v-model="title" 
             :placeholder="languageStore.t('مثال: سوالات عمومی دیزاین', 'e.g., General Design Questions')" 
-            class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
+            class="h-10 text-xs font-semibold rounded-xl border border-border/70 focus-visible:ring-1 focus-visible:ring-primary/40 text-start"
             maxlength="40"
             dir="auto"
             @keyup.enter="handleSubmit"
@@ -177,7 +177,7 @@ const nameLetter = computed(() => {
             type="text" 
             v-model="description" 
             :placeholder="languageStore.t('توضیح کوتاهی درباره این تاپیک بنویسید...', 'Write a short description about this topic...')" 
-            class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
+            class="h-10 text-xs font-semibold rounded-xl border border-border/70 focus-visible:ring-1 focus-visible:ring-primary/40 text-start"
             maxlength="100"
             dir="auto"
             @keyup.enter="handleSubmit"
@@ -194,7 +194,7 @@ const nameLetter = computed(() => {
             type="text" 
             v-model="postBadge" 
             :placeholder="languageStore.t('مثال: @my_channel یا 📌 منبع: تفکر', 'e.g., @my_channel or 📌 Source: Tafakor')" 
-            class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
+            class="h-10 text-xs font-semibold rounded-xl border border-border/70 focus-visible:ring-1 focus-visible:ring-primary/40 text-start"
             maxlength="100"
             dir="auto"
             @keyup.enter="handleSubmit"
@@ -203,19 +203,19 @@ const nameLetter = computed(() => {
       </div>
 
       <!-- Footer Actions -->
-      <div class="px-5 py-3.5 bg-muted/20 border-t border-border/40 flex justify-end gap-2">
+      <div class="px-6 py-4 bg-muted/20 border-t border-border/40 flex justify-end gap-2">
         <Button 
           variant="outline" 
           size="sm" 
           @click="handleCancel"
-          class="text-xs cursor-pointer"
+          class="h-9 text-xs rounded-xl cursor-pointer font-semibold"
         >
           {{ languageStore.t('انصراف', 'Cancel') }}
         </Button>
         <Button 
           size="sm" 
           @click="handleSubmit"
-          class="text-xs flex items-center gap-1.5 cursor-pointer"
+          class="h-9 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer font-semibold shadow-xs"
         >
           <PlusIcon data-icon="inline-start" />
           {{ languageStore.t('ایجاد تاپیک', 'Create Topic') }}

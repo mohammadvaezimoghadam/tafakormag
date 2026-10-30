@@ -50,13 +50,13 @@ const handleSubmit = () => {
 <template>
   <Dialog :open="open" @update:open="(val) => emit('update:open', val)">
     <DialogContent 
-      class="max-w-[calc(100%-2rem)] sm:max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-5 font-sans text-start border border-border/70 bg-card text-card-foreground shadow-2xl"
+      class="max-w-[calc(100%-2rem)] sm:max-w-md rounded-2xl sm:rounded-3xl p-5 sm:p-6 font-sans text-start border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.2)]"
       :dir="languageStore.dir"
     >
       <DialogHeader class="flex flex-col gap-1 text-start">
         <DialogTitle class="text-xs sm:text-[13px] font-bold flex items-center gap-2 text-foreground">
-          <div class="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <HeartIcon class="size-3.5 fill-primary/20" />
+          <div class="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <HeartIcon class="size-4 fill-primary/20" />
           </div>
           <span>{{ languageStore.t('مشارکت در پویش مهربانی', 'Support Kindness Campaign') }}</span>
         </DialogTitle>
@@ -83,7 +83,7 @@ const handleSubmit = () => {
               :key="amt"
               :value="String(amt)"
               size="sm"
-              class="text-[11px] !rounded-full rounded-full font-medium border border-border/60 transition-all cursor-pointer data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary data-[state=on]:font-bold data-[state=on]:shadow-xs hover:border-primary/40 h-7.5 px-2"
+              class="text-[11px] !rounded-full rounded-full font-medium border border-border/60 transition-all cursor-pointer data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary data-[state=on]:font-bold data-[state=on]:shadow-xs hover:border-primary/40 h-8 px-2.5 active:scale-95"
             >
               {{ formatCurrency(amt) }}
             </ToggleGroupItem>
@@ -101,7 +101,7 @@ const handleSubmit = () => {
               type="number"
               v-model.number="customAmount"
               :placeholder="languageStore.t('مثلا ۵۰,۰۰۰', 'e.g. 50,000')"
-              class="h-8.5 text-xs font-bold border-border/70 pr-3 pl-12 text-start placeholder:text-start tracking-normal focus-visible:ring-primary/20 rounded-xl"
+              class="h-11 text-xs font-bold border-border/70 dark:border-border/60 bg-muted/20 pr-3 pl-12 text-start placeholder:text-start tracking-normal focus-visible:ring-primary/20 rounded-xl shadow-none"
             />
             <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10.5px] font-bold text-muted-foreground select-none pointer-events-none">
               تومان
@@ -127,7 +127,7 @@ const handleSubmit = () => {
       <DialogFooter class="flex flex-col sm:flex-row gap-2 sm:justify-end pt-1">
         <Button
           type="button"
-          class="w-full font-bold text-xs gap-1.5 rounded-xl h-8.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+          class="w-full font-bold text-xs gap-1.5 rounded-xl h-11 shadow-md shadow-primary/20 active:scale-95 transition-all cursor-pointer"
           :disabled="!customAmount || customAmount <= 0"
           @click="handleSubmit"
         >

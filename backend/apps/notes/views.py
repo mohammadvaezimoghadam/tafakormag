@@ -314,10 +314,31 @@ class PostViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        queryset = Post.objects.select_related('author', 'topic').all().order_by('-created_at')
+        queryset = Post.objects.select_related('author', 'topic').prefetch_related('plugin_references__plugin').all().order_by('-created_at')
         topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
+
+        ayah = self.request.query_params.get('ayah')
+        if ayah:
+            if ':' in ayah and not ayah.startswith('surah:'):
+                parts = ayah.split(':')
+                canonical = f"surah:{parts[0]},ayah:{parts[1]}"
+            else:
+                canonical = ayah
+            queryset = queryset.filter(
+                plugin_references__resource_type='ayah',
+                plugin_references__external_id=canonical
+            ).distinct()
+
+        external_id = self.request.query_params.get('external_id')
+        if external_id:
+            queryset = queryset.filter(plugin_references__external_id=external_id).distinct()
+
+        plugin = self.request.query_params.get('plugin')
+        if plugin:
+            queryset = queryset.filter(plugin_references__plugin__identifier=plugin).distinct()
+
         return queryset
 
     def get_permissions(self):

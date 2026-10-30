@@ -74,11 +74,11 @@ const statusBgGlow = computed(() => {
 
 <template>
   <div
-    class="w-full bg-card/25 dark:bg-card/15 backdrop-blur-md border border-border/50 rounded-3xl overflow-hidden relative shadow-xs flex flex-col items-center select-none pt-0 pb-6 transition-all duration-300 hover:border-border/80 group"
+    class="w-full bg-card/60 dark:bg-card/40 backdrop-blur-xl border border-border/70 dark:border-border/60 rounded-2xl overflow-hidden relative shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col items-center select-none pt-0 pb-6 transition-all duration-300 hover:border-border/80 group"
     :dir="languageStore.dir"
   >
     <!-- Decorative Header Banner -->
-    <div class="w-full h-16 bg-gradient-to-tr from-primary/15 via-primary/5 to-transparent border-b border-border/20 relative overflow-hidden">
+    <div class="w-full h-18 bg-gradient-to-tr from-primary/15 via-primary/5 to-transparent border-b border-border/20 relative overflow-hidden">
       <!-- Ambient background blur bubbles for depth -->
       <div 
         class="absolute -top-10 size-24 rounded-full bg-primary/10 blur-xl transition-all duration-500 group-hover:scale-110"
@@ -93,32 +93,32 @@ const statusBgGlow = computed(() => {
     <!-- Floating Edit Account button -->
     <button
       @click="emit('edit')"
-      class="absolute top-3.5 size-7.5 rounded-full bg-background/55 dark:bg-card/40 backdrop-blur-xs border border-border/50 hover:bg-muted/80 text-muted-foreground hover:text-foreground active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
+      class="absolute top-3.5 size-8 rounded-xl bg-background/70 dark:bg-card/60 backdrop-blur-md border border-border/60 hover:bg-muted/80 text-muted-foreground hover:text-foreground active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
       :class="[languageStore.isFa ? 'left-3.5' : 'right-3.5']"
       :title="languageStore.t('ویرایش حساب کاربری', 'Edit Profile')"
     >
       <PencilIcon class="size-3.5 shrink-0" />
     </button>
 
-    <!-- Overlapping Circular Avatar -->
+    <!-- Overlapping Squircle Avatar -->
     <div class="relative shrink-0 select-none -mt-9 transition-transform duration-300 group-hover:scale-102">
       <img
         v-if="avatar"
         :src="avatar"
-        class="size-18 rounded-full object-cover ring-4 ring-background/90 dark:ring-card shadow-md"
+        class="size-18 rounded-2xl object-cover ring-4 ring-background/90 dark:ring-card shadow-md"
         alt="Profile Avatar"
       />
       <div
         v-else
-        class="size-18 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary text-xl font-bold ring-4 ring-background/90 dark:ring-card shadow-md"
+        class="size-18 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary text-xl font-bold ring-4 ring-background/90 dark:ring-card shadow-md"
       >
         {{ nameLetter }}
       </div>
 
       <!-- Overlapping Discord-style Status indicator dot -->
       <div
-        class="absolute bottom-0 size-4.5 rounded-full border-3 border-background dark:border-card shadow-xs flex items-center justify-center"
-        :class="[languageStore.isFa ? 'left-0.5' : 'right-0.5']"
+        class="absolute -bottom-1 size-4.5 rounded-full border-2 border-background dark:border-card shadow-xs flex items-center justify-center"
+        :class="[languageStore.isFa ? 'left-0' : 'right-0']"
         :style="statusDotColor"
       >
         <span 
@@ -131,14 +131,14 @@ const statusBgGlow = computed(() => {
     </div>
 
     <!-- User Information -->
-    <div class="mt-10 flex flex-col items-center justify-center text-center px-4 w-full">
+    <div class="mt-4 flex flex-col items-center justify-center text-center px-4 w-full">
       <!-- Full Name -->
       <h3 class="text-sm font-black text-foreground select-all leading-normal">
         {{ name }}
       </h3>
       
       <!-- Phone Number -->
-      <span class="text-xs text-muted-foreground/80 mt-4 select-all font-semibold font-sans">
+      <span class="text-xs text-muted-foreground/80 mt-1 select-all font-semibold font-sans">
         {{ formatNumber(phone) }}
       </span>
     </div>

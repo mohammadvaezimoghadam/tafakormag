@@ -360,7 +360,7 @@ defineExpose({
             'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer border select-none active:scale-95',
             selectedCategory === cat.id
               ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-              : 'bg-card/70 dark:bg-card/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border/60'
+              : 'bg-card/90 dark:bg-card/90 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border/70 dark:border-border/60 shadow-[0_2px_6px_rgba(0,0,0,0.02)]'
           ]"
         >
           <UserIcon v-if="cat.id === 'my_campaigns'" class="size-3.5" />
@@ -379,19 +379,19 @@ defineExpose({
       </div>
     </div>
 
-    <!-- CAMPAIGNS STREAM LIST: Rendered vertically under each other with DonationCard.vue -->
-    <div class="flex flex-col gap-4.5 w-full pb-24">
+    <!-- CAMPAIGNS STREAM LIST: Responsive 2-column grid on desktop -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4.5 w-full pb-24">
       
       <!-- Skeleton Loading State -->
       <template v-if="loading">
         <div 
-          v-for="i in 3" 
+          v-for="i in 4" 
           :key="'donation-skeleton-' + i" 
-          class="w-full rounded-3xl border border-border/50 bg-card/30 p-4 flex flex-col gap-3 animate-pulse"
+          class="w-full rounded-2xl border border-border/70 dark:border-border/60 bg-card/90 p-4 flex flex-col gap-3 animate-pulse shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <Skeleton class="size-8 rounded-full" />
+              <Skeleton class="size-9 rounded-xl" />
               <div class="flex flex-col gap-1.5">
                 <Skeleton class="h-3.5 w-24 rounded-md" />
                 <Skeleton class="h-2.5 w-16 rounded-md" />
@@ -400,17 +400,17 @@ defineExpose({
             <Skeleton class="h-5 w-20 rounded-full" />
           </div>
 
-          <Skeleton class="w-full aspect-[2.4/1] rounded-2xl" />
+          <Skeleton class="w-full aspect-[2.4/1] rounded-xl" />
 
           <Skeleton class="h-4 w-3/4 rounded-md mt-1" />
-          <Skeleton class="h-14 w-full rounded-2xl" />
+          <Skeleton class="h-14 w-full rounded-xl" />
         </div>
       </template>
 
       <!-- Empty State -->
       <div 
         v-else-if="filteredCampaigns.length === 0" 
-        class="w-full py-12 px-4 flex flex-col items-center justify-center text-center gap-3 bg-card/30 border border-dashed border-border/70 rounded-3xl"
+        class="col-span-full w-full py-12 px-4 flex flex-col items-center justify-center text-center gap-3 bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
       >
         <div class="size-12 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground">
           <HeartIcon class="size-6 stroke-[1.5]" />

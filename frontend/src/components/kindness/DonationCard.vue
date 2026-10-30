@@ -114,14 +114,14 @@ const totalTransparencyCost = computed(() => {
 </script>
 
 <template>
-  <Card class="relative w-full overflow-hidden rounded-3xl border border-border/60 bg-card text-card-foreground shadow-none transition-all duration-300 dir-rtl text-right font-sans flex flex-col py-0 gap-0">
+  <Card class="relative w-full overflow-hidden rounded-2xl border border-border/70 dark:border-border/60 bg-card/95 backdrop-blur-md text-card-foreground shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all duration-300 dir-rtl text-right font-sans flex flex-col py-0 gap-0">
     
     <!-- 1. STREAM HEADER: Creator Profile Info & Status Badge -->
-    <div class="px-4 py-3 border-b border-border/40 bg-muted/20 flex items-center justify-between gap-2">
+    <div class="px-4 py-3 border-b border-border/60 bg-muted/20 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5 min-w-0">
-        <Avatar class="size-8 border border-border/60 shrink-0">
-          <AvatarImage v-if="authorAvatar" :src="authorAvatar" :alt="authorName || topicName" />
-          <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs">
+        <Avatar class="size-9 rounded-xl border border-border/60 shrink-0 overflow-hidden">
+          <AvatarImage v-if="authorAvatar" :src="authorAvatar" :alt="authorName || topicName" class="w-full h-full object-cover" />
+          <AvatarFallback class="bg-primary/10 text-primary font-bold text-xs rounded-xl">
             <UserIcon v-if="!authorName" class="size-3.5 text-primary" />
             <span v-else>{{ authorName.charAt(0) }}</span>
           </AvatarFallback>
@@ -147,7 +147,7 @@ const totalTransparencyCost = computed(() => {
 
       <Badge 
         :variant="statusConfig.variant" 
-        class="rounded-full shrink-0 text-[10px] px-2 py-0.5 font-semibold"
+        class="rounded-full shrink-0 text-[10px] px-2.5 py-0.5 font-semibold"
       >
         <component :is="statusConfig.icon" v-if="statusConfig.icon" data-icon="inline-start" />
         <span>{{ statusConfig.label }}</span>
@@ -381,19 +381,19 @@ const totalTransparencyCost = computed(() => {
       </Tabs>
     </CardContent>
 
-    <Separator class="bg-border/40" />
+    <Separator class="bg-border/50" />
 
     <!-- 5. ACTIONS FOOTER BAR -->
-    <CardFooter class="p-3 bg-muted/20 border-t border-border/40 flex items-center justify-between gap-2">
+    <CardFooter class="p-3 bg-muted/20 border-t border-border/50 flex items-center justify-between gap-2">
       <!-- 1. Active State Action -->
       <Button 
         v-if="status === 'active'"
         variant="default"
         size="sm"
-        class="h-8 px-3 text-xs font-bold rounded-xl shadow-none hover:shadow-none transition-all cursor-pointer flex-1"
+        class="h-9 px-3 text-xs font-bold rounded-xl shadow-md shadow-primary/20 active:scale-95 transition-all cursor-pointer flex-1"
         @click="emit('donate-click', id)"
       >
-        <HeartIcon class="fill-current" data-icon="inline-start" />
+        <HeartIcon class="fill-current size-3.5" data-icon="inline-start" />
         <span>مشارکت در این مهربانی</span>
       </Button>
 
@@ -403,7 +403,7 @@ const totalTransparencyCost = computed(() => {
         variant="secondary" 
         disabled 
         size="sm"
-        class="h-8 px-3 text-xs font-bold rounded-xl shadow-none flex-1 opacity-70 bg-muted text-muted-foreground border border-border/40"
+        class="h-9 px-3 text-xs font-bold rounded-xl shadow-none flex-1 opacity-70 bg-muted text-muted-foreground border border-border/40"
       >
         <BanIcon class="size-3.5" data-icon="inline-start" />
         <span>پویش متوقف و غیرفعال شد</span>
@@ -415,9 +415,9 @@ const totalTransparencyCost = computed(() => {
         variant="secondary" 
         disabled 
         size="sm"
-        class="h-8 px-3 text-xs font-bold rounded-xl shadow-none flex-1 opacity-90"
+        class="h-9 px-3 text-xs font-bold rounded-xl shadow-none flex-1 opacity-90"
       >
-        <CheckCircle2Icon v-if="status === 'executed'" data-icon="inline-start" />
+        <CheckCircle2Icon v-if="status === 'executed'" class="size-3.5" data-icon="inline-start" />
         <span>{{ status === 'executed' ? 'پایان و اجرای پویش' : 'تکمیل شده' }}</span>
       </Button>
 
@@ -426,7 +426,7 @@ const totalTransparencyCost = computed(() => {
         v-if="canEdit && status !== 'inactive'"
         variant="outline" 
         size="icon" 
-        class="size-8 rounded-xl border-border/60 hover:bg-muted/50 text-primary hover:text-primary shrink-0 cursor-pointer shadow-none"
+        class="size-9 rounded-xl border-border/70 dark:border-border/60 hover:bg-muted/50 text-primary hover:text-primary shrink-0 cursor-pointer shadow-none active:scale-95 transition-all"
         @click="emit('edit-click', id)"
         title="ویرایش پویش"
       >
@@ -438,7 +438,7 @@ const totalTransparencyCost = computed(() => {
         v-if="canEdit && status !== 'inactive'"
         variant="outline" 
         size="icon" 
-        class="size-8 rounded-xl border-border/60 shrink-0 shadow-none transition-all text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer border-destructive/30"
+        class="size-9 rounded-xl border-border/70 dark:border-border/60 shrink-0 shadow-none transition-all text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer border-destructive/30 active:scale-95"
         @click="emit('delete-click', id)"
         :title="hasDonations ? 'متوقف‌سازی و غیرفعال‌کردن پویش' : 'پاکسازی و حذف کامل اهدا'"
       >
@@ -449,11 +449,11 @@ const totalTransparencyCost = computed(() => {
       <Button 
         variant="outline" 
         size="icon" 
-        class="size-8 rounded-xl border-border/60 hover:bg-muted/50 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer shadow-none"
+        class="size-9 rounded-xl border-border/70 dark:border-border/60 hover:bg-muted/50 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer shadow-none active:scale-95 transition-all"
         @click="emit('share-click', id)"
         title="اشتراک‌گذاری"
       >
-        <Share2Icon />
+        <Share2Icon class="size-3.5" />
       </Button>
     </CardFooter>
 

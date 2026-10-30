@@ -631,23 +631,23 @@ const handleRemoveAttachment = (id: string | number) => {
 // Dynamic classes based on attachment status
 const containerClasses = computed(() => {
   if (hasAttachments.value || (isLongText.value && !isRecording.value) || props.isEditMode || isSlashModalOpen.value) {
-    return 'w-full flex flex-col relative bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 rounded-3xl p-1.5 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-white focus-within:dark:bg-muted/25'
+    return 'w-full flex flex-col relative bg-card/95 dark:bg-card/95 backdrop-blur-xl border border-border/80 dark:border-border/60 rounded-2xl p-2 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all duration-300 focus-within:border-primary/50'
   }
   return 'w-full flex flex-col relative transition-all duration-300'
 })
 
 const textareaClasses = computed(() => {
   if (hasAttachments.value || (isLongText.value && !isRecording.value) || isSlashModalOpen.value) {
-    return 'w-full bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-1.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
+    return 'w-full bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-medium min-h-[36px] max-h-[140px] h-[36px] py-2 px-1.5 rounded-xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
   }
-  return 'w-full bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
+  return 'w-full bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 outline-none focus:border-primary/50 focus-within:border-primary/50 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-medium min-h-[44px] max-h-[140px] h-11 py-2.5 px-3.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.03)] resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
 })
 
 const recordingStatusClasses = computed(() => {
   if (hasAttachments.value) {
-    return 'w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/10 text-destructive text-xs font-semibold h-9 px-3 rounded-2xl flex items-center justify-between transition-all duration-200 select-none'
+    return 'w-full bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold h-9 px-3 rounded-xl flex items-center justify-between transition-all duration-200 select-none'
   }
-  return 'w-full bg-destructive/5 dark:bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold h-10 px-4 rounded-2xl flex items-center justify-between transition-all duration-200 select-none'
+  return 'w-full bg-destructive/10 border border-destructive/25 text-destructive text-xs font-semibold h-11 px-4 rounded-2xl flex items-center justify-between transition-all duration-200 select-none shadow-[0_2px_8px_rgba(239,68,68,0.08)]'
 })
 
 import { useLanguageStore } from '@/stores/languageStore'
@@ -898,7 +898,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           key="cancel-edit-btn"
           variant="outline"
           :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-destructive/20 rounded-2xl"
+          class="group text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200 bg-destructive/5 border border-destructive/30 rounded-2xl"
           :title="languageStore.t('لغو ویرایش', 'Cancel edit')"
           @click="emit('cancel-edit')"
         >
@@ -911,7 +911,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           key="cancel-record"
           variant="destructive"
           :size="hasAttachments ? 'icon' : 'icon-lg'"
-          class="group bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/25 active:scale-95 transition-all duration-200"
+          class="group bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/25 rounded-2xl active:scale-95 transition-all duration-200"
           :title="languageStore.t('لغو ضبط', 'Cancel recording')"
           @click="cancelRecording"
         >
@@ -929,7 +929,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             key="plus-btn"
             variant="outline"
             :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-            class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
+            class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
             :disabled="props.disabled"
             :title="languageStore.t('گزینه‌های بیشتر', 'More options')"
             @click="handlePlusClick"
@@ -942,7 +942,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             key="attach-file"
             variant="outline"
             :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-            class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
+            class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
             :disabled="props.disabled"
             :title="languageStore.t('افزودن فایل پیوست', 'Attach file')"
             @click="handleAttachClick"
@@ -1035,7 +1035,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           key="save-edit-btn"
           variant="default"
           :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all duration-200 rounded-2xl border-none"
+          class="group bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 active:scale-95 transition-all duration-200 rounded-2xl border-none"
           :disabled="props.disabled || !hasContent"
           :title="languageStore.t('ذخیره تغییرات', 'Save changes')"
           @click="handleSend"
@@ -1048,7 +1048,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           v-else-if="isRecording"
           key="stop-record"
           :size="hasAttachments ? 'icon' : 'icon-lg'"
-          class="group bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all duration-200"
+          class="group bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 rounded-2xl active:scale-95 transition-all duration-200"
           :title="languageStore.t('ارسال صدا', 'Send voice')"
           @click="completeRecording"
         >
@@ -1061,7 +1061,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           key="send-msg"
           variant="default"
           :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group shadow-md shadow-primary/20 hover:scale-105 active:scale-95 transition-all duration-200"
+          class="group rounded-2xl shadow-md shadow-primary/20 hover:scale-105 active:scale-95 transition-all duration-200"
           :disabled="props.disabled"
           :title="languageStore.t('ارسال پیام', 'Send message')"
           @click="handleSend"
@@ -1082,7 +1082,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           key="record-voice"
           variant="outline"
           :size="hasAttachments || (isLongText && !isRecording) ? 'icon' : 'icon-lg'"
-          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-white dark:bg-muted/20 border border-border/40"
+          class="group text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-200 bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
           :disabled="props.disabled"
           :title="languageStore.t('ضبط صدا', 'Record voice')"
           @click="startRecording"
@@ -1138,7 +1138,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
     <transition name="sheet-slide">
       <div 
         v-if="showExpanded" 
-        class="fixed bottom-0 inset-x-0 h-[80dvh] bg-white dark:bg-zinc-900 border-t border-x border-border/60 dark:border-border/30 rounded-t-[calc(var(--radius)*1.5)] z-55 flex flex-col shadow-2xl transition-transform overflow-hidden"
+        class="fixed bottom-0 inset-x-0 h-[80dvh] bg-card/95 backdrop-blur-2xl border-t border-x border-border/80 dark:border-border/60 rounded-t-3xl z-55 flex flex-col shadow-[0_-12px_40px_rgba(0,0,0,0.15)] transition-transform overflow-hidden"
         :dir="languageStore.dir"
         @click.stop
       >
@@ -1344,7 +1344,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
   <Dialog :open="isActionSheetOpen" @update:open="(val: boolean) => isActionSheetOpen = val">
     <DialogContent 
       :show-close-button="true"
-      class="max-w-[420px] w-[calc(100%-2rem)] rounded-3xl border border-border/70 bg-card p-5 sm:p-6 flex flex-col gap-4 text-start font-sans shadow-2xl z-[60]"
+      class="max-w-[420px] w-[calc(100%-2rem)] rounded-3xl border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl p-5 sm:p-6 flex flex-col gap-4 text-start font-sans shadow-[0_20px_50px_rgba(0,0,0,0.2)] z-[60]"
       :dir="languageStore.dir"
     >
       <!-- Header -->

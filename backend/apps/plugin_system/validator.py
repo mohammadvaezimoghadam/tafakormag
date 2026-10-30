@@ -134,3 +134,52 @@ class ManifestValidator:
         result.setdefault('icon', 'BookOpen')
         result.setdefault('is_core', False)
         return result
+
+
+class PluginReferenceValidator:
+    """
+    Validates and normalizes external resource references across Tafakor plugins.
+    """
+    QURAN_AYAH_REGEX = re.compile(r'^(?:surah:)?(\d+)[,:](?:ayah:)?(\d+)$')
+    QURAN_SURAH_REGEX = re.compile(r'^(?:surah:)?(\d+)$')
+
+    @classmethod
+    def normalize_and_validate(cls, plugin_identifier: str, resource_type: str, external_id: str) -> tuple:
+        """
+        Normalizes external_id to canonical string format and returns (canonical_id, default_metadata).
+        Raises ValueError on invalid format.
+        """
+        external_id = str(external_id).strip()
+
+        if plugin_identifier == 'quran':
+            if resource_type == 'ayah':
+                match = cls.QURAN_AYAH_REGEX.match(external_id)
+                if not match:
+                    raise ValueError(f"فرمت نامعتبر برای آیه قرآن: '{external_id}'. فرمت صحیح: 'surah:2,ayah:255' یا '2:255'")
+                surah_num = int(match.group(1))
+                ayah_num = int(match.group(2))
+
+                if not (1 <= surah_num <= 114):
+                    raise ValueError(f"شماره سوره باید بین ۱ تا ۱۱۴ باشد (دریافت شده: {surah_num}).")
+                if ayah_num < 1:
+                    raise ValueError(f"شماره آیه باید حداقل ۱ باشد (دریافت شده: {ayah_num}).")
+
+                canonical_id = f"surah:{surah_num},ayah:{ayah_num}"
+                metadata = {
+                    'surah_number': surah_num,
+                    'ayah_number': ayah_num
+                }
+                return canonical_id, metadata
+
+            elif resource_type == 'surah':
+                match = cls.QURAN_SURAH_REGEX.match(external_id)
+                if not match:
+                    raise ValueError(f"فرمت نامعتبر برای سوره قرآن: '{external_id}'. فرمت صحیح: 'surah:2' یا '2'")
+                surah_num = int(match.group(1))
+                if not (1 <= surah_num <= 114):
+                    raise ValueError(f"شماره سوره باید بین ۱ تا ۱۱۴ باشد (دریافت شده: {surah_num}).")
+                canonical_id = f"surah:{surah_num}"
+                metadata = {'surah_number': surah_num}
+                return canonical_id, metadata
+
+        return external_id, {}

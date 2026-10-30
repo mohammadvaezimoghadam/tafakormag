@@ -8,6 +8,7 @@ import PlatformHeader from '@/components/PlatformHeader.vue'
 import PlatformNavigation from '@/components/PlatformNavigation.vue'
 import PostCard from '@/components/PostCard.vue'
 import TopicCard from '@/components/TopicCard.vue'
+import HomeTopicListView from '@/components/home/HomeTopicListView.vue'
 import ProfileCard from '@/components/ProfileCard.vue'
 import ProfileOptionCard from '@/components/ProfileOptionCard.vue'
 import CreateTopicModal from '@/components/CreateTopicModal.vue'
@@ -1090,7 +1091,7 @@ const toggleTheme = useToggle(isDark)
 
 <template>
   <div 
-    class="w-full max-w-[500px] flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
+    class="w-full max-w-[500px] md:max-w-4xl lg:max-w-5xl px-2 sm:px-4 flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300 transition-all duration-300" 
     :class="[languageStore.isFa ? 'text-right' : 'text-left']"
     :dir="languageStore.dir"
   >
@@ -1125,47 +1126,14 @@ const toggleTheme = useToggle(isDark)
         <div v-if="currentTab === 'home'" key="home" class="flex flex-col gap-5 w-full">
           
           <transition name="fade-slide" mode="out-in">
-            <!-- List View: Search and vertical TopicCards -->
-            <div v-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full pb-20">
-              <!-- Grouped TopicCards Container (Borderless list grouped inside a single glass card wrapper) -->
-              <div class="flex flex-col gap-1 w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-2.5 shadow-xs">
-                <!-- Skeleton Loading -->
-                <template v-if="topicStore.loading">
-                  <div 
-                    v-for="i in 4" 
-                    :key="'topic-skeleton-' + i" 
-                    class="w-full flex items-center gap-3.5 p-3 rounded-2xl select-none text-start animate-pulse"
-                  >
-                    <Skeleton class="size-11 rounded-2xl shrink-0" />
-                    <div class="flex-1 flex flex-col gap-2 min-w-0">
-                      <div class="flex items-center gap-2">
-                        <Skeleton class="h-4 w-28 rounded-md" />
-                        <Skeleton class="h-4 w-10 rounded-md" />
-                      </div>
-                      <Skeleton class="h-3 w-40 rounded-md" />
-                    </div>
-                    <div class="flex flex-col items-end shrink-0 gap-2">
-                      <Skeleton class="h-3 w-10 rounded-md" />
-                      <Skeleton class="size-5 rounded-full" />
-                    </div>
-                  </div>
-                </template>
-
-                <!-- Real Content -->
-                <template v-else>
-                  <TopicCard 
-                    v-for="topic in filteredTopics" 
-                    :key="topic.id"
-                    v-bind="topic"
-                    @click="handleSelectTopic(topic)"
-                  />
-                  
-                  <div v-if="filteredTopics.length === 0" class="text-center py-12 text-xs text-muted-foreground font-medium">
-                    {{ languageStore.t('هیچ تاپیکی مطابق با جستجوی شما یافت نشد.', 'No topics match your search.') }}
-                  </div>
-                </template>
-              </div>
-            </div>
+            <!-- List View: Home Topics Feed (SOLID SRP: HomeTopicListView) -->
+            <HomeTopicListView
+              v-if="selectedTopic === null"
+              key="topic-list"
+              v-model:external-search-query="searchQuery"
+              @select-topic="handleSelectTopic"
+              @create-topic="handleCreateTopicClick"
+            />
 
             <!-- Detail View: Topic Posts Feed -->
             <div v-else-if="activeTopicSubView === 'feed'" key="feed" class="flex flex-col gap-4.5 w-full pb-32">
@@ -1276,7 +1244,7 @@ const toggleTheme = useToggle(isDark)
               </div>
 
               <!-- Message Input component at the bottom of the feed -->
-              <div class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] w-full">
+              <div class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 z-40 max-w-[500px] md:max-w-4xl lg:max-w-5xl w-full px-3 sm:px-6">
                 <TopicMessageInput 
                   :key="selectedTopic ? `topic-${selectedTopic.id}-${editingPost ? 'edit' : 'create'}` : 'no-topic'"
                   :disabled="!isTopicCreator"
@@ -1374,13 +1342,13 @@ const toggleTheme = useToggle(isDark)
         </div>
 
         <!-- TAB 3: PROFILE -->
-        <div v-else-if="currentTab === 'profile'" key="profile" class="w-full flex flex-col gap-4.5">
+        <div v-else-if="currentTab === 'profile'" key="profile" class="w-full flex flex-col gap-4.5 pb-24">
           
           <transition name="fade-slide" mode="out-in">
             <!-- Subview: Connections -->
-            <div v-if="showConnections" key="connections-list" class="flex flex-col gap-4.5">
+            <div v-if="showConnections" key="connections-list" class="flex flex-col gap-4.5 pb-24">
               <!-- Connection Cards list -->
-              <div class="flex flex-col gap-4.5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4.5 w-full">
                 <BotConnectionCard 
                   platform="telegram"
                   :initialStatus="telegramBotStatus"
@@ -1413,7 +1381,7 @@ const toggleTheme = useToggle(isDark)
               />
 
               <!-- Options -->
-              <div class="flex flex-col gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 w-full">
                 <ProfileOptionCard 
                   :title="languageStore.t('پویش‌های اهدا', 'Donation Campaigns')"
                   :description="languageStore.t('مشاهده و مشارکت در پویش‌های مهربانی و سازندگی', 'View and participate in donation campaigns')"
@@ -1435,12 +1403,12 @@ const toggleTheme = useToggle(isDark)
                 <!-- Light/Dark Mode Switcher -->
                 <div
                   @click="isDark = !isDark"
-                  class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none relative active:scale-[0.995] group gap-3.5"
+                  class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/60 dark:bg-card/40 backdrop-blur-xl border border-border/70 dark:border-border/60 hover:bg-muted/50 hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-200 cursor-pointer select-none relative active:scale-[0.99] group gap-3.5"
                   :class="[languageStore.isFa ? 'text-right' : 'text-left']"
                   :dir="languageStore.dir"
                 >
                   <!-- Right side: Icon Container -->
-                  <div class="size-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary shrink-0 transition-transform duration-200 group-hover:scale-102">
+                  <div class="size-10 rounded-xl bg-primary/10 dark:bg-primary/15 border border-primary/20 flex items-center justify-center text-primary shrink-0 transition-transform duration-200 group-hover:scale-105">
                     <transition name="icon-pop" mode="out-in">
                       <component :is="isDark ? MoonIcon : SunIcon" class="size-5 shrink-0" :key="isDark ? 'moon' : 'sun'" />
                     </transition>
@@ -1494,15 +1462,6 @@ const toggleTheme = useToggle(isDark)
       </div>
     </div>
 
-    <!-- Floating Plus Button to Create Topic (Bottom Right Corner - Raised above floating tab bar, aligned inside page grid) -->
-    <Button 
-      v-if="currentTab === 'home' && selectedTopic === null"
-      @click="handleCreateTopicClick()"
-      class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
-      :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
-    >
-      <PlusIcon class="size-6" />
-    </Button>
 
     <!-- Create Topic Modal -->
     <CreateTopicModal 

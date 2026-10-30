@@ -53,13 +53,13 @@ const handleViewCampaign = () => {
 <template>
   <Dialog :open="open" @update:open="(val: boolean) => emit('update:open', val)">
     <DialogContent 
-      class="max-w-[calc(100%-2rem)] sm:max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-5 font-sans text-start border border-border/70 bg-card text-card-foreground shadow-2xl"
+      class="max-w-[calc(100%-2rem)] sm:max-w-md rounded-2xl sm:rounded-3xl p-5 sm:p-6 font-sans text-start border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.2)]"
       :dir="languageStore.dir"
       :show-close-button="false"
     >
       <DialogHeader class="flex flex-col items-center text-center gap-1.5 pb-0.5">
-        <div class="size-10 sm:size-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 shadow-xs">
-          <CheckCircle2Icon class="size-5 sm:size-5.5 stroke-[2.5]" />
+        <div class="size-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 shadow-xs">
+          <CheckCircle2Icon class="size-6 stroke-[2.5]" />
         </div>
         <DialogTitle class="text-xs sm:text-[13px] font-bold text-foreground">
           {{ languageStore.t('پرداخت با موفقیت انجام شد', 'Payment Successful') }}
@@ -70,21 +70,21 @@ const handleViewCampaign = () => {
       </DialogHeader>
 
       <!-- Receipt Details Box -->
-      <div class="flex flex-col gap-1 p-2.5 sm:p-3 rounded-xl bg-muted/30 border border-border/40 text-[11px] sm:text-xs my-1">
+      <div class="flex flex-col gap-1 p-3 rounded-xl bg-muted/20 border border-border/60 text-[11px] sm:text-xs my-1">
         <!-- Campaign Title if provided -->
-        <div v-if="campaignTitle" class="flex items-center justify-between py-1 border-b border-border/30">
+        <div v-if="campaignTitle" class="flex items-center justify-between py-1.5 border-b border-border/40">
           <span class="text-[10.5px] sm:text-[11px] text-muted-foreground font-medium">{{ languageStore.t('پویش مهربانی:', 'Campaign:') }}</span>
           <span class="font-bold text-foreground text-[11px] sm:text-xs truncate max-w-[180px] sm:max-w-[210px]">{{ campaignTitle }}</span>
         </div>
 
         <!-- Amount -->
-        <div v-if="amount" class="flex items-center justify-between py-1 border-b border-border/30">
+        <div v-if="amount" class="flex items-center justify-between py-1.5 border-b border-border/40">
           <span class="text-[10.5px] sm:text-[11px] text-muted-foreground font-medium">{{ languageStore.t('مبلغ اهدایی:', 'Donation Amount:') }}</span>
           <span class="font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">{{ formattedAmount }} {{ languageStore.t('تومان', 'Tomans') }}</span>
         </div>
 
         <!-- Ref ID -->
-        <div v-if="refId" class="flex items-center justify-between py-1 border-b border-border/30">
+        <div v-if="refId" class="flex items-center justify-between py-1.5 border-b border-border/40">
           <span class="text-[10.5px] sm:text-[11px] text-muted-foreground font-medium">{{ languageStore.t('شماره پیگیری (Ref ID):', 'Reference ID:') }}</span>
           <span class="font-mono font-bold text-foreground text-[10.5px] sm:text-xs dir-ltr select-all">{{ refId }}</span>
         </div>
@@ -99,7 +99,7 @@ const handleViewCampaign = () => {
       <DialogFooter class="flex flex-col sm:flex-row gap-2 sm:justify-end pt-1">
         <Button
           type="button"
-          class="w-full font-bold text-xs gap-1.5 rounded-xl h-8 sm:h-8.5 shadow-sm active:scale-95 transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+          class="w-full font-bold text-xs gap-1.5 rounded-xl h-11 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
           @click="handleViewCampaign"
         >
           <CheckCircle2Icon class="size-3.5" />

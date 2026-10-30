@@ -169,7 +169,7 @@ onUnmounted(() => {
 
 <template>
   <div 
-    class="w-full flex flex-col gap-5 text-start font-sans" 
+    class="w-full flex flex-col gap-5 text-start font-sans pb-24" 
     :dir="languageStore.dir"
   >
     <!-- Header -->
@@ -181,10 +181,10 @@ onUnmounted(() => {
     />
 
     <!-- Main Card wrapper -->
-    <div class="w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-5 shadow-xs flex flex-col gap-5">
+    <div class="w-full bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col gap-5">
       
       <!-- Info Banner -->
-      <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed text-start">
+      <div class="bg-muted/30 rounded-xl p-3.5 border border-border/60 text-xs text-muted-foreground leading-relaxed text-start">
         {{ languageStore.t('💡 پیام‌ها و مدیاهای کانال تلگرام خود را با بارگذاری پوشه بک‌آپ به شکل فایل فشرده ZIP وارد این تاپیک کنید تا ساختار چت بازیابی شود.', '💡 Import your Telegram channel messages and media assets into this topic by uploading the compressed ZIP backup archive.') }}
       </div>
 
@@ -202,8 +202,8 @@ onUnmounted(() => {
           @dragleave.prevent="isDragActive = false"
           @drop.prevent="handleFileDrop"
           @click="fileInput?.click()"
-          class="flex flex-col items-center justify-center p-6 border border-dashed border-border/70 rounded-2xl bg-background/25 hover:bg-muted/30 hover:border-primary/45 transition-all duration-200 cursor-pointer h-36"
-          :class="[isDragActive ? 'border-primary bg-primary/[0.02]' : '']"
+          class="flex flex-col items-center justify-center p-6 border border-dashed border-border/70 dark:border-border/60 rounded-2xl bg-muted/15 hover:bg-muted/25 hover:border-primary/50 transition-all duration-200 cursor-pointer h-36"
+          :class="[isDragActive ? 'border-primary bg-primary/[0.04]' : '']"
         >
           <input 
             type="file" 
@@ -222,7 +222,7 @@ onUnmounted(() => {
         </div>
 
         <!-- File Metadata Preview -->
-        <div v-else class="flex items-center justify-between p-3.5 border border-border/50 rounded-2xl bg-background/45">
+        <div v-else class="flex items-center justify-between p-3.5 border border-border/70 dark:border-border/60 rounded-2xl bg-muted/20 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
           <div class="flex items-center gap-3 min-w-0">
             <div class="size-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
               <FileArchiveIcon class="size-5" />
@@ -240,7 +240,7 @@ onUnmounted(() => {
             variant="ghost" 
             size="icon" 
             @click="removeFile" 
-            class="text-destructive hover:bg-destructive/10 rounded-xl size-8 cursor-pointer shadow-none"
+            class="text-destructive hover:bg-destructive/10 rounded-xl size-8 cursor-pointer shadow-none active:scale-95 transition-all"
           >
             <Trash2Icon class="size-4" />
           </Button>
@@ -254,7 +254,7 @@ onUnmounted(() => {
           {{ languageStore.t('راهنمای خروجی گرفتن از تلگرام', 'How to Export from Telegram') }}
         </div>
 
-        <div class="flex flex-col gap-3 p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 text-start">
+        <div class="flex flex-col gap-3 p-4 bg-muted/20 rounded-2xl border border-border/60 text-start">
           <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
             <span class="font-extrabold text-primary">۱.</span>
             <div class="flex-1">
@@ -291,7 +291,7 @@ onUnmounted(() => {
           </div>
 
           <!-- Alert Note -->
-          <div class="mt-1 flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/[0.03] border border-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-normal">
+          <div class="mt-1 flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-normal">
             <InfoIcon class="size-4 text-amber-500 shrink-0 mt-0.5" />
             <div class="flex-1">
               {{ languageStore.t(
@@ -306,7 +306,7 @@ onUnmounted(() => {
       <!-- Action Footer -->
       <div class="flex justify-end pt-1">
         <Button 
-          class="w-full rounded-xl px-5 py-4 text-xs font-bold transition-all cursor-pointer h-10"
+          class="w-full rounded-xl px-5 py-4 text-xs font-bold transition-all cursor-pointer h-11 shadow-md shadow-primary/20 active:scale-[0.98]"
           :disabled="!selectedFile" 
           @click="startImportPipeline"
         >

@@ -760,11 +760,11 @@ const handleSubmit = () => {
   <Dialog v-else :open="open" @update:open="(val: boolean) => emit('update:open', val)">
     <DialogContent 
       :show-close-button="false"
-      class="w-[94vw] max-w-[420px] max-h-[90dvh] overflow-hidden rounded-3xl p-0 border border-border/80 bg-card text-card-foreground shadow-2xl flex flex-col text-start font-sans"
+      class="w-[94vw] max-w-[420px] max-h-[90dvh] overflow-hidden rounded-3xl p-0 border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex flex-col text-start font-sans"
       :dir="languageStore.dir"
     >
       <!-- Minimalist Dialog Header -->
-      <DialogHeader class="px-4 py-3.5 border-b border-border/40 shrink-0 bg-muted/20 flex flex-col gap-3">
+      <DialogHeader class="px-4 py-3.5 border-b border-border/60 shrink-0 bg-muted/20 flex flex-col gap-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-xs">
