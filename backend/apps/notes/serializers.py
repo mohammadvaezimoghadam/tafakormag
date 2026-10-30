@@ -216,3 +216,17 @@ class ImportTaskStatusSerializer(serializers.ModelSerializer):
             'error_message', 'created_at'
         ]
         read_only_fields = fields
+
+
+class AyahSummaryQuerySerializer(serializers.Serializer):
+    surah = serializers.IntegerField(
+        min_value=1,
+        max_value=114,
+        required=True,
+        error_messages={
+            'required': 'پارامتر surah الزامی است.',
+            'invalid': 'شماره سوره باید یک عدد صحیح معتبر باشد.',
+            'min_value': 'شماره سوره باید حداقل ۱ باشد.',
+            'max_value': 'شماره سوره نمی‌تواند بیشتر از ۱۱۴ باشد.',
+        }
+    )

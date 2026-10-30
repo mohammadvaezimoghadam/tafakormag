@@ -13,7 +13,7 @@ from apps.accounts.models import User
 from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin, normalize_persian_text
 from .serializers import (
     TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer,
-    TopicAdminSerializer, UserSimpleSerializer
+    TopicAdminSerializer, UserSimpleSerializer, AyahSummaryQuerySerializer
 )
 from .permissions import IsTopicOwnerOrAdmin
 from .services import create_bot_tasks, execute_external_platform_deletion, check_duplicate_message
@@ -398,18 +398,9 @@ class PostViewSet(viewsets.ModelViewSet):
         Returns aggregated counts of notes across all ayahs in the given surah.
         Lightweight O(1) query preventing N+1 problem on Quran reader screens.
         """
-        surah_raw = request.query_params.get('surah')
-        if not surah_raw or not str(surah_raw).isdigit():
-            return Response(
-                {"error": "پارامتر 'surah' الزامی است و باید عدد بین ۱ تا ۱۱۴ باشد."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        surah_num = int(surah_raw)
-        if not (1 <= surah_num <= 114):
-            return Response(
-                {"error": "شماره سوره باید بین ۱ تا ۱۱۴ باشد."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer = AyahSummaryQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        surah_num = serializer.validated_data['surah']
 
         prefix = f"surah:{surah_num},"
         refs = PostPluginReference.objects.filter(
