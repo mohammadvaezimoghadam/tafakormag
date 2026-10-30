@@ -120,3 +120,8 @@ node_modules/
 
 # Frontend source libraries
 !frontend/src/lib/
+
+
+# Private internal notes and future roadmaps (never push to git)
+docs/internal/
+*_INTERNAL.md

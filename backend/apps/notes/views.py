@@ -3,13 +3,14 @@ from django.db.models import Q, Count
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination, CursorPagination
+from apps.plugin_system.models import PostPluginReference
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import User
-from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin
+from .models import Topic, Post, PostReaction, PostComment, ImportTask, TopicAdmin, normalize_persian_text
 from .serializers import (
     TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer,
     TopicAdminSerializer, UserSimpleSerializer
@@ -303,6 +304,13 @@ class TopicViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
+class PostCursorPagination(CursorPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+    ordering = '-created_at'
+
+
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
@@ -313,12 +321,29 @@ class PostViewSet(viewsets.ModelViewSet):
     serializer_class = PostSerializer
     pagination_class = StandardResultsSetPagination
 
+    @property
+    def paginator(self):
+        """
+        Dynamically selects CursorPagination if `cursor` is passed or `pagination=cursor`,
+        while maintaining full backward compatibility with StandardResultsSetPagination (`page`).
+        """
+        if not hasattr(self, '_paginator'):
+            pagination_type = str(self.request.query_params.get('pagination', '')).lower()
+            if 'cursor' in self.request.query_params or pagination_type == 'cursor':
+                self._paginator = PostCursorPagination()
+            elif self.pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = self.pagination_class()
+        return self._paginator
+
     def get_queryset(self):
         queryset = Post.objects.select_related('author', 'topic').prefetch_related('plugin_references__plugin').all().order_by('-created_at')
         topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
 
+        # ۱. فیلتر آیه (Canonical surah:X,ayah:Y یا X:Y)
         ayah = self.request.query_params.get('ayah')
         if ayah:
             if ':' in ayah and not ayah.startswith('surah:'):
@@ -339,7 +364,88 @@ class PostViewSet(viewsets.ModelViewSet):
         if plugin:
             queryset = queryset.filter(plugin_references__plugin__identifier=plugin).distinct()
 
+        # ۲. فیلتر مالکیت (یادداشت‌های من در برابر نظرات دیگران)
+        mine = str(self.request.query_params.get('mine', '')).lower() in ('true', '1')
+        if mine:
+            if self.request.user.is_authenticated:
+                queryset = queryset.filter(author=self.request.user)
+            else:
+                queryset = queryset.none()
+
+        author_id = self.request.query_params.get('author_id') or self.request.query_params.get('author')
+        if author_id and str(author_id).isdigit():
+            queryset = queryset.filter(author_id=int(author_id))
+
+        # ۳. جستجوی متنی هوشمند با نرمال‌سازی فارسی
+        search_query = self.request.query_params.get('search') or self.request.query_params.get('q')
+        if search_query:
+            normalized = normalize_persian_text(search_query).strip()
+            if normalized:
+                for word in normalized.split():
+                    queryset = queryset.filter(content__icontains=word)
+
+        # ۴. مرتب‌سازی
+        ordering = self.request.query_params.get('ordering')
+        if ordering in ['created_at', '-created_at']:
+            queryset = queryset.order_by(ordering)
+
         return queryset
+
+    @action(detail=False, methods=['get'], url_path='ayah-summary', permission_classes=[permissions.AllowAny])
+    def ayah_summary(self, request):
+        """
+        GET /api/notes/ayah-summary/?surah=1
+        Returns aggregated counts of notes across all ayahs in the given surah.
+        Lightweight O(1) query preventing N+1 problem on Quran reader screens.
+        """
+        surah_raw = request.query_params.get('surah')
+        if not surah_raw or not str(surah_raw).isdigit():
+            return Response(
+                {"error": "پارامتر 'surah' الزامی است و باید عدد بین ۱ تا ۱۱۴ باشد."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        surah_num = int(surah_raw)
+        if not (1 <= surah_num <= 114):
+            return Response(
+                {"error": "شماره سوره باید بین ۱ تا ۱۱۴ باشد."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        prefix = f"surah:{surah_num},"
+        refs = PostPluginReference.objects.filter(
+            plugin__identifier='quran',
+            resource_type='ayah',
+            external_id__startswith=prefix
+        ).select_related('post')
+
+        user = request.user if request.user.is_authenticated else None
+
+        ayah_counts = {}
+        total_posts = 0
+
+        for ref in refs:
+            ext = ref.external_id
+            if ',ayah:' in ext:
+                ayah_str = ext.split(',ayah:')[-1]
+            elif ':' in ext:
+                ayah_str = ext.split(':')[-1]
+            else:
+                continue
+
+            if not ayah_str.isdigit():
+                continue
+
+            entry = ayah_counts.setdefault(ayah_str, {'total': 0, 'mine': 0})
+            entry['total'] += 1
+            total_posts += 1
+            if user and ref.post.author_id == user.id:
+                entry['mine'] += 1
+
+        return Response({
+            "surah": surah_num,
+            "total_posts": total_posts,
+            "ayahs_with_notes": ayah_counts
+        }, status=status.HTTP_200_OK)
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'react', 'selective_delete', 'check_duplicate']:
