@@ -21,7 +21,6 @@ from .serializers import (
     PostEditProposalSerializer, PostEditHistorySerializer, AyahSummaryQuerySerializer
 )
 from apps.plugin_system.models import PostPluginReference
-)
 from .permissions import IsTopicOwnerOrAdmin
 from .services import (
     create_bot_tasks, execute_external_platform_deletion, check_duplicate_message,
