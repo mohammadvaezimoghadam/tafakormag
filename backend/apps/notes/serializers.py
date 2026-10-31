@@ -1,3 +1,5 @@
+from apps.plugin_system.models import PostPluginReference
+from apps.plugin_system.serializers import PostPluginReferenceSerializer
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
@@ -85,11 +87,13 @@ class PostSerializer(serializers.ModelSerializer):
     topic_name = serializers.SerializerMethodField(read_only=True)
     topic_image = serializers.SerializerMethodField(read_only=True)
     topic_description = serializers.SerializerMethodField(read_only=True)
+    plugin_references = PostPluginReferenceSerializer(many=True, required=False)
 
     class Meta:
         model = Post
         fields = [
             'id', 'topic', 'topic_name', 'topic_image', 'topic_description',
+            'plugin_references',
             'author', 'author_phone', 'author_name', 'author_avatar', 'content',
             'media_type', 'media_file', 'created_at', 'updated_at',
             'reactions_summary', 'user_reaction', 'comments_count',
@@ -313,4 +317,6 @@ class PostEditHistorySerializer(serializers.ModelSerializer):
             'applied_at', 'appliedAt'
         ]
         read_only_fields = fields
-
+
+class AyahSummaryQuerySerializer(serializers.Serializer):
+    surah = serializers.IntegerField(min_value=1, max_value=114, required=True)

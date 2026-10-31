@@ -202,13 +202,13 @@ const defaultCancelText = computed(() => {
   <Dialog v-model:open="localIsOpen">
     <DialogContent 
       :show-close-button="false" 
-      class="max-w-[420px] p-0 overflow-hidden flex flex-col text-start font-sans" 
+      class="max-w-[420px] p-0 overflow-hidden flex flex-col text-start font-sans rounded-3xl border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.2)]" 
       :dir="languageStore.dir"
     >
       <!-- Header -->
-      <DialogHeader :class="cn('px-5 py-4 border-b border-border/40 flex flex-row items-center justify-between', headerBgClass)">
+      <DialogHeader :class="cn('px-5 py-4 border-b border-border/60 flex flex-row items-center justify-between', headerBgClass)">
         <div class="flex items-center gap-2">
-          <div :class="cn('size-8 rounded-full flex items-center justify-center shadow-xs shrink-0', iconBgClass)">
+          <div :class="cn('size-8 rounded-xl flex items-center justify-center shadow-xs shrink-0', iconBgClass)">
             <component :is="iconComponent" class="size-4" />
           </div>
           <DialogTitle class="text-xs font-black text-foreground">
@@ -362,12 +362,12 @@ const defaultCancelText = computed(() => {
       </div>
 
       <!-- Footer Actions -->
-      <DialogFooter class="px-5 py-3.5 bg-muted/20 border-t border-border/40 flex justify-end gap-2">
+      <DialogFooter class="px-5 py-3.5 bg-muted/20 border-t border-border/60 flex justify-end gap-2">
         <Button 
           type="button" 
           variant="outline" 
           size="sm" 
-          class="text-xs font-bold rounded-2xl cursor-pointer" 
+          class="text-xs font-bold rounded-xl h-10 px-4 cursor-pointer active:scale-95 transition-all" 
           @click="handleCancel"
         >
           {{ defaultCancelText }}
@@ -377,7 +377,7 @@ const defaultCancelText = computed(() => {
           :variant="confirmButtonVariant" 
           size="sm" 
           :disabled="isConfirmDisabled"
-          class="text-xs font-bold rounded-2xl cursor-pointer" 
+          class="text-xs font-bold rounded-xl h-10 px-4 cursor-pointer shadow-md shadow-destructive/20 active:scale-95 transition-all" 
           @click="handleConfirm"
         >
           <component :is="iconComponent" data-icon="inline-start" />

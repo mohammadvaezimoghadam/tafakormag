@@ -12,9 +12,6 @@
   ],
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,
-    /* 🟢 اضافه شدن پایه آدرس‌دهی برای حل خطای Shadcn */
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": [
         "./src/*"

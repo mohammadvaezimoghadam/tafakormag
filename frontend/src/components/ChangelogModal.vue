@@ -127,7 +127,7 @@ const formatChange = (change: string) => {
   <Dialog :open="isOpen" @update:open="(val) => { if (!val) handleConfirm() }">
     <DialogContent 
       :show-close-button="false" 
-      class="max-w-[440px] p-0 overflow-hidden flex flex-col rounded-3xl text-start" 
+      class="max-w-[440px] p-0 overflow-hidden flex flex-col rounded-3xl bg-card/95 backdrop-blur-2xl border border-border/80 dark:border-border/60 shadow-[0_20px_50px_rgba(0,0,0,0.2)] text-start" 
       :dir="languageStore.dir"
     >
       
@@ -138,9 +138,9 @@ const formatChange = (change: string) => {
 
       <!-- Header -->
       <DialogHeader class="px-6 py-5 border-b border-border/40 flex flex-row items-center justify-between bg-gradient-to-br from-primary/10 to-primary/5 space-y-0">
-        <div class="flex items-center gap-2">
-          <div class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-xs">
-            <HistoryIcon class="size-4" />
+        <div class="flex items-center gap-2.5">
+          <div class="size-9 rounded-2xl bg-primary/15 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+            <HistoryIcon class="size-4.5" />
           </div>
           <DialogTitle class="text-xs font-black text-foreground">{{ languageStore.t('آخرین بروزرسانی‌های تفکر', 'Tafakor Latest Updates') }}</DialogTitle>
         </div>
@@ -165,7 +165,7 @@ const formatChange = (change: string) => {
           >
             <div class="flex items-center gap-2">
               <span class="text-xs font-black text-foreground">{{ languageStore.t('نسخه', 'Version') }} {{ section.version }}</span>
-              <span class="text-[10px] font-bold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-lg border border-border/20">{{ section.title }}</span>
+              <span class="text-[10px] font-bold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-lg border border-border/40">{{ section.title }}</span>
             </div>
             <ChevronDownIcon 
               class="size-3.5 text-muted-foreground transition-transform duration-200" 
@@ -196,10 +196,10 @@ const formatChange = (change: string) => {
       </div>
 
       <!-- Footer -->
-      <DialogFooter class="p-5 border-t border-border/40 bg-muted/30">
+      <DialogFooter class="p-5 border-t border-border/40 bg-muted/20">
         <Button 
           @click="handleConfirm" 
-          class="w-full h-10 text-xs font-bold rounded-2xl cursor-pointer shadow-md shadow-primary/10"
+          class="w-full h-10 text-xs font-bold rounded-xl cursor-pointer shadow-sm shadow-primary/10"
         >
           <CheckIcon class="size-4" data-icon="inline-start" />
           {{ languageStore.t('متوجه شدم', 'Got it') }}

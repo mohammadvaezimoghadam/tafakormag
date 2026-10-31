@@ -53,6 +53,7 @@ INSTALLED_APPS = [
 # ==============================================================================
 INSTALLED_TAFAKOR_PLUGINS = [
     'plugins.quran',
+    'plugins.marketplace',
 ]
 
 # الحاق پویا و ایمن اپلیکیشن‌های پلاگین به INSTALLED_APPS
@@ -70,6 +71,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'EXCEPTION_HANDLER': 'note_platform.exceptions.custom_exception_handler',
 }
 
 # ==============================================================================

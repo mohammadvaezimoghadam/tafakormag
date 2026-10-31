@@ -1,0 +1,39 @@
+{
+  "manifest_version": 1,
+  "identifier": "marketplace",
+  "name": "Official Marketplace Plugin",
+  "version": "1.0.0",
+  "description": "Multi-vendor marketplace, book commerce, donation, escrow, and digital goods",
+  "author": "Tafakor Core Team",
+  "icon": "Store",
+  "is_core": true,
+  "capabilities": [
+    "composer_action",
+    "mini_app",
+    "topic_integration"
+  ],
+  "scopes": [
+    "read:content",
+    "manage:topic"
+  ],
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "platform_commission_percent": {
+        "type": "number",
+        "default": 5.0,
+        "description": "درصد کارمزد پلتفرم از معاملات فروش"
+      },
+      "escrow_hold_days": {
+        "type": "integer",
+        "default": 3,
+        "description": "مهلت روزهای امانت وجه پس از تحویل مرسوله"
+      }
+    },
+    "additionalProperties": true
+  },
+  "default_config": {
+    "platform_commission_percent": 5.0,
+    "escrow_hold_days": 3
+  }
+}
