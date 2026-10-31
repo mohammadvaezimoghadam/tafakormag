@@ -92,18 +92,18 @@ const handleToggleNotification = () => {
   <Dialog :open="open" @update:open="(val: boolean) => emit('update:open', val)">
     <DialogContent 
       :show-close-button="false"
-      class="w-[94vw] max-w-[420px] max-h-[90dvh] overflow-hidden rounded-3xl p-0 border border-border/80 bg-card text-card-foreground shadow-2xl flex flex-col text-start font-sans select-none" 
+      class="w-[94vw] max-w-[420px] max-h-[90dvh] overflow-hidden rounded-3xl p-0 border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex flex-col text-start font-sans select-none" 
       :dir="languageStore.dir"
     >
       <!-- Minimalist Dialog Header (Aligned with CreateDonationDialog) -->
-      <DialogHeader v-if="app" class="px-4 py-3.5 border-b border-border/40 shrink-0 bg-muted/20 flex flex-col gap-0">
+      <DialogHeader v-if="app" class="px-4 py-3.5 border-b border-border/60 shrink-0 bg-muted/20 flex flex-col gap-0">
         <div class="flex items-center justify-between gap-2.5">
           <!-- Icon & App Details Column -->
           <div class="flex items-center gap-2.5 min-w-0 flex-1">
             <!-- App Squircle Icon -->
             <div 
               :class="[
-                'size-10 sm:size-11 rounded-xl flex items-center justify-center shadow-xs border shrink-0 overflow-hidden',
+                'size-11 rounded-2xl flex items-center justify-center shadow-xs border shrink-0 overflow-hidden',
                 !appIsComingSoon 
                   ? 'bg-primary/10 border-primary/20 text-primary'
                   : 'bg-muted/40 border-border/70 text-muted-foreground'
@@ -277,7 +277,7 @@ const handleToggleNotification = () => {
           >
             <ArrowUpRightIcon class="size-3.5 text-primary shrink-0" />
             <span>{{ languageStore.t('باز کردن مینی‌اپ', 'Open Mini-App') }}</span>
-            <span class="text-[9px] font-bold px-1.5 py-0.5 bg-muted/60 dark:bg-muted/40 text-muted-foreground border border-border/60 rounded-md ms-0.5">
+            <span v-if="app?.id !== 'quran'" class="text-[9px] font-bold px-1.5 py-0.5 bg-muted/60 dark:bg-muted/40 text-muted-foreground border border-border/60 rounded-md ms-0.5">
               {{ languageStore.t('به‌زودی', 'Soon') }}
             </span>
           </Button>

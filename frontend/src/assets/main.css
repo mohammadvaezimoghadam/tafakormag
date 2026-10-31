@@ -209,4 +209,15 @@
   /* نگاشت ضخامت هدینگ‌های بومی همراه با اتصال نقطه‌ها */
   h1 { font-variation-settings: "wght" 800, "dots" 3; font-weight: 800; }
   h2, h3, h4 { font-variation-settings: "wght" 600, "dots" 3; font-weight: 600; }
+
+  /* Utility classes to completely hide scrollbars while allowing scrolling */
+  .scrollbar-none,
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-none::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }

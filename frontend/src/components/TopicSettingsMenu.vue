@@ -81,13 +81,13 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
   <Transition name="fade">
     <div 
       v-if="isOpen" 
-      class="fixed inset-0 z-50 bg-black/35 dark:bg-black/55 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
+      class="fixed inset-0 z-50 bg-black/30 dark:bg-black/50 backdrop-blur-xs flex items-center justify-center pointer-events-auto"
       @click="emit('close')"
       @contextmenu.prevent="emit('close')"
     >
       <!-- Floating Menu Wrapper -->
       <div 
-        class="bg-white/75 dark:bg-card/80 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-1.5 shadow-xl flex flex-col gap-0.5 w-56 pointer-events-auto select-none scale-up text-start animate-menu-pop"
+        class="bg-card/95 backdrop-blur-2xl border border-border/80 dark:border-border/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex flex-col gap-0.5 w-56 pointer-events-auto select-none scale-up text-start animate-menu-pop"
         :style="menuStyle"
         @click.stop
         :dir="languageStore.dir"
@@ -95,7 +95,7 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         <!-- Topic Admins -->
         <button 
           @click="handleAction('admins')" 
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-foreground hover:bg-muted/80 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ isOwner ? languageStore.t('مدیریت ادمین‌ها', 'Manage Admins') : languageStore.t('اطلاعات و ادمین‌ها', 'Admins & Info') }}</span>
           <ShieldCheckIcon class="size-3.5 text-primary" />
@@ -105,7 +105,7 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         <button 
           v-if="isOwner"
           @click="handleAction('edit')" 
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-foreground hover:bg-muted/80 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('ویرایش مشخصات تاپیک', 'Edit Topic Info') }}</span>
           <PencilIcon class="size-3.5 text-muted-foreground" />
@@ -115,7 +115,7 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         <button 
           v-if="isOwner"
           @click="handleAction('connections')" 
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-foreground hover:bg-muted/80 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('تنظیمات اتصالات تاپیک', 'Topic Connections Settings') }}</span>
           <LinkIcon class="size-3.5 text-muted-foreground" />
@@ -125,20 +125,20 @@ const handleAction = (action: 'edit' | 'connections' | 'delete' | 'import' | 'ad
         <button 
           v-if="isOwner"
           @click="handleAction('import')" 
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-foreground hover:bg-secondary/60 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-foreground hover:bg-muted/80 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('آپلود تاریخچه تلگرام', 'Upload Telegram History') }}</span>
           <UploadCloudIcon class="size-3.5 text-muted-foreground" />
         </button>
 
         <!-- Divider -->
-        <div v-if="isOwner" class="h-[1px] bg-border/40 my-1" />
+        <div v-if="isOwner" class="h-[0.8px] bg-border/60 my-0.5 mx-1" />
 
         <!-- Delete Topic -->
         <button 
           v-if="isOwner"
           @click="handleAction('delete')" 
-          class="w-full text-start px-3 py-2 text-xs font-bold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+          class="w-full text-start px-3 py-2 text-xs font-semibold rounded-xl text-destructive hover:bg-destructive/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
         >
           <span>{{ languageStore.t('حذف تاپیک', 'Delete Topic') }}</span>
           <Trash2Icon class="size-3.5 text-destructive" />

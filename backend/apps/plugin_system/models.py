@@ -162,6 +162,12 @@ class PostPluginReference(models.Model):
 
     class Meta:
         db_table = 'tafakor_post_plugin_references'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post', 'plugin', 'resource_type', 'external_id'],
+                name='unique_post_plugin_resource'
+            )
+        ]
         indexes = [
             models.Index(fields=['plugin', 'external_id']),
             models.Index(fields=['post', 'plugin']),

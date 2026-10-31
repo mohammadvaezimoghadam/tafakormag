@@ -68,47 +68,47 @@ const languageStore = useLanguageStore()
 </script>
 
 <template>
-  <div class="w-full bg-card border border-border/80 rounded-lg shadow-sm overflow-hidden transition-all duration-300">
+  <div class="w-full bg-card border border-border/70 dark:border-border/60 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300">
     
     <!-- LOADING STATE -->
     <div v-if="state === 'loading'" class="p-6 flex flex-col gap-6">
       <div class="flex items-center gap-4">
         <!-- Avatar skeleton -->
-        <Skeleton class="size-14 rounded-full shrink-0" />
+        <Skeleton class="size-14 rounded-2xl shrink-0" />
         <div class="flex flex-col gap-2 w-full">
           <!-- Name skeleton -->
-          <Skeleton class="h-5 w-2/3" />
+          <Skeleton class="h-5 w-2/3 rounded-lg" />
           <!-- Role skeleton -->
-          <Skeleton class="h-4 w-1/2" />
+          <Skeleton class="h-4 w-1/2 rounded-md" />
         </div>
       </div>
       
       <div class="flex flex-col gap-3 pt-4 border-t border-border/40">
-        <Skeleton class="h-8 w-full" />
-        <Skeleton class="h-8 w-full" />
+        <Skeleton class="h-9 w-full rounded-xl" />
+        <Skeleton class="h-9 w-full rounded-xl" />
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
-        <Skeleton class="h-8 w-20" />
-        <Skeleton class="h-8 w-24" />
+        <Skeleton class="h-9 w-20 rounded-xl" />
+        <Skeleton class="h-9 w-24 rounded-xl" />
       </div>
     </div>
 
     <!-- EMPTY STATE -->
     <div v-else-if="state === 'empty'" class="p-6 text-center flex flex-col items-center justify-center gap-4">
-      <div class="size-12 rounded-full bg-muted flex items-center justify-center border border-border/40 text-muted-foreground">
+      <div class="size-14 rounded-2xl bg-muted/60 flex items-center justify-center border border-border/60 text-muted-foreground shadow-xs">
         <InboxIcon class="size-6" />
       </div>
       <div class="flex flex-col gap-1">
         <h3 class="text-sm font-semibold text-foreground">{{ languageStore.t('اطلاعات کاربری یافت نشد', 'User Profile Not Found') }}</h3>
         <p class="text-xs text-muted-foreground max-w-xs">{{ languageStore.t('هیچ حساب کاربری در این بخش وجود ندارد یا دسترسی شما محدود شده است.', 'No user account exists in this section or your access is restricted.') }}</p>
       </div>
-      <Button size="sm" variant="outline">{{ languageStore.t('بارگذاری مجدد', 'Reload') }}</Button>
+      <Button size="sm" variant="outline" class="h-9 rounded-xl">{{ languageStore.t('بارگذاری مجدد', 'Reload') }}</Button>
     </div>
 
     <!-- ERROR STATE -->
     <div v-else-if="state === 'error'" class="p-6 flex flex-col gap-4">
-      <div class="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
+      <div class="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20">
         <AlertTriangleIcon class="size-5 shrink-0 mt-0.5" />
         <div class="flex flex-col gap-1 text-start">
           <h4 class="text-sm font-bold">{{ languageStore.t('خطای سیستمی رخ داده است', 'System Error Occurred') }}</h4>
@@ -116,7 +116,7 @@ const languageStore = useLanguageStore()
         </div>
       </div>
       <div class="flex justify-end pt-2">
-        <Button size="sm" variant="outline" class="flex items-center gap-1">
+        <Button size="sm" variant="outline" class="h-9 rounded-xl flex items-center gap-1.5">
           <XCircleIcon data-icon="inline-start" />
           {{ languageStore.t('بستن پیام', 'Close Message') }}
         </Button>
@@ -126,21 +126,21 @@ const languageStore = useLanguageStore()
     <!-- IDLE / SUCCESS STATE (Main Card UI) -->
     <div v-else class="flex flex-col">
       <!-- Card Header / Avatar Banner -->
-      <div class="p-6 bg-gradient-to-br from-secondary/40 to-secondary/10 border-b border-border/40">
+      <div class="p-6 bg-gradient-to-br from-secondary/40 via-secondary/15 to-transparent border-b border-border/40">
         <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-start gap-4">
-          <!-- Avatar Icon wrapper -->
-          <div class="size-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm shrink-0">
+          <!-- Avatar Icon wrapper (Squircle) -->
+          <div class="size-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs shrink-0">
             <UserIcon class="size-8" />
           </div>
           
-          <div class="flex flex-col gap-1 w-full">
+          <div class="flex flex-col gap-1.5 w-full">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <h3 class="text-lg font-bold text-foreground">{{ user.name }}</h3>
               
               <!-- Badges -->
               <Badge 
                 :class="[
-                  'text-[10px] font-semibold px-2 py-0.5 rounded-full border',
+                  'text-[10px] font-semibold px-2.5 py-0.5 rounded-lg border',
                   user.status === 'active' 
                     ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400' 
                     : 'bg-muted border-border text-muted-foreground'
@@ -160,28 +160,28 @@ const languageStore = useLanguageStore()
 
       <!-- Card Body / Edit Form -->
       <div class="p-6 grid gap-4">
-        <div class="flex flex-col gap-1">
-          <Label for="card-name" class="text-xs text-muted-foreground">{{ languageStore.t('نام و نام خانوادگی:', 'Full Name:') }}</Label>
+        <div class="flex flex-col gap-1.5">
+          <Label for="card-name" class="text-xs font-semibold text-muted-foreground">{{ languageStore.t('نام و نام خانوادگی:', 'Full Name:') }}</Label>
           <div class="relative">
-            <Input id="card-name" v-model="editedName" class="h-8 text-sm" :placeholder="languageStore.t('نام کاربر را وارد کنید', 'Enter user name')" />
+            <Input id="card-name" v-model="editedName" class="h-10 text-sm rounded-xl border-border/70 focus-visible:ring-1 focus-visible:ring-primary/40" :placeholder="languageStore.t('نام کاربر را وارد کنید', 'Enter user name')" />
           </div>
         </div>
 
-        <div class="flex flex-col gap-1">
-          <Label for="card-email" class="text-xs text-muted-foreground">{{ languageStore.t('آدرس ایمیل:', 'Email Address:') }}</Label>
+        <div class="flex flex-col gap-1.5">
+          <Label for="card-email" class="text-xs font-semibold text-muted-foreground">{{ languageStore.t('آدرس ایمیل:', 'Email Address:') }}</Label>
           <div class="relative">
-            <Input id="card-email" v-model="editedEmail" class="h-8 text-sm" :placeholder="languageStore.t('ایمیل کاربر را وارد کنید', 'Enter user email')" />
+            <Input id="card-email" v-model="editedEmail" class="h-10 text-sm rounded-xl border-border/70 focus-visible:ring-1 focus-visible:ring-primary/40" :placeholder="languageStore.t('ایمیل کاربر را وارد کنید', 'Enter user email')" />
           </div>
         </div>
       </div>
 
       <!-- Card Footer Actions -->
-      <div class="px-6 py-4 bg-muted/30 border-t border-border/40 flex justify-between items-center gap-2">
+      <div class="px-6 py-4 bg-muted/20 border-t border-border/40 flex justify-between items-center gap-2">
         <Button 
           size="sm" 
           variant="outline" 
           @click="emit('statusToggle')"
-          class="text-xs flex items-center gap-1"
+          class="h-9 text-xs rounded-xl flex items-center gap-1.5 font-semibold"
         >
           <ActivityIcon data-icon="inline-start" />
           {{ user.status === 'active' ? languageStore.t('غیرفعال‌سازی', 'Deactivate') : languageStore.t('فعال‌سازی حساب', 'Activate Account') }}
@@ -191,7 +191,7 @@ const languageStore = useLanguageStore()
           <Button 
             size="sm" 
             @click="handleSave"
-            class="text-xs flex items-center gap-1.5"
+            class="h-9 text-xs rounded-xl flex items-center gap-1.5 font-semibold shadow-xs"
           >
             <CheckIcon data-icon="inline-start" />
             {{ languageStore.t('ذخیره تغییرات', 'Save Changes') }}

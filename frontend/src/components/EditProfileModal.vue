@@ -95,7 +95,7 @@ const nameLetter = computed(() => {
   <Dialog :open="isOpen" @update:open="(val) => { if (!val) handleCancel() }">
     <DialogContent 
       :show-close-button="false" 
-      class="max-w-[380px] p-0 overflow-hidden flex flex-col text-start font-sans" 
+      class="max-w-[380px] p-0 overflow-hidden flex flex-col text-start font-sans rounded-3xl border border-border/80 dark:border-border/60 bg-card/95 backdrop-blur-2xl text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.2)]" 
       :dir="languageStore.dir"
     >
       
@@ -104,14 +104,14 @@ const nameLetter = computed(() => {
       </DialogDescription>
 
       <!-- Header -->
-      <DialogHeader class="px-5 py-4 border-b border-border/40 flex flex-row items-center justify-between bg-gradient-to-br from-secondary/30 to-secondary/10 space-y-0">
+      <DialogHeader class="px-5 py-4 border-b border-border/60 flex flex-row items-center justify-between bg-muted/20 space-y-0">
         <DialogTitle class="text-xs font-extrabold text-foreground">{{ languageStore.t('ویرایش اطلاعات حساب', 'Edit Account Details') }}</DialogTitle>
         <button 
           @click="handleCancel"
-          class="size-6.5 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer border-0 outline-none"
+          class="size-7 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer border-0 outline-none"
           :title="languageStore.t('بستن', 'Close')"
         >
-          <XIcon class="size-3.5" />
+          <XIcon class="size-4" />
         </button>
       </DialogHeader>
 
@@ -123,7 +123,7 @@ const nameLetter = computed(() => {
           
           <div 
             @click="handleTriggerUpload"
-            class="size-16 rounded-full bg-primary/5 hover:bg-primary/10 border border-border/80 hover:border-primary/30 flex items-center justify-center cursor-pointer relative overflow-hidden group transition-all"
+            class="size-18 rounded-2xl bg-muted/30 hover:bg-muted/40 border border-border/70 dark:border-border/60 hover:border-primary/40 flex items-center justify-center cursor-pointer relative overflow-hidden group transition-all shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
             :title="languageStore.t('تغییر تصویر پروفایل', 'Change Profile Image')"
           >
             <img 
@@ -139,8 +139,8 @@ const nameLetter = computed(() => {
               {{ nameLetter }}
             </div>
             
-            <div class="absolute inset-0 bg-black/35 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              <CameraIcon class="size-4.5" />
+            <div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+              <CameraIcon class="size-5" />
             </div>
           </div>
 
@@ -162,7 +162,7 @@ const nameLetter = computed(() => {
             type="text" 
             v-model="firstName" 
             :placeholder="languageStore.t('نام خود را وارد کنید', 'Enter your first name')" 
-            class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
+            class="h-11 text-xs font-semibold focus-visible:ring-primary/20 bg-muted/20 border-border/70 dark:border-border/60 rounded-xl text-start shadow-none"
             maxlength="30"
           />
         </div>
@@ -174,7 +174,7 @@ const nameLetter = computed(() => {
             type="text" 
             v-model="lastName" 
             :placeholder="languageStore.t('نام خانوادگی خود را وارد کنید', 'Enter your last name')" 
-            class="h-9.5 text-xs font-semibold focus-visible:ring-primary/20 text-start"
+            class="h-11 text-xs font-semibold focus-visible:ring-primary/20 bg-muted/20 border-border/70 dark:border-border/60 rounded-xl text-start shadow-none"
             maxlength="35"
             @keyup.enter="handleSubmit"
           />
@@ -182,19 +182,19 @@ const nameLetter = computed(() => {
       </div>
 
       <!-- Footer Actions -->
-      <div class="px-5 py-3.5 bg-muted/20 border-t border-border/40 flex justify-end gap-2">
+      <div class="px-5 py-3.5 bg-muted/20 border-t border-border/60 flex justify-end gap-2">
         <Button 
           variant="outline" 
           size="sm" 
           @click="handleCancel"
-          class="text-xs cursor-pointer"
+          class="text-xs font-bold rounded-xl h-10 px-4 cursor-pointer active:scale-95 transition-all"
         >
           {{ languageStore.t('انصراف', 'Cancel') }}
         </Button>
         <Button 
           size="sm" 
           @click="handleSubmit"
-          class="text-xs flex items-center gap-1.5 cursor-pointer"
+          class="text-xs font-bold rounded-xl h-10 px-4 flex items-center gap-1.5 cursor-pointer shadow-md shadow-primary/20 active:scale-95 transition-all"
         >
           <SaveIcon class="size-3.5" />
           {{ languageStore.t('ذخیره تغییرات', 'Save Changes') }}

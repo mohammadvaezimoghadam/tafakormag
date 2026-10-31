@@ -50,6 +50,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.phone
 
+    def get_full_name(self):
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        return full_name if full_name else self.phone
+
+    def get_short_name(self):
+        return self.first_name or self.phone
+
     # برای سازگاری با PermissionsMixin، متدهای زیر باید باشند (اگر نباشند)
     def has_perm(self, perm, obj=None):
         return self.is_superuser

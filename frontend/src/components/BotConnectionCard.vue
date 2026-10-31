@@ -191,7 +191,7 @@ const toggleGuide = () => {
 
 <template>
   <div 
-    class="w-full bg-card/45 backdrop-blur-md border border-border/40 rounded-3xl p-5 md:p-6 flex flex-col gap-5 select-none shadow-xs transition-all duration-300 relative overflow-hidden"
+    class="w-full bg-card/60 dark:bg-card/40 backdrop-blur-xl border border-border/70 dark:border-border/60 rounded-2xl p-5 md:p-6 flex flex-col gap-5 select-none shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all duration-300 relative overflow-hidden"
     :dir="languageStore.dir"
   >
     <!-- Background subtle tint decoration -->
@@ -208,11 +208,11 @@ const toggleGuide = () => {
         <!-- Logo Indicator -->
         <div 
           :class="[
-            'size-9 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-xs',
+            'size-10 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-xs',
             props.platform === 'telegram' ? 'bg-sky-500' : 'bg-emerald-500'
           ]"
         >
-          <span class="font-sans text-[10px] tracking-tighter">{{ props.platform === 'telegram' ? 'TG' : 'BL' }}</span>
+          <span class="font-sans text-[11px] tracking-tighter">{{ props.platform === 'telegram' ? 'TG' : 'BL' }}</span>
         </div>
         <div class="flex flex-col text-start">
           <h3 class="text-xs font-black text-foreground">{{ languageStore.t('اتصال به', 'Connect to') }} {{ platformName }}</h3>
@@ -299,7 +299,7 @@ const toggleGuide = () => {
             variant="outline" 
             size="sm" 
             @click="handleEdit" 
-            class="h-8.5 text-[11px] font-bold cursor-pointer"
+            class="h-9 rounded-xl text-[11px] font-bold cursor-pointer"
           >
             <Edit2Icon data-icon="inline-start" />
             {{ languageStore.t('ویرایش توکن', 'Edit Token') }}
@@ -308,7 +308,7 @@ const toggleGuide = () => {
             variant="outline" 
             size="sm" 
             @click="handleDisconnect" 
-            class="h-8.5 text-[11px] font-bold text-destructive hover:bg-destructive/5 hover:text-destructive border-destructive/20 hover:border-destructive/30 cursor-pointer"
+            class="h-9 rounded-xl text-[11px] font-bold text-destructive hover:bg-destructive/5 hover:text-destructive border-destructive/20 hover:border-destructive/30 cursor-pointer"
           >
             <Trash2Icon data-icon="inline-start" />
             {{ languageStore.t('قطع اتصال', 'Disconnect') }}
@@ -397,7 +397,7 @@ const toggleGuide = () => {
               size="sm" 
               @click="handleConnect" 
               :disabled="isConnecting || isValidating || !!validationError"
-              class="h-9.5 text-xs font-bold px-4 cursor-pointer"
+              class="h-9.5 text-xs font-bold px-4 rounded-xl cursor-pointer"
             >
               <RefreshCwIcon v-if="isConnecting" class="animate-spin" data-icon="inline-start" />
               <SendIcon v-else data-icon="inline-start" />

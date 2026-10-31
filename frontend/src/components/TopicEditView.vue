@@ -94,7 +94,7 @@ const handleSave = () => {
 
 <template>
   <div 
-    class="w-full flex flex-col gap-5 text-start font-sans" 
+    class="w-full flex flex-col gap-5 text-start font-sans pb-24" 
     :dir="languageStore.dir"
   >
     <!-- Header -->
@@ -106,14 +106,14 @@ const handleSave = () => {
     />
 
     <!-- Edit Form Card -->
-    <div class="w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-5 shadow-xs flex flex-col gap-4.5">
+    <div class="w-full bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col gap-5">
       <div class="flex flex-col gap-2 text-start">
         <Label for="topic-title" class="text-xs font-bold text-foreground/80">{{ languageStore.t('نام تاپیک', 'Topic Name') }}</Label>
         <Input 
           id="topic-title" 
           v-model="title" 
           :placeholder="languageStore.t('مثال: پشتیبانی فنی پلتفرم', 'e.g., Technical Support Platform')" 
-          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 h-10.5 font-bold text-start"
+          class="rounded-xl border-border/70 dark:border-border/60 bg-muted/20 focus-visible:ring-1 focus-visible:ring-primary/40 h-11 text-xs font-semibold text-start shadow-none"
           dir="auto"
         />
       </div>
@@ -124,7 +124,7 @@ const handleSave = () => {
           id="topic-desc" 
           v-model="description" 
           :placeholder="languageStore.t('توضیحاتی درباره این تاپیک بنویسید...', 'Write a description about this topic...')" 
-          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 min-h-[90px] resize-none text-start"
+          class="rounded-xl border-border/70 dark:border-border/60 bg-muted/20 focus-visible:ring-1 focus-visible:ring-primary/40 min-h-[90px] text-xs font-semibold leading-relaxed text-start shadow-none resize-none"
           dir="auto"
         />
       </div>
@@ -138,7 +138,7 @@ const handleSave = () => {
           id="topic-badge" 
           v-model="postBadge" 
           :placeholder="languageStore.t('مثال: @my_channel یا 📌 منبع: تفکر', 'e.g., @my_channel or 📌 Source: Tafakor')" 
-          class="rounded-xl border-border/60 focus-visible:ring-primary/20 bg-background/50 h-10.5 font-medium text-start"
+          class="rounded-xl border-border/70 dark:border-border/60 bg-muted/20 focus-visible:ring-1 focus-visible:ring-primary/40 h-11 text-xs font-medium text-start shadow-none"
           dir="auto"
           maxlength="100"
         />
@@ -149,8 +149,8 @@ const handleSave = () => {
         <Label class="text-xs font-bold text-foreground/80">{{ languageStore.t('تصویر تاپیک (اختیاری)', 'Topic Image (Optional)') }}</Label>
         
         <!-- Image Preview and Upload Controls -->
-        <div class="flex items-center gap-4 p-3 rounded-2xl bg-white/5 dark:bg-black/20 border border-border/60">
-          <div class="size-16 rounded-xl border border-border/80 bg-background/50 overflow-hidden flex items-center justify-center shrink-0">
+        <div class="flex items-center gap-4 p-3 rounded-xl bg-muted/15 border border-border/60">
+          <div class="size-16 rounded-2xl border border-border/70 dark:border-border/60 bg-muted/30 overflow-hidden flex items-center justify-center shrink-0 shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
             <img v-if="imagePreview" :src="imagePreview" class="w-full h-full object-cover" alt="Topic preview" />
             <ImageIcon v-else class="size-6 text-muted-foreground/60" />
           </div>
@@ -160,7 +160,7 @@ const handleSave = () => {
               <Button 
                 variant="secondary" 
                 size="sm" 
-                class="h-8.5 rounded-lg text-[10px] font-bold cursor-pointer"
+                class="h-8.5 rounded-xl text-[10px] font-bold cursor-pointer active:scale-95 transition-all"
                 @click="triggerImageSelect"
               >
                 <UploadIcon class="size-3.5" data-icon="inline-start" />
@@ -170,7 +170,7 @@ const handleSave = () => {
                 v-if="imagePreview"
                 variant="ghost" 
                 size="sm" 
-                class="h-8.5 rounded-lg text-[10px] font-bold text-destructive hover:bg-destructive/10 cursor-pointer"
+                class="h-8.5 rounded-xl text-[10px] font-bold text-destructive hover:bg-destructive/10 cursor-pointer active:scale-95 transition-all"
                 @click="clearImage"
               >
                 <Trash2Icon class="size-3.5" data-icon="inline-start" />
@@ -188,13 +188,13 @@ const handleSave = () => {
         </div>
       </div>
 
-      <div class="h-[1px] bg-border/40 my-1" />
+      <div class="h-[0.8px] bg-border/60 my-0.5" />
 
       <!-- Save Button -->
       <Button 
         @click="handleSave"
         :disabled="isSaving || saveSuccess || !title.trim()"
-        class="w-full h-11 rounded-xl font-bold transition-all relative overflow-hidden active:scale-[0.98] cursor-pointer"
+        class="w-full h-11 rounded-xl font-bold transition-all relative overflow-hidden active:scale-[0.98] cursor-pointer shadow-md shadow-primary/20"
         :variant="saveSuccess ? 'secondary' : 'default'"
       >
         <transition name="btn-content" mode="out-in">
@@ -202,7 +202,7 @@ const handleSave = () => {
             <RefreshCwIcon class="size-4 animate-spin" />
             <span>{{ languageStore.t('در حال ذخیره‌سازی...', 'Saving...') }}</span>
           </div>
-          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-650 dark:text-emerald-400">
+          <div v-else-if="saveSuccess" class="flex items-center gap-2 justify-center text-emerald-600 dark:text-emerald-400">
             <CheckCircle2Icon class="size-4" />
             <span>{{ languageStore.t('تغییرات با موفقیت ذخیره شد', 'Changes saved successfully') }}</span>
           </div>

@@ -167,7 +167,7 @@ const handleSave = () => {
 
 <template>
   <div 
-    class="w-full flex flex-col gap-5 text-start font-sans" 
+    class="w-full flex flex-col gap-5 text-start font-sans pb-24" 
     :dir="languageStore.dir"
   >
     <!-- Header -->
@@ -179,15 +179,15 @@ const handleSave = () => {
     />
 
     <!-- Main Card wrapper -->
-    <div class="w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-5 shadow-xs flex flex-col gap-5">
+    <div class="w-full bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col gap-5">
       
-      <div class="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed text-start">
+      <div class="bg-muted/30 rounded-xl p-3.5 border border-border/60 text-xs text-muted-foreground leading-relaxed text-start">
         {{ languageStore.t('💡 با فعال‌سازی بازنشر، پست‌های ارسالی شما در این تاپیک به صورت خودکار از طریق ربات‌های اختصاصی در گروه‌ها و کانال‌های انتخاب شده منتشر خواهند شد.', '💡 By enabling auto-repost, your posts in this topic will be automatically published via dedicated bots in the selected groups and channels.') }}
       </div>
 
       <!-- Telegram Section -->
-      <div class="flex flex-col gap-4">
-        <div class="flex items-center justify-between p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 transition-all duration-300">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between p-3.5 sm:p-4 bg-muted/20 hover:bg-muted/30 rounded-xl border border-border/70 dark:border-border/60 transition-all duration-200">
           <div class="flex flex-col text-start pe-4">
             <span class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
               <span class="size-2 rounded-full bg-sky-500 shrink-0" />
@@ -205,7 +205,7 @@ const handleSave = () => {
             <!-- Telegram not connected -->
             <div 
               v-if="!telegramConnected" 
-              class="flex flex-col gap-3 p-3.5 rounded-2xl bg-destructive/5 border border-destructive/15 text-start font-sans"
+              class="flex flex-col gap-3 p-3.5 rounded-xl bg-destructive/5 border border-destructive/20 text-start font-sans"
             >
               <div class="flex items-start gap-2.5">
                 <AlertCircleIcon class="size-4.5 text-destructive shrink-0 mt-0.5" />
@@ -219,7 +219,7 @@ const handleSave = () => {
               <Button 
                 variant="outline" 
                 size="xs" 
-                class="self-start text-[10px] h-7 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer gap-1 ps-2.5 pe-2"
+                class="self-start text-[10px] h-7 rounded-lg border-destructive/25 text-destructive hover:bg-destructive/10 cursor-pointer gap-1 ps-2.5 pe-2 active:scale-95 transition-all"
                 @click="emit('goToConnections')"
               >
                 <span>{{ languageStore.t('اتصال ربات تلگرام', 'Connect Telegram Bot') }}</span>
@@ -228,9 +228,9 @@ const handleSave = () => {
             </div>
 
             <!-- Telegram Channels list -->
-            <div v-else class="flex flex-col gap-2 bg-background/30 rounded-2xl p-1.5 border border-border/40">
-              <div v-if="loadingTg" class="text-center text-xs text-gray-400 py-4">{{ languageStore.t('در حال بارگذاری مقاصد تلگرام......', 'Loading Telegram destinations...') }}</div>
-              <div v-else-if="tgDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30 text-start">
+            <div v-else class="flex flex-col gap-1.5 bg-muted/15 rounded-xl p-2 border border-border/60">
+              <div v-if="loadingTg" class="text-center text-xs text-muted-foreground py-4">{{ languageStore.t('در حال بارگذاری مقاصد تلگرام......', 'Loading Telegram destinations...') }}</div>
+              <div v-else-if="tgDestinations.length === 0" class="text-xs text-amber-600 bg-amber-500/10 rounded-xl p-3 border border-amber-500/20 text-start">
                 {{ languageStore.t('⚠️ هیچ مقصد متصلی در تلگرام یافت نشد. ابتدا ربات خود را در تلگرام به گروه یا کانال عضو و مدیر کنید.', '⚠️ No connected destination found in Telegram. First add your bot to a group or channel and make it an admin.') }}
               </div>
               <template v-else>
@@ -238,21 +238,21 @@ const handleSave = () => {
                   v-for="ch in tgDestinations" 
                   :key="ch.id"
                   @click="toggleTgChannel(ch.id)"
-                  class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors"
+                  class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors active:scale-[0.99]"
                 >
                   <div class="flex items-center gap-3">
-                    <div class="size-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-500 shrink-0">
+                    <div class="size-8 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-500 shrink-0">
                       <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
                     </div>
                     <div class="flex flex-col text-start">
                       <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
-                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start">{{ ch.chat_id }}</span>
+                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start font-mono">{{ ch.chat_id }}</span>
                     </div>
                   </div>
                   <Checkbox :checked="selectedTgConnections.includes(ch.id)" @update:checked="toggleTgChannel(ch.id)" @click.stop class="shrink-0" />
                 </div>
                 <!-- Disconnect Guide -->
-                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-start">
+                <div class="m-1.5 p-3 bg-muted/30 border border-border/50 rounded-xl leading-relaxed text-start">
                   <span class="text-[10px] font-bold text-muted-foreground block">{{ languageStore.t('💡 راهنمای حذف مقصد:', '💡 Destination Removal Guide:') }}</span>
                   <span class="text-[9px] text-muted-foreground/80 mt-1 block">{{ languageStore.t('برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در تلگرام ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.', 'To permanently remove any of the above destinations, simply remove the Tafakor bot from the corresponding channel or group in Telegram. The system will apply the changes automatically.') }}</span>
                 </div>
@@ -263,8 +263,8 @@ const handleSave = () => {
       </div>
 
       <!-- Bale Section -->
-      <div class="flex flex-col gap-4">
-        <div class="flex items-center justify-between p-4 bg-background/40 dark:bg-card/30 rounded-2xl border border-border/50 transition-all duration-300">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between p-3.5 sm:p-4 bg-muted/20 hover:bg-muted/30 rounded-xl border border-border/70 dark:border-border/60 transition-all duration-200">
           <div class="flex flex-col text-start pe-4">
             <span class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
               <span class="size-2 rounded-full bg-emerald-500 shrink-0" />
@@ -282,7 +282,7 @@ const handleSave = () => {
             <!-- Bale not connected -->
             <div 
               v-if="!baleConnected" 
-              class="flex flex-col gap-3 p-3.5 rounded-2xl bg-destructive/5 border border-destructive/15 text-start font-sans"
+              class="flex flex-col gap-3 p-3.5 rounded-xl bg-destructive/5 border border-destructive/20 text-start font-sans"
             >
               <div class="flex items-start gap-2.5">
                 <AlertCircleIcon class="size-4.5 text-destructive shrink-0 mt-0.5" />
@@ -296,7 +296,7 @@ const handleSave = () => {
               <Button 
                 variant="outline" 
                 size="xs" 
-                class="self-start text-[10px] h-7 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer gap-1 ps-2.5 pe-2"
+                class="self-start text-[10px] h-7 rounded-lg border-destructive/25 text-destructive hover:bg-destructive/10 cursor-pointer gap-1 ps-2.5 pe-2 active:scale-95 transition-all"
                 @click="emit('goToConnections')"
               >
                 <span>{{ languageStore.t('اتصال ربات بله', 'Connect Bale Bot') }}</span>
@@ -305,9 +305,9 @@ const handleSave = () => {
             </div>
 
             <!-- Bale Channels list -->
-            <div v-else class="flex flex-col gap-2 bg-background/30 rounded-2xl p-1.5 border border-border/40">
-              <div v-if="loadingBale" class="text-center text-xs text-gray-400 py-4">{{ languageStore.t('در حال بارگذاری مقاصد بله......', 'Loading Bale destinations...') }}</div>
-              <div v-else-if="baleDestinations.length === 0" class="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-50 dark:border-amber-900/30 text-start">
+            <div v-else class="flex flex-col gap-1.5 bg-muted/15 rounded-xl p-2 border border-border/60">
+              <div v-if="loadingBale" class="text-center text-xs text-muted-foreground py-4">{{ languageStore.t('در حال بارگذاری مقاصد بله......', 'Loading Bale destinations...') }}</div>
+              <div v-else-if="baleDestinations.length === 0" class="text-xs text-amber-600 bg-amber-500/10 rounded-xl p-3 border border-amber-500/20 text-start">
                 {{ languageStore.t('⚠️ هیچ مقصد متصلی در بله یافت نشد. ابتدا ربات خود را در بله به گروه یا کانال عضو و مدیر کنید.', '⚠️ No connected destination found in Bale. First add your bot to a group or channel and make it an admin.') }}
               </div>
               <template v-else>
@@ -315,21 +315,21 @@ const handleSave = () => {
                   v-for="ch in baleDestinations" 
                   :key="ch.id"
                   @click="toggleBaleChannel(ch.id)"
-                  class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors"
+                  class="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/40 cursor-pointer transition-colors active:scale-[0.99]"
                 >
                   <div class="flex items-center gap-3">
-                    <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                    <div class="size-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
                       <SendIcon class="size-4 rotate-45 -translate-x-0.5 translate-y-0.5" />
                     </div>
                     <div class="flex flex-col text-start">
                       <span class="text-[11px] font-bold text-foreground">{{ ch.label }}</span>
-                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start">{{ ch.chat_id }}</span>
+                      <span class="text-[9px] text-muted-foreground mt-0.5 dir-ltr text-start font-mono">{{ ch.chat_id }}</span>
                     </div>
                   </div>
                   <Checkbox :checked="selectedBaleConnections.includes(ch.id)" @update:checked="toggleBaleChannel(ch.id)" @click.stop class="shrink-0" />
                 </div>
                 <!-- Disconnect Guide -->
-                <div class="m-1.5 p-3 bg-muted/20 border border-border/40 rounded-xl leading-relaxed text-start">
+                <div class="m-1.5 p-3 bg-muted/30 border border-border/50 rounded-xl leading-relaxed text-start">
                   <span class="text-[10px] font-bold text-muted-foreground block">{{ languageStore.t('💡 راهنمای حذف مقصد:', '💡 Destination Removal Guide:') }}</span>
                   <span class="text-[9px] text-muted-foreground/80 mt-1 block">{{ languageStore.t('برای حذف دائمی هر یک از مقاصد فوق، کافیست ربات تفکر را از کانال یا گروه مربوطه در بله ریمو (حذف) کنید. سیستم به صورت خودکار تغییرات را اعمال خواهد کرد.', 'To permanently remove any of the above destinations, simply remove the Tafakor bot from the corresponding channel or group in Bale. The system will apply the changes automatically.') }}</span>
                 </div>
@@ -339,13 +339,13 @@ const handleSave = () => {
         </transition>
       </div>
 
-      <div class="h-[1px] bg-border/40 my-1" />
+      <div class="h-[0.8px] bg-border/60 my-0.5" />
 
       <!-- Save Button -->
       <Button 
         @click="handleSave"
         :disabled="isSaving || saveSuccess"
-        class="w-full h-11 rounded-xl font-bold transition-all relative overflow-hidden active:scale-[0.98] cursor-pointer"
+        class="w-full h-11 rounded-xl font-bold transition-all relative overflow-hidden active:scale-[0.98] cursor-pointer shadow-md shadow-primary/20"
         :variant="saveSuccess ? 'secondary' : 'default'"
       >
         <transition name="btn-content" mode="out-in">
