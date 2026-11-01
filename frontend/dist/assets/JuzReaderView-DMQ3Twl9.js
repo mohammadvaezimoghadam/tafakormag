@@ -1,0 +1,1 @@
+import{JuzReaderView as e}from"./quran-BphmAfYP.js";export{e as default};

@@ -1,0 +1,32 @@
+@layer base {
+  /* Persian font features and numeral dot settings for inputs and interactive elements */
+  input,
+  textarea,
+  select,
+  button,
+  .btn,
+  [data-slot="input-otp-slot"] {
+    font-family: 'IRANYekanX', var(--font-sans), sans-serif !important;
+    font-feature-settings: "ss01" on, "cv11" on !important;
+    font-variation-settings: "dots" 3 !important;
+  }
+}
+
+@layer utilities {
+  /* کلاسهای کمکی برای ترکیب سریع فواصل استاندارد در چیدمانها (Layouts) */
+
+  /* چیدمان فرمها با فواصل استاندارد شدسن */
+  .form-group-layout {
+    @apply grid gap-4 w-full;
+  }
+
+  /* چیدمان دکمههای انتهای فرم (مثلا انصراف و تایید) */
+  .form-actions-layout {
+    @apply flex items-center justify-end gap-3 mt-6;
+  }
+
+  /* فواصل پدینگ بخشهای اصلی دشبورد یا لندینگ */
+  .section-padding {
+    @apply p-4 md:p-6 lg:p-8;
+  }
+}

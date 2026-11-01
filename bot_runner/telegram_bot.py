@@ -1,4 +1,5 @@
 import asyncio
+import re
 import httpx
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram import Update
@@ -9,17 +10,20 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     filters,
-    ContextTypes
+    ContextTypes,
+    ChatMemberHandler
 )
 from telegram.error import TelegramError
 
 from config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_PROXY_URL,
+    TELEGRAM_API_URL,
     POLL_INTERVAL
 )
 from api_client import APIClient
 from logger_config import setup_logger
+from main import format_text_for_telegram
 
 logger = setup_logger("telegram_bot", "telegram.log")
 api_client = APIClient()
@@ -31,9 +35,29 @@ def get_main_keyboard():
     keyboard = [
         [KeyboardButton("📋 کانال‌ها و گروه‌های من")],
         [KeyboardButton("🔗 اتصال گروه/کانال جدید")],
+        [KeyboardButton("📱 ثبت/بروزرسانی شماره موبایل", request_contact=True)],
         [KeyboardButton("❓ راهنما")],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+
+def get_start_keyboard():
+    """ساخت منوی ثبت‌نام/شروع برای کاربرانی که هنوز متصل نشده‌اند"""
+    keyboard = [
+        [KeyboardButton("📱 ثبت شماره موبایل", request_contact=True)],
+        [KeyboardButton("❓ راهنما")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+
+async def is_user_linked(chat_id: int) -> bool:
+    """بررسی اینکه آیا چت کاربر متصل به حسابی در تفکر است یا خیر"""
+    try:
+        user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
+        return bool(user_id)
+    except Exception:
+        return False
+
 
 WELCOME_TEXT = (
     "🧠 به ربات تفکر خوش آمدید!\n\n"
@@ -86,7 +110,8 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = await api_client.get_user_id_by_chat("telegram", user.id)
         label = chat.title or f"Chat {chat_id}"
-        await api_client.register_destination(user_id, "telegram", chat_id, label)
+        username = chat.username or ""
+        await api_client.register_destination(user_id, "telegram", chat_id, label, username=username)
 
         # ارسال پیام موفقیت به صورت خصوصی به کاربر
         await context.bot.send_message(
@@ -115,8 +140,175 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning(f"Registration failed: {e}")
 
 
+async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ثبت خودکار مقصد بدون نیاز به دستور (Zero-Command Connection) برای ربات عمومی تلگرام"""
+    my_chat_member = update.my_chat_member
+    if not my_chat_member:
+        return
+
+    chat = my_chat_member.chat
+    chat_id = str(chat.id)
+    new_status = my_chat_member.new_chat_member.status
+
+    # اگر ربات از کانال/گروه لفت داد یا کیک شد
+    if new_status in ("left", "kicked"):
+        try:
+            res = await api_client.unregister_chat("telegram", chat_id)
+            if res and res.get("success"):
+                notifications = res.get("notifications", [])
+                for notif in notifications:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=notif["chat_id"],
+                            text=(
+                                f"⚠️ <b>قطع اتصال مقصد انتشار تلگرام</b>\n\n"
+                                f"ربات تفکر از مقصد «{notif['label']}» (با شناسه <code>{notif['chat_id_removed']}</code>) خارج شد.\n"
+                                f"این مقصد با موفقیت از سیستم تفکر شما حذف گردید."
+                            ),
+                            parse_mode="HTML"
+                        )
+                    except Exception as notify_err:
+                        logger.error(f"Error sending unregister notification to {notif['chat_id']}: {notify_err}")
+                logger.info(f"Unregistered telegram chat {chat_id} due to bot status: {new_status}")
+        except Exception as e:
+            logger.error(f"Failed to unregister telegram chat {chat_id}: {e}")
+        return
+
+    from_user = my_chat_member.from_user
+
+    if not from_user:
+        return
+
+    # ادمین شدن ربات در گروه یا کانال
+    if new_status in ("administrator", "creator"):
+        try:
+            # دریافت شناسه کاربر در تفکر
+            user_id = await api_client.get_user_id_by_chat("telegram", from_user.id)
+            if not user_id:
+                # اگر کاربر ثبت نام نکرده بود
+                await context.bot.send_message(
+                    chat_id=from_user.id,
+                    text=(
+                        f"⚠️ شما ربات تفکر را به عنوان مدیر به گروه/کانال «{chat.title}» اضافه کردید، "
+                        f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                        f"لطفاً ابتدا با زدن دکمه «📱 ثبت شماره موبایل» یا ارسال توکن در این چت خصوصی، حساب خود را متصل کنید."
+                    )
+                )
+                return
+
+            label = chat.title or f"Chat {chat_id}"
+            username = chat.username or ""
+            await api_client.register_destination(user_id, "telegram", chat_id, label, username=username)
+
+            # ارسال پیام موفقیت به صورت خصوصی به کاربر
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"✅ <b>اتصال خودکار مقصد موفقیت‌آمیز بود!</b>\n\n"
+                    f"📢 نام مقصد: <code>{label}</code>\n"
+                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                    f"این چت با موفقیت به مقاصد انتشار حساب تفکر شما متصل شد و نیازی به ارسال کامند نیست."
+                ),
+                parse_mode="HTML"
+            )
+            logger.info(f"Auto-connected chat {chat_id} ({label}) for user {user_id} via my_chat_member")
+        except Exception as e:
+            if "already registered" in str(e).lower() or "400" in str(e):
+                logger.info(f"Chat {chat_id} is already registered for user Telegram chat {from_user.id}")
+            elif "404" in str(e) or "not found" in str(e).lower():
+                try:
+                    await context.bot.send_message(
+                        chat_id=from_user.id,
+                        text=(
+                            f"⚠️ شما ربات تفکر را به عنوان مدیر به گروه/کانال «{chat.title}» اضافه کردید، "
+                            f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                            f"لطفاً ابتدا با زدن دکمه «📱 ثبت شماره موبایل» یا ارسال توکن در این چت خصوصی، حساب خود را متصل کنید."
+                        )
+                    )
+                except Exception as msg_err:
+                    logger.warning(f"Could not send private notification to user: {msg_err}")
+            else:
+                logger.error(f"Auto-registration in telegram on_my_chat_member failed: {e}")
+
+async def on_new_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """هندلر کمکی برای عضویت ربات عمومی تلگرام در گروه‌ها به عنوان عضو عادی یا مدیر"""
+    message = update.message
+    if not message or not message.new_chat_members:
+        return
+
+    chat = message.chat
+    chat_id = str(chat.id)
+    from_user = message.from_user
+
+    if not from_user:
+        return
+
+    # بررسی اینکه آیا خود ربات به گروه اضافه شده است
+    bot_added = any(member.id == context.bot.id for member in message.new_chat_members)
+    if not bot_added:
+        return
+
+    logger.info(f"Bot added to group {chat_id} ({chat.title}) via new_chat_members")
+    try:
+        # بررسی وضعیت ادمین بودن ربات
+        chat_member = await context.bot.get_chat_member(chat_id=chat.id, user_id=context.bot.id)
+        is_admin = chat_member.status in ("administrator", "creator")
+
+        user_id = await api_client.get_user_id_by_chat("telegram", from_user.id)
+        if not user_id:
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"⚠️ شما ربات تفکر را به گروه «{chat.title}» اضافه کردید، "
+                    f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                    f"لطفاً ابتدا حساب خود را در این چت خصوصی متصل کنید تا مقصد به طور خودکار ثبت شود."
+                )
+            )
+            return
+
+        if is_admin:
+            label = chat.title or f"Chat {chat_id}"
+            username = chat.username or ""
+            await api_client.register_destination(user_id, "telegram", chat_id, label, username=username)
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"✅ <b>اتصال خودکار گروه موفقیت‌آمیز بود!</b>\n\n"
+                    f"📢 نام گروه: <code>{label}</code>\n"
+                    f"🆔 شناسه: <code>{chat_id}</code>\n\n"
+                    f"این گروه با موفقیت به مقاصد شما متصل شد."
+                ),
+                parse_mode="HTML"
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=from_user.id,
+                text=(
+                    f"💡 شما ربات تفکر را به گروه «{chat.title}» اضافه کردید.\n\n"
+                    f"برای فعال‌سازی کامل و ارسال خودکار یادداشت‌ها، لطفاً ربات را در این گروه **مدیر (Admin)** کنید."
+                )
+            )
+    except Exception as e:
+        if "already registered" in str(e).lower() or "400" in str(e):
+            logger.info(f"Chat {chat_id} is already registered")
+        elif "404" in str(e) or "not found" in str(e).lower():
+            try:
+                await context.bot.send_message(
+                    chat_id=from_user.id,
+                    text=(
+                        f"⚠️ شما ربات تفکر را به گروه «{chat.title}» اضافه کردید، "
+                        f"اما هنوز حساب تفکر خود را متصل نکرده‌اید.\n\n"
+                        f"لطفاً ابتدا حساب خود را در این چت خصوصی متصل کنید تا مقصد به طور خودکار ثبت شود."
+                    )
+                )
+            except Exception as msg_err:
+                logger.warning(f"Could not send private notification: {msg_err}")
+        else:
+            logger.error(f"Auto-registration in telegram on_new_chat_members failed: {e}")
+
+
 async def destinations_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش منوی مدیریت مقصدها با دکمه‌های inline"""
+    """نمایش لیست مقاصد متصل با قابلیت فعال/غیرفعال‌سازی و حذف کامل"""
     chat_id = update.effective_chat.id
     try:
         user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
@@ -131,31 +323,23 @@ async def destinations_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        keyboard = []
+        await update.message.reply_text("📋 *لیست مقاصد متصل شده به تفکر:*")
+
         for dest in destinations:
             label = dest.get("label", "بدون نام")
-            dest_id = dest["id"]
-            is_default = dest.get("is_default", False)
-            prefix = "✅ " if is_default else "⬜ "
-            keyboard.append([
-                InlineKeyboardButton(
-                    f"{prefix}{label}",
-                    callback_data=f"setdef_{dest_id}"
-                )
-            ])
-        keyboard.append([
-            InlineKeyboardButton("➕ راهنمای ثبت جدید", callback_data="how_to_register")
-        ])
+            chat_num_id = dest["chat_id"]
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "📌 *مقصدهای ثبت‌شده شما:*\n\n"
-            "برای انتخاب مقصد پیش‌فرض، روی نام آن کلیک کنید.\n"
-            "✅ = مقصد پیش‌فرض فعلی\n"
-            "⬜ = سایر مقصدها",
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
+            text = (
+                f"📢 *نام:* {label}\n"
+                f"🆔 *شناسه:* `{chat_num_id}`\n\n"
+                f"💡 *راهنمای لغو اتصال:* برای قطع اتصال این مقصد، کافیست ربات تفکر را از این گروه/کانال ریمو (حذف) کنید. سیستم تفکر به صورت خودکار اتصال را قطع و از لیست حذف خواهد کرد."
+            )
+
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                parse_mode="Markdown"
+            )
     except Exception as e:
         await update.message.reply_text(
             "❌ خطا در دریافت مقصدها.\n"
@@ -175,31 +359,116 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             HOW_TO_REGISTER_TEXT,
             parse_mode="Markdown"
         )
-    elif data.startswith("setdef_"):
+    elif data.startswith("toggle_"):
         try:
             dest_id = int(data.split("_")[1])
             user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
-            if await api_client.set_default_destination(user_id, "telegram", dest_id):
-                await query.edit_message_text("✅ مقصد پیش‌فرض با موفقیت تغییر کرد.")
+            result = await api_client.toggle_active_destination(user_id, "telegram", dest_id)
+            if result and result.get("success"):
+                is_active = result.get("is_active", False)
+                status_text = "🟢 فعال" if is_active else "🔴 غیرفعال"
+
+                orig_text = query.message.text
+                lines = orig_text.split("\n")
+                new_lines = []
+                for line in lines:
+                    if "📊 وضعیت:" in line or "وضعیت:" in line:
+                        new_lines.append(f"📊 وضعیت: {status_text}")
+                    else:
+                        new_lines.append(line)
+                new_text = "\n".join(new_lines)
+
+                buttons = []
+                if is_active:
+                    buttons.append(InlineKeyboardButton("🔴 غیرفعال‌سازی", callback_data=f"toggle_{dest_id}"))
+                else:
+                    buttons.append(InlineKeyboardButton("🟢 فعال‌سازی", callback_data=f"toggle_{dest_id}"))
+                buttons.append(InlineKeyboardButton("❌ حذف", callback_data=f"delete_{dest_id}"))
+
+                reply_markup = InlineKeyboardMarkup([buttons])
+                await query.edit_message_text(
+                    text=new_text,
+                    reply_markup=reply_markup
+                )
             else:
-                await query.edit_message_text("❌ خطا در تغییر مقصد پیش‌فرض. لطفاً دوباره تلاش کنید.")
+                await query.answer("❌ خطا در تغییر وضعیت مقصد.", show_alert=True)
         except Exception as e:
-            await query.edit_message_text("❌ مشکلی پیش آمد، دوباره تلاش کنید.")
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
             logger.error(f"button_callback error: {e}")
+
+    elif data.startswith("delete_"):
+        try:
+            dest_id = int(data.split("_")[1])
+            user_id = await api_client.get_user_id_by_chat("telegram", chat_id)
+            success = await api_client.delete_destination(user_id, "telegram", dest_id)
+            if success:
+                await query.edit_message_text(
+                    text=query.message.text + "\n\n❌ این مقصد با موفقیت حذف شد."
+                )
+            else:
+                await query.answer("❌ خطا در حذف مقصد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback delete error: {e}")
+
+    elif data.startswith("retry_"):
+        try:
+            task_id = int(data.split("_")[1])
+            success = await api_client.retry_task(task_id)
+            if success:
+                await query.answer("🔄 یادداشت مجدداً در صف انتشار قرار گرفت.", show_alert=True)
+            else:
+                await query.answer("❌ خطا در تلاش مجدد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback retry error: {e}")
+
+    elif data.startswith("view_"):
+        try:
+            task_id = int(data.split("_")[1])
+            task_details = await api_client.get_task_details(task_id)
+            if task_details and task_details.get("text"):
+                note_text = task_details.get("text")
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"📋 <b>متن یادداشت:</b>\n\n{note_text}",
+                    parse_mode="HTML"
+                )
+                await query.answer("📋 متن یادداشت ارسال شد.")
+            else:
+                await query.answer("❌ متن یادداشت یافت نشد.", show_alert=True)
+        except Exception as e:
+            await query.answer("❌ مشکلی پیش آمد، دوباره تلاش کنید.", show_alert=True)
+            logger.error(f"button_callback view error: {e}")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        WELCOME_TEXT,
-        reply_markup=get_main_keyboard()
-    )
+    chat_id = update.effective_chat.id
+    if await is_user_linked(chat_id):
+        await update.message.reply_text(
+            WELCOME_TEXT,
+            reply_markup=get_main_keyboard()
+        )
+    else:
+        await update.message.reply_text(
+            "🧠 *به ربات تفکر خوش آمدید!*\n\n"
+            "برای دریافت آسان و سریع کد تایید ورود در همین ربات، لطفاً با کلیک بر روی دکمه زیر شماره موبایل خود را به اشتراک بگذارید یا توکن اتصال از اپلیکیشن را ارسال کنید.",
+            parse_mode="Markdown",
+            reply_markup=get_start_keyboard()
+        )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if await is_user_linked(chat_id):
+        reply_markup = get_main_keyboard()
+    else:
+        reply_markup = get_start_keyboard()
+
     await update.message.reply_text(
         HELP_TEXT,
         parse_mode="Markdown",
-        reply_markup=get_main_keyboard()
+        reply_markup=reply_markup
     )
 
 
@@ -225,13 +494,58 @@ async def handle_token(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         logger.info(f"User {update.effective_user.id} connected")
     except Exception as e:
+        linked = await is_user_linked(chat_id)
+        reply_markup = get_main_keyboard() if linked else get_start_keyboard()
         await context.bot.send_message(
             chat_id,
             "❌ *توکن نامعتبر یا منقضی شده است*\n\n"
             "لطفاً دوباره از اپلیکیشن تفکر توکن جدید دریافت کنید و آن را ارسال نمایید.",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=reply_markup
         )
         logger.warning(f"Connection failed: {e}")
+
+
+async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """دریافت شماره موبایل از طریق اشتراک‌گذاری مخاطب (Contact)"""
+    contact = update.message.contact
+    chat_id = update.effective_chat.id
+    user = update.effective_user
+
+    if not contact:
+        return
+
+    # بررسی امنیت: آیا مخاطب ارسال شده متعلق به خود فرستنده است؟
+    if contact.user_id and contact.user_id != user.id:
+        await update.message.reply_text(
+            "⚠️ خطا: لطفاً فقط شماره موبایل خود را به اشتراک بگذارید (از دکمه ثبت شماره موبایل استفاده کنید).",
+            reply_markup=get_start_keyboard()
+        )
+        return
+
+    phone = contact.phone_number.strip()
+
+    try:
+        # همگام‌سازی شماره تلفن با بک‌اند
+        await api_client.register_phone_chat("telegram", phone, chat_id)
+
+        await update.message.reply_text(
+            f"✅ *شماره موبایل شما با موفقیت ثبت شد!*\n\n"
+            f"📱 شماره ثبت شده: `{phone}`\n\n"
+            f"از این پس می‌توانید برای دریافت سریع کد ورود به اپلیکیشن تفکر، "
+            f"از این ربات استفاده کنید. کدهای تأیید مستقیماً همین‌جا برای شما ارسال خواهند شد.",
+            parse_mode="Markdown",
+            reply_markup=get_main_keyboard()
+        )
+        logger.info(f"Phone registered via Telegram contact sharing for user {user.id}: {phone}")
+    except Exception as e:
+        await update.message.reply_text(
+            "❌ خطا در ثبت شماره موبایل.\n"
+            "لطفاً مطمئن شوید شماره به درستی ارسال شده یا بعداً تلاش کنید.",
+            reply_markup=get_start_keyboard()
+        )
+        logger.error(f"Contact registration failed: {e}")
+
 
 
 async def handle_menu_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -268,20 +582,56 @@ async def task_processor(app: Application):
 
                 try:
                     dest_chat_id = int(chat_id) if str(chat_id).lstrip("-").isdigit() else chat_id
+                    frontend_domain = (os.getenv("FRONTEND_BASE_URL") or "https://tafakormag.ir").strip().rstrip('/')
+                    if not frontend_domain.startswith(('http://', 'https://')):
+                        frontend_domain = f"https://{frontend_domain}"
+
+                    if text:
+                        for local_prefix in ("http://localhost:5001", "http://localhost:5173", "http://127.0.0.1:5001", "http://127.0.0.1:5173"):
+                            if local_prefix in text:
+                                text = text.replace(local_prefix, frontend_domain)
+
+                    formatted_text = format_text_for_telegram(text)
+                    post_reply_markup = None
+                    if text:
+                        match = re.search(r'https?://[^\s<>"\'`]+/p/\S+', text)
+                        if match:
+                            p_url = match.group(0).rstrip('.,;:!?؛،؟)')
+                            from urllib.parse import urlparse
+                            tg_host = (urlparse(p_url).hostname or "").lower()
+                            if "." in tg_host and tg_host != "localhost":
+                                post_reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 مشاهده و ثبت نظر در تفکر", url=p_url)]])
+
                     if action == "send":
-                        msg = await app.bot.send_message(
-                            dest_chat_id, text, parse_mode="Markdown"
-                        )
+                        try:
+                            msg = await app.bot.send_message(
+                                dest_chat_id, formatted_text, parse_mode="HTML", reply_markup=post_reply_markup
+                            )
+                        except Exception as e:
+                            logger.warning(f"Telegram send with markup failed ({e}), retrying without reply_markup...")
+                            msg = await app.bot.send_message(
+                                dest_chat_id, formatted_text, parse_mode="HTML"
+                            )
                         await api_client.complete_task(tid, str(msg.message_id))
                         logger.info(f"Sent message for task {tid}")
 
                     elif action == "edit" and message_id:
-                        await app.bot.edit_message_text(
-                            text=text,
-                            chat_id=dest_chat_id,
-                            message_id=int(message_id),
-                            parse_mode="Markdown"
-                        )
+                        try:
+                            await app.bot.edit_message_text(
+                                text=formatted_text,
+                                chat_id=dest_chat_id,
+                                message_id=int(message_id),
+                                parse_mode="HTML",
+                                reply_markup=post_reply_markup
+                            )
+                        except Exception as e:
+                            logger.warning(f"Telegram edit with markup failed ({e}), retrying without reply_markup...")
+                            await app.bot.edit_message_text(
+                                text=formatted_text,
+                                chat_id=dest_chat_id,
+                                message_id=int(message_id),
+                                parse_mode="HTML"
+                            )
                         await api_client.complete_task(tid, message_id)
                         logger.info(f"Edited message for task {tid}")
 
@@ -308,6 +658,11 @@ async def run():
 
     builder = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN)
 
+    # Apply custom Telegram API base URL (Bypass Relay) if configured
+    if TELEGRAM_API_URL and TELEGRAM_API_URL != "https://api.telegram.org/bot":
+        builder.base_url(TELEGRAM_API_URL)
+        logger.info(f"Using custom Telegram API URL (Bypass Relay): {TELEGRAM_API_URL}")
+
     if TELEGRAM_PROXY_URL:
         proxy_client = httpx.AsyncClient(proxy=TELEGRAM_PROXY_URL)
         builder.http_client(proxy_client)
@@ -315,11 +670,18 @@ async def run():
 
     app = builder.build()
 
+    # Auto-connection handlers
+    app.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_new_chat_members))
+
     # Command handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("register", register_chat))
     app.add_handler(CommandHandler("destinations", destinations_menu))
+
+    # Contact sharing handler (must be registered before generic text/token handler)
+    app.add_handler(MessageHandler(filters.CONTACT, handle_contact))
 
     # Callback query handler (for inline buttons)
     app.add_handler(CallbackQueryHandler(button_callback))

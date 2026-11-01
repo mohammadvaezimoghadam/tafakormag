@@ -40,47 +40,34 @@ cd tafakor
 
 ---
 
-### 2. ایجاد فایل `.env.docker`
+### 2. تنظیم فایل `.env` سراسری
 
-در ریشه پروژه فایل زیر را ایجاد کنید:
+تمام تنظیمات پروژه (شامل دیتابیس، ربات‌ها، کاوه‌نگار و ماژول پروکسی) در فایل واحد [`.env`](file:///f:/tafakor/.env) در ریشه پروژه متمرکز شده است. 
 
-```env
-SECRET_KEY=your-very-secret-key
-DB_NAME=tafakor
-DB_USER=postgres
-DB_PASSWORD=your-db-password
-ALLOWED_HOSTS=*
-
-BALE_BOT_TOKEN=your-real-bale-bot-token
-
-KAVENEGAR_API_KEY=
-KAVENEGAR_SENDER=
-```
-
-> مقادیر `KAVENEGAR_*` اختیاری هستند.
+کافیست فایل نمونه را ویرایش کرده و متغیرهای آن را بر اساس سناریوی خود تنظیم کنید (برای اجرای داکر روی سرور ادمین، مقدار `DB_HOST=db` را فعال کنید).
 
 ---
 
-### 3. ساخت و اجرای تمام سرویس‌ها
+### 3. ساخت و اجرای سرویس‌ها
 
+برای اجرای معمولی پروژه (بک‌اند، فرانت‌اند، دیتابیس و ربات بله):
 ```bash
-docker-compose --env-file .env.docker up -d --build
+docker compose up -d --build
 ```
 
-این دستور سرویس‌های زیر را اجرا می‌کند:
-
-- PostgreSQL
-- Backend (Django + Gunicorn)
-- Frontend (Vue + Nginx)
-- Bot Runner (ربات بله)
+**فعال‌سازی درگاه تلگرام (بای‌پس فیلترینگ):**
+اگر پروژه را روی سرور مستقر در ایران اجرا می‌کنید و نیاز به پروکسی تلگرام دارید، کافیست پروژه را همراه با پروفایل `proxy` اجرا کنید تا کانتینر پروکسی تلگرام نیز بالا بیاید:
+```bash
+docker compose --profile proxy up -d --build
+```
 
 ---
 
 ### 4. بررسی وضعیت سرویس‌ها
 
 ```bash
-docker-compose ps
-docker-compose logs -f
+docker compose ps
+docker compose logs -f
 ```
 
 ---
@@ -254,9 +241,10 @@ frontend/
 | سرویس | Dockerfile / Image | نقش |
 |---|---|---|
 | `db` | `postgres:15` | پایگاه داده PostgreSQL |
-| `backend` | Dockerfile ریشه پروژه | Django |
-| `frontend` | `frontend/Dockerfile` | Vue + Nginx یا Vite |
-| `bot_runner` | `bot_runner/Dockerfile` | ربات بله |
+| `backend` | `backend/Dockerfile` | بک‌اند جنگو (Django API Server) |
+| `frontend` | `frontend/Dockerfile` | فرانت‌اند ویو (Vue + Nginx / Vite) |
+| `bot_runner` | `bot_runner/Dockerfile` | ربات بله و تلگرام |
+| `telegram_proxy` | `telegram_proxy/Dockerfile` | دور زدن فیلترینگ تلگرام (پروکسی رله) |
 
 ---
 
@@ -293,14 +281,14 @@ tafakor_net
 2. اجرای پروژه:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 3. توسعه کدها با Hot Reload
-4. در صورت نیاز اجرای ربات:
+4. در صورت نیاز به فعال‌سازی پروکسی بای‌پس تلگرام جهت تست محلی ربات تلگرام:
 
 ```bash
-docker-compose --profile bot up -d bot_runner
+docker compose --profile proxy up -d
 ```
 
 ---
@@ -310,7 +298,7 @@ docker-compose --profile bot up -d bot_runner
 ### Backend
 
 ```bash
-docker-compose exec backend python manage.py test
+docker compose exec backend python manage.py test
 ```
 
 یا ارسال درخواست به:
@@ -356,7 +344,7 @@ docker-compose exec db psql -U postgres -d tafakor
 در صورت تغییر Dockerfile یا وابستگی‌ها:
 
 ```bash
-docker-compose build --no-cache <service_name>
+docker compose build --no-cache <service_name>
 ```
 
 ---
@@ -366,7 +354,7 @@ docker-compose build --no-cache <service_name>
 ### مشاهده لاگ‌ها
 
 ```bash
-docker-compose logs -f <service_name>
+docker compose logs -f <service_name>
 ```
 
 ### ورود به کانتینر
@@ -404,7 +392,9 @@ docker individual service
 run single container
 
 tafakor environment variables
-.env.docker
+tafakor unified .env
+telegram_proxy bypass
+telegram bypass relay
 
 postgres docker volume
 static files nginx

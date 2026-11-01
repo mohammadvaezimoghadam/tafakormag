@@ -4,8 +4,12 @@
 *.pyc
 __pycache__/
 db.sqlite3
+*.sqlite3*
+*.sqlite3-shm
+*.sqlite3-wal
 /media/
 /staticfiles/
+backend/media/
 
 
 
@@ -17,7 +21,7 @@ frontend/node_modules/*
 
 
 # Environment
-.env
+#.env
 .venv/
 venv/
 env/
@@ -42,8 +46,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
-develop-eggs/
 dist/
+!frontend/dist/
 downloads/
 eggs/
 .eggs/
@@ -68,6 +72,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+tests/results/
+tests/artifacts/
 
 # Translations
 *.mo
@@ -96,7 +102,7 @@ celerybeat-schedule
 # Environments
 #.env
 .venv
-env/
+#env/
 venv/
 ENV/
 env.bak/
@@ -111,3 +117,11 @@ venv.bak/
 
 #node
 node_modules/
+
+# Frontend source libraries
+!frontend/src/lib/
+
+
+# Private internal notes and future roadmaps (never push to git)
+docs/internal/
+*_INTERNAL.md

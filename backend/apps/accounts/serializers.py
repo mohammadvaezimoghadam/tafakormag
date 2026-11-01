@@ -1,0 +1,93 @@
+from rest_framework import serializers
+from .models import User, BotConnectionToken
+
+
+IRAN_MOBILE_REGEX = r'^09\d{9}$'
+IRAN_MOBILE_ERROR = 'شماره موبایل باید به صورت 09123456789 باشد'
+
+class UserSerializer(serializers.ModelSerializer):
+    is_telegram_bot_connected = serializers.SerializerMethodField()
+    is_bale_bot_connected = serializers.SerializerMethodField()
+    is_telegram_otp_connected = serializers.SerializerMethodField()
+    is_bale_otp_connected = serializers.SerializerMethodField()
+    donations_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'phone', 
+            'first_name',
+            'last_name',
+            'profile_image',
+            'is_telegram_bot_connected', 'telegram_bot_username', 'telegram_bot_disconnect_reason',
+            'is_bale_bot_connected', 'bale_bot_username', 'bale_bot_disconnect_reason',
+            'is_telegram_otp_connected', 'is_bale_otp_connected',
+            'donations_count'
+        ]
+        read_only_fields = [
+            'id',
+            'phone', 
+            'is_telegram_bot_connected', 'telegram_bot_username', 'telegram_bot_disconnect_reason',
+            'is_bale_bot_connected', 'bale_bot_username', 'bale_bot_disconnect_reason',
+            'is_telegram_otp_connected', 'is_bale_otp_connected',
+            'donations_count'
+        ]
+
+    def get_is_telegram_bot_connected(self, obj):
+        return bool(obj.telegram_bot_token)
+
+    def get_is_bale_bot_connected(self, obj):
+        return bool(obj.bale_bot_token)
+
+    def get_is_telegram_otp_connected(self, obj):
+        return bool(obj.telegram_chat_id)
+
+    def get_is_bale_otp_connected(self, obj):
+        return bool(obj.bale_chat_id)
+
+    def get_donations_count(self, obj):
+        try:
+            from apps.donations.models import DonationTransaction
+            donated_count = obj.donations.filter(status=DonationTransaction.PaymentStatus.SUCCESSFUL).count()
+            created_count = obj.created_campaigns.count()
+            return donated_count + created_count
+        except Exception:
+            return 0
+
+
+class RequestOTPSerializer(serializers.Serializer):
+    phone = serializers.RegexField(
+        regex=IRAN_MOBILE_REGEX,
+        max_length=11,
+        min_length=11,
+        error_messages={
+            'invalid': IRAN_MOBILE_ERROR
+        }
+    )
+    force_sms = serializers.BooleanField(required=False, default=False)
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone = serializers.RegexField(
+        regex=IRAN_MOBILE_REGEX,
+        max_length=11,
+        min_length=11,
+        error_messages={
+            'invalid': IRAN_MOBILE_ERROR
+        }
+    )   
+    otp = serializers.RegexField(
+        regex=r'^\d{4}$',
+        max_length=4,
+        min_length=4,
+        error_messages={
+            'invalid': 'کد تأیید باید 4 رقم باشد'
+        }
+    )
+
+
+class ConnectTokenResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BotConnectionToken
+        fields = ['token', 'platform', 'created_at']

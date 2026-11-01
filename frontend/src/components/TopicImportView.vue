@@ -1,0 +1,328 @@
+<script setup lang="ts">
+import { ref, onUnmounted } from 'vue'
+import PlatformHeader from './PlatformHeader.vue'
+import { Button } from '@/components/ui/button'
+import LoadingDialog from '@/components/LoadingDialog.vue'
+import { useLanguageStore } from '@/stores/languageStore'
+import { importHistory, getImportStatus } from '@/api'
+import {
+  UploadCloudIcon,
+  FileArchiveIcon,
+  InfoIcon,
+  Trash2Icon
+} from '@lucide/vue'
+
+const props = withDefaults(defineProps<{
+  topicId?: number
+}>(), {})
+
+const emit = defineEmits<{
+  (e: 'back'): void
+  (e: 'import-complete'): void
+  (e: 'import-failed', error: string): void
+}>()
+
+const languageStore = useLanguageStore()
+
+// State management
+const selectedFile = ref<File | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const isDragActive = ref(false)
+
+// Pipeline state
+const isImporting = ref(false)
+const globalProgress = ref(0)
+const currentStatus = ref<'idle' | 'uploading' | 'validating' | 'importing' | 'completed' | 'failed'>('idle')
+const isProcessing = ref(false)
+
+// File selection handlers — فقط فایل ZIP مجاز است
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    const file = target.files[0]
+    if (file && file.name.toLowerCase().endsWith('.zip')) {
+      selectedFile.value = file
+    } else {
+      alert(languageStore.isFa ? 'فقط فایل‌های فشرده ZIP مجاز هستند.' : 'Only ZIP compressed archives are allowed.')
+    }
+  }
+}
+
+const handleFileDrop = (event: DragEvent) => {
+  isDragActive.value = false
+  if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+    const file = event.dataTransfer.files[0]
+    if (file && file.name.toLowerCase().endsWith('.zip')) {
+      selectedFile.value = file
+    } else {
+      alert(languageStore.isFa ? 'فقط فایل‌های فشرده ZIP مجاز هستند.' : 'Only ZIP compressed archives are allowed.')
+    }
+  }
+}
+
+const removeFile = () => {
+  selectedFile.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+// Format bytes to readable size
+const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const dm = decimals < 0 ? 0 : decimals
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
+}
+
+// Active Polling Interval reference
+let pollingInterval: any = null
+
+const startStatusPolling = (taskId: string) => {
+  pollingInterval = setInterval(async () => {
+    try {
+      const res = await getImportStatus(taskId)
+      const taskData = res.data
+      
+      // Scale backend progress (0-100) to range (25-100)
+      globalProgress.value = 25 + Math.round((taskData.progress || 0) * 0.75)
+      
+      // Map backend status to loading dialog stage status codes
+      const statusMap: Record<string, typeof currentStatus.value> = {
+        'PENDING': 'uploading',
+        'EXTRACTING': 'validating',
+        'IMPORTING': 'importing',
+        'COMPLETED': 'completed',
+        'FAILED': 'failed'
+      }
+      currentStatus.value = statusMap[taskData.status] || 'idle'
+
+      if (taskData.status === 'COMPLETED') {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+        isProcessing.value = false
+        emit('import-complete')
+      } else if (taskData.status === 'FAILED') {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+        isProcessing.value = false
+        emit('import-failed', taskData.error_message || 'خطا در درون‌ریزی تاریخچه.')
+      }
+    } catch (err) {
+      console.error('Polling import status failed:', err)
+    }
+  }, 1200)
+}
+
+const startImportPipeline = async () => {
+  if (!selectedFile.value || !props.topicId) return
+
+  isImporting.value = true
+  isProcessing.value = true
+  globalProgress.value = 0
+  currentStatus.value = 'uploading'
+
+  try {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    
+    // Call Django API multipart upload with progress tracking
+    const res = await importHistory(props.topicId, formData, (progressEvent) => {
+      if (progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        // Map upload progress (0-100) to global progress (0-25)
+        globalProgress.value = Math.round(percentCompleted * 0.25)
+      }
+    })
+    const taskId = res.data.id
+    
+    // Start tracking background process status
+    startStatusPolling(taskId)
+  } catch (err: any) {
+    isImporting.value = false
+    isProcessing.value = false
+    const errMsg = err.response?.data?.error || 'خطا در آپلود فایل تاریخچه تلگرام.'
+    emit('import-failed', errMsg)
+  }
+}
+
+const handleDialogClose = () => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+  }
+  if (!isProcessing.value) {
+    isImporting.value = false
+    removeFile()
+    currentStatus.value = 'idle'
+  }
+}
+
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+  }
+})
+</script>
+
+<template>
+  <div 
+    class="w-full flex flex-col gap-5 text-start font-sans pb-24" 
+    :dir="languageStore.dir"
+  >
+    <!-- Header -->
+    <PlatformHeader 
+      is-inner-page
+      :inner-title="languageStore.t('درون‌ریزی تاریخچه', 'Import History')"
+      :show-options-button="false"
+      @back="emit('back')"
+    />
+
+    <!-- Main Card wrapper -->
+    <div class="w-full bg-card/90 dark:bg-card/90 backdrop-blur-md border border-border/70 dark:border-border/60 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col gap-5">
+      
+      <!-- Info Banner -->
+      <div class="bg-muted/30 rounded-xl p-3.5 border border-border/60 text-xs text-muted-foreground leading-relaxed text-start">
+        {{ languageStore.t('💡 پیام‌ها و مدیاهای کانال تلگرام خود را با بارگذاری پوشه بک‌آپ به شکل فایل فشرده ZIP وارد این تاپیک کنید تا ساختار چت بازیابی شود.', '💡 Import your Telegram channel messages and media assets into this topic by uploading the compressed ZIP backup archive.') }}
+      </div>
+
+      <!-- File Dropzone Section -->
+      <div class="flex flex-col gap-3">
+        <div class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+          <span class="size-2 rounded-full bg-primary shrink-0" />
+          {{ languageStore.t('انتخاب آرشیو پشتیبان', 'Select Backup Archive') }}
+        </div>
+        
+        <!-- Dropzone Box -->
+        <div 
+          v-if="!selectedFile"
+          @dragover.prevent="isDragActive = true"
+          @dragleave.prevent="isDragActive = false"
+          @drop.prevent="handleFileDrop"
+          @click="fileInput?.click()"
+          class="flex flex-col items-center justify-center p-6 border border-dashed border-border/70 dark:border-border/60 rounded-2xl bg-muted/15 hover:bg-muted/25 hover:border-primary/50 transition-all duration-200 cursor-pointer h-36"
+          :class="[isDragActive ? 'border-primary bg-primary/[0.04]' : '']"
+        >
+          <input 
+            type="file" 
+            ref="fileInput" 
+            class="hidden" 
+            accept=".zip" 
+            @change="handleFileSelect" 
+          />
+          <UploadCloudIcon class="w-8 h-8 mb-2 text-muted-foreground/60" />
+          <div class="text-[11px] font-bold text-foreground">
+            {{ languageStore.t('برای بارگذاری کلیک کنید یا فایل را بکشید', 'Click to upload or drag file here') }}
+          </div>
+          <div class="text-[9.5px] text-muted-foreground mt-0.5">
+            {{ languageStore.t('فایل ZIP حاوی result.json و پوشه مدیاها', 'ZIP file containing result.json and media folders') }}
+          </div>
+        </div>
+
+        <!-- File Metadata Preview -->
+        <div v-else class="flex items-center justify-between p-3.5 border border-border/70 dark:border-border/60 rounded-2xl bg-muted/20 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="size-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <FileArchiveIcon class="size-5" />
+            </div>
+            <div class="flex flex-col text-start min-w-0">
+              <span class="text-[11px] font-extrabold text-foreground truncate max-w-[190px]" dir="ltr">
+                {{ selectedFile.name }}
+              </span>
+              <span class="text-[9.5px] text-muted-foreground font-mono leading-none mt-1">
+                {{ formatBytes(selectedFile.size) }}
+              </span>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            @click="removeFile" 
+            class="text-destructive hover:bg-destructive/10 rounded-xl size-8 cursor-pointer shadow-none active:scale-95 transition-all"
+          >
+            <Trash2Icon class="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      <!-- Step-by-Step Guide Section -->
+      <div class="flex flex-col gap-3">
+        <div class="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+          <span class="size-2 rounded-full bg-primary shrink-0" />
+          {{ languageStore.t('راهنمای خروجی گرفتن از تلگرام', 'How to Export from Telegram') }}
+        </div>
+
+        <div class="flex flex-col gap-3 p-4 bg-muted/20 rounded-2xl border border-border/60 text-start">
+          <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
+            <span class="font-extrabold text-primary">۱.</span>
+            <div class="flex-1">
+              {{ languageStore.t('نسخه دسکتاپ تلگرام (Telegram Desktop) را باز کرده و وارد کانال خود شوید.', 'Open Telegram Desktop and go to your channel.') }}
+            </div>
+          </div>
+          
+          <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
+            <span class="font-extrabold text-primary">۲.</span>
+            <div class="flex-1">
+              {{ languageStore.t('از منوی سه نقطه بالا سمت راست، گزینه Export channel history را انتخاب کنید.', 'Select Export channel history from the three-dots menu.') }}
+            </div>
+          </div>
+          
+          <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
+            <span class="font-extrabold text-primary">۳.</span>
+            <div class="flex-1">
+              {{ languageStore.t('گزینه‌های عکس‌ها (Photos) و ویدیوها (Videos) را در صورت تمایل فعال بگذارید.', 'Keep Photos and Videos checked if you want to migrate media files.') }}
+            </div>
+          </div>
+          
+          <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed font-bold text-amber-600 dark:text-amber-500">
+            <span class="font-extrabold">۴.</span>
+            <div class="flex-1">
+              {{ languageStore.t('حیاتی: قالب خروجی (Format) را حتماً روی حالت JSON تنظیم کنید.', 'CRITICAL: Change the format from HTML to JSON.') }}
+            </div>
+          </div>
+          
+          <div class="flex gap-2.5 text-[11px] text-muted-foreground leading-relaxed">
+            <span class="font-extrabold text-primary">۵.</span>
+            <div class="flex-1">
+              {{ languageStore.t('کل پوشه استخراج شده حاوی result.json و مدیاها را تبدیل به یک فایل فشرده ZIP کرده و بارگذاری نمایید.', 'Compress the entire exported folder containing result.json and media files into a single ZIP archive and upload it above.') }}
+            </div>
+          </div>
+
+          <!-- Alert Note -->
+          <div class="mt-1 flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-normal">
+            <InfoIcon class="size-4 text-amber-500 shrink-0 mt-0.5" />
+            <div class="flex-1">
+              {{ languageStore.t(
+                'توجه: فایل زیپ آپلود شده باید شامل سند فایل ریشه result.json باشد، در غیر این‌صورت خط لوله معتبرسازی با شکست مواجه خواهد شد.',
+                'Make sure the uploaded ZIP contains the root result.json metadata file, otherwise the validation pipeline will terminate.'
+              ) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="flex justify-end pt-1">
+        <Button 
+          class="w-full rounded-xl px-5 py-4 text-xs font-bold transition-all cursor-pointer h-11 shadow-md shadow-primary/20 active:scale-[0.98]"
+          :disabled="!selectedFile" 
+          @click="startImportPipeline"
+        >
+          {{ languageStore.t('تایید و شروع درون‌ریزی', 'Confirm & Start Import') }}
+        </Button>
+      </div>
+    </div>
+
+    <!-- Pipeline Loading Modal Dialog -->
+    <LoadingDialog 
+      :is-open="isImporting" 
+      :progress="globalProgress" 
+      :currentStatus="currentStatus" 
+      :isProcessing="isProcessing"
+      @close="handleDialogClose"
+      @action="handleDialogClose"
+    />
+  </div>
+</template>

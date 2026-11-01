@@ -1,0 +1,412 @@
+{
+  "source_name": "Tafakor Verified Quran Seed Dataset",
+  "source_version": "1.0.0",
+  "license": "Creative Commons Attribution 3.0",
+  "description": "Authentic Quranic text seed dataset with multi-edition support (Simple Arabic, Uthmani script, Ansarian Persian translation, and Sahih English translation)",
+  "total_ayahs": 38,
+  "data": [
+    {
+      "surah_number": 1,
+      "number_in_surah": 1,
+      "global_number": 1,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        "quran-uthmani": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+        "fa.ansarian": "به نام خدا که رحمتش بی‌اندازه است و مهربانی‌اش همیشگی",
+        "en.sahih": "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+      }
+    },
+    {
+      "surah_number": 1,
+      "number_in_surah": 2,
+      "global_number": 2,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+        "quran-uthmani": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ",
+        "fa.ansarian": "همه ستایش‌ها ویژه خداست که پروردگار جهانیان است",
+        "en.sahih": "[All] praise is [due] to Allah, Lord of the worlds -"
+      }
+    },
+    {
+      "surah_number": 1,
+      "number_in_surah": 3,
+      "global_number": 3,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "الرَّحْمَٰنِ الرَّحِيمِ",
+        "quran-uthmani": "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+        "fa.ansarian": "رحمتش بی‌اندازه و مهربانی‌اش همیشگی است",
+        "en.sahih": "The Entirely Merciful, the Especially Merciful,"
+      }
+    },
+    {
+      "surah_number": 1,
+      "number_in_surah": 4,
+      "global_number": 4,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "مَالِكِ يَوْمِ الدِّينِ",
+        "quran-uthmani": "مَٰلِكِ يَوْمِ ٱلدِّينِ",
+        "fa.ansarian": "مالک و فرمانروای روز جزاست",
+        "en.sahih": "Sovereign of the Day of Recompense."
+      }
+    },
+    {
+      "surah_number": 1,
+      "number_in_surah": 5,
+      "global_number": 5,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+        "quran-uthmani": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+        "fa.ansarian": "[پروردگارا!] تنها تو را می‌پرستیم و تنها از تو یاری می‌جوییم",
+        "en.sahih": "It is You we worship and You we ask for help."
+      }
+    },
+    {
+      "surah_number": 1,
+      "number_in_surah": 6,
+      "global_number": 6,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ",
+        "quran-uthmani": "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+        "fa.ansarian": "ما را به راه راست هدایت فرما",
+        "en.sahih": "Guide us to the straight path -"
+      }
+    },
+    {
+      "surah_number": 1,
+      "number_in_surah": 7,
+      "global_number": 7,
+      "juz": 1,
+      "page": 1,
+      "editions": {
+        "quran-simple": "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ",
+        "quran-uthmani": "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+        "fa.ansarian": "راه آنان که به آنان نعمت دادی، نه آنان که مورد خشم قرار گرفته‌اند و نه گمراهان",
+        "en.sahih": "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray."
+      }
+    },
+    {
+      "surah_number": 2,
+      "number_in_surah": 1,
+      "global_number": 8,
+      "juz": 1,
+      "page": 2,
+      "editions": {
+        "quran-simple": "الم",
+        "quran-uthmani": "الٓمٓ",
+        "fa.ansarian": "الف، لام، میم",
+        "en.sahih": "Alif, Lam, Meem."
+      }
+    },
+    {
+      "surah_number": 2,
+      "number_in_surah": 2,
+      "global_number": 9,
+      "juz": 1,
+      "page": 2,
+      "editions": {
+        "quran-simple": "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِلْمُتَّقِينَ",
+        "quran-uthmani": "ذَٰلِكَ ٱلْكِتَٰبُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًۭى لِّلْمُتَّقِينَ",
+        "fa.ansarian": "در [حقانیّت و وحی بودن] این کتاب هیچ تردیدی نیست؛ سراسرش هدایت است برای پرهیزکاران",
+        "en.sahih": "This is the Book about which there is no doubt, a guidance for those conscious of Allah -"
+      }
+    },
+    {
+      "surah_number": 2,
+      "number_in_surah": 255,
+      "global_number": 262,
+      "juz": 3,
+      "page": 42,
+      "editions": {
+        "quran-simple": "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَنْ ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+        "quran-uthmani": "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌۭ وَلَا نَوْمٌۭ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍۢ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ",
+        "fa.ansarian": "خداست که هیچ معبودی جز او نیست؛ زنده و برپادارنده است؛ نه خوابی سبک او را فرو می‌گیرد و نه خوابی گران؛ آنچه در آسمان‌ها و آنچه در زمین است، فقط در سیطره مالکیّت اوست. کیست آنکه جز به اذن او در پیشگاهش شفاعت کند؟ آنچه را پیش روی آنان است و آنچه را پشت سرشان است می‌داند و به چیزی از علم او احاطه نمی‌یابند مگر به آنچه او بخواهد. تختِ حکومت و فرمانروایی‌اش آسمان‌ها و زمین را فرا گرفته و نگهداری آن‌ها بر او گران و دشوار نیست و او بلندمرتبه و بزرگ است.",
+        "en.sahih": "Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great."
+      }
+    },
+    {
+      "surah_number": 103,
+      "number_in_surah": 1,
+      "global_number": 6177,
+      "juz": 30,
+      "page": 601,
+      "editions": {
+        "quran-simple": "وَالْعَصْرِ",
+        "quran-uthmani": "وَٱلْعَصْرِ",
+        "fa.ansarian": "سوگند به عصر",
+        "en.sahih": "By time,"
+      }
+    },
+    {
+      "surah_number": 103,
+      "number_in_surah": 2,
+      "global_number": 6178,
+      "juz": 30,
+      "page": 601,
+      "editions": {
+        "quran-simple": "إِنَّ الْإِنْسَانَ لَفِي خُسْرٍ",
+        "quran-uthmani": "إِنَّ ٱلْإِنسَٰنَ لَفِى خُسْرٍ",
+        "fa.ansarian": "بی‌تردید انسان در زیان‌کاری بزرگی است",
+        "en.sahih": "Indeed, mankind is in loss,"
+      }
+    },
+    {
+      "surah_number": 103,
+      "number_in_surah": 3,
+      "global_number": 6179,
+      "juz": 30,
+      "page": 601,
+      "editions": {
+        "quran-simple": "إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ",
+        "quran-uthmani": "إِلَّا ٱلَّذِينَ ءَامَنُوا۟ وَعَمِلُوا۟ ٱلصَّٰلِحَٰتِ وَتَوَاصَوْا۟ بِٱلْحَقِّ وَتَوَاصَوْا۟ بِٱلصَّبْرِ",
+        "fa.ansarian": "مگر کسانی که ایمان آورده و کارهای شایسته انجام داده‌اند و یکدیگر را به حق سفارش نموده و به شکیبایی توصیه کرده‌اند",
+        "en.sahih": "Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience."
+      }
+    },
+    {
+      "surah_number": 108,
+      "number_in_surah": 1,
+      "global_number": 6189,
+      "juz": 30,
+      "page": 602,
+      "editions": {
+        "quran-simple": "إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ",
+        "quran-uthmani": "إِنَّآ أَعْطَيْنَٰكَ ٱلْكَوْثَرَ",
+        "fa.ansarian": "ما به تو کوثر [خیر و برکت بسیار] عطا کردیم",
+        "en.sahih": "Indeed, We have granted you, [O Muhammad], al-Kawthar."
+      }
+    },
+    {
+      "surah_number": 108,
+      "number_in_surah": 2,
+      "global_number": 6190,
+      "juz": 30,
+      "page": 602,
+      "editions": {
+        "quran-simple": "فَصَلِّ لِرَبِّكَ وَانْحَرْ",
+        "quran-uthmani": "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ",
+        "fa.ansarian": "پس برای پروردگارت نماز بخوان و قربانی کن",
+        "en.sahih": "So pray to your Lord and sacrifice [to Him alone]."
+      }
+    },
+    {
+      "surah_number": 108,
+      "number_in_surah": 3,
+      "global_number": 6191,
+      "juz": 30,
+      "page": 602,
+      "editions": {
+        "quran-simple": "إِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ",
+        "quran-uthmani": "إِنَّ شَانِئَكَ هُوَ ٱلْأَبْتَرُ",
+        "fa.ansarian": "یقیناً دشمن تو بی‌تبار و بی‌نسل خواهد بود",
+        "en.sahih": "Indeed, your enemy is the one cut off."
+      }
+    },
+    {
+      "surah_number": 112,
+      "number_in_surah": 1,
+      "global_number": 6222,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "قُلْ هُوَ اللَّهُ أَحَدٌ",
+        "quran-uthmani": "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
+        "fa.ansarian": "بگو: او خدای یکتاست",
+        "en.sahih": "Say, \"He is Allah, [who is] One,"
+      }
+    },
+    {
+      "surah_number": 112,
+      "number_in_surah": 2,
+      "global_number": 6223,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "اللَّهُ الصَّمَدُ",
+        "quran-uthmani": "ٱللَّهُ ٱلصَّمَدُ",
+        "fa.ansarian": "خدای بی‌نیاز که همه نیازمندان قصد او می‌کنند",
+        "en.sahih": "Allah, the Eternal Refuge."
+      }
+    },
+    {
+      "surah_number": 112,
+      "number_in_surah": 3,
+      "global_number": 6224,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+        "quran-uthmani": "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+        "fa.ansarian": "نه زاده است و نه زاده شده",
+        "en.sahih": "He neither begets nor is born,"
+      }
+    },
+    {
+      "surah_number": 112,
+      "number_in_surah": 4,
+      "global_number": 6225,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "وَلَمْ يَكُنْ لَهُ كُفُوًا أَحَدٌ",
+        "quran-uthmani": "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ",
+        "fa.ansarian": "و هیچ‌کس همتا و مانند او نبوده و نیست",
+        "en.sahih": "Nor is there to Him any equivalent.\""
+      }
+    },
+    {
+      "surah_number": 113,
+      "number_in_surah": 1,
+      "global_number": 6226,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ",
+        "quran-uthmani": "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ",
+        "fa.ansarian": "بگو: به پروردگار سپیده دم پناه می‌برم",
+        "en.sahih": "Say, \"I seek refuge in the Lord of daybreak"
+      }
+    },
+    {
+      "surah_number": 113,
+      "number_in_surah": 2,
+      "global_number": 6227,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "مِنْ شَرِّ مَا خَلَقَ",
+        "quran-uthmani": "مِن شَرِّ مَا خَلَقَ",
+        "fa.ansarian": "از زیان و آسیب پدیده‌هایی که آفریده است",
+        "en.sahih": "From the evil of that which He created"
+      }
+    },
+    {
+      "surah_number": 113,
+      "number_in_surah": 3,
+      "global_number": 6228,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "وَمِنْ شَرِّ غَاسِقٍ إِذَا وَقَبَ",
+        "quran-uthmani": "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ",
+        "fa.ansarian": "و از زیان شب تاریک هنگامی که با ظلمتش همه جا را فرو پوشد",
+        "en.sahih": "And from the evil of darkness when it settles"
+      }
+    },
+    {
+      "surah_number": 113,
+      "number_in_surah": 4,
+      "global_number": 6229,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "وَمِنْ شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ",
+        "quran-uthmani": "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ",
+        "fa.ansarian": "و از زیان زنان دمنده در گره‌ها [که قصد افسون و فریب دارند]",
+        "en.sahih": "And from the evil of the blowers in knots"
+      }
+    },
+    {
+      "surah_number": 113,
+      "number_in_surah": 5,
+      "global_number": 6230,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "وَمِنْ شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+        "quran-uthmani": "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+        "fa.ansarian": "و از زیان حسود هنگامی که حسد می‌ورزد",
+        "en.sahih": "And from the evil of an envier when he envies.\""
+      }
+    },
+    {
+      "surah_number": 114,
+      "number_in_surah": 1,
+      "global_number": 6231,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "قُلْ أَعُوذُ بِرَبِّ النَّاسِ",
+        "quran-uthmani": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ",
+        "fa.ansarian": "بگو: به پروردگار مردم پناه می‌برم",
+        "en.sahih": "Say, \"I seek refuge in the Lord of mankind,"
+      }
+    },
+    {
+      "surah_number": 114,
+      "number_in_surah": 2,
+      "global_number": 6232,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "مَلِكِ النَّاسِ",
+        "quran-uthmani": "مَلِكِ ٱلنَّاسِ",
+        "fa.ansarian": "فرمانروای مردم",
+        "en.sahih": "The Sovereign of mankind."
+      }
+    },
+    {
+      "surah_number": 114,
+      "number_in_surah": 3,
+      "global_number": 6233,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "إِلَٰهِ النَّاسِ",
+        "quran-uthmani": "إِلَٰهِ ٱلنَّاسِ",
+        "fa.ansarian": "معبود مردم",
+        "en.sahih": "The God of mankind,"
+      }
+    },
+    {
+      "surah_number": 114,
+      "number_in_surah": 4,
+      "global_number": 6234,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ",
+        "quran-uthmani": "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+        "fa.ansarian": "از زیان وسوسه‌گر نهانی و پنهان‌شونده",
+        "en.sahih": "From the evil of the retreating whisperer -"
+      }
+    },
+    {
+      "surah_number": 114,
+      "number_in_surah": 5,
+      "global_number": 6235,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ",
+        "quran-uthmani": "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ",
+        "fa.ansarian": "آنکه همواره در سینه‌های مردم وسوسه می‌کند",
+        "en.sahih": "Who whispers into the breasts of mankind -"
+      }
+    },
+    {
+      "surah_number": 114,
+      "number_in_surah": 6,
+      "global_number": 6236,
+      "juz": 30,
+      "page": 604,
+      "editions": {
+        "quran-simple": "مِنَ الْجِنَّةِ وَالنَّاسِ",
+        "quran-uthmani": "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ",
+        "fa.ansarian": "از جنّیان و آدمیان",
+        "en.sahih": "From among the jinn and mankind.\""
+      }
+    }
+  ]
+}

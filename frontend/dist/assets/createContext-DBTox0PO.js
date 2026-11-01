@@ -1,0 +1,1 @@
+import{V as e,j as t}from"./languageStore-DVQ-_aoA.js";function n(n,r){let i=typeof n==`string`&&!r?`${n}Context`:r,a=Symbol(i);return[e=>{let r=t(a,e);if(r||r===null)return r;throw Error(`Injection \`${a.toString()}\` not found. Component must be used within ${Array.isArray(n)?`one of the following components: ${n.join(`, `)}`:`\`${n}\``}`)},t=>(e(a,t),t)]}export{n as t};

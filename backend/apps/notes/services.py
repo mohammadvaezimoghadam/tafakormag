@@ -1,0 +1,924 @@
+# apps/notes/services.py
+from __future__ import annotations
+
+import json
+import logging
+import os
+import sys
+import traceback
+from typing import Optional, Any
+from django.conf import settings
+from django.utils.dateparse import parse_datetime
+from django.utils.timezone import make_aware, is_aware, now as tz_now
+from django.db import close_old_connections
+from apps.accounts.models import MessagingTarget
+from .models import BotTask, Post, ImportTask, PostEditProposal, PostEditHistory
+
+logger = logging.getLogger("notes.services")
+
+
+def safe_close_old_connections():
+    """Closes old DB connections safely without breaking active test suite transactions."""
+    if not getattr(settings, 'TESTING', False) and 'pytest' not in sys.modules and 'test' not in sys.argv:
+        try:
+            close_old_connections()
+        except Exception:
+            pass
+
+
+def update_topic_description(topic):
+    """
+    Updates topic description based on the latest post in the topic.
+    """
+    if not topic:
+        return
+    latest_post = topic.posts.all().order_by('-created_at').first()
+    if latest_post and latest_post.content:
+        snippet = latest_post.content[:150] + "..." if len(latest_post.content) > 150 else latest_post.content
+        topic.description = snippet
+    else:
+        topic.description = ""
+    topic.save()
+
+
+def check_duplicate_message(topic_id: str | int, content_hash: str) -> tuple[bool, Optional[Post]]:
+    """
+    Checks if a message with an identical content hash has already been published 
+    in the specified topic in O(1) time complexity.
+    """
+    if not content_hash or not topic_id:
+        return False, None
+
+    existing_post = Post.objects.filter(
+        topic_id=topic_id,
+        content_hash=content_hash
+    ).first()
+
+    if existing_post:
+        logger.warning(f"Duplicate content detected for Topic {topic_id}. Existing Post ID: {existing_post.id}")
+        return True, existing_post
+
+    return False, None
+
+
+def execute_external_platform_deletion(
+    post_id: int | str,
+    delete_telegram: bool,
+    delete_bale: bool,
+    delete_database: bool
+) -> None:
+    """
+    Background worker process executing platform deletions safely with DB connection cleanup
+    and dispatching BotTask records for Telegram and Bale.
+    """
+    safe_close_old_connections()
+    try:
+        post = Post.objects.get(id=post_id)
+
+        # 1. Dispatch Bot Tasks for Telegram Deletion across registered chats
+        if delete_telegram and post.telegram_message_ids:
+            bot_token = getattr(post.author, 'telegram_bot_token', '')
+            for chat_id, msg_id in list(post.telegram_message_ids.items()):
+                if msg_id and chat_id:
+                    BotTask.objects.create(
+                        action="delete",
+                        platform="telegram",
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+            post.telegram_message_ids = {}
+            if "telegram" in post.published_platforms:
+                post.published_platforms.remove("telegram")
+
+        # 2. Dispatch Bot Tasks for Bale Deletion across registered chats
+        if delete_bale and post.bale_message_ids:
+            bot_token = getattr(post.author, 'bale_bot_token', '')
+            for chat_id, msg_id in list(post.bale_message_ids.items()):
+                if msg_id and chat_id:
+                    BotTask.objects.create(
+                        action="delete",
+                        platform="bale",
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+            post.bale_message_ids = {}
+            if "bale" in post.published_platforms:
+                post.published_platforms.remove("bale")
+
+        # 3. Handle DB Persistence or Destruction
+        if delete_database:
+            post.delete()
+            logger.info(f"Post {post_id} permanently removed from DB.")
+        else:
+            post.save()
+            logger.info(f"Post {post_id} platform references cleared.")
+
+    except Post.DoesNotExist:
+        logger.error(f"Post {post_id} not found during async deletion execution.")
+    except Exception as e:
+        logger.error(f"Error executing async deletion for Post {post_id}: {str(e)}")
+    finally:
+        safe_close_old_connections()
+
+
+def get_message_ids(post: Post, platform: str) -> dict[str, str]:
+    """دریافت شناسه‌های پیام به صورت دیکشنری {chat_id: message_id}"""
+    if platform == "telegram":
+        return post.telegram_message_ids or {}
+    elif platform == "bale":
+        return post.bale_message_ids or {}
+    return {}
+
+
+def set_message_ids(post: Post, platform: str, message_ids: dict[str, str]):
+    """ذخیره شناسه‌های پیام و به‌روزرسانی پلتفرم‌های منتشر شده"""
+    current_platforms = list(post.published_platforms or [])
+    if message_ids:
+        if platform not in current_platforms:
+            current_platforms.append(platform)
+    else:
+        if platform in current_platforms:
+            current_platforms.remove(platform)
+
+    post.published_platforms = current_platforms
+
+    if platform == "telegram":
+        post.telegram_message_ids = message_ids
+        Post.objects.filter(id=post.id).update(
+            telegram_message_ids=message_ids,
+            published_platforms=current_platforms
+        )
+    elif platform == "bale":
+        post.bale_message_ids = message_ids
+        Post.objects.filter(id=post.id).update(
+            bale_message_ids=message_ids,
+            published_platforms=current_platforms
+        )
+
+
+def _truncate_content(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    truncated = text[:limit]
+    last_space = max(truncated.rfind(' '), truncated.rfind('\n'))
+    if last_space > int(limit * 0.7):
+        truncated = truncated[:last_space]
+    return truncated.rstrip() + "..."
+
+
+def _post_markdown_text(post: Post, platform: Optional[str] = None, target: Optional[Any] = None) -> str:
+    """
+    متن ارسالی به ربات با کوتاه کردن خودکار متون طولانی و الصاق لینک پیش‌نمایش در تفکر،
+    به همراه الحاق خودکار بج/امضای تاپیک در صورت وجود.
+    اولویت انتساب تگ:
+    ۱. بج دستی وارد شده توسط کاربر در تاپیک (telegram_post_badge / bale_post_badge)
+    ۲. تگ خودکار استخراج‌شده از مقصد ثبت‌شده در دیتابیس (target.auto_badge)
+    ۳. بج عمومی تاپیک (post_badge)
+    """
+    raw_content = (post.content or "").strip()
+    topic = getattr(post, 'topic', None)
+
+    # تعیین آستانه طول مجاز بر اساس نوع پست (مدیا یا متن ساده)
+    has_media = bool(post.media_file or post.media_type in ('image', 'video', 'audio'))
+    max_len = getattr(settings, 'BOT_MEDIA_POST_MAX_CHARS', 800) if has_media else getattr(settings, 'BOT_TEXT_POST_MAX_CHARS', 1000)
+    is_long = len(raw_content) > max_len
+
+    # تعیین نحوه درج لینک بر اساس تنظیمات پلتفرم در تاپیک
+    link_mode = 'auto_long'
+    if topic:
+        if platform == "telegram":
+            link_mode = getattr(topic, 'telegram_post_link_mode', 'auto_long') or 'auto_long'
+        elif platform == "bale":
+            link_mode = getattr(topic, 'bale_post_link_mode', 'auto_long') or 'auto_long'
+
+    # بررسی شرط الصاق خودکار لینک به پایین پست
+    should_include_link = False
+    if link_mode == 'always':
+        should_include_link = True
+    elif link_mode == 'auto_long' and is_long:
+        should_include_link = True
+    elif link_mode == 'disabled':
+        should_include_link = False
+
+    # کوتاه کردن متن در صورت فراتر رفتن از حد مجاز
+    if is_long:
+        content = _truncate_content(raw_content, max_len)
+    else:
+        content = raw_content
+
+    # الصاق لینک خودکار به همراه متن راهنمای کوتاه در پایین پست
+    if should_include_link:
+        frontend_base = getattr(settings, 'FRONTEND_BASE_URL', None) or os.getenv('FRONTEND_BASE_URL')
+        if not frontend_base:
+            frontend_base = 'https://tafakormag.ir'
+        frontend_base = str(frontend_base).strip().rstrip('/')
+        if frontend_base and not frontend_base.startswith(('http://', 'https://')):
+            frontend_base = f"https://{frontend_base}"
+        post_id = post.id if post.id else ''
+        preview_url = f"{frontend_base}/p/{post_id}"
+        short_guide = f"🔗 [مشاهده و ثبت نظر در تفکر]({preview_url})\n{preview_url}"
+        content = f"{content}\n\n{short_guide}" if content else short_guide
+
+    if topic:
+        badge = ""
+        if platform == "telegram":
+            badge = (getattr(topic, 'telegram_post_badge', '') or "").strip()
+        elif platform == "bale":
+            badge = (getattr(topic, 'bale_post_badge', '') or "").strip()
+
+        # اگر تاپیک بج دستی مختص پلتفرم نداشت، از تگ خودکار مقصد در دیتابیس استفاده می‌کنیم
+        if not badge and target and hasattr(target, 'auto_badge') and target.auto_badge:
+            badge = str(target.auto_badge).strip()
+
+        # در صورت نبود، بج عمومی تاپیک را بررسی می‌کنیم
+        if not badge:
+            badge = (getattr(topic, 'post_badge', '') or "").strip()
+
+        if badge and badge not in content:
+            content = f"{content}\n\n{badge}" if content else badge
+
+    return content or ""
+
+
+def create_bot_tasks(post: Post, old_instance: Optional[Post] = None, *, is_delete: bool = False):
+    """
+    صف وظایف ربات را برای پست ایجاد می‌کند.
+    old_instance: وضعیت قبلی هنگام به‌روزرسانی؛ برای ایجاد تازه None است.
+    is_delete: True یعنی کاربر در حال حذف پست است.
+    """
+    if getattr(post, 'is_imported', False):
+        return
+
+    if is_delete:
+        for platform in ("telegram", "bale"):
+            msg_ids = get_message_ids(post, platform)
+            bot_token = post.author.telegram_bot_token if platform == "telegram" else post.author.bale_bot_token
+            
+            for chat_id, msg_id in msg_ids.items():
+                if msg_id and chat_id:
+                    BotTask.objects.create(
+                        action="delete",
+                        platform=platform,
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        note_id=post.id, # سازگاری با سیستم‌های قدیمی
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+        return
+
+    # برای ایجاد یا ویرایش پست
+    for platform in ("telegram", "bale"):
+        active_field = f"{platform}_bot_active"
+        is_bot_active = getattr(post.topic, active_field, False)
+        
+        bot_token = post.author.telegram_bot_token if platform == "telegram" else post.author.bale_bot_token
+        
+        # اگر ربات فعال نباشد یا توکن نداشته باشیم، کاری انجام نمی‌دهیم
+        if not is_bot_active or not bot_token:
+            continue
+
+        # دریافت اهداف ارتباط متصل به این تاپیک
+        connections_field = f"{platform}_connections"
+        connections = getattr(post.topic, connections_field).filter(is_active=True)
+        conn_by_chat_id = {str(conn.chat_id): conn for conn in connections}
+        chat_ids = list(conn_by_chat_id.keys())
+
+        if old_instance is None:
+            # ۱. پست جدید: ارسال به تمام کانال‌های متصل
+            for chat_id, conn in conn_by_chat_id.items():
+                BotTask.objects.create(
+                    action="send",
+                    platform=platform,
+                    chat_id=str(chat_id),
+                    text=_post_markdown_text(post, platform=platform, target=conn),
+                    message_id=None,
+                    note_id=post.id,
+                    post_id=post,
+                    bot_token=bot_token,
+                )
+        else:
+            # ۲. ویرایش پست
+            msg_ids = get_message_ids(old_instance, platform)
+            content_changed = (old_instance.content != post.content or 
+                               old_instance.media_type != post.media_type or 
+                               old_instance.media_file != post.media_file)
+
+            # الف) ویرایش در کانال‌هایی که قبلاً ارسال شده است
+            for chat_id, msg_id in msg_ids.items():
+                conn = conn_by_chat_id.get(str(chat_id))
+                if msg_id and chat_id in chat_ids:
+                    if content_changed:
+                        BotTask.objects.create(
+                            action="edit",
+                            platform=platform,
+                            chat_id=str(chat_id),
+                            text=_post_markdown_text(post, platform=platform, target=conn),
+                            message_id=str(msg_id),
+                            note_id=post.id,
+                            post_id=post,
+                            bot_token=bot_token,
+                        )
+                elif msg_id and chat_id not in chat_ids:
+                    # اگر از لیست اتصالات حذف شده است، پیام قبلی را حذف کنیم
+                    BotTask.objects.create(
+                        action="delete",
+                        platform=platform,
+                        chat_id=str(chat_id),
+                        text="",
+                        message_id=str(msg_id),
+                        note_id=post.id,
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+
+            # ب) ارسال به کانال‌های جدیدی که به اتصالات اضافه شده‌اند ولی هنوز ارسال نشده بودند
+            for chat_id, conn in conn_by_chat_id.items():
+                if chat_id not in msg_ids:
+                    BotTask.objects.create(
+                        action="send",
+                        platform=platform,
+                        chat_id=str(chat_id),
+                        text=_post_markdown_text(post, platform=platform, target=conn),
+                        message_id=None,
+                        note_id=post.id,
+                        post_id=post,
+                        bot_token=bot_token,
+                    )
+
+
+def process_telegram_json_import(task_id: str, temp_filepath: str):
+    """
+    یک کار پیش‌زمینه غیرمسدودکننده برای درون‌ریزی پیام‌های فایل JSON خروجی تلگرام.
+    فایل موقت آپلود شده در نهایت در بلاک finally حذف می‌شود.
+    """
+    logger.info(f"Starting Telegram JSON import process for Task ID: {task_id}")
+    task = None
+    try:
+        # 1. بازیابی تسک
+        task = ImportTask.objects.filter(id=task_id).first()
+        if not task:
+            logger.error(f"ImportTask with ID {task_id} not found.")
+            return
+
+        # تنظیم وضعیت به استخراج
+        task.status = 'EXTRACTING'
+        task.current_stage = 'در حال خواندن و استخراج پیام‌ها...'
+        task.progress = 10
+        task.save()
+
+        # 2. بررسی وجود فایل و بارگذاری محتوای فایل JSON
+        if not os.path.exists(temp_filepath):
+            raise FileNotFoundError(f"فایل موقت یافت نشد: {temp_filepath}")
+
+        with open(temp_filepath, 'r', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"فایل آپلود شده یک فایل JSON معتبر نیست: {str(e)}")
+
+        # قالب خروجی تلگرام معمولاً دارای کلید messages است
+        if not isinstance(data, dict) or 'messages' not in data:
+            raise ValueError("ساختار فایل تلگرام معتبر نیست. کلید 'messages' یافت نشد.")
+
+        raw_messages = data['messages']
+        if not isinstance(raw_messages, list):
+            raise ValueError("لیست پیام‌ها ('messages') باید یک آرایه باشد.")
+
+        total_messages = len(raw_messages)
+        logger.info(f"Total raw messages extracted: {total_messages}")
+
+        # فیلتر پیام‌ها (فقط پیام‌های عادی با متن و شناسه)
+        # تلگرام فیلد type="message" را برای پیام‌های عادی دارد
+        valid_raw_messages = []
+        for msg in raw_messages:
+            if not isinstance(msg, dict):
+                continue
+            # فقط پیام‌های عادی را ایمپورت کنیم (از پیام‌های خدماتی مثل دعوت، تغییر عکس و غیره بگذریم)
+            if msg.get('type') != 'message':
+                continue
+            # چک کردن شناسه و تاریخ
+            if 'id' not in msg or 'date' not in msg:
+                continue
+            valid_raw_messages.append(msg)
+
+        total_valid = len(valid_raw_messages)
+        logger.info(f"Total valid messages to import: {total_valid}")
+
+        if total_valid == 0:
+            task.status = 'COMPLETED'
+            task.current_stage = 'هیچ پیامی برای درون‌ریزی یافت نشد.'
+            task.progress = 100
+            task.save()
+            return
+
+        # تغییر وضعیت به درون‌ریزی
+        task.status = 'IMPORTING'
+        task.current_stage = 'در حال ثبت پیام‌ها در دیتابیس...'
+        task.progress = 30
+        task.save()
+
+        # 3. پردازش پیام‌ها و ایجاد شیء پست
+        posts_to_create = []
+        author = task.topic.created_by
+        if not author:
+            # اگر سازنده‌ای نباشد، از اولین سوپریوزر یا ادمین استفاده کنیم
+            from apps.accounts.models import User
+            author = User.objects.filter(is_superuser=True).first()
+            if not author:
+                author = User.objects.first()
+
+        # خواندن تک‌تک پیام‌ها و تبدیل به Post
+        for index, msg in enumerate(valid_raw_messages):
+            msg_id = msg['id']
+            raw_date = msg['date'] # "2023-05-15T12:30:45" or similar ISO
+            
+            # تبدیل تاریخ به datetime آگاه از منطقه زمانی (Timezone-aware)
+            dt = parse_datetime(raw_date)
+            if not dt:
+                # تلاش برای پارس مستقیم
+                from datetime import datetime
+                try:
+                    dt = datetime.fromisoformat(raw_date)
+                except Exception:
+                    dt = tz_now()
+
+            if dt and not is_aware(dt):
+                dt = make_aware(dt)
+
+            # تبدیل متن پیام تلگرام
+            text_content = ""
+            text_entities = msg.get('text', '')
+            # تلگرام گاهی متن را به صورت لیستی از اشیاء متنی (برای فرمت‌ها مثل لینک، بولد و غیره) یا متن ساده می‌دهد
+            if isinstance(text_entities, list):
+                # تبدیل آرایه پیام تلگرام به متن ساده یا مارک‌داون ساده
+                parts = []
+                for part in text_entities:
+                    if isinstance(part, dict):
+                        part_text = part.get('text', '')
+                        part_type = part.get('type', '')
+                        if part_type == 'link':
+                            parts.append(f"[{part_text}]({part.get('href', part_text)})")
+                        elif part_type == 'bold':
+                            parts.append(f"**{part_text}**")
+                        elif part_type == 'italic':
+                            parts.append(f"*{part_text}*")
+                        elif part_type == 'code':
+                            parts.append(f"`{part_text}`")
+                        else:
+                            parts.append(part_text)
+                    else:
+                        parts.append(str(part))
+                text_content = "".join(parts)
+            else:
+                text_content = str(text_entities)
+
+            # نادیده گرفتن پیام‌های خالی
+            if not text_content.strip():
+                continue
+
+            post = Post(
+                topic=task.topic,
+                author=author,
+                content=text_content,
+                media_type='text',
+                is_imported=True,
+                telegram_message_id=int(msg_id)
+            )
+            # مقداردهی دستی created_at در صورت پارس معتبر
+            if dt:
+                post.created_at = dt
+            posts_to_create.append(post)
+
+        # 4. نوشتن دسته‌ای در دیتابیس با bulk_create
+        total_posts = len(posts_to_create)
+        logger.info(f"Total posts mapped for database creation: {total_posts}")
+
+        batch_size = 500
+        for i in range(0, total_posts, batch_size):
+            chunk = posts_to_create[i:i + batch_size]
+            
+            # استفاده از bulk_create
+            Post.objects.bulk_create(chunk)
+            
+            # به روز رسانی پیشرفت به صورت پویا
+            chunk_progress = 30 + int((min(i + batch_size, total_posts) / total_posts) * 65)
+            task.progress = min(95, chunk_progress)
+            task.current_stage = f"در حال درون‌ریزی پیام‌ها ({min(i + batch_size, total_posts)} از {total_posts})..."
+            task.save()
+
+        task.progress = 95
+        task.current_stage = "در حال نهایی‌سازی و بازنشانی تاریخچه..."
+        task.save()
+
+        # آپدیت فیلد توضیحات تاپیک (Topic Description) بر اساس آخرین پیام
+        try:
+            # درون‌ریزی داینامیک برای جلوگیری از مشکلات چرخه وارداتی (circular imports)
+            from .views import update_topic_description
+            update_topic_description(task.topic)
+        except Exception as e:
+            logger.warning(f"Failed to update topic description: {str(e)}")
+
+        # تکمیل تسک
+        task.status = 'COMPLETED'
+        task.current_stage = 'درون‌ریزی تاریخچه تلگرام با موفقیت به پایان رسید.'
+        task.progress = 100
+        task.save()
+        logger.info(f"Import process COMPLETED successfully for Task ID: {task_id}")
+
+    except Exception as e:
+        logger.error(f"Error processing Telegram import for Task: {task_id}. Error: {str(e)}")
+        logger.error(traceback.format_exc())
+        if task:
+            task.status = 'FAILED'
+            task.current_stage = 'خطا در اجرای فرآیند درون‌ریزی.'
+            task.error_message = f"{str(e)}\n\n{traceback.format_exc()}"
+            task.progress = 100
+            task.save()
+    finally:
+        # پاکسازی فایل موقت برای جلوگیری از پر شدن دیسک
+        if temp_filepath and os.path.exists(temp_filepath):
+            try:
+                os.remove(temp_filepath)
+                logger.info(f"Cleaned up temp import file: {temp_filepath}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {temp_filepath}: {str(e)}")
+
+
+def process_telegram_zip_import(task_id: str, zip_filepath: str) -> None:
+    """
+    یک کار پیش‌زمینه غیرمسدودکننده برای درون‌ریزی تاریخچه تلگرام از فایل ZIP.
+    آرشیو ZIP باید شامل result.json و (اختیاری) پوشه‌های مدیا باشد.
+    فایل موقت در نهایت در بلاک finally حذف می‌شود.
+    """
+    import zipfile
+    import time
+    from django.db import transaction
+    from django.core.files.base import ContentFile
+    from datetime import datetime
+
+    logger.info(f"Starting Telegram ZIP import process for Task ID: {task_id}")
+    task = None
+    try:
+        # ۱. بازیابی تسک
+        task = ImportTask.objects.filter(id=task_id).first()
+        if not task:
+            logger.error(f"ImportTask with ID {task_id} not found.")
+            return
+
+        # Stage 1: اعتبارسنجی آرشیو ZIP
+        task.status = 'EXTRACTING'
+        task.current_stage = 'در حال اعتبارسنجی آرشیو و استخراج result.json...'
+        task.progress = 5
+        task.save()
+
+        if not os.path.exists(zip_filepath):
+            raise FileNotFoundError(f"فایل موقت ZIP یافت نشد: {zip_filepath}")
+
+        if not zipfile.is_zipfile(zip_filepath):
+            raise ValueError("فایل آپلود شده یک آرشیو ZIP معتبر نیست.")
+
+        with zipfile.ZipFile(zip_filepath, 'r') as archive:
+            namelist = archive.namelist()
+
+            # پیدا کردن result.json در هر سطحی از آرشیو
+            json_filename = next((f for f in namelist if f.endswith('result.json')), None)
+            if not json_filename:
+                raise ValueError("فایل result.json در داخل آرشیو ZIP یافت نشد.")
+
+            parent_dir = ""
+            if '/' in json_filename:
+                parent_dir = json_filename.rsplit('/', 1)[0]
+
+            with archive.open(json_filename) as json_file:
+                try:
+                    data = json.load(json_file)
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"فایل result.json داخل آرشیو خراب یا غیرقابل‌خواندن است: {str(e)}")
+
+            raw_messages = data.get('messages', [])
+            if not isinstance(raw_messages, list):
+                raise ValueError("ساختار result.json نامعتبر است. کلید 'messages' باید آرایه باشد.")
+
+            # فیلتر کردن پیام‌های عادی
+            valid_messages = [
+                m for m in raw_messages
+                if isinstance(m, dict) and m.get('type') == 'message' and 'id' in m and 'date' in m
+            ]
+            total_count = len(valid_messages)
+            logger.info(f"ZIP import: {total_count} valid messages found for Task {task_id}")
+
+            if total_count == 0:
+                task.status = 'COMPLETED'
+                task.current_stage = 'هیچ پیامی برای درون‌ریزی یافت نشد.'
+                task.progress = 100
+                task.save()
+                return
+
+            # Stage 2: درون‌ریزی پیام‌ها و مدیا
+            task.status = 'IMPORTING'
+            task.current_stage = 'در حال پردازش متن‌ها و کپی فایل‌های مدیا...'
+            task.save()
+
+            author = task.topic.created_by
+            if not author:
+                from apps.accounts.models import User
+                author = User.objects.filter(is_superuser=True).first() or User.objects.first()
+
+            # خواندن شناسه‌های موجود برای جلوگیری از import مکرر
+            existing_tg_ids = set(
+                Post.objects.filter(topic=task.topic, is_imported=True)
+                .values_list('telegram_message_id', flat=True)
+            )
+
+            batch_size = 100
+            posts_batch = []
+            processed_count = 0
+            last_db_update = time.time()
+
+            for msg in valid_messages:
+                tg_id = msg.get('id')
+
+                if tg_id in existing_tg_ids:
+                    processed_count += 1
+                    continue
+
+                # تبدیل تاریخ به Timezone-aware datetime
+                raw_date = msg.get('date', '')
+                dt = parse_datetime(raw_date)
+                if not dt:
+                    try:
+                        dt = datetime.fromisoformat(raw_date)
+                    except (ValueError, TypeError):
+                        dt = None
+                if dt and not is_aware(dt):
+                    dt = make_aware(dt)
+                if not dt:
+                    dt = tz_now()
+
+                # تبدیل متن تلگرام (ساده یا آرایه‌ای)
+                text_entities = msg.get('text', '')
+                if isinstance(text_entities, list):
+                    parts = []
+                    for part in text_entities:
+                        if isinstance(part, dict):
+                            part_text = part.get('text', '')
+                            part_type = part.get('type', '')
+                            if part_type == 'link':
+                                parts.append(f"[{part_text}]({part.get('href', part_text)})")
+                            elif part_type == 'bold':
+                                parts.append(f"**{part_text}**")
+                            elif part_type == 'italic':
+                                parts.append(f"*{part_text}*")
+                            elif part_type == 'code':
+                                parts.append(f"`{part_text}`")
+                            else:
+                                parts.append(part_text)
+                        else:
+                            parts.append(str(part))
+                    text_content = "".join(parts)
+                else:
+                    text_content = str(text_entities)
+
+                post = Post(
+                    topic=task.topic,
+                    author=author,
+                    content=text_content,
+                    media_type='text',
+                    created_at=dt,
+                    is_imported=True,
+                    telegram_message_id=int(tg_id) if tg_id else None,
+                )
+
+                # استخراج مدیا از داخل ZIP (عکس یا ویدیو یا فایل صوتی)
+                relative_media_path = msg.get('file') or msg.get('photo')
+                if relative_media_path:
+                    normalized_path = os.path.normpath(relative_media_path).replace('\\', '/').lstrip('/')
+                    # اگر آرشیو دارای دایرکتوری والد بود، مسیر را به آن متصل می‌کنیم
+                    if parent_dir:
+                        archive_path = f"{parent_dir}/{normalized_path}"
+                    else:
+                        archive_path = normalized_path
+
+                    if archive_path in namelist:
+                        try:
+                            file_bytes = archive.read(archive_path)
+                            base_filename = os.path.basename(archive_path)
+                            post.media_file.save(base_filename, ContentFile(file_bytes), save=False)
+                            # تشخیص نوع مدیا
+                            lower_name = base_filename.lower()
+                            if any(lower_name.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.mkv', '.webm')):
+                                post.media_type = 'video'
+                            elif any(lower_name.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                                post.media_type = 'image'
+                            elif any(lower_name.endswith(ext) for ext in ('.mp3', '.ogg', '.wav', '.m4a', '.aac', '.flac')):
+                                post.media_type = 'audio'
+                        except Exception as media_err:
+                            logger.error(f"ZIP media extraction failed for {archive_path}: {str(media_err)}")
+
+                posts_batch.append(post)
+                processed_count += 1
+
+                # فلاش دسته‌ای برای کاهش مصرف حافظه یا به‌روزرسانی پیشرفت زمانی
+                current_time = time.time()
+                should_update_db = (current_time - last_db_update >= 1.5)
+
+                if len(posts_batch) >= batch_size or should_update_db:
+                    if posts_batch:
+                        with transaction.atomic():
+                            Post.objects.bulk_create(posts_batch)
+                        posts_batch = []
+                    task.progress = int((processed_count / total_count) * 90) + 5
+                    task.current_stage = f"در حال درون‌ریزی پیام‌ها ({processed_count} از {total_count})..."
+                    task.save()
+                    last_db_update = current_time
+
+            # فلاش باقی‌مانده و به‌روزرسانی نهایی پیشرفت درون‌ریزی
+            if posts_batch:
+                with transaction.atomic():
+                    Post.objects.bulk_create(posts_batch)
+
+            task.progress = 95
+            task.current_stage = "در حال نهایی‌سازی و بازنشانی تاریخچه..."
+            task.save()
+
+        # آپدیت خلاصه تاپیک
+        try:
+            from .views import update_topic_description
+            update_topic_description(task.topic)
+        except Exception as e:
+            logger.warning(f"Failed to update topic description after ZIP import: {str(e)}")
+
+        # Stage 3: تکمیل
+        task.status = 'COMPLETED'
+        task.current_stage = 'درون‌ریزی آرشیو ZIP با موفقیت به پایان رسید.'
+        task.progress = 100
+        task.save()
+        logger.info(f"ZIP import COMPLETED successfully for Task ID: {task_id}")
+
+    except Exception as e:
+        logger.error(f"Error processing ZIP import for Task: {task_id}. Error: {str(e)}")
+        logger.error(traceback.format_exc())
+        if task:
+            task.status = 'FAILED'
+            task.current_stage = 'خطا در اجرای فرآیند درون‌ریزی ZIP.'
+            task.error_message = f"{str(e)}\n\n{traceback.format_exc()}"
+            task.progress = 100
+            task.save()
+    finally:
+        # پاکسازی فایل موقت ZIP
+        if zip_filepath and os.path.exists(zip_filepath):
+            try:
+                os.remove(zip_filepath)
+                logger.info(f"Cleaned up temp ZIP file: {zip_filepath}")
+            except Exception as e:
+                logger.warning(f"Failed to remove temp ZIP file {zip_filepath}: {str(e)}")
+
+
+def create_edit_proposal(post: Post, editor: Any, proposed_content: str, reason: str = "") -> PostEditProposal:
+    """
+    Creates a new edit proposal for a post.
+    Validates that proposed_content is provided and not identical to current post.content.
+    """
+    if not proposed_content or not proposed_content.strip():
+        raise ValueError("متن پیشنهادی نمی‌تواند خالی باشد.")
+    
+    proposed_content = proposed_content.strip()
+    if proposed_content == (post.content or "").strip():
+        raise ValueError("متن پیشنهادی با متن فعلی پست یکسان است.")
+    
+    proposal = PostEditProposal.objects.create(
+        post=post,
+        editor=editor,
+        original_content=post.content or "",
+        proposed_content=proposed_content,
+        reason=reason.strip() if reason else "",
+        status='pending'
+    )
+    return proposal
+
+
+def update_edit_proposal(proposal: PostEditProposal, user: Any, proposed_content: str, reason: Optional[str] = None) -> PostEditProposal:
+    """
+    Updates an existing pending edit proposal.
+    Only the editor who submitted the proposal, the topic creator, or a superuser can update it.
+    """
+    from rest_framework.exceptions import PermissionDenied
+
+    if proposal.status != 'pending':
+        raise ValueError("تنها پیشنهادات در وضعیت در انتظار بررسی قابل ویرایش هستند.")
+
+    topic = proposal.post.topic if proposal.post else None
+    is_owner = (topic.created_by == user) if topic and topic.created_by else False
+    is_editor = proposal.editor == user
+    if not (is_editor or is_owner or getattr(user, 'is_superuser', False)):
+        raise PermissionDenied("شما مجاز به ویرایش این پیشنهاد نیستید.")
+
+    if not proposed_content or not proposed_content.strip():
+        raise ValueError("متن پیشنهادی نمی‌تواند خالی باشد.")
+
+    proposed_content = proposed_content.strip()
+    if proposed_content == (proposal.original_content or "").strip():
+        raise ValueError("متن پیشنهادی با متن اصلی یکسان است.")
+
+    proposal.proposed_content = proposed_content
+    if reason is not None:
+        proposal.reason = reason.strip()
+    proposal.save()
+    return proposal
+
+
+def apply_edit_proposal(proposal: PostEditProposal, reviewer: Any, review_note: str = "") -> PostEditProposal:
+    """
+    Applies an approved edit proposal:
+    1. Updates post.content with proposed_content
+    2. Recomputes content_hash and saves post
+    3. Records entry in PostEditHistory
+    4. Sets proposal status to 'approved' with reviewer metadata
+    5. Dispatches BotTask records to sync updated post to Telegram and Bale
+    6. Updates topic description
+    """
+    import copy
+    from django.db import transaction
+
+    if proposal.status != 'pending':
+        raise ValueError(f"پیشنهاد در وضعیت {proposal.status} است و امکان تایید مجدد آن وجود ندارد.")
+
+    with transaction.atomic():
+        post = proposal.post
+        # Snapshot current post state before modifying
+        old_post = copy.copy(post)
+
+        # Update post content
+        post.content = proposal.proposed_content
+        post.save()
+
+        # Record history
+        PostEditHistory.objects.create(
+            post=post,
+            proposal=proposal,
+            editor=proposal.editor,
+            approved_by=reviewer,
+            previous_content=proposal.original_content,
+            new_content=proposal.proposed_content,
+            summary_of_changes=proposal.reason or "",
+        )
+
+        # Mark proposal approved
+        proposal.status = 'approved'
+        proposal.reviewed_by = reviewer
+        proposal.reviewed_at = tz_now()
+        proposal.review_note = review_note.strip() if review_note else ""
+        proposal.save()
+
+        # Queue bot tasks for Telegram and Bale edit sync
+        create_bot_tasks(post, old_instance=old_post)
+
+        # Update topic description
+        try:
+            update_topic_description(post.topic)
+        except Exception as e:
+            logger.warning(f"Failed to update topic description after applying proposal {proposal.id}: {str(e)}")
+
+    return proposal
+
+
+def reject_edit_proposal(proposal: PostEditProposal, reviewer: Any, review_note: str = "") -> PostEditProposal:
+    """
+    Rejects an edit proposal with reviewer metadata.
+    """
+    if proposal.status != 'pending':
+        raise ValueError(f"پیشنهاد در وضعیت {proposal.status} است و امکان تغییر وضعیت آن وجود ندارد.")
+
+    proposal.status = 'rejected'
+    proposal.reviewed_by = reviewer
+    proposal.reviewed_at = tz_now()
+    proposal.review_note = review_note.strip() if review_note else ""
+    proposal.save()
+    return proposal
+
+
+def bulk_approve_proposals(topic_id: int | str, reviewer: Any) -> int:
+    """
+    Applies all pending proposals for a given topic.
+    Returns count of successfully approved proposals.
+    """
+    pending_proposals = PostEditProposal.objects.filter(
+        post__topic_id=topic_id,
+        status='pending'
+    ).select_related('post', 'editor')
+
+    approved_count = 0
+    for proposal in pending_proposals:
+        apply_edit_proposal(proposal, reviewer=reviewer, review_note="تایید همگانی")
+        approved_count += 1
+
+    return approved_count
+

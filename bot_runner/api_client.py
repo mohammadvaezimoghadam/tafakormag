@@ -55,7 +55,7 @@ class APIClient:
             return False
 
     async def register_destination(
-        self, user_id: int, platform: str, chat_id: str, label: str
+        self, user_id: int, platform: str, chat_id: str, label: str, username: str = ""
     ) -> dict:
         url = f"{BACKEND_API_URL}/bot/register-destination/"
         payload = {
@@ -63,6 +63,7 @@ class APIClient:
             "platform": platform,
             "chat_id": str(chat_id),
             "label": label,
+            "username": username,
         }
         try:
             resp = await self.client.post(url, json=payload)
@@ -103,6 +104,24 @@ class APIClient:
             logger.error(f"set_default_destination failed: {e}")
             return False
 
+    async def delete_destination(
+        self, user_id: int, platform: str, destination_id: int
+    ) -> bool:
+        url = f"{BACKEND_API_URL}/bot/delete-destination/"
+        payload = {
+            "user_id": user_id,
+            "platform": platform,
+            "destination_id": destination_id,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            logger.info(f"Destination {destination_id} deleted for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"delete_destination failed: {e}")
+            return False
+
     async def get_user_id_by_chat(self, platform: str, chat_id: int) -> int:
         """دریافت user_id از روی chat_id (برای ثبت مقصد)"""
         url = f"{BACKEND_API_URL}/bot/user-by-chat/"
@@ -115,6 +134,103 @@ class APIClient:
         except Exception as e:
             logger.error(f"get_user_id_by_chat failed: {e}")
             raise
+
+    async def register_phone_chat(self, platform: str, phone: str, chat_id: int) -> dict:
+        """همگام‌سازی شماره تلفن و شناسه چت پیام‌رسان در مدل کاربر"""
+        url = f"{BACKEND_API_URL}/bot/register-phone-chat/"
+        payload = {
+            "platform": platform,
+            "phone": phone,
+            "chat_id": str(chat_id)
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            logger.info(f"register_phone_chat success for phone={phone}, chat_id={chat_id}")
+            return resp.json()
+        except Exception as e:
+            logger.error(f"register_phone_chat failed for phone={phone}: {e}")
+            raise
+
+    async def toggle_active_destination(
+        self, user_id: int, platform: str, destination_id: int
+    ) -> dict:
+        url = f"{BACKEND_API_URL}/bot/toggle-active-destination/"
+        payload = {
+            "user_id": user_id,
+            "platform": platform,
+            "destination_id": destination_id,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            logger.info(f"Active status toggled for destination {destination_id}")
+            return resp.json()
+        except Exception as e:
+            logger.error(f"toggle_active_destination failed: {e}")
+            return {}
+
+    async def get_active_custom_bots(self) -> list:
+        url = f"{BACKEND_API_URL}/auth/active-tokens/"
+        headers = {}
+        if BOT_API_KEY.strip():
+            headers["X-Bot-Service-Key"] = BOT_API_KEY.strip()
+        try:
+            resp = await self.client.get(url, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"get_active_custom_bots failed: {e}")
+            return []
+
+    async def get_task_details(self, task_id: int) -> dict:
+        url = f"{BACKEND_API_URL}/bot/tasks/{task_id}/"
+        try:
+            resp = await self.client.get(url)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"get_task_details failed: {e}")
+            return {}
+
+    async def retry_task(self, task_id: int) -> bool:
+        url = f"{BACKEND_API_URL}/bot/tasks/{task_id}/retry/"
+        try:
+            resp = await self.client.post(url)
+            resp.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"retry_task failed: {e}")
+            return False
+
+    async def unregister_chat(self, platform: str, chat_id: str) -> dict:
+        url = f"{BACKEND_API_URL}/bot/unregister-chat/"
+        payload = {
+            "platform": platform,
+            "chat_id": chat_id,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error(f"unregister_chat failed: {e}")
+            return {}
+
+    async def report_bot_disconnect(self, user_id: int, platform: str, reason: str) -> bool:
+        url = f"{BACKEND_API_URL}/bot/report-bot-disconnect/"
+        payload = {
+            "user_id": user_id,
+            "platform": platform,
+            "reason": reason,
+        }
+        try:
+            resp = await self.client.post(url, json=payload)
+            resp.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"report_bot_disconnect failed: {e}")
+            return False
 
     async def close(self):
         await self.client.aclose()
