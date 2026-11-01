@@ -35,7 +35,10 @@ class TopicViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # شمارش پست‌ها برای هر تاپیک و مرتب‌سازی بر اساس آخرین تاپیک‌های ایجاد شده
-        return Topic.objects.annotate(post_count=Count('posts')).order_by('-created_at')
+        return Topic.objects.select_related('created_by') \
+            .prefetch_related('telegram_connections', 'bale_connections') \
+            .annotate(post_count=Count('posts', distinct=True)) \
+            .order_by('-created_at')
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -473,7 +476,10 @@ class PostViewSet(viewsets.ModelViewSet):
         return self._paginator
 
     def get_queryset(self):
-        queryset = Post.objects.select_related('author', 'topic').prefetch_related('plugin_references__plugin').all().order_by('-created_at')
+        queryset = Post.objects.select_related('author', 'topic', 'donation_campaign') \
+            .prefetch_related('reactions', 'plugin_references__plugin') \
+            .annotate(annotated_comments_count=Count('comments', distinct=True)) \
+            .all().order_by('-created_at')
         topic_id = self.request.query_params.get('topic_id') or self.request.query_params.get('topic')
         if topic_id:
             queryset = queryset.filter(topic_id=topic_id)
