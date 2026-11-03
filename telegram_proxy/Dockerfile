@@ -7,9 +7,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt || \
-    (echo "Primary PyPI registry failed. Falling back to devneeds mirror..." && \
-     pip install --no-cache-dir -r requirements.txt --index-url https://pypi.devneeds.ir/simple/)
+RUN pip install --no-cache-dir --default-timeout=100 -i https://pypi.tuna.tsinghua.edu.cn/simple/ -r requirements.txt || \
+    pip install --no-cache-dir --default-timeout=100 -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt || \
+    pip install --no-cache-dir --default-timeout=100 -r requirements.txt
 
 COPY local_proxy.py .
 
