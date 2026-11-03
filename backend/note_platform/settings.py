@@ -22,32 +22,11 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
-# CSRF Trusted Origins for Admin & API
-CSRF_TRUSTED_ORIGINS = [
-    orig.strip()
-    for orig in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
-    if orig.strip()
-]
-for default_origin in [
-    'http://localhost:8085',
-    'http://127.0.0.1:8085',
-    'http://192.168.1.106:8085',
-    'http://192.168.1.102:8085',
-    'https://tafakormag.ir',
-]:
-    if default_origin not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(default_origin)
-
-# Cookies Security: Only enable over HTTPS (production with SSL)
-USE_HTTPS = os.getenv('USE_HTTPS', 'False') == 'True'
-if not DEBUG and USE_HTTPS:
+if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-else:
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
 
 # ==============================================================================
 # اپلیکیشن‌ها
