@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'apps.notes',
     'apps.donations',
     'apps.plugin_system',
+    'apps.subscriptions',
 ]
 
 # ==============================================================================
