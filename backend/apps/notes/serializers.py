@@ -320,38 +320,27 @@ class PostSerializer(serializers.ModelSerializer):
 
 
     def get_reactions_summary(self, obj):
-
         summary = {}
-
-        reactions = obj.reactions.all()
-
-        for r in reactions:
-
+        # Uses in-memory prefetched reactions
+        for r in obj.reactions.all():
             summary[r.emoji] = summary.get(r.emoji, 0) + 1
-
         return summary
 
-
-
     def get_user_reaction(self, obj):
-
         request = self.context.get('request')
-
-        if request and request.user and request.user.is_authenticated:
-
-            reaction = obj.reactions.filter(user=request.user).first()
-
-            return reaction.emoji if reaction else None
-
+        if request and hasattr(request, 'user') and request.user and request.user.is_authenticated:
+            target_user_id = request.user.id
+            # Iterate through in-memory prefetched reactions to eliminate per-post queries
+            for r in obj.reactions.all():
+                if r.user_id == target_user_id:
+                    return r.emoji
         return None
 
-
-
     def get_comments_count(self, obj):
-
+        # Uses SQL-annotated count from get_queryset if present
+        if hasattr(obj, 'annotated_comments_count'):
+            return obj.annotated_comments_count
         return obj.comments.count()
-
-
 
     def get_donation_campaign(self, obj):
 

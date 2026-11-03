@@ -29,6 +29,8 @@ urlpatterns = [
     path('api/v1/marketplace/', include('plugins.marketplace.urls')),
     path('api/plugins/quran/', include('plugins.quran.urls')),
     path('api/plugins/', include('apps.plugin_system.urls')),
+    path('api/subscriptions/', include('apps.subscriptions.urls')),
+    path('api/v1/subscriptions/', include('apps.subscriptions.urls')),
     
     # سرو فایل‌های آپلود شده بدون وابستگی به DEBUG
     re_path(r'^media/(?P<path>.*)$', serve, {
