@@ -1,0 +1,1936 @@
+{% load static %}
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>فلاتر او‌تی‌ای | سامانه مدیریت انتشار و رول‌بک پچ‌های فلاتر (Flutter OTA Hub)</title>
+  <!-- Offline Local Persian Fonts & Icons (Zero External Dependency, 0ms Load Time) -->
+  <link rel="stylesheet" href="{% static 'ota/css/fonts.css' %}">
+
+  <!-- Production Pre-compiled High-Performance CSS (Zero Runtime Overhead, 0ms Load Time) -->
+  <style>
+    /* Base font settings & fallbacks */
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'IRANYekanX', 'IRANSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Tahoma, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-code, .font-mono {
+      font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    }
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined', sans-serif;
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .overflow-hidden { overflow: hidden !important; }
+    .object-cover { object-fit: cover !important; }
+    .w-12 { width: 3rem !important; }
+    .h-12 { height: 3rem !important; }
+    .app-icon-img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      display: block !important;
+      border-radius: inherit !important;
+    }
+    /*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-translate-x:0;--tw-translate-y:0;--tw-translate-z:0;--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-space-y-reverse:0;--tw-divide-y-reverse:0;--tw-border-style:solid;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-backdrop-blur:initial;--tw-backdrop-brightness:initial;--tw-backdrop-contrast:initial;--tw-backdrop-grayscale:initial;--tw-backdrop-hue-rotate:initial;--tw-backdrop-invert:initial;--tw-backdrop-opacity:initial;--tw-backdrop-saturate:initial;--tw-backdrop-sepia:initial;--tw-duration:initial}}}@layer theme{:root,:host{--font-sans:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--color-red-50:oklch(97.1% .013 17.38);--color-red-100:oklch(93.6% .032 17.717);--color-red-600:oklch(57.7% .245 27.325);--color-red-700:oklch(50.5% .213 27.518);--color-red-800:oklch(44.4% .177 26.899);--color-emerald-50:oklch(97.9% .021 166.113);--color-emerald-100:oklch(95% .052 163.051);--color-emerald-200:oklch(90.5% .093 164.15);--color-emerald-400:oklch(76.5% .177 163.223);--color-emerald-500:oklch(69.6% .17 162.48);--color-emerald-600:oklch(59.6% .145 163.225);--color-emerald-700:oklch(50.8% .118 165.612);--color-emerald-800:oklch(43.2% .095 166.913);--color-blue-50:oklch(97% .014 254.604);--color-blue-100:oklch(93.2% .032 255.585);--color-blue-200:oklch(88.2% .059 254.128);--color-blue-400:oklch(70.7% .165 254.624);--color-blue-500:oklch(62.3% .214 259.815);--color-blue-600:oklch(54.6% .245 262.881);--color-blue-700:oklch(48.8% .243 264.376);--color-slate-50:oklch(98.4% .003 247.858);--color-slate-100:oklch(96.8% .007 247.896);--color-slate-200:oklch(92.9% .013 255.508);--color-slate-300:oklch(86.9% .022 252.894);--color-slate-400:oklch(70.4% .04 256.788);--color-slate-500:oklch(55.4% .046 257.417);--color-slate-600:oklch(44.6% .043 257.281);--color-slate-700:oklch(37.2% .044 257.287);--color-slate-800:oklch(27.9% .041 260.031);--color-slate-900:oklch(20.8% .042 265.755);--color-white:#fff;--spacing:.25rem;--container-xs:20rem;--container-sm:24rem;--container-md:28rem;--container-3xl:48rem;--container-6xl:72rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--text-base:1rem;--text-base--line-height:calc(1.5 / 1);--text-xl:1.25rem;--text-xl--line-height:calc(1.75 / 1.25);--text-2xl:1.5rem;--text-2xl--line-height:calc(2 / 1.5);--text-3xl:1.875rem;--text-3xl--line-height:calc(2.25 / 1.875);--font-weight-normal:400;--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;--font-weight-extrabold:800;--font-weight-black:900;--tracking-tight:-.025em;--tracking-wider:.05em;--leading-tight:1.25;--leading-relaxed:1.625;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;--radius-2xl:1rem;--animate-spin:spin 1s linear infinite;--animate-pulse:pulse 2s cubic-bezier(.4, 0, .6, 1) infinite;--blur-xs:4px;--blur-md:12px;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring:where(:not(iframe)){outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.pointer-events-auto{pointer-events:auto}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.fixed{position:fixed}.relative{position:relative}.static{position:static}.sticky{position:sticky}.inset-0{inset:0}.top-0{top:0}.top-2{top:calc(var(--spacing) * 2)}.right-0{right:0}.right-2{right:calc(var(--spacing) * 2)}.bottom-6{bottom:calc(var(--spacing) * 6)}.left-6{left:calc(var(--spacing) * 6)}.z-40{z-index:40}.z-50{z-index:50}.col-span-2{grid-column:span 2/span 2}.col-span-full{grid-column:1/-1}.container{width:100%}@media (min-width:40rem){.container{max-width:40rem}}@media (min-width:48rem){.container{max-width:48rem}}@media (min-width:64rem){.container{max-width:64rem}}@media (min-width:80rem){.container{max-width:80rem}}@media (min-width:96rem){.container{max-width:96rem}}.mx-auto{margin-inline:auto}.my-2{margin-block:calc(var(--spacing) * 2)}.mt-0\.5{margin-top:calc(var(--spacing) * .5)}.mt-1{margin-top:var(--spacing)}.mt-2{margin-top:calc(var(--spacing) * 2)}.mt-3{margin-top:calc(var(--spacing) * 3)}.mt-5{margin-top:calc(var(--spacing) * 5)}.mb-1{margin-bottom:var(--spacing)}.mb-2{margin-bottom:calc(var(--spacing) * 2)}.mb-3{margin-bottom:calc(var(--spacing) * 3)}.mb-4{margin-bottom:calc(var(--spacing) * 4)}.mb-5{margin-bottom:calc(var(--spacing) * 5)}.block{display:block}.contents{display:contents}.flex{display:flex}.grid{display:grid}.hidden{display:none}.inline{display:inline}.inline-flex{display:inline-flex}.table{display:table}.h-1{height:var(--spacing)}.h-1\.5{height:calc(var(--spacing) * 1.5)}.h-2{height:calc(var(--spacing) * 2)}.h-2\.5{height:calc(var(--spacing) * 2.5)}.h-4{height:calc(var(--spacing) * 4)}.h-7{height:calc(var(--spacing) * 7)}.h-8{height:calc(var(--spacing) * 8)}.h-9{height:calc(var(--spacing) * 9)}.h-10{height:calc(var(--spacing) * 10)}.h-11{height:calc(var(--spacing) * 11)}.h-14{height:calc(var(--spacing) * 14)}.h-16{height:calc(var(--spacing) * 16)}.h-full{height:100%}.max-h-80{max-height:calc(var(--spacing) * 80)}.min-h-screen{min-height:100vh}.w-1{width:var(--spacing)}.w-1\.5{width:calc(var(--spacing) * 1.5)}.w-2{width:calc(var(--spacing) * 2)}.w-2\.5{width:calc(var(--spacing) * 2.5)}.w-4{width:calc(var(--spacing) * 4)}.w-8{width:calc(var(--spacing) * 8)}.w-9{width:calc(var(--spacing) * 9)}.w-10{width:calc(var(--spacing) * 10)}.w-11{width:calc(var(--spacing) * 11)}.w-52{width:calc(var(--spacing) * 52)}.w-64{width:calc(var(--spacing) * 64)}.w-full{width:100%}.max-w-3xl{max-width:var(--container-3xl)}.max-w-6xl{max-width:var(--container-6xl)}.max-w-md{max-width:var(--container-md)}.max-w-sm{max-width:var(--container-sm)}.max-w-xs{max-width:var(--container-xs)}.flex-1{flex:1}.shrink-0{flex-shrink:0}.grow{flex-grow:1}.border-collapse{border-collapse:collapse}.translate-x-full{--tw-translate-x:100%;translate:var(--tw-translate-x) var(--tw-translate-y)}.transform{transform:var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,)}.animate-pulse{animation:var(--animate-pulse)}.animate-spin{animation:var(--animate-spin)}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-baseline{align-items:baseline}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.justify-end{justify-content:flex-end}.gap-1{gap:var(--spacing)}.gap-1\.5{gap:calc(var(--spacing) * 1.5)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-2\.5{gap:calc(var(--spacing) * 2.5)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-3\.5{gap:calc(var(--spacing) * 3.5)}.gap-4{gap:calc(var(--spacing) * 4)}.gap-5{gap:calc(var(--spacing) * 5)}:where(.space-y-4>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 4) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 4) * calc(1 - var(--tw-space-y-reverse)))}:where(.space-y-6>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 6) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 6) * calc(1 - var(--tw-space-y-reverse)))}:where(.divide-y>:not(:last-child)){--tw-divide-y-reverse:0;border-bottom-style:var(--tw-border-style);border-top-style:var(--tw-border-style);border-top-width:calc(1px * var(--tw-divide-y-reverse));border-bottom-width:calc(1px * calc(1 - var(--tw-divide-y-reverse)))}:where(.divide-slate-100>:not(:last-child)){border-color:var(--color-slate-100)}.self-start{align-self:flex-start}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:var(--radius-2xl)}.rounded-full{border-radius:3.40282e38px}.rounded-lg{border-radius:var(--radius-lg)}.rounded-md{border-radius:var(--radius-md)}.rounded-xl{border-radius:var(--radius-xl)}.rounded-l-lg{border-top-left-radius:var(--radius-lg);border-bottom-left-radius:var(--radius-lg)}.rounded-r-lg{border-top-right-radius:var(--radius-lg);border-bottom-right-radius:var(--radius-lg)}.border{border-style:var(--tw-border-style);border-width:1px}.border-2{border-style:var(--tw-border-style);border-width:2px}.border-t{border-top-style:var(--tw-border-style);border-top-width:1px}.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.border-l{border-left-style:var(--tw-border-style);border-left-width:1px}.border-dashed{--tw-border-style:dashed;border-style:dashed}.border-blue-200{border-color:var(--color-blue-200)}.border-blue-400{border-color:var(--color-blue-400)}.border-blue-500{border-color:var(--color-blue-500)}.border-emerald-200{border-color:var(--color-emerald-200)}.border-emerald-500\/50{border-color:#00bb7f80}@supports (color:color-mix(in lab, red, red)){.border-emerald-500\/50{border-color:color-mix(in oklab, var(--color-emerald-500) 50%, transparent)}}.border-red-800{border-color:var(--color-red-800)}.border-slate-100{border-color:var(--color-slate-100)}.border-slate-200{border-color:var(--color-slate-200)}.border-slate-200\/60{border-color:#e2e8f099}@supports (color:color-mix(in lab, red, red)){.border-slate-200\/60{border-color:color-mix(in oklab, var(--color-slate-200) 60%, transparent)}}.border-slate-200\/80{border-color:#e2e8f0cc}@supports (color:color-mix(in lab, red, red)){.border-slate-200\/80{border-color:color-mix(in oklab, var(--color-slate-200) 80%, transparent)}}.border-slate-300{border-color:var(--color-slate-300)}.border-slate-700{border-color:var(--color-slate-700)}.bg-blue-50{background-color:var(--color-blue-50)}.bg-blue-50\/40{background-color:#eff6ff66}@supports (color:color-mix(in lab, red, red)){.bg-blue-50\/40{background-color:color-mix(in oklab, var(--color-blue-50) 40%, transparent)}}.bg-blue-50\/50{background-color:#eff6ff80}@supports (color:color-mix(in lab, red, red)){.bg-blue-50\/50{background-color:color-mix(in oklab, var(--color-blue-50) 50%, transparent)}}.bg-blue-50\/70{background-color:#eff6ffb3}@supports (color:color-mix(in lab, red, red)){.bg-blue-50\/70{background-color:color-mix(in oklab, var(--color-blue-50) 70%, transparent)}}.bg-blue-100{background-color:var(--color-blue-100)}.bg-blue-600{background-color:var(--color-blue-600)}.bg-emerald-50{background-color:var(--color-emerald-50)}.bg-emerald-100{background-color:var(--color-emerald-100)}.bg-emerald-500{background-color:var(--color-emerald-500)}.bg-emerald-600{background-color:var(--color-emerald-600)}.bg-red-100{background-color:var(--color-red-100)}.bg-red-700{background-color:var(--color-red-700)}.bg-slate-50{background-color:var(--color-slate-50)}.bg-slate-100{background-color:var(--color-slate-100)}.bg-slate-300{background-color:var(--color-slate-300)}.bg-slate-900{background-color:var(--color-slate-900)}.bg-slate-900\/40{background-color:#0f172b66}@supports (color:color-mix(in lab, red, red)){.bg-slate-900\/40{background-color:color-mix(in oklab, var(--color-slate-900) 40%, transparent)}}.bg-white{background-color:var(--color-white)}.bg-white\/95{background-color:#fffffff2}@supports (color:color-mix(in lab, red, red)){.bg-white\/95{background-color:color-mix(in oklab, var(--color-white) 95%, transparent)}}.bg-gradient-to-tr{--tw-gradient-position:to top right in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.from-blue-700{--tw-gradient-from:var(--color-blue-700);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.to-blue-500{--tw-gradient-to:var(--color-blue-500);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.p-1\.5{padding:calc(var(--spacing) * 1.5)}.p-2\.5{padding:calc(var(--spacing) * 2.5)}.p-3{padding:calc(var(--spacing) * 3)}.p-4{padding:calc(var(--spacing) * 4)}.p-5{padding:calc(var(--spacing) * 5)}.p-6{padding:calc(var(--spacing) * 6)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-2\.5{padding-inline:calc(var(--spacing) * 2.5)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-3\.5{padding-inline:calc(var(--spacing) * 3.5)}.px-4{padding-inline:calc(var(--spacing) * 4)}.px-5{padding-inline:calc(var(--spacing) * 5)}.px-6{padding-inline:calc(var(--spacing) * 6)}.py-0\.5{padding-block:calc(var(--spacing) * .5)}.py-1{padding-block:var(--spacing)}.py-1\.5{padding-block:calc(var(--spacing) * 1.5)}.py-2{padding-block:calc(var(--spacing) * 2)}.py-2\.5{padding-block:calc(var(--spacing) * 2.5)}.py-3{padding-block:calc(var(--spacing) * 3)}.py-6{padding-block:calc(var(--spacing) * 6)}.py-8{padding-block:calc(var(--spacing) * 8)}.pt-2{padding-top:calc(var(--spacing) * 2)}.pt-3{padding-top:calc(var(--spacing) * 3)}.pt-4{padding-top:calc(var(--spacing) * 4)}.pt-5{padding-top:calc(var(--spacing) * 5)}.pr-0{padding-right:0}.pr-8{padding-right:calc(var(--spacing) * 8)}.pb-3{padding-bottom:calc(var(--spacing) * 3)}.pb-4{padding-bottom:calc(var(--spacing) * 4)}.pl-3{padding-left:calc(var(--spacing) * 3)}.text-center{text-align:center}.text-left{text-align:left}.text-right{text-align:right}.font-mono{font-family:var(--font-mono)}.font-sans{font-family:var(--font-sans)}.text-2xl{font-size:var(--text-2xl);line-height:var(--tw-leading,var(--text-2xl--line-height))}.text-base{font-size:var(--text-base);line-height:var(--tw-leading,var(--text-base--line-height))}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xl{font-size:var(--text-xl);line-height:var(--tw-leading,var(--text-xl--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[15px\]{font-size:15px}.text-\[16px\]{font-size:16px}.text-\[17px\]{font-size:17px}.text-\[18px\]{font-size:18px}.text-\[19px\]{font-size:19px}.text-\[20px\]{font-size:20px}.text-\[22px\]{font-size:22px}.leading-relaxed{--tw-leading:var(--leading-relaxed);line-height:var(--leading-relaxed)}.leading-tight{--tw-leading:var(--leading-tight);line-height:var(--leading-tight)}.font-black{--tw-font-weight:var(--font-weight-black);font-weight:var(--font-weight-black)}.font-bold{--tw-font-weight:var(--font-weight-bold);font-weight:var(--font-weight-bold)}.font-extrabold{--tw-font-weight:var(--font-weight-extrabold);font-weight:var(--font-weight-extrabold)}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-normal{--tw-font-weight:var(--font-weight-normal);font-weight:var(--font-weight-normal)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.tracking-tight{--tw-tracking:var(--tracking-tight);letter-spacing:var(--tracking-tight)}.tracking-wider{--tw-tracking:var(--tracking-wider);letter-spacing:var(--tracking-wider)}.whitespace-nowrap{white-space:nowrap}.text-blue-600{color:var(--color-blue-600)}.text-blue-700{color:var(--color-blue-700)}.text-emerald-400{color:var(--color-emerald-400)}.text-emerald-600{color:var(--color-emerald-600)}.text-emerald-700{color:var(--color-emerald-700)}.text-emerald-800{color:var(--color-emerald-800)}.text-red-600{color:var(--color-red-600)}.text-red-700{color:var(--color-red-700)}.text-slate-400{color:var(--color-slate-400)}.text-slate-500{color:var(--color-slate-500)}.text-slate-600{color:var(--color-slate-600)}.text-slate-700{color:var(--color-slate-700)}.text-slate-800{color:var(--color-slate-800)}.text-slate-900{color:var(--color-slate-900)}.text-white{color:var(--color-white)}.uppercase{text-transform:uppercase}.antialiased{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.shadow-2xl{--tw-shadow:0 25px 50px -12px var(--tw-shadow-color,#00000040);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px var(--tw-shadow-color,#0000001a), 0 4px 6px -4px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px var(--tw-shadow-color,#0000001a), 0 2px 4px -2px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.shadow-xs{--tw-shadow:0 1px 2px 0 var(--tw-shadow-color,#0000000d);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.ring-2{--tw-ring-shadow:var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.ring-4{--tw-ring-shadow:var(--tw-ring-inset,) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.ring-blue-50{--tw-ring-color:var(--color-blue-50)}.ring-blue-100{--tw-ring-color:var(--color-blue-100)}.ring-emerald-50{--tw-ring-color:var(--color-emerald-50)}.filter{filter:var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,)}.backdrop-blur-md{--tw-backdrop-blur:blur(var(--blur-md));-webkit-backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)}.backdrop-blur-xs{--tw-backdrop-blur:blur(var(--blur-xs));-webkit-backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-all{transition-property:all;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.transition-transform{transition-property:transform,translate,scale,rotate;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.duration-300{--tw-duration:.3s;transition-duration:.3s}.select-none{-webkit-user-select:none;user-select:none}@media (hover:hover){.group-hover\:text-blue-600:is(:where(.group):hover *){color:var(--color-blue-600)}.hover\:border-slate-300:hover{border-color:var(--color-slate-300)}.hover\:bg-blue-50:hover{background-color:var(--color-blue-50)}.hover\:bg-blue-700:hover{background-color:var(--color-blue-700)}.hover\:bg-red-50:hover{background-color:var(--color-red-50)}.hover\:bg-slate-50:hover{background-color:var(--color-slate-50)}.hover\:bg-slate-50\/70:hover{background-color:#f8fafcb3}@supports (color:color-mix(in lab, red, red)){.hover\:bg-slate-50\/70:hover{background-color:color-mix(in oklab, var(--color-slate-50) 70%, transparent)}}.hover\:bg-slate-100:hover{background-color:var(--color-slate-100)}.hover\:bg-slate-100\/80:hover{background-color:#f1f5f9cc}@supports (color:color-mix(in lab, red, red)){.hover\:bg-slate-100\/80:hover{background-color:color-mix(in oklab, var(--color-slate-100) 80%, transparent)}}.hover\:bg-slate-200:hover{background-color:var(--color-slate-200)}.hover\:text-blue-700:hover{color:var(--color-blue-700)}.hover\:text-red-600:hover{color:var(--color-red-600)}.hover\:text-slate-700:hover{color:var(--color-slate-700)}.hover\:text-slate-900:hover{color:var(--color-slate-900)}.hover\:underline:hover{text-decoration-line:underline}.hover\:shadow-xs:hover{--tw-shadow:0 1px 2px 0 var(--tw-shadow-color,#0000000d);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}}.focus\:border-blue-500:focus{border-color:var(--color-blue-500)}.focus\:bg-white:focus{background-color:var(--color-white)}.focus\:ring-0:focus{--tw-ring-shadow:var(--tw-ring-inset,) 0 0 0 calc(0px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.focus\:outline-none:focus{--tw-outline-style:none;outline-style:none}@media (min-width:40rem){.sm\:inline-flex{display:inline-flex}.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:p-5{padding:calc(var(--spacing) * 5)}.sm\:px-6{padding-inline:calc(var(--spacing) * 6)}.sm\:text-2xl{font-size:var(--text-2xl);line-height:var(--tw-leading,var(--text-2xl--line-height))}.sm\:text-3xl{font-size:var(--text-3xl);line-height:var(--tw-leading,var(--text-3xl--line-height))}.sm\:text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}}@media (min-width:48rem){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\:flex-row{flex-direction:row}.md\:items-center{align-items:center}.md\:self-auto{align-self:auto}}@media (min-width:64rem){.lg\:hidden{display:none}.lg\:translate-x-0{--tw-translate-x:0px;translate:var(--tw-translate-x) var(--tw-translate-y)}.lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\:pr-64{padding-right:calc(var(--spacing) * 64)}}}@property --tw-translate-x{syntax:"*";inherits:false;initial-value:0}@property --tw-translate-y{syntax:"*";inherits:false;initial-value:0}@property --tw-translate-z{syntax:"*";inherits:false;initial-value:0}@property --tw-rotate-x{syntax:"*";inherits:false}@property --tw-rotate-y{syntax:"*";inherits:false}@property --tw-rotate-z{syntax:"*";inherits:false}@property --tw-skew-x{syntax:"*";inherits:false}@property --tw-skew-y{syntax:"*";inherits:false}@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-divide-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-gradient-position{syntax:"*";inherits:false}@property --tw-gradient-from{syntax:"<color>";inherits:false;initial-value:#0000}@property --tw-gradient-via{syntax:"<color>";inherits:false;initial-value:#0000}@property --tw-gradient-to{syntax:"<color>";inherits:false;initial-value:#0000}@property --tw-gradient-stops{syntax:"*";inherits:false}@property --tw-gradient-via-stops{syntax:"*";inherits:false}@property --tw-gradient-from-position{syntax:"<length-percentage>";inherits:false;initial-value:0%}@property --tw-gradient-via-position{syntax:"<length-percentage>";inherits:false;initial-value:50%}@property --tw-gradient-to-position{syntax:"<length-percentage>";inherits:false;initial-value:100%}@property --tw-leading{syntax:"*";inherits:false}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-tracking{syntax:"*";inherits:false}@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:"*";inherits:false}@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:"*";inherits:false}@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:"*";inherits:false}@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:"*";inherits:false}@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:"*";inherits:false}@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-blur{syntax:"*";inherits:false}@property --tw-brightness{syntax:"*";inherits:false}@property --tw-contrast{syntax:"*";inherits:false}@property --tw-grayscale{syntax:"*";inherits:false}@property --tw-hue-rotate{syntax:"*";inherits:false}@property --tw-invert{syntax:"*";inherits:false}@property --tw-opacity{syntax:"*";inherits:false}@property --tw-saturate{syntax:"*";inherits:false}@property --tw-sepia{syntax:"*";inherits:false}@property --tw-drop-shadow{syntax:"*";inherits:false}@property --tw-drop-shadow-color{syntax:"*";inherits:false}@property --tw-drop-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-drop-shadow-size{syntax:"*";inherits:false}@property --tw-backdrop-blur{syntax:"*";inherits:false}@property --tw-backdrop-brightness{syntax:"*";inherits:false}@property --tw-backdrop-contrast{syntax:"*";inherits:false}@property --tw-backdrop-grayscale{syntax:"*";inherits:false}@property --tw-backdrop-hue-rotate{syntax:"*";inherits:false}@property --tw-backdrop-invert{syntax:"*";inherits:false}@property --tw-backdrop-opacity{syntax:"*";inherits:false}@property --tw-backdrop-saturate{syntax:"*";inherits:false}@property --tw-backdrop-sepia{syntax:"*";inherits:false}@property --tw-duration{syntax:"*";inherits:false}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{opacity:.5}}
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen">
+
+  <!-- Fixed Right Sidebar -->
+  <aside id="main-sidebar" class="fixed right-0 top-0 h-full w-64 bg-white z-50 flex flex-col justify-between border-l border-slate-200/80 shadow-xs transition-transform duration-300 translate-x-full lg:translate-x-0">
+    <div class="flex flex-col">
+      <!-- Sidebar Brand Header -->
+      <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+            ⚡
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-extrabold text-slate-900 leading-tight">فلاتر او‌تی‌ای</span>
+            <span class="text-[10px] text-slate-400 font-mono tracking-tight" dir="ltr">Flutter OTA Hub</span>
+          </div>
+        </div>
+        <div class="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50" title="سرور آنلاین"></div>
+      </div>
+
+      <!-- App Switcher in Sidebar -->
+      <div class="p-4 border-b border-slate-100">
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">برنامه فعال (Workspace)</span>
+        <button onclick="openAppModal()" class="w-full flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200/80 text-right transition-all group">
+          <div class="flex items-center gap-2.5 truncate">
+            <div class="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-xs border border-slate-200 flex items-center justify-center bg-blue-600 text-white font-black text-xs" id="sidebar-app-avatar" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
+              {% if current_app.icon %}
+                <img src="{{ current_app.icon.url }}" alt="{{ current_app.name }}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;">
+              {% elif current_app %}
+                {{ current_app.name|slice:":2" }}
+              {% else %}
+                <span class="material-symbols-outlined text-[18px]">apps</span>
+              {% endif %}
+            </div>
+            <div class="flex flex-col truncate text-right">
+              <span class="text-xs font-bold text-slate-900 truncate" id="sidebar-app-name">{{ current_app.name|default:"برنامه‌ای ثبت نشده" }}</span>
+              <span class="text-[10px] text-slate-400 font-mono truncate" dir="ltr" id="sidebar-app-pkg">{{ current_app.package_name|default:"-" }}</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-slate-400 group-hover:text-blue-600 text-[18px]">unfold_more</span>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="px-4 py-3">
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">کنترل پنل مرکزی</span>
+        <nav class="flex flex-col gap-1.5" id="sidebar-nav">
+          <button onclick="switchView('dashboard')" data-view="dashboard" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-600 text-white shadow-xs font-bold text-xs text-right w-full transition-all">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">dashboard</span>داشبورد و وضعیت زنده</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('publisher')" data-view="publisher" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">cloud_upload</span>انتشار پچ جدید</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('rollback')" data-view="rollback" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">history</span>تاریخچه و رول‌بک</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('releases')" data-view="releases" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">android</span>انتشار و مدیریت APK</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('apps')" data-view="apps" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">apps</span>مدیریت برنامه‌ها</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="openNewAppModal()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-600 hover:bg-blue-50 transition-all text-xs font-bold text-right w-full mt-2 border border-dashed border-blue-200">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">add_box</span>+ ثبت برنامه جدید</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Sidebar Bottom Status -->
+    <div class="px-5 py-3 text-[11px] text-slate-400 border-t border-slate-100 flex items-center justify-between font-mono" dir="ltr">
+      <span id="serverHostInfo">Host: {{ server_host }}:{{ server_port }}</span>
+      <span class="text-emerald-600 font-bold flex items-center gap-1">● Online</span>
+    </div>
+  </aside>
+
+  <!-- Content Canvas Area -->
+  <div class="pr-0 lg:pr-64 min-h-screen flex flex-col transition-all">
+
+    <!-- Top Global Header -->
+    <header class="sticky top-0 h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-40 flex items-center justify-between px-6 shadow-xs">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200 flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]">menu</span>
+        </button>
+        
+        <h1 id="current-page-badge" class="text-xs sm:text-sm font-extrabold text-slate-800 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-600 text-[19px]">dashboard</span>
+          <span>داشبورد و وضعیت زنده</span>
+        </h1>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Active App Indicator & Switcher Button -->
+        <button onclick="openAppModal()" class="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 transition-colors">
+          <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+          <span id="header-app-name">{{ current_app.name|default:"برنامه‌ای ثبت نشده" }}</span>
+          <span class="material-symbols-outlined text-slate-400 text-[16px]">expand_more</span>
+        </button>
+
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>سرویس فعال</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- Main Body Content -->
+    <main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+      <!-- Multi-App Workspace Context Ribbon -->
+      <div class="w-full bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+        <div class="flex items-center gap-3.5 flex-wrap">
+          <div class="w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-xs border border-slate-200 ring-2 ring-emerald-100 flex items-center justify-center bg-blue-600 text-white font-black text-sm" id="active-app-avatar" style="width: 44px; height: 44px; min-width: 44px; min-height: 44px;">
+            {% if current_app.icon %}
+              <img src="{{ current_app.icon.url }}" alt="{{ current_app.name }}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;">
+            {% elif current_app %}
+              {{ current_app.name|slice:":2" }}
+            {% else %}
+              <span class="material-symbols-outlined text-[24px]">apps</span>
+            {% endif %}
+          </div>
+          <div class="flex flex-col justify-center">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-extrabold text-slate-900" id="ribbon-app-name">{{ current_app.name|default:"برنامه‌ای ثبت نشده است" }}</span>
+              <span class="text-xs font-mono text-slate-400 font-normal" dir="ltr" id="ribbon-app-pkg">{% if current_app %}({{ current_app.package_name }}){% endif %}</span>
+            </div>
+            <div class="flex items-center gap-3 mt-1 flex-wrap text-xs text-slate-500">
+              <div class="flex items-center gap-1">
+                <span>شناسه:</span>
+                <span class="font-mono text-blue-600 font-bold" dir="ltr" id="ribbon-app-id">{{ current_app.app_id|default:"-" }}</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <div class="flex items-center gap-1">
+                <span>پلتفرم:</span>
+                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200">Android + iOS</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <div class="flex items-center gap-1">
+                <span>پچ‌های ثبت‌شده:</span>
+                <span class="font-bold text-slate-800" id="ribbon-total-patches">{{ current_app.total_patches|default:0 }} نسخه</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <div class="flex items-center gap-1">
+                <span>ریلیزهای APK:</span>
+                <span class="font-bold text-slate-800" id="ribbon-total-releases">{{ current_app.total_releases|default:0 }} نسخه</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-start md:self-auto shrink-0">
+          <button onclick="openAppModal()" class="h-9 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors border border-slate-200/80 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[17px]">sync_alt</span>
+            <span>تغییر برنامه</span>
+          </button>
+          <button onclick="openNewAppModal()" class="h-9 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs flex items-center gap-1">
+            <span class="material-symbols-outlined text-[17px]">add</span>
+            <span>+ برنامه جدید</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== VIEW 1: DASHBOARD ==================== -->
+      <div id="view-dashboard" class="view-tab space-y-6">
+        
+        <!-- 3 Key Metric Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Card 1: Active Patch Status -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-500 uppercase">نسخه فعال جاری</span>
+                {% if active_patch %}
+                <span id="live-status-chip" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>فعال در کلاینت‌ها</span>
+                </span>
+                {% else %}
+                <span id="live-status-chip" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                  <span>بدون پچ فعال</span>
+                </span>
+                {% endif %}
+              </div>
+              <div class="text-2xl sm:text-3xl font-black font-mono text-slate-900 my-2" dir="ltr" id="current-patch-version">{% if active_patch %}v{{ active_patch.version }}{% else %}نسخه خام استور{% endif %}</div>
+              <div class="text-xs text-slate-500 leading-relaxed truncate" id="meta-notes-text">{% if active_patch %}{{ active_patch.release_notes|default:"بدون یادداشت فنی" }}{% else %}کاربران هم‌اکنون به نسخه اصلی استور متصل هستند.{% endif %}</div>
+            </div>
+            <div class="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400 font-mono" id="meta-date">{% if active_patch %}{{ active_patch.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</span>
+              <button onclick="switchView('rollback')" class="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-all font-bold flex items-center gap-1">
+                <span>مشاهده تاریخچه</span>
+                <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: Update Policy -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-500 uppercase">سیاست دریافت آپدیت</span>
+                <span class="material-symbols-outlined text-slate-400 text-[20px]">policy</span>
+              </div>
+              <div class="text-xl sm:text-2xl font-black text-slate-900 my-2" id="policy-chip">{% if active_patch %}{% if active_patch.is_force %}اجباری (Force Update){% else %}اختیاری (Optional){% endif %}{% else %}پیش‌فرض استور{% endif %}</div>
+              <p class="text-xs text-slate-500">نحوه برخورد اپلیکیشن کلاینت هنگام دریافت پچ</p>
+            </div>
+            <div class="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+              <span>کد بیلد تارگت:</span>
+              <span class="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" id="meta-target-code">{% if active_patch %}{{ active_patch.target_version_code }}{% else %}-{% endif %}</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Storage & Check API -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-500 uppercase">کل پچ‌های ذخیره‌شده</span>
+                <span class="material-symbols-outlined text-slate-400 text-[20px]">layers</span>
+              </div>
+              <div class="text-2xl sm:text-3xl font-black text-blue-600 my-2 flex items-baseline gap-2">
+                <span id="stat-patch-count">{{ current_app.total_patches|default:0 }}</span>
+                <span class="text-xs font-bold text-slate-500">نسخه در دیتابیس</span>
+              </div>
+              <p class="text-xs text-slate-500">پایگاه داده سبک و مستقل SQLite در پوشه محلی</p>
+            </div>
+            <div class="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs text-slate-500">تست کلاینت:</span>
+              <a href="{% if current_app %}/check?app_id={{ current_app.app_id }}{% else %}#{% endif %}" id="stat-test-link" target="_blank" class="text-xs text-blue-600 hover:underline font-mono font-bold">{% if current_app %}/check?app_id={{ current_app.app_id }} ↗{% else %}-{% endif %}</a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Recent Patches Table Card -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+          <div class="flex items-center justify-between pb-4 mb-3 border-b border-slate-100 flex-wrap gap-2">
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-900">آخرین پچ‌های ثبت‌شده</h2>
+              <p class="text-xs text-slate-500">نسخه‌های اخیر ایجاد شده برای این برنامه</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="switchView('publisher')" class="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+                <span>+ انتشار پچ جدید</span>
+              </button>
+              <button onclick="switchView('rollback')" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all border border-slate-200 flex items-center gap-1">
+                <span>مدیریت تاریخچه</span>
+                <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+              </button>
+            </div>
+          </div>
+          <div class="w-full overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                  <th class="py-2.5 px-3 font-bold">نسخه (SemVer)</th>
+                  <th class="py-2.5 px-3 font-bold text-center">وضعیت</th>
+                  <th class="py-2.5 px-3 font-bold text-center">دستگاه / معماری</th>
+                  <th class="py-2.5 px-3 font-bold text-center">سیاست دریافت</th>
+                  <th class="py-2.5 px-3 font-bold text-center">بیلد تارگت (سایز)</th>
+                  <th class="py-2.5 px-3 font-bold">تاریخ ثبت</th>
+                  <th class="py-2.5 px-3 font-bold">یادداشت تغییرات</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-recent-table" class="divide-y divide-slate-100">
+                {% if recent_patches %}
+                  {% for p in recent_patches %}
+                  <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-2.5 px-3 font-mono font-bold text-blue-600" dir="ltr">v{{ p.version }}</td>
+                    <td class="py-2.5 px-3 text-center">
+                      {% if p.is_active %}
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">فعال (Live)</span>
+                      {% else %}
+                      <span class="px-2 py-0.5 rounded text-[10px] text-slate-500 bg-slate-100 border border-slate-200">آرشیو</span>
+                      {% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      {% if p.target_abi == 'arm64-v8a' %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">📱 گوشی واقعی</span>
+                      {% elif p.target_abi == 'x86_64' %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">💻 امولاتور</span>
+                      {% elif p.target_abi == 'armeabi-v7a' %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 inline-flex items-center gap-1">📱 ۳۲بیتی</span>
+                      {% else %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">🌐 همه دستگاه‌ها</span>
+                      {% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      {% if p.is_force %}<span class="text-red-600 font-bold">اجباری</span>{% else %}<span class="text-slate-500">اختیاری</span>{% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 text-center font-mono">{{ p.target_version_code }} ({{ p.formatted_size }})</td>
+                    <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">{{ p.created_at|date:"Y-m-d H:i" }}</td>
+                    <td class="py-2.5 px-3 text-slate-600 truncate max-w-xs">{{ p.release_notes|default:"-" }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                <tr>
+                  <td colspan="7" class="text-center py-6 text-slate-400">هنوز هیچ پچی برای این برنامه ثبت نشده است.</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==================== VIEW 2: PATCH PUBLISHER ==================== -->
+      <div id="view-publisher" class="view-tab hidden space-y-6">
+        
+        <!-- Shorebird-Style Automated CLI Publish Card -->
+        <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-blue-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                <span class="material-symbols-outlined text-[24px]">terminal</span>
+              </div>
+              <div>
+                <h2 class="text-sm font-extrabold text-white flex items-center gap-2">
+                  <span>⚡ انتشار خودکار با CLI (روش توصیه‌شده و بدون نیاز به درگ‌ان‌دراپ)</span>
+                  <span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">اتوماسیون ۱۰۰٪</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">نیازی به درگ‌ان‌دراپ دستی نیست! فقط دستور زیر را در ترمینال پروژه اجرا کنید تا تمام معماری‌ها خودکار ساخته و مستقر شوند:</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Snippet Box -->
+          <div class="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs flex items-center justify-between gap-3 text-slate-200">
+            <div class="flex items-center gap-2 overflow-x-auto select-all" dir="ltr" id="cli-cmd-text">
+              <span class="text-emerald-400 select-none">$</span>
+              <span>python tool/publish_patch.py --version <span class="text-blue-400 font-bold">1.0.2</span> --server <span class="text-amber-300">http://localhost</span> --skip-build</span>
+            </div>
+            <button onclick="copyCliCommand()" class="shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm" id="btn-copy-cli">
+              <span class="material-symbols-outlined text-[16px]">content_copy</span>
+              <span>کپی دستور</span>
+            </button>
+          </div>
+
+          <!-- Feature Bullets -->
+          <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-300">
+            <div class="flex items-center gap-2 bg-slate-800/40 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="material-symbols-outlined text-blue-400 text-[18px]">memory</span>
+              <span>تولید همزمان ۳ معماری (arm64, v7a, x86)</span>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-800/40 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="material-symbols-outlined text-emerald-400 text-[18px]">verified_user</span>
+              <span>محاسبه خودکار هش MD5 و Manifest</span>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-800/40 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="material-symbols-outlined text-purple-400 text-[18px]">cloud_sync</span>
+              <span>استقرار آنی روی سرور بدون دخالت دست</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional: Bundle Upload Card for Web UI -->
+        <div class="max-w-3xl mx-auto bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+          <div class="pb-4 mb-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm text-slate-900 font-extrabold flex items-center gap-2">
+                <span class="material-symbols-outlined text-slate-600 text-[20px]">inventory_2</span>
+                <span>یا آپلود دستی فایل پکیج چندمعماری (patch_bundle.zip)</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-1">اگر پکیج را قبلاً با ابزار ساخته‌اید، فقط فایل zip آن را اینجا رها کنید؛ نیازی به پر کردن دستی هیچ فیلدی نیست.</p>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">روش دوم</span>
+          </div>
+
+          <!-- Drag & Drop Zone for Bundle -->
+          <div class="bg-slate-50 hover:bg-slate-100/80 transition-all border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer mb-5" id="drop-zone" onclick="document.getElementById('real-file-input').click()">
+            <input type="file" id="real-file-input" class="hidden" accept=".zip" onchange="handleBundleChange(this.files)">
+            <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+              <span class="material-symbols-outlined text-[24px]">folder_zip</span>
+            </div>
+            <span class="text-xs text-slate-800 font-bold">فایل patch_bundle_vX.zip را اینجا رها کنید یا برای انتخاب کلیک نمایید</span>
+            <span class="text-[11px] text-slate-400 mt-1">حاوی manifest.json و فولدرهای معماری arm64-v8a / armeabi-v7a / x86_64</span>
+            <div class="mt-3 flex items-center gap-2" id="selected-file-badge" style="display: none;">
+              <span class="font-mono text-xs bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-md font-bold" dir="ltr" id="selected-file-name">bundle.zip</span>
+              <span class="text-xs text-slate-500 font-semibold" id="selected-file-size">۰ MB</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <span class="text-[11px] text-slate-500 flex items-center gap-1">
+              <span class="material-symbols-outlined text-blue-500 text-[16px]">info</span>
+              <span>تمام متادیتاها و نسخه‌ها به صورت خودکار از درون manifest.json خوانده می‌شوند.</span>
+            </span>
+            <button type="button" id="btn-deploy-patch" onclick="uploadBundle()" class="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">upload</span>
+              <span>آپلود و فعال‌سازی آنی بسته</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==================== VIEW 3: VERSION ROLLBACK MATRIX ==================== -->
+      <div id="view-rollback" class="view-tab hidden space-y-6">
+        <div class="w-full bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-col">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 flex-wrap gap-3">
+            <div>
+              <h2 class="text-base text-slate-900 font-extrabold flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600 text-[22px]">history</span>
+                <span>تاریخچه نسخه‌ها و ماتریس بازگشت به عقب (Rollback Matrix)</span>
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">مشاهده تمام پچ‌های ثبت‌شده برای این برنامه با قابلیت رول‌بک اختصاصی و فوری به نسخه‌های قبل.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="relative">
+                <input type="text" id="search-patches" oninput="filterPatchesTable()" placeholder="جستجوی نسخه، هش یا یادداشت..." class="h-8 pr-8 pl-3 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-sans w-52">
+                <span class="material-symbols-outlined absolute right-2 top-2 text-slate-400 text-[16px]">search</span>
+              </div>
+              <button class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 flex items-center gap-1" onclick="loadPatches()">
+                <span class="material-symbols-outlined text-[15px]">refresh</span>
+                <span>به‌روزرسانی</span>
+              </button>
+              <span class="text-xs bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1 rounded-full font-medium" id="table-patch-count">۰ نسخه ثبت‌شده</span>
+            </div>
+          </div>
+
+          <!-- Clean 5-Column Table Container -->
+          <div class="w-full overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200/80">
+                  <th class="py-3 px-4 rounded-r-lg">نسخه و وضعیت</th>
+                  <th class="py-3 px-3 text-center">مشخصات بیلد</th>
+                  <th class="py-3 px-3 text-center">دستگاه / معماری</th>
+                  <th class="py-3 px-3 text-center">نوع آپدیت</th>
+                  <th class="py-3 px-4">تاریخ ثبت و یادداشت</th>
+                  <th class="py-3 px-4 text-left rounded-l-lg" dir="ltr">عملیات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100" id="patches-table-body">
+                <tr>
+                  <td colspan="5" class="text-center py-8 text-slate-400">در حال دریافت لیست نسخه‌ها...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== VIEW 5: NATIVE APK RELEASES ==================== -->
+      <div id="view-releases" class="view-tab hidden space-y-6">
+        <!-- Top Informational Callout -->
+        <div class="bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-400/30">
+              <span class="material-symbols-outlined text-[24px]">android</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-extrabold text-white">مدیریت و انتشار ریلیزهای نصبی نیتیو (Full APK Releases)</h3>
+                <span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-mono">Hybrid Architecture</span>
+              </div>
+              <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                هنگامی که تغییراتی در کد کاتلین/سوئیفت، پلاگین‌های نیتیو، پرمیشن‌ها یا بیلد گریدل داده‌اید، پچ دارت پاسخگو نخواهد بود. فایل کامل APK را در این بخش بارگذاری فرمایید. کلاینت فلاتر هنگام بررسی آپدیت، ابتدا کد بیلد را تطبیق داده و در صورت نیاز، کاربر را مستقیماً به دانلود و نصب APK هدایت خواهد کرد.
+              </p>
+            </div>
+          </div>
+          <div class="shrink-0 flex items-center gap-2">
+            <span class="text-xs bg-white/10 px-3 py-1.5 rounded-lg font-mono border border-white/20 text-blue-200">update_type: "native"</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Form: Upload New APK (1 col) -->
+          <div class="lg:col-span-1 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="pb-3 mb-4 border-b border-slate-100">
+                <h2 class="text-sm text-slate-900 font-extrabold flex items-center gap-2">
+                  <span class="material-symbols-outlined text-blue-600 text-[20px]">upload_file</span>
+                  <span>بارگذاری و انتشار APK جدید</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">ثبت بیلد نصبی کامل با شماره ساخت بالاتر</p>
+              </div>
+
+              <!-- Drag & Drop Zone for APK -->
+              <div class="bg-slate-50 hover:bg-slate-100/80 transition-all border-2 border-dashed border-slate-300 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer mb-4" id="apk-drop-zone" onclick="document.getElementById('real-apk-file-input').click()">
+                <input type="file" id="real-apk-file-input" class="hidden" accept=".apk" onchange="handleApkFileChange(this.files)">
+                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                  <span class="material-symbols-outlined text-[22px]">android</span>
+                </div>
+                <span class="text-xs text-slate-800 font-bold">انتخاب فایل نصبی (.apk)</span>
+                <span class="text-[11px] text-slate-400 mt-1">فایل app-release.apk تولید شده توسط Flutter</span>
+                <div class="mt-2.5 flex items-center gap-2" id="selected-apk-badge" style="display: none;">
+                  <span class="font-mono text-xs bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-1 rounded-md font-bold truncate max-w-[150px]" dir="ltr" id="selected-apk-name">app.apk</span>
+                  <span class="text-xs text-slate-500 font-semibold" id="selected-apk-size">۰ MB</span>
+                </div>
+              </div>
+
+              <div class="space-y-3.5">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">نام نسخه (Version Name) *</label>
+                  <input type="text" id="input-release-vername" placeholder="مثال: 1.1.0 یا 2.0.0" dir="ltr" class="w-full h-9 px-3 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-bold">
+                  <span class="text-[10px] text-slate-400 mt-0.5 block">معادل versionName در گریدل یا pubspec</span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">کد ساخت بیلد (Version Code / Build Number) *</label>
+                  <input type="number" id="input-release-vercode" placeholder="مثال: 2" min="1" dir="ltr" class="w-full h-9 px-3 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-bold">
+                  <span class="text-[10px] text-amber-600 mt-0.5 block">الزام: باید حتماً از کدهای بیلد قبلی بزرگتر باشد</span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">سیاست دریافت آپدیت</label>
+                  <select id="select-release-policy" class="w-full h-9 px-3 bg-white text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-semibold">
+                    <option value="optional" selected>اختیاری (پیشنهاد آپدیت به کاربر)</option>
+                    <option value="force">اجباری (مسدودسازی تا زمان دانلود و نصب APK)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700 font-bold pt-1">
+                    <input type="checkbox" id="auto-deploy-release" checked class="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer">
+                    <span>فعال‌سازی فوری به عنوان نسخه زنده (Live Deploy)</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">یادداشت تغییرات نسخه (Release Notes)</label>
+                  <textarea id="textarea-release-notes" rows="2" placeholder="توضیحات ویژگی‌های جدید یا دلایل به‌روزرسانی نیتیو..." class="w-full px-3 py-1.5 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white transition-all leading-relaxed"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400 font-mono">MD5 & SHA256 خودکار</span>
+              <button type="button" id="btn-deploy-release" onclick="uploadRelease()" class="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[17px]">publish</span>
+                <span>بارگذاری و انتشار APK</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table: Existing Releases (2 cols) -->
+          <div class="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 flex-wrap gap-2">
+                <div>
+                  <h2 class="text-sm text-slate-900 font-extrabold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-600 text-[20px]">format_list_bulleted</span>
+                    <span>ماتریس ریلیزهای نصبی APK</span>
+                  </h2>
+                  <p class="text-xs text-slate-500 mt-0.5">لیست تمام فایل‌های APK ذخیره‌شده و آماده دانلود مستقیم</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 flex items-center gap-1" onclick="loadReleases()">
+                    <span class="material-symbols-outlined text-[15px]">refresh</span>
+                    <span>به‌روزرسانی</span>
+                  </button>
+                  <span class="text-xs bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-full font-medium" id="table-release-count">۰ نسخه</span>
+                </div>
+              </div>
+
+              <div class="w-full overflow-x-auto">
+                <table class="w-full text-right border-collapse text-xs">
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                      <th class="py-2.5 px-3 font-bold">نسخه و بیلد</th>
+                      <th class="py-2.5 px-3 font-bold text-center">سیاست دریافت</th>
+                      <th class="py-2.5 px-3 font-bold text-center">حجم و دانلودها</th>
+                      <th class="py-2.5 px-3 font-bold">تاریخ ثبت</th>
+                      <th class="py-2.5 px-3 font-bold text-center">عملیات و فایل</th>
+                    </tr>
+                  </thead>
+                  <tbody id="releases-table-body" class="divide-y divide-slate-100">
+                    <!-- Rendered via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ==================== VIEW 4: APPS MANAGEMENT ==================== -->
+      <div id="view-apps" class="view-tab hidden space-y-6">
+        <div class="w-full bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100 flex-wrap gap-3">
+            <div>
+              <h2 class="text-base text-slate-900 font-extrabold flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600 text-[22px]">apps</span>
+                <span>مدیریت اپلیکیشن‌ها (Applications Matrix)</span>
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">مشاهده و سوییچ بین برنامه‌های فلاتر یا ثبت پروژه جدید جهت توزیع پچ‌های مستقل.</p>
+            </div>
+            <button onclick="openNewAppModal()" class="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>+ ثبت برنامه جدید</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="apps-cards-grid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modals & Toasts Container -->
+  <div class="fixed bottom-6 left-6 z-50 flex flex-col gap-2 pointer-events-none" id="toast-container"></div>
+
+  <!-- Modal: App Switcher -->
+  <div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="app-switcher-modal">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl text-right">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-base text-slate-900 font-extrabold">انتخاب برنامه فعال (Workspace)</span>
+        <button class="text-slate-400 hover:text-slate-700" onclick="closeAppModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-2.5 mb-4 max-h-80 overflow-y-auto" id="modal-apps-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: New App -->
+  <div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="new-app-modal">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl text-right">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-base text-slate-900 font-extrabold">ثبت و اتصال برنامه فلاتر جدید</span>
+        <button class="text-slate-400 hover:text-slate-700" onclick="closeNewAppModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <form class="flex flex-col gap-3.5" onsubmit="submitNewApp(event)">
+        <!-- App Icon Picker -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-slate-800 font-bold">تصویر / لوگوی برنامه (اختیاری)</label>
+          <div class="flex items-center gap-3">
+            <div id="new-app-icon-preview" class="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+              <span class="material-symbols-outlined text-slate-400 text-[24px]">image</span>
+            </div>
+            <div class="flex-1">
+              <input type="file" id="input-new-app-icon" accept="image/*" class="hidden" onchange="handleNewAppIconSelect(this)">
+              <button type="button" onclick="document.getElementById('input-new-app-icon').click()" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors">
+                <span class="material-symbols-outlined text-[16px]">upload</span>
+                <span>انتخاب تصویر...</span>
+              </button>
+              <span class="text-[10px] text-slate-400 block mt-1">فرمت‌های PNG، JPG، WebP، SVG</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">شناسه برنامه (App ID) *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" dir="ltr" id="input-new-app-id" placeholder="مثال: my_app" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">نام نمایشی برنامه *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-new-app-name" placeholder="مثال: اپلیکیشن من" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">Package Name / Bundle ID *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" dir="ltr" id="input-new-app-pkg" placeholder="مثال: com.example.myapp" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">توضیحات کوتاه</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-new-app-desc" placeholder="توضیحات اختیاری" type="text">
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button class="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-semibold" onclick="closeNewAppModal()" type="button">انصراف</button>
+          <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs" type="submit">ثبت و اتصال</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Core JavaScript -->
+
+  <!-- Modal: Edit App -->
+  <div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="edit-app-modal">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl text-right">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-base text-slate-900 font-extrabold flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-600 text-[20px]">edit</span>
+          <span>ویرایش مشخصات برنامه</span>
+        </span>
+        <button class="text-slate-400 hover:text-slate-700" onclick="closeEditAppModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <form class="flex flex-col gap-3.5" onsubmit="submitEditApp(event)">
+        <input type="hidden" id="input-edit-app-id">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">نام نمایشی برنامه *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-edit-app-name" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">Package Name / Bundle ID *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" dir="ltr" id="input-edit-app-pkg" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">توضیحات کوتاه</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-edit-app-desc" type="text">
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button class="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-semibold" onclick="closeEditAppModal()" type="button">انصراف</button>
+          <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs" type="submit">ذخیره تغییرات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const BASE_PATH = window.location.pathname.startsWith('/ota') ? '/ota' : (window.location.pathname.startsWith('/patcher') ? '/patcher' : '');
+
+    let currentAppId = '{{ current_app.app_id|default:"" }}';
+    let appsList = [];
+    let selectedFile = null;
+    let allPatchesData = [];
+
+    const VIEWS = {
+      dashboard: { title: 'داشبورد و وضعیت زنده', icon: 'dashboard', pageTitle: 'داشبورد و وضعیت زنده' },
+      publisher: { title: 'انتشار پچ جدید فلاتر', icon: 'cloud_upload', pageTitle: 'انتشار پچ جدید' },
+      rollback: { title: 'تاریخچه نسخه‌ها و رول‌بک', icon: 'history', pageTitle: 'تاریخچه و رول‌بک' },
+      releases: { title: 'انتشار و مدیریت ریلیزهای APK', icon: 'android', pageTitle: 'مدیریت ریلیزهای APK' },
+      apps: { title: 'مدیریت اپلیکیشن‌ها', icon: 'apps', pageTitle: 'مدیریت اپلیکیشن‌ها' }
+    };
+
+    function switchView(viewName, updateHistory = true) {
+      if (!VIEWS[viewName]) viewName = 'dashboard';
+
+      // 1. Hide all view containers
+      document.querySelectorAll('.view-tab').forEach(el => {
+        el.classList.add('hidden');
+      });
+
+      // 2. Show the targeted view
+      const target = document.getElementById('view-' + viewName);
+      if (target) {
+        target.classList.remove('hidden');
+      }
+
+      // 3. Highlight the active link in the sidebar
+      document.querySelectorAll('#sidebar-nav .nav-link').forEach(btn => {
+        const v = btn.getAttribute('data-view');
+        if (v === viewName) {
+          btn.className = 'nav-link flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-600 text-white shadow-xs font-bold text-xs text-right w-full transition-all';
+        } else {
+          btn.className = 'nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full';
+        }
+      });
+
+      // 4. Update Header Badge & Document Title
+      const pageBadge = document.getElementById('current-page-badge');
+      if (pageBadge) {
+        pageBadge.innerHTML = `<span class="material-symbols-outlined text-[19px] text-blue-600">${VIEWS[viewName].icon}</span><span>${VIEWS[viewName].title}</span>`;
+      }
+      document.title = `فلاتر او‌تی‌ای | ${VIEWS[viewName].pageTitle}`;
+
+      // 5. Update URL Hash / History
+      if (updateHistory) {
+        try {
+          history.replaceState(null, '', '#' + viewName);
+        } catch (e) {
+          window.location.hash = viewName;
+        }
+      }
+
+      // 6. Close mobile drawer if opened
+      const sb = document.getElementById('main-sidebar');
+      if (sb && !sb.classList.contains('translate-x-full')) {
+        sb.classList.add('translate-x-full');
+      }
+
+      // 7. Smoothly scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // 8. Refresh view-specific contents
+      if (viewName === 'rollback') {
+        loadPatches();
+      } else if (viewName === 'releases') {
+        if(typeof loadReleases === 'function') loadReleases();
+      } else if (viewName === 'apps') {
+        renderAppsCards();
+      }
+    }
+
+    function resolveInitialView() {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash && VIEWS[hash]) return hash;
+
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const last = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : '';
+      if (last && VIEWS[last]) return last;
+
+      return 'dashboard';
+    }
+
+    // Toast Notification System
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const t = document.createElement('div');
+      const bg = type === 'success' 
+        ? 'bg-slate-900 text-emerald-400 border-emerald-500/50' 
+        : type === 'error' 
+        ? 'bg-red-700 text-white border-red-800' 
+        : 'bg-slate-900 text-white border-slate-700';
+      const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+      t.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-lg border text-xs flex items-center gap-2 transition-all duration-300 ${bg}`;
+      t.innerHTML = `<span class="material-symbols-outlined text-[18px]">${icon}</span><span>${msg}</span>`;
+      container.appendChild(t);
+      setTimeout(() => {
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 300);
+      }, 3500);
+    }
+
+    // Lifecycle Init
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStatus();
+      loadApps();
+      setupDragDrop();
+      setupReleaseDragDrop();
+
+      const initView = resolveInitialView();
+      switchView(initView, false);
+
+      window.addEventListener('hashchange', () => {
+        const h = window.location.hash.replace('#', '').trim();
+        if (h && VIEWS[h]) {
+          switchView(h, false);
+        }
+      });
+    });
+
+    function setupDragDrop() {
+      const dz = document.getElementById('drop-zone');
+      if (!dz) return;
+      dz.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dz.classList.add('bg-blue-50/70', 'border-blue-400');
+      });
+      dz.addEventListener('dragleave', () => {
+        dz.classList.remove('bg-blue-50/70', 'border-blue-400');
+      });
+      dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dz.classList.remove('bg-blue-50/70', 'border-blue-400');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleFileChange(e.dataTransfer.files);
+        }
+      });
+    }
+
+    function handleFileChange(files) {
+      if (!files || files.length === 0) return;
+      selectedFile = files[0];
+      const badge = document.getElementById('selected-file-badge');
+      const nameEl = document.getElementById('selected-file-name');
+      const sizeEl = document.getElementById('selected-file-size');
+      nameEl.textContent = selectedFile.name;
+      sizeEl.textContent = `سایز: ${(selectedFile.size / (1024 * 1024)).toFixed(2)} مگابایت`;
+      badge.style.display = 'flex';
+
+      // تشخیص هوشمند نام فایل برای پیشنهاد خودکار دستگاه مقصد
+      const fname = selectedFile.name.toLowerCase();
+      const abiSelect = document.getElementById('select-target-abi');
+      if (abiSelect) {
+        if (fname.includes('x86_64') || fname.includes('emulator')) {
+          abiSelect.value = 'x86_64';
+        } else if (fname.includes('arm64')) {
+          abiSelect.value = 'arm64-v8a';
+        } else if (fname.includes('armeabi')) {
+          abiSelect.value = 'armeabi-v7a';
+        } else if (fname.includes('multi')) {
+          abiSelect.value = 'multi';
+        }
+      }
+      showToast(`فایل ${selectedFile.name} با موفقیت انتخاب شد.`, 'success');
+    }
+
+    async function loadStatus() {
+      try {
+        const res = await fetch(`${BASE_PATH}/api/status`);
+        const data = await res.json();
+        const hostIp = (data.ips && data.ips.length > 0) ? data.ips[0] : '127.0.0.1';
+        document.getElementById('serverHostInfo').textContent = `Host: ${hostIp}:${data.port}`;
+      } catch (e) {
+        console.error('Failed to load status', e);
+      }
+    }
+
+    async function loadApps() {
+      try {
+        const res = await fetch(`${BASE_PATH}/api/apps`);
+        appsList = await res.json();
+        
+        // Ensure currentAppId exists
+        if (!appsList.find(a => a.app_id === currentAppId) && appsList.length > 0) {
+          currentAppId = appsList[0].app_id;
+        }
+
+        renderCurrentAppBanner();
+        loadPatches();
+        renderAppsCards();
+      } catch (e) {
+        showToast('خطا در دریافت لیست برنامه‌ها: ' + e, 'error');
+      }
+    }
+
+    function resolveAppIcon(app) {
+      if (!app) return '';
+      let icon = app.icon_url || '';
+      if (icon && icon.startsWith('/') && BASE_PATH) {
+        icon = BASE_PATH + icon;
+      }
+      return icon;
+    }
+
+    function renderCurrentAppBanner() {
+      const app = appsList.find(a => a.app_id === currentAppId) || (appsList.length > 0 ? appsList[0] : null);
+      if (!app) {
+        const hName = document.getElementById('header-app-name');
+        if (hName) hName.textContent = 'برنامه‌ای ثبت نشده';
+        const rName = document.getElementById('ribbon-app-name');
+        if (rName) rName.textContent = 'هیچ برنامه‌ای ثبت نشده است';
+        const rPkg = document.getElementById('ribbon-app-pkg');
+        if (rPkg) rPkg.textContent = '';
+        const rId = document.getElementById('ribbon-app-id');
+        if (rId) rId.textContent = '-';
+        const sName = document.getElementById('sidebar-app-name');
+        if (sName) sName.textContent = 'برنامه‌ای ثبت نشده';
+        const sPkg = document.getElementById('sidebar-app-pkg');
+        if (sPkg) sPkg.textContent = '-';
+        const testLink = document.getElementById('stat-test-link');
+        if (testLink) {
+          testLink.href = '#';
+          testLink.textContent = '-';
+        }
+        const ribbonAvatar = document.getElementById('active-app-avatar');
+        if (ribbonAvatar) ribbonAvatar.innerHTML = '<span class="material-symbols-outlined text-[24px] text-slate-400">apps</span>';
+        const sAvatar = document.getElementById('sidebar-app-avatar');
+        if (sAvatar) sAvatar.innerHTML = '<span class="material-symbols-outlined text-[18px] text-slate-400">apps</span>';
+        return;
+      }
+
+      const iconSrc = resolveAppIcon(app);
+      document.getElementById('header-app-name').textContent = app.name;
+
+      const ribbonAvatar = document.getElementById('active-app-avatar');
+      if (ribbonAvatar) {
+        if (iconSrc) {
+          ribbonAvatar.innerHTML = `<img src="${iconSrc}" alt="${app.name}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;">`;
+        } else {
+          ribbonAvatar.textContent = app.name.substring(0, 2);
+        }
+      }
+
+      const sAvatar = document.getElementById('sidebar-app-avatar');
+      if (sAvatar) {
+        if (iconSrc) {
+          sAvatar.innerHTML = `<img src="${iconSrc}" alt="${app.name}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;">`;
+        } else {
+          sAvatar.textContent = app.name.substring(0, 2);
+        }
+      }
+
+      document.getElementById('ribbon-app-name').textContent = app.name;
+      document.getElementById('ribbon-app-pkg').textContent = `(${app.package_name})`;
+      document.getElementById('ribbon-app-id').textContent = app.app_id;
+      document.getElementById('ribbon-total-patches').textContent = `${app.total_patches || 0} نسخه`;
+      document.getElementById('stat-patch-count').textContent = app.total_patches || 0;
+
+      // Update Sidebar App Info
+      const sName = document.getElementById('sidebar-app-name');
+      if (sName) sName.textContent = app.name;
+      const sPkg = document.getElementById('sidebar-app-pkg');
+      if (sPkg) sPkg.textContent = app.package_name;
+
+      // Update test link
+      const testLink = document.getElementById('stat-test-link');
+      testLink.href = `${BASE_PATH}/check?app_id=${app.app_id}`;
+      testLink.textContent = `/check?app_id=${app.app_id}`;
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('main-sidebar');
+      if (!sb) return;
+      sb.classList.toggle('translate-x-full');
+    }
+
+    function filterPatchesTable() {
+      const q = (document.getElementById('search-patches')?.value || '').trim().toLowerCase();
+      const filtered = allPatchesData.filter(p => {
+        if (!q) return true;
+        return (p.version && p.version.toLowerCase().includes(q)) ||
+               (p.release_notes && p.release_notes.toLowerCase().includes(q)) ||
+               (p.md5 && p.md5.toLowerCase().includes(q)) ||
+               String(p.target_version_code).includes(q);
+      });
+      renderPatchesTable(filtered);
+    }
+
+    function getAbiBadge(abi) {
+      if (abi === 'arm64-v8a') {
+        return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">📱 گوشی واقعی (ARM64)</span>`;
+      } else if (abi === 'x86_64') {
+        return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">💻 امولاتور (x86_64)</span>`;
+      } else if (abi === 'armeabi-v7a') {
+        return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 inline-flex items-center gap-1">📱 ۳۲بیتی (ARMv7)</span>`;
+      } else {
+        return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">🌐 همه دستگاه‌ها (Multi)</span>`;
+      }
+    }
+
+    function renderDashboardRecentTable(patches) {
+      const tbody = document.getElementById('dashboard-recent-table');
+      if (!tbody) return;
+      if (!patches || patches.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400">هنوز هیچ پچی برای این برنامه ثبت نشده است.</td></tr>';
+        return;
+      }
+      const recents = patches.slice(0, 5);
+      tbody.innerHTML = recents.map(p => {
+        const isActive = p.is_active === 1;
+        const statusBadge = isActive 
+          ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">فعال (Live)</span>`
+          : `<span class="px-2 py-0.5 rounded text-[10px] text-slate-500 bg-slate-100 border border-slate-200">آرشیو</span>`;
+        const policyBadge = p.is_force === 1
+          ? `<span class="text-red-600 font-bold">اجباری</span>`
+          : `<span class="text-slate-500">اختیاری</span>`;
+        const sizeKb = (p.size_bytes / 1024).toFixed(1);
+
+        return `
+          <tr class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-2.5 px-3 font-mono font-bold text-blue-600" dir="ltr">v${p.version}</td>
+            <td class="py-2.5 px-3 text-center">${statusBadge}</td>
+            <td class="py-2.5 px-3 text-center">${getAbiBadge(p.target_abi)}</td>
+            <td class="py-2.5 px-3 text-center">${policyBadge}</td>
+            <td class="py-2.5 px-3 text-center font-mono">${p.target_version_code} (${sizeKb} KB)</td>
+            <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">${p.created_at}</td>
+            <td class="py-2.5 px-3 text-slate-600 truncate max-w-xs">${p.release_notes || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderPatchesTable(patches) {
+      const tbody = document.getElementById('patches-table-body');
+      if (!tbody) return;
+
+      if (!patches || patches.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">هیچ پچی یافت نشد. از تب «انتشار پچ جدید» اولین پچ را بارگذاری کنید.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = patches.map(p => {
+        const isActive = p.is_active === 1;
+        const isForce = p.is_force === 1;
+        const sizeKb = (p.size_bytes / 1024).toFixed(1);
+        const rowClass = isActive ? "bg-blue-50/40 font-semibold" : "hover:bg-slate-50";
+
+        const statusBadge = isActive 
+          ? `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>فعال</span>`
+          : `<span class="px-2 py-0.5 rounded text-[11px] text-slate-500 bg-slate-100 border border-slate-200">آرشیو</span>`;
+
+        const policyBadge = isForce 
+          ? `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-700">اجباری</span>`
+          : `<span class="px-2 py-0.5 rounded text-[11px] text-slate-600 bg-slate-100">اختیاری</span>`;
+
+        return `
+          <tr class="${rowClass} transition-colors">
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-sm text-blue-600" dir="ltr">v${p.version}</span>
+                ${statusBadge}
+              </div>
+            </td>
+            <td class="py-3 px-3 text-center">
+              <span class="font-mono text-slate-800 font-bold">بیلد ${p.target_version_code}</span>
+              <span class="text-slate-400 text-[11px] block font-mono" dir="ltr">${sizeKb} KB</span>
+            </td>
+            <td class="py-3 px-3 text-center">${getAbiBadge(p.target_abi)}</td>
+            <td class="py-3 px-3 text-center">${policyBadge}</td>
+            <td class="py-3 px-4">
+              <span class="text-slate-400 text-[11px] block">${p.created_at}</span>
+              <span class="text-slate-700 truncate max-w-sm block" title="${p.release_notes || ''}">${p.release_notes || '-'}</span>
+            </td>
+            <td class="py-3 px-4 text-left whitespace-nowrap" dir="ltr">
+              <div class="flex items-center gap-1.5 justify-end">
+                ${!isActive ? `
+                  <button class="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center gap-1" onclick="activatePatch(${p.id})">
+                    <span class="material-symbols-outlined text-[15px]">history</span>
+                    <span>رول‌بک به این نسخه</span>
+                  </button>
+                ` : `
+                  <span class="h-7 px-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    <span>نسخه فعال جاری</span>
+                  </span>
+                `}
+                <button class="h-7 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs transition-colors" onclick="toggleForce(${p.id})">
+                  ${isForce ? 'تغییر به اختیاری' : 'تغییر به اجباری'}
+                </button>
+                <button class="h-7 px-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="deletePatch(${p.id})" title="حذف پچ">
+                  <span class="material-symbols-outlined text-[17px]">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadPatches() {
+      const tbody = document.getElementById('patches-table-body');
+      if (!currentAppId) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">ابتدا یک برنامه ثبت یا انتخاب کنید.</td></tr>';
+        renderDashboardRecentTable([]);
+        const countEl = document.getElementById('table-patch-count');
+        if (countEl) countEl.textContent = '0 نسخه ثبت‌شده';
+        const statCount = document.getElementById('stat-patch-count');
+        if (statCount) statCount.textContent = 0;
+        return;
+      }
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">در حال بارگذاری نسخه‌ها...</td></tr>';
+
+      try {
+        const res = await fetch(`${BASE_PATH}/api/patches?app_id=${currentAppId}`);
+        const patches = await res.json();
+        allPatchesData = patches;
+
+        const countEl = document.getElementById('table-patch-count');
+        if (countEl) countEl.textContent = `${patches.length} نسخه ثبت‌شده`;
+        const statCount = document.getElementById('stat-patch-count');
+        if (statCount) statCount.textContent = patches.length;
+
+        const activePatch = patches.find(p => p.is_active === 1);
+
+        // Update Hero/Card info
+        const patchVerEl = document.getElementById('current-patch-version');
+        const liveChip = document.getElementById('live-status-chip');
+        const policyChip = document.getElementById('policy-chip');
+        const metaTarget = document.getElementById('meta-target-code');
+        const metaDate = document.getElementById('meta-date');
+        const metaNotesText = document.getElementById('meta-notes-text');
+
+        if (activePatch) {
+          if (patchVerEl) patchVerEl.textContent = `v${activePatch.version}`;
+          if (liveChip) {
+            liveChip.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+            liveChip.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>فعال در کلاینت‌ها</span>`;
+          }
+          if (policyChip) {
+            policyChip.textContent = activePatch.is_force ? "اجباری (Force Update)" : "اختیاری (Optional)";
+          }
+          if (metaTarget) metaTarget.textContent = activePatch.target_version_code;
+          if (metaDate) metaDate.textContent = activePatch.created_at;
+          if (metaNotesText) metaNotesText.textContent = activePatch.release_notes || 'بدون یادداشت فنی';
+        } else {
+          if (patchVerEl) patchVerEl.textContent = "نسخه خام استور";
+          if (liveChip) {
+            liveChip.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200";
+            liveChip.innerHTML = `<span>بدون پچ فعال</span>`;
+          }
+          if (policyChip) policyChip.textContent = "پیش‌فرض استور";
+          if (metaTarget) metaTarget.textContent = "-";
+          if (metaDate) metaDate.textContent = "-";
+          if (metaNotesText) metaNotesText.textContent = "کاربران هم‌اکنون به نسخه اصلی استور متصل هستند.";
+        }
+
+        renderDashboardRecentTable(patches);
+        filterPatchesTable();
+
+      } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-600">خطا در بارگذاری جدول: ${e}</td></tr>`;
+      }
+    }
+
+    async function uploadPatch() {
+      if (!currentAppId) {
+        showToast('لطفاً ابتدا یک برنامه ثبت یا انتخاب کنید.', 'error');
+        return;
+      }
+      if (!selectedFile) {
+        showToast('لطفاً ابتدا فایل پچ (.zip یا .bundle) را انتخاب فرمایید.', 'error');
+        return;
+      }
+      const version = document.getElementById('input-patch-version').value.trim();
+      if (!version) {
+        showToast('لطفاً شماره نسخه پچ (SemVer) را وارد کنید.', 'error');
+        return;
+      }
+      const targetCode = document.getElementById('input-target-build').value || 1;
+      const isForce = document.getElementById('select-policy').value === 'force' ? 1 : 0;
+      const activate = document.getElementById('auto-deploy').checked ? 1 : 0;
+      const notes = encodeURIComponent(document.getElementById('textarea-notes').value.trim());
+
+      const btn = document.getElementById('btn-deploy-patch');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>در حال بارگذاری باینری و محاسبه هش MD5...</span>`;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('app_id', currentAppId);
+        formData.append('target_abi', document.getElementById('select-target-abi') ? document.getElementById('select-target-abi').value : 'multi');
+        formData.append('version', version);
+        formData.append('target_version_code', targetCode);
+        formData.append('is_force', isForce ? '1' : '0');
+        formData.append('activate', activate ? '1' : '0');
+        formData.append('notes', document.getElementById('textarea-notes').value.trim());
+        formData.append('filename', selectedFile.name);
+
+        const url = `${BASE_PATH}/api/patches/upload`;
+        
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          showToast(`پچ نسخه ${version} با موفقیت بارگذاری و فعال گردید!`, 'success');
+          document.getElementById('input-patch-version').value = '';
+          document.getElementById('textarea-notes').value = '';
+          selectedFile = null;
+          document.getElementById('selected-file-badge').style.display = 'none';
+          await loadApps();
+          setTimeout(() => switchView('rollback'), 600);
+        } else {
+          showToast('خطا در سرور: ' + (data.error || 'ناشناخته'), 'error');
+        }
+      } catch (e) {
+        showToast('خطای شبکه در هنگام آپلود: ' + e, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+
+    async function activatePatch(patchId) {
+      if (!confirm('آیا از فعال‌سازی و رول‌بک به این نسخه اطمینان دارید؟ کلاینت‌های این برنامه فوراً به این نسخه متصل خواهند شد.')) return;
+      try {
+        const res = await fetch(`${BASE_PATH}/api/patches/activate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_id: currentAppId, patch_id: patchId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('عملیات رول‌بک با موفقیت انجام شد.', 'success');
+          await loadApps();
+        }
+      } catch (e) {
+        showToast('خطا: ' + e, 'error');
+      }
+    }
+
+    async function toggleForce(patchId) {
+      try {
+        const res = await fetch(`${BASE_PATH}/api/patches/toggle_force`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patch_id: patchId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('سیاست پچ به‌روزرسانی شد.', 'info');
+          await loadPatches();
+        }
+      } catch (e) {
+        showToast('خطا: ' + e, 'error');
+      }
+    }
+
+    async function deletePatch(patchId) {
+      if (!confirm('آیا از حذف دائمی این پچ از سرور اطمینان دارید؟')) return;
+      try {
+        const res = await fetch(`${BASE_PATH}/api/patches/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patch_id: patchId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('پچ با موفقیت حذف گردید.', 'info');
+          await loadApps();
+        }
+      } catch (e) {
+        showToast('خطا: ' + e, 'error');
+      }
+    }
+
+    function renderAppsCards() {
+      const grid = document.getElementById('apps-cards-grid');
+      if (!grid) return;
+      const addCardHtml = `
+        <div onclick="openNewAppModal()" class="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[220px]">
+          <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-[28px]">add</span>
+          </div>
+          <span class="text-sm font-bold text-slate-800">ثبت برنامه جدید</span>
+          <span class="text-xs text-slate-400 mt-1">اتصال پروژه فلاتر دیگر</span>
+        </div>
+      `;
+      if (!appsList || appsList.length === 0) {
+        grid.innerHTML = addCardHtml;
+        return;
+      }
+      
+      const cardsHtml = appsList.map(a => {
+        const isCurrent = a.app_id === currentAppId;
+        const activeVerText = a.active_version ? `v${a.active_version}` : 'بدون پچ فعال';
+        const activeVerClass = a.active_version ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200';
+        const cardBorder = isCurrent ? 'border-2 border-emerald-500 shadow-md ring-4 ring-emerald-50' : 'border border-slate-200 hover:border-slate-300 hover:shadow-xs';
+        const iconSrc = resolveAppIcon(a);
+        const avatarHtml = iconSrc 
+          ? `<div class="w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-xs border border-slate-200 flex items-center justify-center" style="width: 44px; height: 44px; min-width: 44px; min-height: 44px;"><img src="${iconSrc}" alt="${a.name}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;"></div>`
+          : `<div class="w-11 h-11 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-xs shrink-0" style="width: 44px; height: 44px; min-width: 44px; min-height: 44px;">${a.name.substring(0, 2)}</div>`;
+        const encodedApp = encodeURIComponent(JSON.stringify(a));
+        
+        return `
+          <div class="bg-white rounded-2xl p-5 ${cardBorder} flex flex-col justify-between transition-all">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                <div class="flex items-center gap-3">
+                  ${avatarHtml}
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-900">${a.name}</h3>
+                    <span class="text-[11px] font-mono text-slate-400 block" dir="ltr">${a.package_name}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1">
+                  ${isCurrent ? '<span class="text-[10px] bg-emerald-600 text-white font-extrabold px-2.5 py-0.5 rounded-full mr-1">برنامه فعال</span>' : ''}
+                  <button class="h-6 w-6 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded" onclick="openEditAppModal(decodeURIComponent('${encodedApp}'))" title="ویرایش">
+                    <span class="material-symbols-outlined text-[15px]">edit</span>
+                  </button>
+                  <button class="h-6 w-6 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" onclick="deleteApp('${a.app_id}', '${a.name}')" title="حذف">
+                    <span class="material-symbols-outlined text-[15px]">delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-xs text-slate-600 mb-4 leading-relaxed">${a.description || 'بدون توضیحات ثبت‌شده'}</div>
+
+              <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100 mb-4">
+                <div>
+                  <span class="text-slate-400 block text-[10px]">شناسه:</span>
+                  <span class="font-mono text-blue-600 font-bold" dir="ltr">${a.app_id}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px]">کل پچ‌ها:</span>
+                  <span class="font-bold text-slate-800">${a.total_patches || 0} نسخه</span>
+                </div>
+                <div class="col-span-2 pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                  <span class="text-slate-400 text-[10px]">نسخه جاری کلاینت‌ها:</span>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${activeVerClass}">${activeVerText}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[10px] text-slate-400 font-mono" dir="ltr">${a.created_at}</span>
+              ${!isCurrent ? `
+                <button onclick="selectApp('${a.app_id}'); switchView('dashboard');" class="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1">
+                  <span>ورود به این برنامه</span>
+                  <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+                </button>
+              ` : `
+                <button onclick="switchView('dashboard')" class="h-8 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all border border-slate-200 flex items-center gap-1">
+                  <span>مشاهده داشبورد</span>
+                  <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+      grid.innerHTML = cardsHtml + addCardHtml;
+    }
+
+    // Modal Handlers
+    function openAppModal() {
+      const modal = document.getElementById('app-switcher-modal');
+      const list = document.getElementById('modal-apps-list');
+      if (!appsList || appsList.length === 0) {
+        list.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs">هیچ برنامه‌ای ثبت نشده است. از دکمه زیر می‌توانید برنامه جدید اضافه کنید.</div>';
+        modal.classList.remove('hidden');
+        return;
+      }
+      list.innerHTML = appsList.map(a => {
+        const isCurrent = a.app_id === currentAppId;
+        const border = isCurrent ? "border-emerald-500 bg-emerald-50/50" : "border-slate-200 hover:bg-slate-50";
+        const vText = a.active_version ? `v${a.active_version}` : 'بدون پچ';
+        const iconSrc = resolveAppIcon(a);
+        const avatarHtml = iconSrc 
+          ? `<div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 shadow-xs border border-slate-200 flex items-center justify-center" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px;"><img src="${iconSrc}" alt="${a.name}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;"></div>`
+          : `<div class="w-10 h-10 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px;">${a.name.substring(0, 2)}</div>`;
+
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl border ${border} cursor-pointer transition-all" onclick="selectApp('${a.app_id}')">
+            <div class="flex items-center gap-3">
+              ${avatarHtml}
+              <div>
+                <div class="text-xs font-bold text-slate-900">${a.name}</div>
+                <div class="font-mono text-[11px] text-slate-500" dir="ltr">${a.package_name}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-slate-500 font-mono">${vText}</span>
+              ${isCurrent ? '<span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">انتخاب شده</span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      modal.classList.remove('hidden');
+    }
+
+    function closeAppModal() {
+      document.getElementById('app-switcher-modal').classList.add('hidden');
+    }
+
+    function selectApp(appId) {
+      currentAppId = appId;
+      closeAppModal();
+      renderCurrentAppBanner();
+      loadPatches();
+      if (typeof loadReleases === 'function') loadReleases();
+      renderAppsCards();
+      showToast(`برنامه فعال به ${appId} تغییر یافت.`, 'info');
+    }
+
+    function openNewAppModal() {
+      document.getElementById('new-app-modal').classList.remove('hidden');
+    }
+
+    function closeNewAppModal() {
+      document.getElementById('new-app-modal').classList.add('hidden');
+    }
+
+    function handleNewAppIconSelect(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('new-app-icon-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        }
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    async function submitNewApp(e) {
+      e.preventDefault();
+      const appId = document.getElementById('input-new-app-id').value.trim();
+      const name = document.getElementById('input-new-app-name').value.trim();
+      const pkg = document.getElementById('input-new-app-pkg').value.trim();
+      const desc = document.getElementById('input-new-app-desc').value.trim();
+      const iconInput = document.getElementById('input-new-app-icon');
+      const iconFile = iconInput.files && iconInput.files[0];
+
+      if (!appId || !name || !pkg) {
+        showToast('لطفاً فیلدهای الزامی را پر کنید.', 'error');
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('app_id', appId);
+        formData.append('name', name);
+        formData.append('package_name', pkg);
+        formData.append('description', desc);
+        if (iconFile) {
+          formData.append('icon', iconFile);
+        }
+
+        const res = await fetch(`${BASE_PATH}/api/apps`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`برنامه ${name} با موفقیت افزوده شد.`, 'success');
+          closeNewAppModal();
+          currentAppId = appId;
+          document.getElementById('input-new-app-id').value = '';
+          document.getElementById('input-new-app-name').value = '';
+          document.getElementById('input-new-app-pkg').value = '';
+          document.getElementById('input-new-app-desc').value = '';
+          document.getElementById('input-new-app-icon').value = '';
+          document.getElementById('new-app-icon-preview').innerHTML = '<span class="material-symbols-outlined text-slate-400 text-[24px]">image</span>';
+          await loadApps();
+          renderCurrentAppBanner();
+          switchView('apps');
+        } else {
+          showToast('خطا: ' + (data.error || 'ناشناخته'), 'error');
+        }
+      } catch (e) {
+        showToast('خطا در ثبت برنامه: ' + e, 'error');
+      }
+    }
+
+    function openEditAppModal(appStr) {
+      const app = JSON.parse(appStr);
+      document.getElementById('input-edit-app-id').value = app.app_id;
+      document.getElementById('input-edit-app-name').value = app.name;
+      document.getElementById('input-edit-app-pkg').value = app.package_name;
+      document.getElementById('input-edit-app-desc').value = app.description || '';
+      document.getElementById('edit-app-modal').classList.remove('hidden');
+    }
+
+    function closeEditAppModal() {
+      document.getElementById('edit-app-modal').classList.add('hidden');
+    }
+
+    async function submitEditApp(e) {
+      e.preventDefault();
+      const appId = document.getElementById('input-edit-app-id').value;
+      const name = document.getElementById('input-edit-app-name').value.trim();
+      const pkg = document.getElementById('input-edit-app-pkg').value.trim();
+      const desc = document.getElementById('input-edit-app-desc').value.trim();
+
+      try {
+        const res = await fetch(`${BASE_PATH}/api/apps`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_id: appId, name, package_name: pkg, description: desc })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('تغییرات برنامه با موفقیت ذخیره شد.', 'success');
+          closeEditAppModal();
+          await loadApps();
+          if(currentAppId === appId) renderCurrentAppBanner();
+        } else {
+          showToast('خطا: ' + data.error, 'error');
+        }
+      } catch (e) {
+        showToast('خطا در ذخیره تغییرات.', 'error');
+      }
+    }
+
+    async function deleteApp(appId, appName) {
+      if (!confirm(`آیا از حذف دائمی برنامه «${appName || appId}» اطمینان دارید؟\nتمام پچ‌ها و فایل‌های APK متعلق به این برنامه نیز برای همیشه از سرور پاک خواهند شد!`)) return;
+      try {
+        const res = await fetch(`${BASE_PATH}/api/apps/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_id: appId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`برنامه ${appName || appId} با موفقیت حذف گردید.`, 'info');
+          if (currentAppId === appId) {
+            currentAppId = '';
+          }
+          await loadApps();
+        } else {
+          showToast('خطا در حذف برنامه: ' + (data.error || 'ناشناخته'), 'error');
+        }
+      } catch (e) {
+        showToast('خطای شبکه در هنگام حذف برنامه: ' + e, 'error');
+      }
+    }
+
+    async function loadReleases() {
+      if (!currentAppId) return;
+      try {
+        const res = await fetch(`${BASE_PATH}/api/releases?app_id=${currentAppId}`);
+        const data = await res.json();
+        allReleasesData = Array.isArray(data) ? data : (data.releases || []);
+        
+        const tbody = document.getElementById('releases-table-body');
+        if (!tbody) return;
+        
+        document.getElementById('table-release-count').textContent = allReleasesData.length + ' نسخه';
+        
+        if (allReleasesData.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400">هیچ فایل APK برای این برنامه ثبت نشده است.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = allReleasesData.map(r => {
+          const isActive = r.is_active;
+          const bgClass = isActive ? 'bg-blue-50/50' : 'hover:bg-slate-50/80';
+          const badgeHtml = isActive 
+            ? '<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold">فعال (زنده)</span>'
+            : '<span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">غیرفعال</span>';
+          
+          return `
+            <tr class="${bgClass} transition-colors">
+              <td class="py-3 px-3">
+                <div class="flex flex-col">
+                  <span class="font-bold text-slate-900 font-mono text-sm" dir="ltr">v${r.version_name}</span>
+                  <span class="text-[10px] text-slate-400 font-mono" dir="ltr">build ${r.version_code}</span>
+                </div>
+              </td>
+              <td class="py-3 px-3 text-center">
+                ${badgeHtml}
+              </td>
+              <td class="py-3 px-3 text-center text-xs">
+                <div class="flex flex-col items-center gap-1">
+                  <span class="font-bold text-slate-700" dir="ltr">${r.formatted_size}</span>
+                  <span class="text-[10px] text-slate-400 flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">download</span>${r.download_count} دانلود</span>
+                </div>
+              </td>
+              <td class="py-3 px-3">
+                <div class="flex flex-col">
+                  <span class="text-[11px] text-slate-500 font-mono" dir="ltr">${r.created_at}</span>
+                  <span class="text-[10px] text-slate-400 truncate max-w-[120px]" title="${r.release_notes || 'بدون یادداشت'}">${r.release_notes || '-'}</span>
+                </div>
+              </td>
+              <td class="py-3 px-3 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                  <a href="${r.download_url}" target="_blank" class="h-7 w-7 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 rounded flex items-center justify-center transition-colors border border-slate-200" title="دانلود APK">
+                    <span class="material-symbols-outlined text-[16px]">download</span>
+                  </a>
+                  ${!isActive ? `
+                  <button onclick="activateRelease(${r.id})" class="h-7 px-2 bg-white hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded flex items-center gap-1 transition-colors border border-slate-200" title="انتخاب به عنوان نسخه فعال">
+                    <span class="material-symbols-outlined text-[16px]">task_alt</span>
+                    <span class="text-[10px] font-bold">فعال‌سازی</span>
+                  </button>
+                  ` : ''}
+                  <button onclick="deleteRelease(${r.id})" class="h-7 w-7 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded flex items-center justify-center transition-colors border border-slate-200" title="حذف دائم">
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch(e) {
+        console.error('loadReleases error:', e);
+      }
+    }
+
+    async function activateRelease(releaseId) {
+      if(!confirm('آیا مطمئن هستید که می‌خواهید این فایل APK را به عنوان نسخه زنده (فعال) برای کاربران تنظیم کنید؟')) return;
+      try {
+        const res = await fetch(`${BASE_PATH}/api/releases/activate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_id: currentAppId, release_id: releaseId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('نسخه APK با موفقیت فعال شد.', 'success');
+          await loadReleases();
+        } else {
+          showToast('خطا: ' + data.error, 'error');
+        }
+      } catch(e) {
+        showToast('خطای شبکه', 'error');
+      }
+    }
+
+    async function deleteRelease(releaseId) {
+      if(!confirm('آیا از حذف این فایل APK اطمینان دارید؟')) return;
+      try {
+        const res = await fetch(`${BASE_PATH}/api/releases/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ release_id: releaseId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('فایل APK حذف شد.', 'info');
+          await loadReleases();
+        } else {
+          showToast('خطا: ' + data.error, 'error');
+        }
+      } catch(e) {
+        showToast('خطای شبکه', 'error');
+      }
+    }
+
+
+    let selectedApkFile = null;
+
+    function handleApkFileChange(files) {
+      if (!files || files.length === 0) return;
+      selectedApkFile = files[0];
+      const badge = document.getElementById('selected-apk-badge');
+      const nameEl = document.getElementById('selected-apk-name');
+      const sizeEl = document.getElementById('selected-apk-size');
+      if (nameEl) nameEl.textContent = selectedApkFile.name;
+      if (sizeEl) sizeEl.textContent = `سایز: ${(selectedApkFile.size / (1024 * 1024)).toFixed(2)} مگابایت`;
+      if (badge) badge.style.display = 'flex';
+      showToast(`فایل ${selectedApkFile.name} با موفقیت انتخاب شد.`, 'success');
+    }
+
+    function handleReleaseFileSelect(input) {
+      if (input && input.files) {
+        handleApkFileChange(input.files);
+      }
+    }
+
+    function setupReleaseDragDrop() {
+      const dropZone = document.getElementById('apk-drop-zone');
+      const input = document.getElementById('real-apk-file-input');
+      if (!dropZone || !input) return;
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+      });
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('border-blue-500', 'bg-blue-50'), false);
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-blue-500', 'bg-blue-50'), false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          if (files[0].name.endsWith('.apk')) {
+            handleApkFileChange(files);
+          } else {
+            showToast('فقط فایل‌های APK (.apk) مجاز هستند.', 'error');
+          }
+        }
+      });
+    }
+
+    async function toggleForceRelease(releaseId) {
+      try {
+        const res = await fetch(`${BASE_PATH}/api/releases/toggle_force`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ release_id: releaseId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('سیاست نسخه APK به‌روزرسانی شد.', 'info');
+          await loadReleases();
+        }
+      } catch (e) {
+        showToast('خطا: ' + e, 'error');
+      }
+    }
+
+    async function uploadRelease() {
+      if (!currentAppId) {
+        showToast('لطفاً ابتدا یک برنامه ثبت یا انتخاب کنید.', 'error');
+        return;
+      }
+      if (!selectedApkFile) {
+        showToast('لطفاً ابتدا فایل APK (.apk) را انتخاب فرمایید.', 'error');
+        return;
+      }
+      const verName = document.getElementById('input-release-vername').value.trim();
+      const verCode = document.getElementById('input-release-vercode').value.trim();
+      if (!verName || !verCode) {
+        showToast('نام نسخه (Version Name) و کد بیلد (Version Code) هر دو الزامی هستند.', 'error');
+        return;
+      }
+      const isForce = document.getElementById('select-release-policy').value === 'force' ? '1' : '0';
+      const activate = document.getElementById('auto-deploy-release').checked ? '1' : '0';
+      const notes = document.getElementById('textarea-release-notes').value.trim();
+
+      const btn = document.getElementById('btn-deploy-release');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[17px] animate-spin">refresh</span><span>در حال بارگذاری APK و محاسبه هش...</span>';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedApkFile);
+        formData.append('app_id', currentAppId);
+        formData.append('version_name', verName);
+        formData.append('version_code', verCode);
+        formData.append('is_force', isForce);
+        formData.append('activate', activate);
+        formData.append('notes', notes);
+        formData.append('filename', selectedApkFile.name);
+
+        const res = await fetch(`${BASE_PATH}/api/releases/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`نسخه APK v${verName} (بیلد ${verCode}) با موفقیت ثبت شد!`, 'success');
+          document.getElementById('input-release-vername').value = '';
+          document.getElementById('input-release-vercode').value = '';
+          document.getElementById('textarea-release-notes').value = '';
+          selectedApkFile = null;
+          const badge = document.getElementById('selected-apk-badge');
+          if(badge) badge.style.display = 'none';
+          
+          await loadApps();
+          await loadReleases();
+        } else {
+          showToast('خطا در سرور: ' + (data.error || 'ناشناخته'), 'error');
+        }
+      } catch (e) {
+        showToast('خطای شبکه در هنگام آپلود APK: ' + e, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+
+  
+    function copyCliCommand() {
+      const cmd = "python tool/publish_patch.py --version 1.0.2 --server http://localhost --skip-build";
+      navigator.clipboard.writeText(cmd).then(() => {
+        showToast("دستور CLI در حافظه کپی شد!", "success");
+        const btn = document.getElementById("btn-copy-cli");
+        if (btn) {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">check</span><span>کپی شد</span>';
+          setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }
+      }).catch(err => {
+        prompt("دستور را کپی کنید:", cmd);
+      });
+    }
+
+    let selectedBundleFile = null;
+
+    function handleBundleChange(files) {
+      if (!files || files.length === 0) return;
+      selectedBundleFile = files[0];
+      const badge = document.getElementById("selected-file-badge");
+      const nameEl = document.getElementById("selected-file-name");
+      const sizeEl = document.getElementById("selected-file-size");
+      if (nameEl) nameEl.textContent = selectedBundleFile.name;
+      if (sizeEl) sizeEl.textContent = `${(selectedBundleFile.size / (1024 * 1024)).toFixed(2)} MB`;
+      if (badge) badge.style.display = "flex";
+      showToast(`بسته ${selectedBundleFile.name} انتخاب شد.`, "info");
+    }
+
+    async function uploadBundle() {
+      if (!selectedBundleFile) {
+        showToast("لطفاً ابتدا فایل patch_bundle_vX.zip را انتخاب کنید.", "error");
+        return;
+      }
+      const btn = document.getElementById("btn-deploy-patch");
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>در حال استقرار بسته...</span>';
+
+      try {
+        const formData = new FormData();
+        formData.append("bundle", selectedBundleFile);
+        formData.append("channel", "stable");
+
+        const res = await fetch("/api/v1/ota/publish/", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`پچ v${data.version} با ${data.artifacts.length} معماری با موفقیت مستقر شد!`, "success");
+          selectedBundleFile = null;
+          document.getElementById("selected-file-badge").style.display = "none";
+          await loadPatches();
+          switchTab("patches");
+        } else {
+          showToast("خطا در استقرار: " + (data.error || "نامشخص"), "error");
+        }
+      } catch (err) {
+        showToast("خطای شبکه: " + err, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+      }
+    }
+</script>
+</body>
+</html>

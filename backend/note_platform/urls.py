@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/plugins/quran/', include('plugins.quran.urls')),
     path('api/plugins/', include('apps.plugin_system.urls')),
     path('api/subscriptions/', include('apps.subscriptions.urls')),
+    path('', include('apps.ota.urls')),
     path('api/v1/subscriptions/', include('apps.subscriptions.urls')),
     
     # سرو فایل‌های آپلود شده بدون وابستگی به DEBUG

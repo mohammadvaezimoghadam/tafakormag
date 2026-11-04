@@ -49,6 +49,8 @@ services:
       - ./backend:/app
       - dev_static_volume:/app/staticfiles
       - dev_media_volume:/app/media
+      - dev_patches_volume:/app/patches
+      - dev_releases_volume:/app/releases
     depends_on:
       db:
         condition: service_healthy
@@ -79,6 +81,8 @@ volumes:
   dev_postgres_data:
   dev_static_volume:
   dev_media_volume:
+  dev_patches_volume:
+  dev_releases_volume:
 
 networks:
   tafakor_dev_net:

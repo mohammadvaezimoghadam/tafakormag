@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.donations',
     'apps.plugin_system',
     'apps.subscriptions',
+    'apps.ota',
 ]
 
 # ==============================================================================
@@ -239,7 +240,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # آپلود فایل (افزایش سقف حجم فایل برای تصاویر پروفایل و تاپیک‌ها)
 # ==============================================================================
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2147483648  # 2 GB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500 MB
 
 LOGGING = {
     'version': 1,
@@ -268,3 +269,14 @@ LOGGING = {
 AI_API_KEY = os.getenv('AI_API_KEY', config('AI_API_KEY', default=''))
 AI_API_BASE_URL = os.getenv('AI_API_BASE_URL', config('AI_API_BASE_URL', default='https://openrouter.ai/api/v1'))
 AI_MODEL = os.getenv('AI_MODEL', config('AI_MODEL', default='openai/gpt-4o-mini'))
+
+# ==============================================================================
+# سامانه پچ و توزیع آنلاین فلاتر (OTA & Native Release Hub)
+# ==============================================================================
+PATCHES_URL = '/patches/'
+PATCHES_ROOT = os.path.join(BASE_DIR, 'patches')
+RELEASES_URL = '/releases/'
+RELEASES_ROOT = os.path.join(BASE_DIR, 'releases')
+
+os.makedirs(PATCHES_ROOT, exist_ok=True)
+os.makedirs(RELEASES_ROOT, exist_ok=True)

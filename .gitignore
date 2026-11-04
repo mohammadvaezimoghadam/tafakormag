@@ -10,6 +10,8 @@ db.sqlite3
 /media/
 /staticfiles/
 backend/media/
+backend/patches/
+backend/releases/
 
 
 
