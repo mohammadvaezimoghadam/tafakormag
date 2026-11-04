@@ -1,6 +1,10 @@
-    const BASE_PATH = window.location.pathname.startsWith('/ota') ? '/ota' : (window.location.pathname.startsWith('/patcher') ? '/patcher' : '');
+    const BASE_PATH = (window.OTA_CONFIG && typeof window.OTA_CONFIG.basePath === 'string') 
+      ? window.OTA_CONFIG.basePath 
+      : (window.location.pathname.startsWith('/ota') ? '/ota' : '');
 
-    let currentAppId = '{{ current_app.app_id|default:"" }}';
+    let currentAppId = (window.OTA_CONFIG && window.OTA_CONFIG.currentAppId) 
+      ? window.OTA_CONFIG.currentAppId 
+      : '';
     let appsList = [];
     let selectedFile = null;
     let allPatchesData = [];
@@ -1147,7 +1151,7 @@
           selectedBundleFile = null;
           document.getElementById("selected-file-badge").style.display = "none";
           await loadPatches();
-          switchTab("patches");
+          switchView("rollback");
         } else {
           showToast("خطا در استقرار: " + (data.error || "نامشخص"), "error");
         }
@@ -1158,4 +1162,3 @@
         btn.innerHTML = orig;
       }
     }
-</script>
