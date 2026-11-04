@@ -14,7 +14,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 class UserSubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'plugin_identifier', 'plan', 'status', 'starts_at', 'expires_at', 'source', 'is_valid_display')
     list_filter = ('plugin_identifier', 'status', 'source')
-    search_fields = ('user__phone_number', 'user__username', 'plugin_identifier')
+    search_fields = ('user__phone', 'user__first_name', 'user__last_name', 'plugin_identifier')
     raw_id_fields = ('user', 'plan')
     date_hierarchy = 'expires_at'
 
@@ -27,7 +27,7 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
 class PurchaseVerificationLogAdmin(admin.ModelAdmin):
     list_display = ('user', 'sku', 'marketplace', 'is_verified', 'purchase_token_preview', 'created_at')
     list_filter = ('marketplace', 'is_verified', 'created_at')
-    search_fields = ('user__phone_number', 'user__username', 'sku', 'purchase_token')
+    search_fields = ('user__phone', 'user__first_name', 'user__last_name', 'sku', 'purchase_token')
     raw_id_fields = ('user', 'plan')
     readonly_fields = ('created_at', 'bazaar_payload')
 

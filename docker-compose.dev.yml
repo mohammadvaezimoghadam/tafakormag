@@ -1,0 +1,82 @@
+name: tafakor_dev
+
+services:
+  db:
+    image: postgres:15
+    container_name: tafakor_dev_db
+    environment:
+      POSTGRES_DB: tafakor_dev
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    networks:
+      - tafakor_dev_net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: tafakor_dev_backend
+    env_file:
+      - .env
+    entrypoint: []
+    command: [ "sh", "-c", "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py createcachetable && python manage.py collectstatic --noinput && python manage.py import_quran --seed && gunicorn note_platform.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 300" ]
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
+      - ALLOWED_HOSTS=*
+      - DB_NAME=tafakor_dev
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-admin}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://5.202.19.101:8086}
+      - BAZAAR_SANDBOX=true
+      - KAVENEGAR_API_KEY=${KAVENEGAR_API_KEY:-}
+      - KAVENEGAR_SENDER=${KAVENEGAR_SENDER:-}
+      - BOT_API_KEY=${BOT_API_KEY:-}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_API_BASE_URL=${AI_API_BASE_URL:-https://openrouter.ai/api/v1}
+      - AI_MODEL=${AI_MODEL:-google/gemma-4-31b-it:free}
+    volumes:
+      - ./backend:/app
+      - dev_static_volume:/app/staticfiles
+      - dev_media_volume:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tafakor_dev_net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_BASE_URL=/
+        - VITE_BALE_OTP_BOT_URL=${VITE_BALE_OTP_BOT_URL:-https://ble.ir/tafakor_otp_bot}
+        - NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmmirror.com}
+    container_name: tafakor_dev_frontend
+    ports:
+      - "8086:80"
+    volumes:
+      - dev_static_volume:/app/staticfiles
+    depends_on:
+      - backend
+    networks:
+      - tafakor_dev_net
+
+volumes:
+  dev_postgres_data:
+  dev_static_volume:
+  dev_media_volume:
+
+networks:
+  tafakor_dev_net:
+    driver: bridge
+

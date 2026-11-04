@@ -90,6 +90,15 @@ KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', config('KAVENEGAR_SENDER', defa
 # ==============================================================================
 ZARINPAL_SANDBOX = os.getenv('ZARINPAL_SANDBOX', config('ZARINPAL_SANDBOX', default='True')) == 'True'
 ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', config('ZARINPAL_MERCHANT_ID', default='00000000-0000-0000-0000-000000000000'))
+
+# ==============================================================================
+# پیکربندی وب‌سرویس توسعه‌دهندگان کافه‌بازار (Cafe Bazaar In-App Purchase API)
+# ==============================================================================
+BAZAAR_SANDBOX = os.getenv('BAZAAR_SANDBOX', config('BAZAAR_SANDBOX', default='True')) == 'True'
+BAZAAR_CLIENT_ID = os.getenv('BAZAAR_CLIENT_ID', config('BAZAAR_CLIENT_ID', default=''))
+BAZAAR_CLIENT_SECRET = os.getenv('BAZAAR_CLIENT_SECRET', config('BAZAAR_CLIENT_SECRET', default=''))
+BAZAAR_REFRESH_TOKEN = os.getenv('BAZAAR_REFRESH_TOKEN', config('BAZAAR_REFRESH_TOKEN', default=''))
+BAZAAR_PACKAGE_NAME = os.getenv('BAZAAR_PACKAGE_NAME', config('BAZAAR_PACKAGE_NAME', default='com.tafakor.quran'))
 def _resolve_frontend_base_url() -> str:
     env_url = (os.getenv('FRONTEND_BASE_URL') or config('FRONTEND_BASE_URL', default='')).strip().rstrip('/')
     if env_url:
