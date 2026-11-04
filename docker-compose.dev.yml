@@ -21,7 +21,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: ./backend/Dockerfile
+      dockerfile: ./backend/Dockerfile.dev
     image: tafakor-backend:dev
     container_name: tafakor_dev_backend
     env_file:
@@ -58,6 +58,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile.dev
+      target: development
       args:
         - VITE_API_BASE_URL=/
         - VITE_BALE_OTP_BOT_URL=${VITE_BALE_OTP_BOT_URL:-https://ble.ir/tafakor_otp_bot}
