@@ -1,0 +1,135 @@
+      <!-- ==================== VIEW 5: NATIVE APK RELEASES ==================== -->
+      <div id="view-releases" class="view-tab hidden space-y-6">
+        <!-- Top Informational Callout -->
+        <div class="bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-400/30">
+              <span class="material-symbols-outlined text-[24px]">android</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-extrabold text-white">مدیریت و انتشار ریلیزهای نصبی نیتیو (Full APK Releases)</h3>
+                <span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-mono">Hybrid Architecture</span>
+              </div>
+              <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                هنگامی که تغییراتی در کد کاتلین/سوئیفت، پلاگین‌های نیتیو، پرمیشن‌ها یا بیلد گریدل داده‌اید، پچ دارت پاسخگو نخواهد بود. فایل کامل APK را در این بخش بارگذاری فرمایید. کلاینت فلاتر هنگام بررسی آپدیت، ابتدا کد بیلد را تطبیق داده و در صورت نیاز، کاربر را مستقیماً به دانلود و نصب APK هدایت خواهد کرد.
+              </p>
+            </div>
+          </div>
+          <div class="shrink-0 flex items-center gap-2">
+            <span class="text-xs bg-white/10 px-3 py-1.5 rounded-lg font-mono border border-white/20 text-blue-200">update_type: "native"</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Form: Upload New APK (1 col) -->
+          <div class="lg:col-span-1 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="pb-3 mb-4 border-b border-slate-100">
+                <h2 class="text-sm text-slate-900 font-extrabold flex items-center gap-2">
+                  <span class="material-symbols-outlined text-blue-600 text-[20px]">upload_file</span>
+                  <span>بارگذاری و انتشار APK جدید</span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">ثبت بیلد نصبی کامل با شماره ساخت بالاتر</p>
+              </div>
+
+              <!-- Drag & Drop Zone for APK -->
+              <div class="bg-slate-50 hover:bg-slate-100/80 transition-all border-2 border-dashed border-slate-300 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer mb-4" id="apk-drop-zone" onclick="document.getElementById('real-apk-file-input').click()">
+                <input type="file" id="real-apk-file-input" class="hidden" accept=".apk" onchange="handleApkFileChange(this.files)">
+                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                  <span class="material-symbols-outlined text-[22px]">android</span>
+                </div>
+                <span class="text-xs text-slate-800 font-bold">انتخاب فایل نصبی (.apk)</span>
+                <span class="text-[11px] text-slate-400 mt-1">فایل app-release.apk تولید شده توسط Flutter</span>
+                <div class="mt-2.5 flex items-center gap-2" id="selected-apk-badge" style="display: none;">
+                  <span class="font-mono text-xs bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-1 rounded-md font-bold truncate max-w-[150px]" dir="ltr" id="selected-apk-name">app.apk</span>
+                  <span class="text-xs text-slate-500 font-semibold" id="selected-apk-size">۰ MB</span>
+                </div>
+              </div>
+
+              <div class="space-y-3.5">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">نام نسخه (Version Name) *</label>
+                  <input type="text" id="input-release-vername" placeholder="مثال: 1.1.0 یا 2.0.0" dir="ltr" class="w-full h-9 px-3 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-bold">
+                  <span class="text-[10px] text-slate-400 mt-0.5 block">معادل versionName در گریدل یا pubspec</span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">کد ساخت بیلد (Version Code / Build Number) *</label>
+                  <input type="number" id="input-release-vercode" placeholder="مثال: 2" min="1" dir="ltr" class="w-full h-9 px-3 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-bold">
+                  <span class="text-[10px] text-amber-600 mt-0.5 block">الزام: باید حتماً از کدهای بیلد قبلی بزرگتر باشد</span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">سیاست دریافت آپدیت</label>
+                  <select id="select-release-policy" class="w-full h-9 px-3 bg-white text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-semibold">
+                    <option value="optional" selected>اختیاری (پیشنهاد آپدیت به کاربر)</option>
+                    <option value="force">اجباری (مسدودسازی تا زمان دانلود و نصب APK)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700 font-bold pt-1">
+                    <input type="checkbox" id="auto-deploy-release" checked class="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer">
+                    <span>فعال‌سازی فوری به عنوان نسخه زنده (Live Deploy)</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">یادداشت تغییرات نسخه (Release Notes)</label>
+                  <textarea id="textarea-release-notes" rows="2" placeholder="توضیحات ویژگی‌های جدید یا دلایل به‌روزرسانی نیتیو..." class="w-full px-3 py-1.5 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white transition-all leading-relaxed"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400 font-mono">MD5 & SHA256 خودکار</span>
+              <button type="button" id="btn-deploy-release" onclick="uploadRelease()" class="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[17px]">publish</span>
+                <span>بارگذاری و انتشار APK</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table: Existing Releases (2 cols) -->
+          <div class="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 flex-wrap gap-2">
+                <div>
+                  <h2 class="text-sm text-slate-900 font-extrabold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-600 text-[20px]">format_list_bulleted</span>
+                    <span>ماتریس ریلیزهای نصبی APK</span>
+                  </h2>
+                  <p class="text-xs text-slate-500 mt-0.5">لیست تمام فایل‌های APK ذخیره‌شده و آماده دانلود مستقیم</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 flex items-center gap-1" onclick="loadReleases()">
+                    <span class="material-symbols-outlined text-[15px]">refresh</span>
+                    <span>به‌روزرسانی</span>
+                  </button>
+                  <span class="text-xs bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-full font-medium" id="table-release-count">۰ نسخه</span>
+                </div>
+              </div>
+
+              <div class="w-full overflow-x-auto">
+                <table class="w-full text-right border-collapse text-xs">
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                      <th class="py-2.5 px-3 font-bold">نسخه و بیلد</th>
+                      <th class="py-2.5 px-3 font-bold text-center">سیاست دریافت</th>
+                      <th class="py-2.5 px-3 font-bold text-center">حجم و دانلودها</th>
+                      <th class="py-2.5 px-3 font-bold">تاریخ ثبت</th>
+                      <th class="py-2.5 px-3 font-bold text-center">عملیات و فایل</th>
+                    </tr>
+                  </thead>
+                  <tbody id="releases-table-body" class="divide-y divide-slate-100">
+                    <!-- Rendered via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+

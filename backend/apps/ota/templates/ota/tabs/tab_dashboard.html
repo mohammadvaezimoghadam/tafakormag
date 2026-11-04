@@ -1,0 +1,145 @@
+      <!-- ==================== VIEW 1: DASHBOARD ==================== -->
+      <div id="view-dashboard" class="view-tab space-y-6">
+        
+        <!-- 3 Key Metric Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Card 1: Active Patch Status -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-500 uppercase">نسخه فعال جاری</span>
+                {% if active_patch %}
+                <span id="live-status-chip" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>فعال در کلاینت‌ها</span>
+                </span>
+                {% else %}
+                <span id="live-status-chip" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                  <span>بدون پچ فعال</span>
+                </span>
+                {% endif %}
+              </div>
+              <div class="text-2xl sm:text-3xl font-black font-mono text-slate-900 my-2" dir="ltr" id="current-patch-version">{% if active_patch %}v{{ active_patch.version }}{% else %}نسخه خام استور{% endif %}</div>
+              <div class="text-xs text-slate-500 leading-relaxed truncate" id="meta-notes-text">{% if active_patch %}{{ active_patch.release_notes|default:"بدون یادداشت فنی" }}{% else %}کاربران هم‌اکنون به نسخه اصلی استور متصل هستند.{% endif %}</div>
+            </div>
+            <div class="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[11px] text-slate-400 font-mono" id="meta-date">{% if active_patch %}{{ active_patch.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</span>
+              <button onclick="switchView('rollback')" class="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-all font-bold flex items-center gap-1">
+                <span>مشاهده تاریخچه</span>
+                <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: Update Policy -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-500 uppercase">سیاست دریافت آپدیت</span>
+                <span class="material-symbols-outlined text-slate-400 text-[20px]">policy</span>
+              </div>
+              <div class="text-xl sm:text-2xl font-black text-slate-900 my-2" id="policy-chip">{% if active_patch %}{% if active_patch.is_force %}اجباری (Force Update){% else %}اختیاری (Optional){% endif %}{% else %}پیش‌فرض استور{% endif %}</div>
+              <p class="text-xs text-slate-500">نحوه برخورد اپلیکیشن کلاینت هنگام دریافت پچ</p>
+            </div>
+            <div class="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+              <span>کد بیلد تارگت:</span>
+              <span class="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" id="meta-target-code">{% if active_patch %}{{ active_patch.target_version_code }}{% else %}-{% endif %}</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Storage & Check API -->
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-500 uppercase">کل پچ‌های ذخیره‌شده</span>
+                <span class="material-symbols-outlined text-slate-400 text-[20px]">layers</span>
+              </div>
+              <div class="text-2xl sm:text-3xl font-black text-blue-600 my-2 flex items-baseline gap-2">
+                <span id="stat-patch-count">{{ current_app.total_patches|default:0 }}</span>
+                <span class="text-xs font-bold text-slate-500">نسخه در دیتابیس</span>
+              </div>
+              <p class="text-xs text-slate-500">پایگاه داده سبک و مستقل SQLite در پوشه محلی</p>
+            </div>
+            <div class="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs text-slate-500">تست کلاینت:</span>
+              <a href="{% if current_app %}/check?app_id={{ current_app.app_id }}{% else %}#{% endif %}" id="stat-test-link" target="_blank" class="text-xs text-blue-600 hover:underline font-mono font-bold">{% if current_app %}/check?app_id={{ current_app.app_id }} ↗{% else %}-{% endif %}</a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Recent Patches Table Card -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+          <div class="flex items-center justify-between pb-4 mb-3 border-b border-slate-100 flex-wrap gap-2">
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-900">آخرین پچ‌های ثبت‌شده</h2>
+              <p class="text-xs text-slate-500">نسخه‌های اخیر ایجاد شده برای این برنامه</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="switchView('publisher')" class="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+                <span>+ انتشار پچ جدید</span>
+              </button>
+              <button onclick="switchView('rollback')" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all border border-slate-200 flex items-center gap-1">
+                <span>مدیریت تاریخچه</span>
+                <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+              </button>
+            </div>
+          </div>
+          <div class="w-full overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                  <th class="py-2.5 px-3 font-bold">نسخه (SemVer)</th>
+                  <th class="py-2.5 px-3 font-bold text-center">وضعیت</th>
+                  <th class="py-2.5 px-3 font-bold text-center">دستگاه / معماری</th>
+                  <th class="py-2.5 px-3 font-bold text-center">سیاست دریافت</th>
+                  <th class="py-2.5 px-3 font-bold text-center">بیلد تارگت (سایز)</th>
+                  <th class="py-2.5 px-3 font-bold">تاریخ ثبت</th>
+                  <th class="py-2.5 px-3 font-bold">یادداشت تغییرات</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-recent-table" class="divide-y divide-slate-100">
+                {% if recent_patches %}
+                  {% for p in recent_patches %}
+                  <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-2.5 px-3 font-mono font-bold text-blue-600" dir="ltr">v{{ p.version }}</td>
+                    <td class="py-2.5 px-3 text-center">
+                      {% if p.is_active %}
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">فعال (Live)</span>
+                      {% else %}
+                      <span class="px-2 py-0.5 rounded text-[10px] text-slate-500 bg-slate-100 border border-slate-200">آرشیو</span>
+                      {% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      {% if p.target_abi == 'arm64-v8a' %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">📱 گوشی واقعی</span>
+                      {% elif p.target_abi == 'x86_64' %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">💻 امولاتور</span>
+                      {% elif p.target_abi == 'armeabi-v7a' %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 inline-flex items-center gap-1">📱 ۳۲بیتی</span>
+                      {% else %}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">🌐 همه دستگاه‌ها</span>
+                      {% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      {% if p.is_force %}<span class="text-red-600 font-bold">اجباری</span>{% else %}<span class="text-slate-500">اختیاری</span>{% endif %}
+                    </td>
+                    <td class="py-2.5 px-3 text-center font-mono">{{ p.target_version_code }} ({{ p.formatted_size }})</td>
+                    <td class="py-2.5 px-3 text-slate-500 whitespace-nowrap">{{ p.created_at|date:"Y-m-d H:i" }}</td>
+                    <td class="py-2.5 px-3 text-slate-600 truncate max-w-xs">{{ p.release_notes|default:"-" }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                <tr>
+                  <td colspan="7" class="text-center py-6 text-slate-400">هنوز هیچ پچی برای این برنامه ثبت نشده است.</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+

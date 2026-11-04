@@ -1,0 +1,77 @@
+  <aside id="main-sidebar" class="fixed right-0 top-0 h-full w-64 bg-white z-50 flex flex-col justify-between border-l border-slate-200/80 shadow-xs transition-transform duration-300 translate-x-full lg:translate-x-0">
+    <div class="flex flex-col">
+      <!-- Sidebar Brand Header -->
+      <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-xs">
+            ⚡
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-extrabold text-slate-900 leading-tight">فلاتر او‌تی‌ای</span>
+            <span class="text-[10px] text-slate-400 font-mono tracking-tight" dir="ltr">Flutter OTA Hub</span>
+          </div>
+        </div>
+        <div class="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50" title="سرور آنلاین"></div>
+      </div>
+
+      <!-- App Switcher in Sidebar -->
+      <div class="p-4 border-b border-slate-100">
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">برنامه فعال (Workspace)</span>
+        <button onclick="openAppModal()" class="w-full flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200/80 text-right transition-all group">
+          <div class="flex items-center gap-2.5 truncate">
+            <div class="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-xs border border-slate-200 flex items-center justify-center bg-blue-600 text-white font-black text-xs" id="sidebar-app-avatar" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
+              {% if current_app.icon %}
+                <img src="{{ current_app.icon.url }}" alt="{{ current_app.name }}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;">
+              {% elif current_app %}
+                {{ current_app.name|slice:":2" }}
+              {% else %}
+                <span class="material-symbols-outlined text-[18px]">apps</span>
+              {% endif %}
+            </div>
+            <div class="flex flex-col truncate text-right">
+              <span class="text-xs font-bold text-slate-900 truncate" id="sidebar-app-name">{{ current_app.name|default:"برنامه‌ای ثبت نشده" }}</span>
+              <span class="text-[10px] text-slate-400 font-mono truncate" dir="ltr" id="sidebar-app-pkg">{{ current_app.package_name|default:"-" }}</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-slate-400 group-hover:text-blue-600 text-[18px]">unfold_more</span>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="px-4 py-3">
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">کنترل پنل مرکزی</span>
+        <nav class="flex flex-col gap-1.5" id="sidebar-nav">
+          <button onclick="switchView('dashboard')" data-view="dashboard" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-600 text-white shadow-xs font-bold text-xs text-right w-full transition-all">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">dashboard</span>داشبورد و وضعیت زنده</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('publisher')" data-view="publisher" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">cloud_upload</span>انتشار پچ جدید</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('rollback')" data-view="rollback" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">history</span>تاریخچه و رول‌بک</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('releases')" data-view="releases" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">android</span>انتشار و مدیریت APK</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="switchView('apps')" data-view="apps" class="nav-link flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all text-xs font-semibold text-right w-full">
+            <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px]">apps</span>مدیریت برنامه‌ها</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+          <button onclick="openNewAppModal()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-blue-600 hover:bg-blue-50 transition-all text-xs font-bold text-right w-full mt-2 border border-dashed border-blue-200">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">add_box</span>+ ثبت برنامه جدید</span>
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Sidebar Bottom Status -->
+    <div class="px-5 py-3 text-[11px] text-slate-400 border-t border-slate-100 flex items-center justify-between font-mono" dir="ltr">
+      <span id="serverHostInfo">Host: {{ server_host }}:{{ server_port }}</span>
+      <span class="text-emerald-600 font-bold flex items-center gap-1">● Online</span>
+    </div>
+  </aside>

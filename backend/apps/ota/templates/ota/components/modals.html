@@ -1,0 +1,105 @@
+  <!-- Modals & Toasts Container -->
+  <div class="fixed bottom-6 left-6 z-50 flex flex-col gap-2 pointer-events-none" id="toast-container"></div>
+
+  <!-- Modal: App Switcher -->
+  <div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="app-switcher-modal">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl text-right">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-base text-slate-900 font-extrabold">انتخاب برنامه فعال (Workspace)</span>
+        <button class="text-slate-400 hover:text-slate-700" onclick="closeAppModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-2.5 mb-4 max-h-80 overflow-y-auto" id="modal-apps-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: New App -->
+  <div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="new-app-modal">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl text-right">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-base text-slate-900 font-extrabold">ثبت و اتصال برنامه فلاتر جدید</span>
+        <button class="text-slate-400 hover:text-slate-700" onclick="closeNewAppModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <form class="flex flex-col gap-3.5" onsubmit="submitNewApp(event)">
+        <!-- App Icon Picker -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs text-slate-800 font-bold">تصویر / لوگوی برنامه (اختیاری)</label>
+          <div class="flex items-center gap-3">
+            <div id="new-app-icon-preview" class="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+              <span class="material-symbols-outlined text-slate-400 text-[24px]">image</span>
+            </div>
+            <div class="flex-1">
+              <input type="file" id="input-new-app-icon" accept="image/*" class="hidden" onchange="handleNewAppIconSelect(this)">
+              <button type="button" onclick="document.getElementById('input-new-app-icon').click()" class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors">
+                <span class="material-symbols-outlined text-[16px]">upload</span>
+                <span>انتخاب تصویر...</span>
+              </button>
+              <span class="text-[10px] text-slate-400 block mt-1">فرمت‌های PNG، JPG، WebP، SVG</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">شناسه برنامه (App ID) *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" dir="ltr" id="input-new-app-id" placeholder="مثال: my_app" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">نام نمایشی برنامه *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-new-app-name" placeholder="مثال: اپلیکیشن من" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">Package Name / Bundle ID *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" dir="ltr" id="input-new-app-pkg" placeholder="مثال: com.example.myapp" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">توضیحات کوتاه</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-new-app-desc" placeholder="توضیحات اختیاری" type="text">
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button class="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-semibold" onclick="closeNewAppModal()" type="button">انصراف</button>
+          <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs" type="submit">ثبت و اتصال</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Core JavaScript -->
+
+  <!-- Modal: Edit App -->
+  <div class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center hidden" id="edit-app-modal">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-md shadow-2xl text-right">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <span class="text-base text-slate-900 font-extrabold flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-600 text-[20px]">edit</span>
+          <span>ویرایش مشخصات برنامه</span>
+        </span>
+        <button class="text-slate-400 hover:text-slate-700" onclick="closeEditAppModal()" type="button">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <form class="flex flex-col gap-3.5" onsubmit="submitEditApp(event)">
+        <input type="hidden" id="input-edit-app-id">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">نام نمایشی برنامه *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-edit-app-name" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">Package Name / Bundle ID *</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs font-mono rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" dir="ltr" id="input-edit-app-pkg" required type="text">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs text-slate-800 font-bold">توضیحات کوتاه</label>
+          <input class="w-full px-3 py-2 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500" id="input-edit-app-desc" type="text">
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button class="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs font-semibold" onclick="closeEditAppModal()" type="button">انصراف</button>
+          <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs" type="submit">ذخیره تغییرات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+

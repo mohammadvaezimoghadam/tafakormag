@@ -1,0 +1,47 @@
+      <!-- ==================== VIEW 3: VERSION ROLLBACK MATRIX ==================== -->
+      <div id="view-rollback" class="view-tab hidden space-y-6">
+        <div class="w-full bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-col">
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 flex-wrap gap-3">
+            <div>
+              <h2 class="text-base text-slate-900 font-extrabold flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600 text-[22px]">history</span>
+                <span>تاریخچه نسخه‌ها و ماتریس بازگشت به عقب (Rollback Matrix)</span>
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">مشاهده تمام پچ‌های ثبت‌شده برای این برنامه با قابلیت رول‌بک اختصاصی و فوری به نسخه‌های قبل.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="relative">
+                <input type="text" id="search-patches" oninput="filterPatchesTable()" placeholder="جستجوی نسخه، هش یا یادداشت..." class="h-8 pr-8 pl-3 bg-slate-50 text-slate-900 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 font-sans w-52">
+                <span class="material-symbols-outlined absolute right-2 top-2 text-slate-400 text-[16px]">search</span>
+              </div>
+              <button class="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 flex items-center gap-1" onclick="loadPatches()">
+                <span class="material-symbols-outlined text-[15px]">refresh</span>
+                <span>به‌روزرسانی</span>
+              </button>
+              <span class="text-xs bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1 rounded-full font-medium" id="table-patch-count">۰ نسخه ثبت‌شده</span>
+            </div>
+          </div>
+
+          <!-- Clean 5-Column Table Container -->
+          <div class="w-full overflow-x-auto">
+            <table class="w-full text-right border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200/80">
+                  <th class="py-3 px-4 rounded-r-lg">نسخه و وضعیت</th>
+                  <th class="py-3 px-3 text-center">مشخصات بیلد</th>
+                  <th class="py-3 px-3 text-center">دستگاه / معماری</th>
+                  <th class="py-3 px-3 text-center">نوع آپدیت</th>
+                  <th class="py-3 px-4">تاریخ ثبت و یادداشت</th>
+                  <th class="py-3 px-4 text-left rounded-l-lg" dir="ltr">عملیات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100" id="patches-table-body">
+                <tr>
+                  <td colspan="5" class="text-center py-8 text-slate-400">در حال دریافت لیست نسخه‌ها...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+

@@ -1,0 +1,53 @@
+      <!-- Multi-App Workspace Context Ribbon -->
+      <div class="w-full bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+        <div class="flex items-center gap-3.5 flex-wrap">
+          <div class="w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-xs border border-slate-200 ring-2 ring-emerald-100 flex items-center justify-center bg-blue-600 text-white font-black text-sm" id="active-app-avatar" style="width: 44px; height: 44px; min-width: 44px; min-height: 44px;">
+            {% if current_app.icon %}
+              <img src="{{ current_app.icon.url }}" alt="{{ current_app.name }}" class="app-icon-img" style="width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit;">
+            {% elif current_app %}
+              {{ current_app.name|slice:":2" }}
+            {% else %}
+              <span class="material-symbols-outlined text-[24px]">apps</span>
+            {% endif %}
+          </div>
+          <div class="flex flex-col justify-center">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-extrabold text-slate-900" id="ribbon-app-name">{{ current_app.name|default:"برنامه‌ای ثبت نشده است" }}</span>
+              <span class="text-xs font-mono text-slate-400 font-normal" dir="ltr" id="ribbon-app-pkg">{% if current_app %}({{ current_app.package_name }}){% endif %}</span>
+            </div>
+            <div class="flex items-center gap-3 mt-1 flex-wrap text-xs text-slate-500">
+              <div class="flex items-center gap-1">
+                <span>شناسه:</span>
+                <span class="font-mono text-blue-600 font-bold" dir="ltr" id="ribbon-app-id">{{ current_app.app_id|default:"-" }}</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <div class="flex items-center gap-1">
+                <span>پلتفرم:</span>
+                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200">Android + iOS</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <div class="flex items-center gap-1">
+                <span>پچ‌های ثبت‌شده:</span>
+                <span class="font-bold text-slate-800" id="ribbon-total-patches">{{ current_app.total_patches|default:0 }} نسخه</span>
+              </div>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <div class="flex items-center gap-1">
+                <span>ریلیزهای APK:</span>
+                <span class="font-bold text-slate-800" id="ribbon-total-releases">{{ current_app.total_releases|default:0 }} نسخه</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-start md:self-auto shrink-0">
+          <button onclick="openAppModal()" class="h-9 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors border border-slate-200/80 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[17px]">sync_alt</span>
+            <span>تغییر برنامه</span>
+          </button>
+          <button onclick="openNewAppModal()" class="h-9 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs flex items-center gap-1">
+            <span class="material-symbols-outlined text-[17px]">add</span>
+            <span>+ برنامه جدید</span>
+          </button>
+        </div>
+      </div>
+

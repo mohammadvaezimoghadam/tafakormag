@@ -1,0 +1,28 @@
+    <!-- Top Global Header -->
+    <header class="sticky top-0 h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/80 z-40 flex items-center justify-between px-6 shadow-xs">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200 flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px]">menu</span>
+        </button>
+        
+        <h1 id="current-page-badge" class="text-xs sm:text-sm font-extrabold text-slate-800 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-600 text-[19px]">dashboard</span>
+          <span>داشبورد و وضعیت زنده</span>
+        </h1>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Active App Indicator & Switcher Button -->
+        <button onclick="openAppModal()" class="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 transition-colors">
+          <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+          <span id="header-app-name">{{ current_app.name|default:"برنامه‌ای ثبت نشده" }}</span>
+          <span class="material-symbols-outlined text-slate-400 text-[16px]">expand_more</span>
+        </button>
+
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>سرویس فعال</span>
+        </span>
+      </div>
+    </header>
+
