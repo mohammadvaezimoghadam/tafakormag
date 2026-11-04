@@ -1,7 +1,12 @@
 # apps/ota/version_utils.py
 import re
 from typing import Optional
-from packaging.version import parse as parse_version, InvalidVersion
+try:
+    from packaging.version import parse as parse_version, InvalidVersion
+except ImportError:
+    parse_version = None
+    class InvalidVersion(Exception):
+        pass
 
 
 def normalize_version(version_str: str) -> str:
@@ -58,6 +63,8 @@ def compare_versions(v1: str, v2: str) -> int:
 
     # ۱. استفاده از موتور استاندارد packaging.version (پشتیبانی کامل SemVer و PEP 440)
     try:
+        if parse_version is None:
+            raise InvalidVersion()
         pv1 = parse_version(n1)
         pv2 = parse_version(n2)
         if pv1 > pv2:
