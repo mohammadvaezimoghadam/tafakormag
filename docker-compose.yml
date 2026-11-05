@@ -155,12 +155,46 @@ services:
     networks:
       - tafakor_net
 
+
+  minio:
+    image: minio/minio:latest
+    container_name: tafakor_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-adminpassword123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - tafakor_net
+
+  minio_init:
+    image: minio/mc:latest
+    container_name: tafakor_minio_init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 2;
+      /usr/bin/mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-adminpassword123};
+      /usr/bin/mc mb --ignore-existing local/quran-audio;
+      /usr/bin/mc anonymous set download local/quran-audio;
+      exit 0;
+      "
+    networks:
+      - tafakor_net
+
 volumes:
   postgres_data:
   static_volume:
   media_volume:
   patches_volume:
   releases_volume:
+  minio_data:
 
 networks:
   tafakor_net:
