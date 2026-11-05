@@ -82,7 +82,8 @@ services:
     image: ${MINIO_IMAGE:-minio/minio:latest}
     container_name: tafakor_dev_minio
     restart: always
-    command: server /data --console-address ":9001"
+    entrypoint: ["/usr/bin/minio"]
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-adminpassword123}
