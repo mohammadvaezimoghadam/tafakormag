@@ -1639,3 +1639,144 @@ class EditorialWorkflowTests(APITestCase):
 
 
 
+
+
+class SurahLatestPostsAPITests(TestCase):
+    """تست‌های اندپوینت دریافت جدیدترین پست به ازای هر آیه از یک سوره (surah-latest-posts)"""
+
+    def setUp(self):
+        from apps.plugin_system.models import Plugin, PostPluginReference
+        from rest_framework.test import APIClient
+        import datetime
+        from django.utils import timezone
+
+        self.client = APIClient()
+        self.user1 = User.objects.create_user(phone="09121111111")
+        self.user1.first_name = "علی"
+        self.user1.last_name = "محمدی"
+        self.user1.save()
+
+        self.user2 = User.objects.create_user(phone="09122222222")
+        self.user2.first_name = "رضا"
+        self.user2.last_name = "رضایی"
+        self.user2.save()
+
+        self.topic = Topic.objects.create(
+            name="تدبر قرآن",
+            created_by=self.user1
+        )
+
+        self.plugin, _ = Plugin.objects.get_or_create(
+            identifier="quran",
+            defaults={"name": "Quran Plugin", "version": "1.0.0", "is_active": True}
+        )
+
+        now = timezone.now()
+
+        # ۲ پست برای آیه ۱ سوره ۲ (یکی قدیمی‌تر، یکی جدیدتر)
+        self.post1_older = Post.objects.create(
+            topic=self.topic,
+            author=self.user1,
+            content="یادداشت قدیمی آیه ۱",
+            created_at=now - datetime.timedelta(hours=2)
+        )
+        PostPluginReference.objects.create(
+            post=self.post1_older,
+            plugin=self.plugin,
+            resource_type="ayah",
+            external_id="surah:2,ayah:1",
+            metadata={"surah_number": 2, "ayah_number": 1}
+        )
+
+        self.post1_newer = Post.objects.create(
+            topic=self.topic,
+            author=self.user2,
+            content="یادداشت جدیدتر آیه ۱ توسط رضا",
+            created_at=now - datetime.timedelta(hours=1)
+        )
+        PostPluginReference.objects.create(
+            post=self.post1_newer,
+            plugin=self.plugin,
+            resource_type="ayah",
+            external_id="surah:2,ayah:1",
+            metadata={"surah_number": 2, "ayah_number": 1}
+        )
+
+        # ۱ پست برای آیه ۲۵۵ سوره ۲
+        self.post_ayah_255 = Post.objects.create(
+            topic=self.topic,
+            author=self.user1,
+            content="یادداشت آیه ۲۵۵ (آیت الکرسی)",
+            created_at=now
+        )
+        PostPluginReference.objects.create(
+            post=self.post_ayah_255,
+            plugin=self.plugin,
+            resource_type="ayah",
+            external_id="surah:2,ayah:255",
+            metadata={"surah_number": 2, "ayah_number": 255}
+        )
+
+        # ۱ پست برای سوره ۳ (نباید در سوره ۲ بیاید)
+        self.post_surah3 = Post.objects.create(
+            topic=self.topic,
+            author=self.user1,
+            content="یادداشت سوره آل عمران",
+            created_at=now
+        )
+        PostPluginReference.objects.create(
+            post=self.post_surah3,
+            plugin=self.plugin,
+            resource_type="ayah",
+            external_id="surah:3,ayah:1",
+            metadata={"surah_number": 3, "ayah_number": 1}
+        )
+
+    def test_surah_latest_posts_success(self):
+        """تست دریافت موفق، تفکیک دقیق جدیدترین پست هر آیه و حذف آیه‌های بی‌ربط"""
+        res = self.client.get("/api/notes/surah-latest-posts/?surah=2")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["surah"], 2)
+        self.assertEqual(data["total_ayahs_with_posts"], 2)
+        items = data["items"]
+        self.assertEqual(len(items), 2)
+
+        # آیه ۱ باید آخرین پست (post1_newer) را داشته باشد نه قدیمی‌تر را
+        item_ayah1 = items[0]
+        self.assertEqual(item_ayah1["ayah"], 1)
+        self.assertEqual(item_ayah1["post_id"], self.post1_newer.id)
+        self.assertEqual(item_ayah1["author"]["id"], self.user2.id)
+        self.assertEqual(item_ayah1["author"]["name"], "رضا رضایی")
+        self.assertEqual(item_ayah1["content"], "یادداشت جدیدتر آیه ۱ توسط رضا")
+
+        # آیه ۲۵۵
+        item_ayah255 = items[1]
+        self.assertEqual(item_ayah255["ayah"], 255)
+        self.assertEqual(item_ayah255["post_id"], self.post_ayah_255.id)
+        self.assertEqual(item_ayah255["author"]["id"], self.user1.id)
+        self.assertEqual(item_ayah255["author"]["name"], "علی محمدی")
+
+    def test_surah_latest_posts_empty(self):
+        """تست سوره بدون هیچ پستی"""
+        res = self.client.get("/api/notes/surah-latest-posts/?surah=114")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["surah"], 114)
+        self.assertEqual(data["total_ayahs_with_posts"], 0)
+        self.assertEqual(data["items"], [])
+
+    def test_surah_latest_posts_validation_error(self):
+        """تست اعتبارسنجی ورودی سوره نامعتبر یا خالی طبق ساختار یکپارچه خطا"""
+        # سوره بیشتر از ۱۱۴
+        res1 = self.client.get("/api/notes/surah-latest-posts/?surah=115")
+        self.assertEqual(res1.status_code, 400)
+        self.assertFalse(res1.json().get("success", True))
+
+        # سوره کمتر از ۱
+        res2 = self.client.get("/api/notes/surah-latest-posts/?surah=0")
+        self.assertEqual(res2.status_code, 400)
+
+        # بدون پارامتر surah
+        res3 = self.client.get("/api/notes/surah-latest-posts/")
+        self.assertEqual(res3.status_code, 400)

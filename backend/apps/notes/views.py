@@ -1,5 +1,7 @@
 import os
 from django.db.models import Q, Count
+from django.db import connection
+from django.core.cache import cache
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
@@ -18,7 +20,7 @@ from .serializers import (
     TopicSerializer, PostSerializer, PostCommentSerializer, ImportTaskStatusSerializer,
     TopicAdminSerializer, UserSimpleSerializer, TopicFAQSerializer,
     TopicChatMessageSerializer, TopicChatSessionSerializer, TopicChatPromptSerializer,
-    PostEditProposalSerializer, PostEditHistorySerializer, AyahSummaryQuerySerializer
+    PostEditProposalSerializer, PostEditHistorySerializer, AyahSummaryQuerySerializer, SurahLatestPostsQuerySerializer
 )
 from apps.plugin_system.models import PostPluginReference
 from .permissions import IsTopicOwnerOrAdmin
@@ -578,6 +580,141 @@ class PostViewSet(viewsets.ModelViewSet):
             "total_posts": total_posts,
             "ayahs_with_notes": ayah_counts
         }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='surah-latest-posts', permission_classes=[permissions.AllowAny])
+    def surah_latest_posts(self, request):
+        """
+        GET /api/notes/surah-latest-posts/?surah=2
+        دریافت جدیدترین یادداشت و اطلاعات نویسنده برای هر آیه از سوره مشخص شده.
+        کوئری با عملکرد بسیار بالا با استفاده از PostgreSQL DISTINCT ON بدون مشکل N+1.
+        """
+        serializer = SurahLatestPostsQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        surah_num = serializer.validated_data['surah']
+
+        cache_key = f"notes:surah_latest_posts:{surah_num}"
+        try:
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return Response(cached_data, status=status.HTTP_200_OK)
+        except Exception:
+            pass
+
+        prefix = f"surah:{surah_num},"
+
+        # کوئری تک‌مرحله‌ای با پرفورمنس حداکثری:
+        # در PostgreSQL از قابلیت DISTINCT ON استفاده می‌شود که در سطح دیتابیس فقط یک ردیف به ازای هر آیه می‌آورد.
+        # در SQLite (محیط تست لوکال) به صورت Fallback در حافظه مرتب‌سازی می‌شود.
+        if connection.features.can_distinct_on_fields:
+            refs = (
+                PostPluginReference.objects.filter(
+                    plugin__identifier='quran',
+                    resource_type='ayah',
+                    external_id__startswith=prefix
+                )
+                .order_by('external_id', '-post__created_at', '-post__id')
+                .distinct('external_id')
+                .select_related('post', 'post__author', 'post__topic')
+            )
+        else:
+            raw_refs = (
+                PostPluginReference.objects.filter(
+                    plugin__identifier='quran',
+                    resource_type='ayah',
+                    external_id__startswith=prefix
+                )
+                .order_by('-post__created_at', '-post__id')
+                .select_related('post', 'post__author', 'post__topic')
+            )
+            seen_ext = set()
+            refs = []
+            for r in raw_refs:
+                if r.external_id not in seen_ext:
+                    seen_ext.add(r.external_id)
+                    refs.append(r)
+
+        items = []
+        for ref in refs:
+            post = ref.post
+            author = post.author
+            topic = post.topic
+
+            # استخراج شماره آیه از متادیتا یا external_id
+            ayah_num = None
+            if isinstance(ref.metadata, dict) and 'ayah_number' in ref.metadata:
+                try:
+                    ayah_num = int(ref.metadata['ayah_number'])
+                except (ValueError, TypeError):
+                    pass
+
+            if ayah_num is None:
+                ext = ref.external_id
+                if ',ayah:' in ext:
+                    raw_ayah = ext.split(',ayah:')[-1]
+                elif ':' in ext:
+                    raw_ayah = ext.split(':')[-1]
+                else:
+                    raw_ayah = ''
+                if raw_ayah.isdigit():
+                    ayah_num = int(raw_ayah)
+
+            if ayah_num is None:
+                continue
+
+            # ساخت نام و آواتار نویسنده
+            author_name = f"{author.first_name} {author.last_name}".strip() or author.phone
+            author_avatar = None
+            if author.profile_image:
+                try:
+                    author_avatar = request.build_absolute_uri(author.profile_image.url)
+                except Exception:
+                    author_avatar = author.profile_image.url
+
+            # آدرس فایل مدیا در صورت وجود
+            media_url = None
+            if post.media_file:
+                try:
+                    media_url = request.build_absolute_uri(post.media_file.url)
+                except Exception:
+                    media_url = post.media_file.url
+
+            clean_content = (post.content or '').strip()
+            preview = (clean_content[:120].strip() + '...') if len(clean_content) > 120 else clean_content
+
+            items.append({
+                'ayah': ayah_num,
+                'post_id': post.id,
+                'topic': {
+                    'id': topic.id,
+                    'name': topic.name,
+                },
+                'author': {
+                    'id': author.id,
+                    'name': author_name,
+                    'phone': author.phone,
+                    'avatar': author_avatar,
+                },
+                'content': clean_content,
+                'content_preview': preview,
+                'media_type': post.media_type,
+                'media_url': media_url,
+                'created_at': post.created_at.isoformat() if post.created_at else None,
+            })
+
+        # مرتب‌سازی آیتم‌ها به ترتیب شماره آیه صعودی
+        items.sort(key=lambda x: x['ayah'])
+
+        response_data = {
+            'surah': surah_num,
+            'total_ayahs_with_posts': len(items),
+            'items': items,
+        }
+
+        try:
+            cache.set(cache_key, response_data, timeout=60)
+        except Exception:
+            pass
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'react', 'selective_delete', 'check_duplicate']:

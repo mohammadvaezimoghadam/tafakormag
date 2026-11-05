@@ -702,3 +702,41 @@ class PostEditHistorySerializer(serializers.ModelSerializer):
 
 class AyahSummaryQuerySerializer(serializers.Serializer):
     surah = serializers.IntegerField(min_value=1, max_value=114, required=True)
+
+
+class SurahLatestPostsQuerySerializer(serializers.Serializer):
+    surah = serializers.IntegerField(
+        min_value=1,
+        max_value=114,
+        required=True,
+        error_messages={
+            'min_value': 'شماره سوره باید بین ۱ تا ۱۱۴ باشد.',
+            'max_value': 'شماره سوره باید بین ۱ تا ۱۱۴ باشد.',
+            'required': 'پارامتر شماره سوره (surah) الزامی است.',
+            'invalid': 'شماره سوره باید یک عدد صحیح معتبر باشد.',
+        }
+    )
+
+
+class SurahAuthorItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    phone = serializers.CharField(read_only=True)
+    avatar = serializers.CharField(read_only=True, allow_null=True)
+
+
+class SurahTopicItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+
+
+class SurahLatestPostItemSerializer(serializers.Serializer):
+    ayah = serializers.IntegerField(read_only=True)
+    post_id = serializers.IntegerField(read_only=True)
+    topic = SurahTopicItemSerializer(read_only=True)
+    author = SurahAuthorItemSerializer(read_only=True)
+    content = serializers.CharField(read_only=True)
+    content_preview = serializers.CharField(read_only=True)
+    media_type = serializers.CharField(read_only=True)
+    media_url = serializers.CharField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
