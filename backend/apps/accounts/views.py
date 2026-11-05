@@ -59,6 +59,8 @@ class AuthViewSet(viewsets.GenericViewSet):
             channel = "bale"
             sent_via_kavenegar = False
 
+        print(f"\n======================================================\n[TAFAKOR OTP CODE]\nPhone: {phone}\nCODE:  {otp}\nChannel: {channel}\n======================================================\n", flush=True)
+
         return Response({
             "message": "کد تأیید ارسال شد.",
             "channel": channel,
