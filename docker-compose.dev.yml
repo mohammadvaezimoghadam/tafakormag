@@ -79,7 +79,7 @@ services:
 
 
   minio:
-    image: minio/minio:latest
+    image: ${MINIO_IMAGE:-minio/minio:latest}
     container_name: tafakor_dev_minio
     restart: always
     command: server /data --console-address ":9001"
@@ -91,22 +91,6 @@ services:
       - "${MINIO_DEV_CONSOLE_PORT:-9003}:9001"
     volumes:
       - dev_minio_data:/data
-    networks:
-      - tafakor_dev_net
-
-  minio_init:
-    image: minio/mc:latest
-    container_name: tafakor_dev_minio_init
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      sleep 2;
-      /usr/bin/mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-adminpassword123};
-      /usr/bin/mc mb --ignore-existing local/quran-audio;
-      /usr/bin/mc anonymous set download local/quran-audio;
-      exit 0;
-      "
     networks:
       - tafakor_dev_net
 

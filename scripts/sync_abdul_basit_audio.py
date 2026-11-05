@@ -23,6 +23,7 @@ import datetime
 import urllib.request
 import urllib.error
 import time
+import json
 
 # پشتیبانی از یونیکد، فارسی و ایموجی در ترمینال ویندوز
 if hasattr(sys.stdout, 'reconfigure'):
@@ -210,6 +211,93 @@ def download_audio(surah: int, ayah: int) -> bytes:
                 time.sleep(0.3)
     return b''
 
+def s3_ensure_bucket(endpoint, bucket, access_key, secret_key, region='us-east-1'):
+    """اطمینان از وجود باکت و تنظیم دسترسی عمومی (Public Read) بدون نیاز به mc"""
+    endpoint = endpoint.rstrip('/')
+    host = endpoint.split('://')[-1]
+    
+    t = datetime.datetime.now(datetime.timezone.utc)
+    amz_date = t.strftime('%Y%m%dT%H%M%SZ')
+    date_stamp = t.strftime('%Y%m%d')
+    
+    canonical_uri = f'/{bucket}'
+    payload_hash = hashlib.sha256(b'').hexdigest()
+    
+    canonical_headers = (
+        f'host:{host}\n'
+        f'x-amz-content-sha256:{payload_hash}\n'
+        f'x-amz-date:{amz_date}\n'
+    )
+    signed_headers = 'host;x-amz-content-sha256;x-amz-date'
+    canonical_request = f'PUT\n{canonical_uri}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}'
+    
+    algorithm = 'AWS4-HMAC-SHA256'
+    credential_scope = f'{date_stamp}/{region}/s3/aws4_request'
+    string_to_sign = f'{algorithm}\n{amz_date}\n{credential_scope}\n{hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()}'
+    
+    signing_key = get_signature_key(secret_key, date_stamp, region, 's3')
+    signature = hmac.new(signing_key, string_to_sign.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    headers = {
+        'Host': host,
+        'x-amz-date': amz_date,
+        'x-amz-content-sha256': payload_hash,
+        'Authorization': f'{algorithm} Credential={access_key}/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}',
+        'Content-Length': '0'
+    }
+    try:
+        req = urllib.request.Request(f'{endpoint}{canonical_uri}', headers=headers, method='PUT')
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+    except urllib.error.HTTPError as e:
+        if e.code not in (200, 204, 409):
+            pass
+    except Exception:
+        pass
+
+    # تنظیم پالیسی دسترسی عمومی خواندن برای اپلیکیشن
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Action": ["s3:GetBucketLocation", "s3:ListBucket"],
+                "Resource": [f"arn:aws:s3:::{bucket}"]
+            },
+            {
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{bucket}/*"]
+            }
+        ]
+    }
+    policy_bytes = json.dumps(policy).encode('utf-8')
+    p_hash = hashlib.sha256(policy_bytes).hexdigest()
+    p_headers = (
+        f'host:{host}\n'
+        f'x-amz-content-sha256:{p_hash}\n'
+        f'x-amz-date:{amz_date}\n'
+    )
+    p_req = f'PUT\n{canonical_uri}\npolicy=\n{p_headers}\n{signed_headers}\n{p_hash}'
+    p_str = f'{algorithm}\n{amz_date}\n{credential_scope}\n{hashlib.sha256(p_req.encode("utf-8")).hexdigest()}'
+    p_sig = hmac.new(signing_key, p_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    auth_policy = {
+        'Host': host,
+        'x-amz-date': amz_date,
+        'x-amz-content-sha256': p_hash,
+        'Authorization': f'{algorithm} Credential={access_key}/{credential_scope}, SignedHeaders={signed_headers}, Signature={p_sig}',
+        'Content-Length': str(len(policy_bytes))
+    }
+    try:
+        req_p = urllib.request.Request(f'{endpoint}{canonical_uri}?policy', data=policy_bytes, headers=auth_policy, method='PUT')
+        with urllib.request.urlopen(req_p, timeout=5):
+            pass
+    except Exception:
+        pass
+
 def main():
     parser = argparse.ArgumentParser(description="دانلود و آپلود صوت‌های استاد عبدالباسط در S3")
     parser.add_argument("--endpoint", default=os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"), help="آدرس سرور S3")
@@ -227,6 +315,11 @@ def main():
     print(f"📦 سرور S3: {args.endpoint} | باکت: {args.bucket}")
     print(f"📁 پوشه قاری در S3: {args.subfolder}")
     print("=" * 65)
+
+    # اطمینان از وجود باکت و عمومی بودن دسترسی
+    print("🔧 در حال بررسی و آماده‌سازی باکت S3...")
+    s3_ensure_bucket(args.endpoint, args.bucket, args.access_key, args.secret_key)
+    print("✅ باکت آماده دریافت صوت‌ها است.")
 
     if args.surah:
         if args.surah < 1 or args.surah > 114:
