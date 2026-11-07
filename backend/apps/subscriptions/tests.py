@@ -124,3 +124,72 @@ class SubscriptionSystemTests(APITestCase):
         self.assertTrue(res_after.json()['has_active_subscription'])
         self.assertEqual(res_after.json()['plan_title'], 'اشتراک ۱ ماهه قرآن')
 
+
+    def test_expired_subscription_is_not_valid(self):
+        """تست وضعیت اشتراک منقضی شده: پایان مهلت اشتراک"""
+        self.client.force_authenticate(user=self.user)
+        UserSubscription.objects.create(
+            user=self.user,
+            plugin_identifier='quran',
+            plan=self.plan_1m,
+            status='active',
+            starts_at=timezone.now() - timedelta(days=31),
+            expires_at=timezone.now() - timedelta(minutes=1),
+            source='cafebazaar'
+        )
+        invalidate_user_subscription_cache(self.user.id, 'quran')
+        
+        self.assertFalse(has_active_subscription(self.user, 'quran'))
+        
+        url = '/api/subscriptions/my-status/?plugin=quran'
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(res.json()['has_active_subscription'])
+        self.assertEqual(res.json()['remaining_days'], 0)
+
+    def test_staff_user_has_automatic_access(self):
+        """تست دسترسی خودکار مدیران و کارمندان به تمام امکانات ویژه بدون نیاز به خرید"""
+        self.user.is_staff = True
+        self.user.save()
+        self.assertTrue(has_active_subscription(self.user, 'quran'))
+        self.assertTrue(has_active_subscription(self.user, 'golshan_raz'))
+
+    def test_plugin_isolation(self):
+        """تست ایزوله‌سازی افزونه‌ها: اشتراک قرآن نباید دسترسی پلاگین دیگر را باز کند"""
+        self.client.force_authenticate(user=self.user)
+        self.client.post('/api/subscriptions/verify/', data={'sku': 'sub_vip_1m', 'purchase_token': 'mock_token_iso'}, format='json')
+        
+        self.assertTrue(has_active_subscription(self.user, 'quran'))
+        self.assertFalse(has_active_subscription(self.user, 'golshan_raz'))
+
+    def test_unauthenticated_user_cannot_verify(self):
+        """تست رد درخواست تایید خرید برای کاربران مهمان"""
+        url = '/api/subscriptions/verify/'
+        res = self.client.post(url, data={'sku': 'sub_vip_1m', 'purchase_token': 'mock_guest'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invalid_sku_rejected(self):
+        """تست رد درخواست خرید برای SKUهای تعریف‌نشده در سیستم"""
+        self.client.force_authenticate(user=self.user)
+        url = '/api/subscriptions/verify/'
+        res = self.client.post(url, data={'sku': 'non_existent_sku', 'purchase_token': 'mock_tok_inv'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('sku', str(res.json()))
+
+    def test_all_plugin_subscription_grants_access_to_all(self):
+        """تست اشتراک جامع: باز شدن دسترسی تمام پلاگین‌ها با یک خرید مشترک"""
+        plan_all = SubscriptionPlan.objects.create(
+            plugin_identifier='all',
+            sku='sub_vip_all_1m',
+            title='اشتراک طلایی تمام افزونه‌ها',
+            duration_days=30,
+            price=990000,
+            is_active=True
+        )
+        self.client.force_authenticate(user=self.user)
+        res = self.client.post('/api/subscriptions/verify/', data={'sku': 'sub_vip_all_1m', 'purchase_token': 'mock_tok_all'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        
+        self.assertTrue(has_active_subscription(self.user, 'quran'))
+        self.assertTrue(has_active_subscription(self.user, 'golshan_raz'))
+        self.assertTrue(has_active_subscription(self.user, 'hafez'))
