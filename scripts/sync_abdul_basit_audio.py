@@ -41,12 +41,27 @@ AYAH_COUNTS = [
     11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6
 ]
 
-# منابع دانلود مطمئن برای صوت عبدالباسط (سورس‌های رسمی بدون سکوت انتهای آیه)
-SOURCE_URLS = [
-    "https://verses.quran.com/AbdulBaset/Murattal/mp3/{surah:03d}{ayah:03d}.mp3",
-    "https://audio.qurancdn.com/AbdulBaset/Murattal/mp3/{surah:03d}{ayah:03d}.mp3",
-    "https://www.everyayah.com/data/Abdul_Basit_Murattal_192kbps/{surah:03d}{ayah:03d}.mp3"
-]
+# منابع دانلود مطمئن برای صوت قرآن
+def get_sources_for_subfolder(subfolder: str) -> list:
+    """تولید سورس‌های مطمئن و ترتیبی با توجه به نام قاری"""
+    sources = []
+    sub_lower = subfolder.lower()
+    
+    # اگر قاری عبدالباسط باشد، از سورس‌های بدون سکوت Quran.com اولویت می‌گیرد
+    if "abdul_basit" in sub_lower or "abdulsamad" in sub_lower:
+        sources.append("https://verses.quran.com/AbdulBaset/Murattal/mp3/{surah:03d}{ayah:03d}.mp3")
+        sources.append("https://audio.qurancdn.com/AbdulBaset/Murattal/mp3/{surah:03d}{ayah:03d}.mp3")
+    elif "minshawy" in sub_lower or "minshawi" in sub_lower:
+        sources.append("https://verses.quran.com/Minshawi/Murattal/mp3/{surah:03d}{ayah:03d}.mp3")
+        sources.append("https://audio.qurancdn.com/Minshawi/Murattal/mp3/{surah:03d}{ayah:03d}.mp3")
+    elif "alafasy" in sub_lower:
+        sources.append("https://verses.quran.com/Alafasy/mp3/{surah:03d}{ayah:03d}.mp3")
+        sources.append("https://audio.qurancdn.com/Alafasy/mp3/{surah:03d}{ayah:03d}.mp3")
+
+    # سورس رسمی و استاندارد EveryAyah و میرور آن
+    sources.append(f"https://www.everyayah.com/data/{subfolder}/{{surah:03d}}{{ayah:03d}}.mp3")
+    sources.append(f"https://mirrors.quranicaudio.com/everyayah/{subfolder}/{{surah:03d}}{{ayah:03d}}.mp3")
+    return sources
 
 def sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
@@ -195,9 +210,10 @@ def is_valid_mp3(data: bytes) -> bool:
         return True
     return True
 
-def download_audio(surah: int, ayah: int) -> bytes:
+def download_audio(surah: int, ayah: int, sources: list) -> tuple:
     """دانلود صوت یک آیه از سورس‌های موجود با مکانیسم Retry"""
-    for url_pattern in SOURCE_URLS:
+    last_err = "هیچ سورسی پاسخ نداد"
+    for url_pattern in sources:
         url = url_pattern.format(surah=surah, ayah=ayah)
         for attempt in range(1, 3):
             try:
@@ -206,10 +222,13 @@ def download_audio(surah: int, ayah: int) -> bytes:
                     if resp.status == 200:
                         data = resp.read()
                         if is_valid_mp3(data):
-                            return data
-            except Exception:
+                            return data, ""
+                        else:
+                            last_err = f"فایل نامعتبر با حجم {len(data)} بایت از {url}"
+            except Exception as e:
+                last_err = f"{e} (آدرس: {url})"
                 time.sleep(0.3)
-    return b''
+    return b'', last_err
 
 def s3_ensure_bucket(endpoint, bucket, access_key, secret_key, region='us-east-1'):
     """اطمینان از وجود باکت و تنظیم دسترسی عمومی (Public Read) بدون نیاز به mc"""
@@ -321,6 +340,9 @@ def main():
     s3_ensure_bucket(args.endpoint, args.bucket, args.access_key, args.secret_key)
     print("✅ باکت آماده دریافت صوت‌ها است.")
 
+    sources = get_sources_for_subfolder(args.subfolder)
+    print(f"🔗 تعداد سورس‌های فعال برای این پوشه: {len(sources)}")
+
     if args.surah:
         if args.surah < 1 or args.surah > 114:
             print("❌ شماره سوره نامعتبر است (باید بین ۱ تا ۱۱۴ باشد).")
@@ -331,7 +353,6 @@ def main():
 
     total_uploaded = 0
     total_skipped = 0
-    total_failed = 0
 
     for s in surah_list:
         ayah_count = AYAH_COUNTS[s - 1]
@@ -350,12 +371,17 @@ def main():
 
             # دانلود صوت
             print(f"  ⬇️ در حال دانلود {fname}...", end="", flush=True)
-            audio_data = download_audio(s, a)
+            audio_data, err_msg = download_audio(s, a, sources)
             
             if not audio_data:
-                print(" ❌ خطا در دانلود از تمام سورس‌ها!")
-                total_failed += 1
-                continue
+                print(" ❌")
+                print("\n" + "!" * 70)
+                print(f"🚨 [توقف اضطراری] خطا در دانلود سوره {s:03d} آیه {a:03d} (فایل {fname})!")
+                print(f"❌ علت خطا: {err_msg}")
+                print(f"🛑 فرآیند فوراً متوقف شد تا هیچ آیه‌ای جا نماند.")
+                print(f"📍 آخرین آیه موفق: سوره {s} آیه {a - 1 if a > 1 else 'قبلی'}")
+                print("!" * 70)
+                sys.exit(1)
                 
             # آپلود در S3
             try:
@@ -367,21 +393,28 @@ def main():
                     access_key=args.access_key,
                     secret_key=args.secret_key
                 )
-                if success:
-                    print(f" ✅ در S3 ذخیره شد ({len(audio_data):,} بایت)")
-                    total_uploaded += 1
-                else:
-                    print(" ❌ خطا در پاسخ سرور S3")
-                    total_failed += 1
+                if not success:
+                    print(" ❌")
+                    print("\n" + "!" * 70)
+                    print(f"🚨 [توقف اضطراری] سرور S3 فایل {fname} را ذخیره نکرد!")
+                    print(f"🛑 فرآیند در سوره {s:03d} آیه {a:03d} متوقف شد.")
+                    print("!" * 70)
+                    sys.exit(1)
+
+                print(f" ✅ در S3 ذخیره شد ({len(audio_data):,} بایت)")
+                total_uploaded += 1
             except Exception as e:
-                print(f" ❌ خطای آپلود: {e}")
-                total_failed += 1
+                print(" ❌")
+                print("\n" + "!" * 70)
+                print(f"🚨 [توقف اضطراری] خطای ارتباط با سرور S3 در سوره {s:03d} آیه {a:03d}: {e}")
+                print(f"🛑 فرآیند متوقف شد.")
+                print("!" * 70)
+                sys.exit(1)
 
     print("\n" + "=" * 65)
     print("🎉 پایان عملیات همگام‌سازی:")
     print(f"  ✅ فایل‌های آپلود شده جدید: {total_uploaded}")
     print(f"  ⏭️ فایل‌های قبلی بدون تغییر: {total_skipped}")
-    print(f"  ❌ موارد ناموفق: {total_failed}")
     print("=" * 65)
 
 if __name__ == "__main__":
