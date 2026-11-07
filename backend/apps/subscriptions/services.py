@@ -46,7 +46,7 @@ class BazaarVerificationService:
         client_id = getattr(settings, 'BAZAAR_CLIENT_ID', '').strip()
         client_secret = getattr(settings, 'BAZAAR_CLIENT_SECRET', '').strip()
         refresh_token = getattr(settings, 'BAZAAR_REFRESH_TOKEN', '').strip()
-        package_name = getattr(settings, 'BAZAAR_PACKAGE_NAME', 'com.tafakor.quran').strip()
+        package_name = getattr(settings, 'BAZAAR_PACKAGE_NAME', 'com.qurantafakor.app').strip()
         return client_id, client_secret, refresh_token, package_name
 
     @classmethod
@@ -178,7 +178,7 @@ class SubscriptionService:
         except SubscriptionPlan.DoesNotExist:
             raise ValidationError({'sku': f"طرح اشتراکی معتبر با شناسه '{sku}' یافت نشد."})
 
-        effective_package = package_name or getattr(settings, 'BAZAAR_PACKAGE_NAME', 'com.tafakor.quran')
+        effective_package = package_name or getattr(settings, 'BAZAAR_PACKAGE_NAME', 'com.qurantafakor.app')
 
         # ۱. بررسی امنیتی: جلوگیری قطعی از سوءاستفاده از توکن تکراری (Replay Attack)
         existing_log = PurchaseVerificationLog.objects.filter(

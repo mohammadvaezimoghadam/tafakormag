@@ -99,7 +99,7 @@ BAZAAR_SANDBOX = str(os.getenv('BAZAAR_SANDBOX', config('BAZAAR_SANDBOX', defaul
 BAZAAR_CLIENT_ID = os.getenv('BAZAAR_CLIENT_ID', config('BAZAAR_CLIENT_ID', default=''))
 BAZAAR_CLIENT_SECRET = os.getenv('BAZAAR_CLIENT_SECRET', config('BAZAAR_CLIENT_SECRET', default=''))
 BAZAAR_REFRESH_TOKEN = os.getenv('BAZAAR_REFRESH_TOKEN', config('BAZAAR_REFRESH_TOKEN', default=''))
-BAZAAR_PACKAGE_NAME = os.getenv('BAZAAR_PACKAGE_NAME', config('BAZAAR_PACKAGE_NAME', default='com.tafakor.quran'))
+BAZAAR_PACKAGE_NAME = os.getenv('BAZAAR_PACKAGE_NAME', config('BAZAAR_PACKAGE_NAME', default='com.qurantafakor.app'))
 def _resolve_frontend_base_url() -> str:
     env_url = (os.getenv('FRONTEND_BASE_URL') or config('FRONTEND_BASE_URL', default='')).strip().rstrip('/')
     if env_url:
