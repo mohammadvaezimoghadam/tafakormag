@@ -197,16 +197,18 @@ class SubscriptionService:
             purchase_token=purchase_token
         )
 
-        # ۳. ثبت گزارش شفاف در لاگ‌های وریفای (خارج از rollback تا لاگ خطاهای ناموفق هم در ادمین ثبت شود)
-        verification_log = PurchaseVerificationLog.objects.create(
-            user=user,
-            plan=plan,
-            sku=sku,
+        # ۳. ثبت یا به‌روزرسانی گزارش شفاف در لاگ‌های وریفای (امکان تلاش مجدد در صورت خطای موقت قبلی)
+        verification_log, _ = PurchaseVerificationLog.objects.update_or_create(
             purchase_token=purchase_token,
-            marketplace=marketplace,
-            is_verified=is_valid,
-            bazaar_payload=payload,
-            verification_error=error_msg or ''
+            defaults={
+                'user': user,
+                'plan': plan,
+                'sku': sku,
+                'marketplace': marketplace,
+                'is_verified': is_valid,
+                'bazaar_payload': payload,
+                'verification_error': error_msg or '',
+            }
         )
 
         if not is_valid:
