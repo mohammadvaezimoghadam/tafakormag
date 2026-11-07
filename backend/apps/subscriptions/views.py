@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils import timezone
 
-from .models import SubscriptionPlan
+from .models import SubscriptionPlan, UserSubscription
 from .serializers import (
     SubscriptionPlanSerializer,
     UserSubscriptionStatusSerializer,
@@ -88,6 +88,14 @@ class UserSubscriptionStatusView(APIView):
         active_sub = get_user_active_subscription(request.user, plugin)
 
         now = timezone.now()
+        if not active_sub:
+            # به‌روزرسانی خودکار رکوردهای منقضی‌شده در دیتابیس
+            UserSubscription.objects.filter(
+                user=request.user,
+                status='active',
+                expires_at__lte=now
+            ).update(status='expired')
+
         if active_sub:
             remaining_days = max(0, math.ceil((active_sub.expires_at - now).total_seconds() / 86400))
             status_data = {
