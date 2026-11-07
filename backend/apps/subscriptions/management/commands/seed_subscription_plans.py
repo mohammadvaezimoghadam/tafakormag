@@ -6,6 +6,9 @@ class Command(BaseCommand):
     help = 'ایجاد و به‌روزرسانی طرح‌های پیش‌فرض اشتراک قرآن و افزونه‌ها'
 
     def handle(self, *args, **options):
+        import sys
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
         plans_data = [
             {
                 'plugin_identifier': 'quran',
@@ -65,10 +68,10 @@ class Command(BaseCommand):
             )
             if created:
                 created_count += 1
-                self.stdout.write(self.style.SUCCESS(f"✅ پلن جدید ساخته شد: {plan.title} ({sku})"))
+                self.stdout.write(self.style.SUCCESS(f"[OK] پلن جدید ساخته شد: {plan.title} ({sku})"))
             else:
                 updated_count += 1
-                self.stdout.write(self.style.SUCCESS(f"🔄 پلن به‌روزرسانی شد: {plan.title} ({sku})"))
+                self.stdout.write(self.style.SUCCESS(f"[UPDATED] پلن به‌روزرسانی شد: {plan.title} ({sku})"))
 
         self.stdout.write(self.style.SUCCESS(
             f"عملیات ثبت پلن‌ها پایان یافت. ساخت: {created_count}، به‌روزرسانی: {updated_count}"

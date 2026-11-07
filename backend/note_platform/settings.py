@@ -95,7 +95,7 @@ ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', config('ZARINPAL_MERCHA
 # ==============================================================================
 # پیکربندی وب‌سرویس توسعه‌دهندگان کافه‌بازار (Cafe Bazaar In-App Purchase API)
 # ==============================================================================
-BAZAAR_SANDBOX = os.getenv('BAZAAR_SANDBOX', config('BAZAAR_SANDBOX', default='True')) == 'True'
+BAZAAR_SANDBOX = str(os.getenv('BAZAAR_SANDBOX', config('BAZAAR_SANDBOX', default='True'))).strip().lower() in ('true', '1', 'yes')
 BAZAAR_CLIENT_ID = os.getenv('BAZAAR_CLIENT_ID', config('BAZAAR_CLIENT_ID', default=''))
 BAZAAR_CLIENT_SECRET = os.getenv('BAZAAR_CLIENT_SECRET', config('BAZAAR_CLIENT_SECRET', default=''))
 BAZAAR_REFRESH_TOKEN = os.getenv('BAZAAR_REFRESH_TOKEN', config('BAZAAR_REFRESH_TOKEN', default=''))

@@ -97,10 +97,10 @@ class SubscriptionSystemTests(APITestCase):
         url = '/api/subscriptions/verify/'
 
         # خرید پلن ۱ ماهه (۳۰ روز)
-        self.client.post(url, data={'sku': 'sub_vip_1m', 'purchase_token': 'token_step_1'}, format='json')
+        self.client.post(url, data={'sku': 'sub_vip_1m', 'purchase_token': 'mock_token_step_1'}, format='json')
 
         # خرید پلن ۳ ماهه بلافاصله پس از آن (۹۰ روز دیگر)
-        res = self.client.post(url, data={'sku': 'sub_vip_3m', 'purchase_token': 'token_step_2'}, format='json')
+        res = self.client.post(url, data={'sku': 'sub_vip_3m', 'purchase_token': 'mock_token_step_2'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         data = res.json()
 

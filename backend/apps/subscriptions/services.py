@@ -124,7 +124,10 @@ class BazaarVerificationService:
 
         try:
             response = session.get(endpoint, headers=headers, timeout=6)
-            data = response.json() if response.text else {}
+            try:
+                data = response.json() if response.text else {}
+            except Exception:
+                data = {'raw': response.text}
 
             if response.status_code == 200:
                 # اشتراک معتبر است
