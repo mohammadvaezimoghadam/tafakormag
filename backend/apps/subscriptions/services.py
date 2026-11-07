@@ -180,41 +180,41 @@ class SubscriptionService:
 
         effective_package = package_name or getattr(settings, 'BAZAAR_PACKAGE_NAME', 'com.tafakor.quran')
 
+        # ۱. بررسی امنیتی: جلوگیری قطعی از سوءاستفاده از توکن تکراری (Replay Attack)
+        existing_log = PurchaseVerificationLog.objects.filter(
+            purchase_token=purchase_token
+        ).first()
+
+        if existing_log and existing_log.is_verified:
+            raise ValidationError({
+                'purchase_token': 'این توکن خرید قبلاً در سیستم ثبت و مصرف شده است.'
+            })
+
+        # ۲. استعلام زنده و رسمی از کافه‌بازار
+        is_valid, payload, error_msg = BazaarVerificationService.verify_subscription(
+            package_name=effective_package,
+            sku=sku,
+            purchase_token=purchase_token
+        )
+
+        # ۳. ثبت گزارش شفاف در لاگ‌های وریفای (خارج از rollback تا لاگ خطاهای ناموفق هم در ادمین ثبت شود)
+        verification_log = PurchaseVerificationLog.objects.create(
+            user=user,
+            plan=plan,
+            sku=sku,
+            purchase_token=purchase_token,
+            marketplace=marketplace,
+            is_verified=is_valid,
+            bazaar_payload=payload,
+            verification_error=error_msg or ''
+        )
+
+        if not is_valid:
+            raise ValidationError({
+                'detail': error_msg or 'تایید خرید در وب‌سرویس کافه‌بازار ناموفق بود.'
+            })
+
         with transaction.atomic():
-            # ۱. بررسی امنیتی: جلوگیری قطعی از سوءاستفاده از توکن تکراری (Replay Attack)
-            existing_log = PurchaseVerificationLog.objects.select_for_update().filter(
-                purchase_token=purchase_token
-            ).first()
-
-            if existing_log and existing_log.is_verified:
-                raise ValidationError({
-                    'purchase_token': 'این توکن خرید قبلاً در سیستم ثبت و مصرف شده است.'
-                })
-
-            # ۲. استعلام زنده و رسمی از کافه‌بازار
-            is_valid, payload, error_msg = BazaarVerificationService.verify_subscription(
-                package_name=effective_package,
-                sku=sku,
-                purchase_token=purchase_token
-            )
-
-            # ۳. ثبت گزارش شفاف در لاگ‌های وریفای
-            verification_log = PurchaseVerificationLog.objects.create(
-                user=user,
-                plan=plan,
-                sku=sku,
-                purchase_token=purchase_token,
-                marketplace=marketplace,
-                is_verified=is_valid,
-                bazaar_payload=payload,
-                verification_error=error_msg or ''
-            )
-
-            if not is_valid:
-                raise ValidationError({
-                    'detail': error_msg or 'تایید خرید در وب‌سرویس کافه‌بازار ناموفق بود.'
-                })
-
             # ۴. قفل ردیف و تمدید هوشمند مدت زمان اشتراک کاربر
             now = timezone.now()
             current_active_sub = UserSubscription.objects.select_for_update().filter(
