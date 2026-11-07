@@ -116,14 +116,15 @@ class BazaarVerificationService:
             return False, {}, "اطلاعات وب‌سرویس توسعه‌دهنده کافه‌بازار روی سرور پیکربندی نشده است."
 
         session = cls.get_session()
-        endpoint = f"{cls.BASE_API_URL}/applications/{package_name}/subscriptions/{sku}/tokens/{purchase_token}/"
+        endpoint = f"{cls.BASE_API_URL}/applications/{package_name}/subscriptions/{sku}/purchases/{purchase_token}/"
+        params = {'access_token': access_token}
         headers = {
             'Authorization': f"Bearer {access_token}",
             'Accept': 'application/json',
         }
 
         try:
-            response = session.get(endpoint, headers=headers, timeout=6)
+            response = session.get(endpoint, params=params, headers=headers, timeout=10)
             try:
                 data = response.json() if response.text else {}
             except Exception:
@@ -225,6 +226,13 @@ class SubscriptionService:
 
             is_renewal = bool(current_active_sub)
 
+            # محاسبه تاریخ انقضا با اولویت پاسخ رسمی کافه‌بازار (برای پشتیبانی از تست‌های ۵ دقیقه‌ای بازار)
+            bazaar_msec = payload.get('validUntilTimestampMsec')
+            bazaar_expiry = None
+            if bazaar_msec and isinstance(bazaar_msec, (int, float)) and bazaar_msec > 0:
+                from datetime import datetime, timezone as py_tz
+                bazaar_expiry = datetime.fromtimestamp(bazaar_msec / 1000, tz=py_tz.utc)
+
             if current_active_sub:
                 # تمدید اعتبار: روزهای پلن جدید به انتهای اعتبار قبلی افزوده می‌شود
                 base_time = max(now, current_active_sub.expires_at)
@@ -236,8 +244,12 @@ class SubscriptionService:
                 current_active_sub.save(update_fields=['expires_at', 'plan', 'source', 'updated_at'])
                 user_sub = current_active_sub
             else:
-                # اشتراک جدید
-                new_expiry = now + timedelta(days=plan.duration_days)
+                # اشتراک جدید: اگر بازار زمان انقضای خاصی (مثل تست ۵ دقیقه‌ای) بازگرداند، از آن استفاده می‌شود
+                if bazaar_expiry and bazaar_expiry > now and (bazaar_expiry - now).total_seconds() < plan.duration_days * 86400:
+                    new_expiry = bazaar_expiry
+                else:
+                    new_expiry = now + timedelta(days=plan.duration_days)
+
                 user_sub = UserSubscription.objects.create(
                     user=user,
                     plugin_identifier=plan.plugin_identifier,
