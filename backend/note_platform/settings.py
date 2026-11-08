@@ -22,6 +22,23 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+raw_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+if raw_csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in raw_csrf_origins.split(',') if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://tafakormag.ir',
+        'http://tafakormag.ir',
+        'https://*.tafakormag.ir',
+        'http://5.202.19.101',
+        'http://5.202.19.101:8085',
+        'http://5.202.19.101:8086',
+        'http://localhost',
+        'http://127.0.0.1',
+    ]
+
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
