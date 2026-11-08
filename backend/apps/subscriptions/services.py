@@ -236,27 +236,32 @@ class SubscriptionService:
                 bazaar_expiry = datetime.fromtimestamp(bazaar_msec / 1000, tz=py_tz.utc)
 
             if current_active_sub:
-                # تمدید اعتبار: روزهای پلن جدید به انتهای اعتبار قبلی افزوده می‌شود
-                base_time = max(now, current_active_sub.expires_at)
-                new_expiry = base_time + timedelta(days=plan.duration_days)
+                # تمدید اعتبار: در صورت بازگشت تاریخ رسمی بازار از آن استفاده می‌شود؛ در غیر اینصورت روزهای پلن افزوده می‌شود
+                if bazaar_expiry:
+                    new_expiry = bazaar_expiry
+                else:
+                    base_time = max(now, current_active_sub.expires_at)
+                    new_expiry = base_time + timedelta(days=plan.duration_days)
 
                 current_active_sub.expires_at = new_expiry
                 current_active_sub.plan = plan
                 current_active_sub.source = marketplace
-                current_active_sub.save(update_fields=['expires_at', 'plan', 'source', 'updated_at'])
+                current_active_sub.status = 'active' if new_expiry > now else 'expired'
+                current_active_sub.save(update_fields=['expires_at', 'plan', 'source', 'status', 'updated_at'])
                 user_sub = current_active_sub
             else:
-                # اشتراک جدید: اگر بازار زمان انقضای خاصی (مثل تست ۵ دقیقه‌ای) بازگرداند، از آن استفاده می‌شود
-                if bazaar_expiry and bazaar_expiry > now and (bazaar_expiry - now).total_seconds() < plan.duration_days * 86400:
+                # اشتراک جدید: همگام‌سازی مستقیم با تاریخ رسمی و معتبر بازار (پشتیبانی کامل از تست‌های ۵ دقیقه‌ای و پروداکشن)
+                if bazaar_expiry:
                     new_expiry = bazaar_expiry
                 else:
                     new_expiry = now + timedelta(days=plan.duration_days)
 
+                sub_status = 'active' if new_expiry > now else 'expired'
                 user_sub = UserSubscription.objects.create(
                     user=user,
                     plugin_identifier=plan.plugin_identifier,
                     plan=plan,
-                    status='active',
+                    status=sub_status,
                     starts_at=now,
                     expires_at=new_expiry,
                     source=marketplace
