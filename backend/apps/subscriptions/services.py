@@ -100,7 +100,7 @@ class BazaarVerificationService:
         is_mock_token = purchase_token.startswith(('mock_', 'test_', 'demo_', 'dev_'))
         is_sandbox = getattr(settings, 'BAZAAR_SANDBOX', True)
 
-        if is_mock_token or (is_sandbox and not getattr(settings, 'BAZAAR_CLIENT_ID', None)):
+        if is_sandbox and (is_mock_token or not getattr(settings, 'BAZAAR_CLIENT_ID', None)):
             logger.info(f"Simulating Bazaar subscription verification for SKU={sku}, Token={purchase_token[:15]}...")
             mock_payload = {
                 "kind": "androidpublisher#subscriptionPurchase",
@@ -180,14 +180,14 @@ class SubscriptionService:
 
         effective_package = package_name or getattr(settings, 'BAZAAR_PACKAGE_NAME', 'com.qurantafakor.app')
 
-        # ۱. بررسی امنیتی: جلوگیری قطعی از سوءاستفاده از توکن تکراری (Replay Attack)
+        # ۱. بررسی امنیتی: جلوگیری قطعی از سوءاستفاده از توکن تکراری توسط کاربر دیگر (Replay Attack)
         existing_log = PurchaseVerificationLog.objects.filter(
             purchase_token=purchase_token
         ).first()
 
-        if existing_log and existing_log.is_verified:
+        if existing_log and existing_log.is_verified and existing_log.user_id != user.id:
             raise ValidationError({
-                'purchase_token': 'این توکن خرید قبلاً در سیستم ثبت و مصرف شده است.'
+                'purchase_token': 'این توکن خرید قبلاً توسط کاربر دیگری در سامانه ثبت و استفاده شده است.'
             })
 
         # ۲. استعلام زنده و رسمی از کافه‌بازار
