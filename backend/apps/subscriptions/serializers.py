@@ -58,7 +58,10 @@ class PurchaseVerifyRequestSerializer(serializers.Serializer):
     package_name = serializers.CharField(
         max_length=150,
         required=False,
-        default='com.tafakor.quran'
+        default=None,
+        allow_null=True,
+        allow_blank=True,
+        help_text="Android package name (defaults to settings.BAZAAR_PACKAGE_NAME if empty)"
     )
 
 
