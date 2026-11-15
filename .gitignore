@@ -127,3 +127,8 @@ node_modules/
 # Private internal notes and future roadmaps (never push to git)
 docs/internal/
 *_INTERNAL.md
+
+# AI Agents temporary workspaces (keep only skills and rules)
+.agents/*
+!.agents/skills/
+!.agents/rules/

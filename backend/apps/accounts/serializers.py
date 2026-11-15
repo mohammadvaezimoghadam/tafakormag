@@ -1,3 +1,5 @@
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from rest_framework import serializers
 from .models import User, BotConnectionToken
 
@@ -11,6 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
     is_telegram_otp_connected = serializers.SerializerMethodField()
     is_bale_otp_connected = serializers.SerializerMethodField()
     donations_count = serializers.SerializerMethodField()
+    shelf_books_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -23,7 +26,8 @@ class UserSerializer(serializers.ModelSerializer):
             'is_telegram_bot_connected', 'telegram_bot_username', 'telegram_bot_disconnect_reason',
             'is_bale_bot_connected', 'bale_bot_username', 'bale_bot_disconnect_reason',
             'is_telegram_otp_connected', 'is_bale_otp_connected',
-            'donations_count'
+            'donations_count',
+            'shelf_books_count',
         ]
         read_only_fields = [
             'id',
@@ -31,7 +35,8 @@ class UserSerializer(serializers.ModelSerializer):
             'is_telegram_bot_connected', 'telegram_bot_username', 'telegram_bot_disconnect_reason',
             'is_bale_bot_connected', 'bale_bot_username', 'bale_bot_disconnect_reason',
             'is_telegram_otp_connected', 'is_bale_otp_connected',
-            'donations_count'
+            'donations_count',
+            'shelf_books_count',
         ]
 
     def get_is_telegram_bot_connected(self, obj):
@@ -52,6 +57,12 @@ class UserSerializer(serializers.ModelSerializer):
             donated_count = obj.donations.filter(status=DonationTransaction.PaymentStatus.SUCCESSFUL).count()
             created_count = obj.created_campaigns.count()
             return donated_count + created_count
+        except Exception:
+            return 0
+
+    def get_shelf_books_count(self, obj):
+        try:
+            return obj.shelf_books.aggregate(total=Coalesce(Sum('quantity'), 0))['total']
         except Exception:
             return 0
 

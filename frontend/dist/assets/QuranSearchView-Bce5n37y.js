@@ -1,1 +1,0 @@
-import{QuranSearchView as e}from"./quran-CZDafx0V.js";export{e as default};

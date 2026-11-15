@@ -212,12 +212,48 @@
 
   /* Utility classes to completely hide scrollbars while allowing scrolling */
   .scrollbar-none,
-  .no-scrollbar {
+  .no-scrollbar,
+  [data-slot="dialog-content"],
+  [data-slot="dialog-content"] *,
+  [role="dialog"],
+  [role="dialog"] *,
+  [role="alertdialog"],
+  [role="alertdialog"] *,
+  [data-slot="sheet-content"],
+  [data-slot="sheet-content"] *,
+  [data-slot="select-content"],
+  [data-slot="select-content"] * {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
   .scrollbar-none::-webkit-scrollbar,
-  .no-scrollbar::-webkit-scrollbar {
+  .no-scrollbar::-webkit-scrollbar,
+  [data-slot="dialog-content"]::-webkit-scrollbar,
+  [data-slot="dialog-content"] *::-webkit-scrollbar,
+  [role="dialog"]::-webkit-scrollbar,
+  [role="dialog"] *::-webkit-scrollbar,
+  [role="alertdialog"]::-webkit-scrollbar,
+  [role="alertdialog"] *::-webkit-scrollbar,
+  [data-slot="sheet-content"]::-webkit-scrollbar,
+  [data-slot="sheet-content"] *::-webkit-scrollbar,
+  [data-slot="select-content"]::-webkit-scrollbar,
+  [data-slot="select-content"] *::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
+}
+
+/* Shared Icon Pop Transition (Theme Sun/Moon toggle across header and profile) */
+.icon-pop-enter-active,
+.icon-pop-leave-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.icon-pop-enter-from {
+  transform: scale(0.6) rotate(-90deg);
+  opacity: 0;
+}
+
+.icon-pop-leave-to {
+  transform: scale(0.6) rotate(90deg);
+  opacity: 0;
 }

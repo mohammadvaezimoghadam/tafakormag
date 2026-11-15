@@ -5,3 +5,8 @@ class DonationsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.donations'
     verbose_name = 'مدیریت پویش‌های مهربانی و دونیت'
+
+    def ready(self):
+        from .handlers import register_donation_payment_handlers
+
+        register_donation_payment_handlers()

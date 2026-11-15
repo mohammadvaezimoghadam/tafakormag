@@ -47,6 +47,11 @@ const router = createRouter({
       component: () => import('@/views/FeedView.vue')
     },
     {
+      path: '/b/:code',
+      name: 'book-copy-scan',
+      component: () => import('@/views/FeedView.vue')
+    },
+    {
       path: '/plugins',
       name: 'plugins',
       component: () => import('@/views/FeedView.vue')

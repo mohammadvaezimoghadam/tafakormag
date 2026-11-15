@@ -1,4 +1,4 @@
-export type CampaignStatus = 'active' | 'completed' | 'executed' | 'inactive';
+export type CampaignStatus = 'pending_review' | 'active' | 'completed' | 'executed' | 'expired' | 'paused' | 'inactive';
 
 export type CampaignCategory = 'mosque' | 'school' | 'health' | 'livelihood' | 'construction' | 'other';
 
@@ -39,7 +39,30 @@ export interface DonationCampaignProps {
   creatorPhone?: string;
   canEdit?: boolean;
   timestamp?: string;
+  deadline?: string | null;
+  iban?: string | null;
+  availablePayoutBalance?: number;
+  totalSettledAmount?: number;
+  canRequestPayout?: boolean;
+  isEnded?: boolean;
   isEmbedded?: boolean;
+}
+
+export interface PayoutRequestItem {
+  id: string;
+  campaign: string;
+  campaign_title: string;
+  amount: number;
+  iban: string;
+  account_holder_name: string;
+  status: 'pending' | 'approved' | 'completed' | 'rejected';
+  status_display: string;
+  tracking_number?: string;
+  receipt_url?: string;
+  rejection_reason?: string;
+  admin_notes?: string;
+  settled_at?: string;
+  created_at: string;
 }
 
 export interface CreateDonationMediaFile {

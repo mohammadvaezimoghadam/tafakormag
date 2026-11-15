@@ -22,6 +22,9 @@ instance.interceptors.request.use(config => {
   if (token) {
     config.headers.Authorization = `Token ${token}`
   }
+  if (config.data instanceof FormData && config.headers) {
+    delete config.headers['Content-Type']
+  }
   return config
 })
 
@@ -242,6 +245,27 @@ export const deleteDonationCampaign = (id: string | number) =>
 
 export const donateToCampaign = (campaignId: string | number, payload: { amount: number; is_anonymous?: boolean }) =>
   instance.post(`/api/v1/donations/campaigns/${campaignId}/donate/`, payload)
+
+export const uploadTransparencyLog = (campaignId: string | number, data: FormData) =>
+  instance.post(`/api/v1/donations/campaigns/${campaignId}/transparency/`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+
+export const fetchCampaignPayouts = (campaignId: string | number) =>
+  instance.get<{
+    available_balance: number
+    collected_amount: number
+    total_settled_amount: number
+    default_iban: string
+    results: any[]
+  }>(`/api/v1/donations/campaigns/${campaignId}/payouts/`)
+
+export const requestCampaignPayout = (
+  campaignId: string | number,
+  payload: { amount: number; iban: string; account_holder_name: string }
+) =>
+  instance.post(`/api/v1/donations/campaigns/${campaignId}/payouts/`, payload)
+
 
 // --- Topic FAQs API ---
 export interface TopicFAQ {

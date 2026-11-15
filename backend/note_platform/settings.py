@@ -61,7 +61,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.accounts',
     'apps.notes',
+    'apps.payments',
     'apps.donations',
+    'apps.marketplace',
     'apps.plugin_system',
     'apps.subscriptions',
     'apps.ota',
@@ -72,7 +74,6 @@ INSTALLED_APPS = [
 # ==============================================================================
 INSTALLED_TAFAKOR_PLUGINS = [
     'plugins.quran',
-    'plugins.marketplace',
 ]
 
 # الحاق پویا و ایمن اپلیکیشن‌های پلاگین به INSTALLED_APPS

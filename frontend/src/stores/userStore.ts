@@ -12,6 +12,7 @@ export interface UserProfile {
   statusText?: string
   statusVariant?: 'success' | 'warning' | 'info' | 'muted'
   donations_count?: number
+  shelf_books_count?: number
   
   // Custom bot states
   is_telegram_bot_connected?: boolean
@@ -72,6 +73,7 @@ export const useUserStore = defineStore('user', () => {
       statusText: data.is_telegram_bot_connected || data.is_bale_bot_connected ? 'متصل' : 'فعال',
       statusVariant: 'success',
       donations_count: typeof data.donations_count === 'number' ? data.donations_count : 0,
+      shelf_books_count: typeof data.shelf_books_count === 'number' ? data.shelf_books_count : 0,
       is_telegram_bot_connected: data.is_telegram_bot_connected,
       telegram_bot_username: data.telegram_bot_username,
       telegram_bot_disconnect_reason: data.telegram_bot_disconnect_reason,

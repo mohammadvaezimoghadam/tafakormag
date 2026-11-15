@@ -4,8 +4,15 @@ from django.test import TransactionTestCase
 from django.db import connection
 from apps.accounts.models import User
 from apps.notes.models import Topic
-from apps.donations.models import DonationCampaign, DonationTransaction
-from apps.donations.services import initiate_donation, verify_and_settle_transaction, ZarinPalService
+from apps.donations.models import DonationCampaign, DonationTransaction, PayoutRequest
+from apps.donations.services import (
+    initiate_donation,
+    verify_and_settle_transaction,
+    ZarinPalService,
+    create_payout_request,
+    process_payout_settlement,
+    validate_iran_iban
+)
 
 
 class DonationServicesTest(TransactionTestCase):
@@ -15,7 +22,7 @@ class DonationServicesTest(TransactionTestCase):
         self.donor2 = User.objects.create_user(phone='09124444444')
         self.topic = Topic.objects.create(name='خیریه عمومی', created_by=self.creator)
 
-    @patch('apps.donations.services.requests.post')
+    @patch('apps.payments.gateways.zarinpal.requests.post')
     def test_initiate_donation_zarinpal_sandbox_success(self, mock_post):
         """Test initiating donation connects to ZarinPal and returns S... authority and startpay url."""
         mock_response = MagicMock()
@@ -51,7 +58,7 @@ class DonationServicesTest(TransactionTestCase):
         self.assertTrue(trx.authority.startswith('S'))
         self.assertIn('StartPay/S0000000000000000000000000000123456', gateway_url)
 
-    @patch('apps.donations.services.requests.post')
+    @patch('apps.payments.gateways.zarinpal.requests.post')
     def test_zarinpal_verify_payment_success(self, mock_post):
         """Test ZarinPal verification with code 100."""
         mock_response = MagicMock()
@@ -76,7 +83,7 @@ class DonationServicesTest(TransactionTestCase):
         self.assertIsNone(err)
 
 
-    @patch('apps.donations.services.requests.post')
+    @patch('apps.payments.gateways.zarinpal.requests.post')
     def test_idempotent_settlement(self, mock_post):
         """
         Idempotent Settle: Call verify_and_settle_transaction() multiple times with the same
@@ -117,7 +124,7 @@ class DonationServicesTest(TransactionTestCase):
         self.assertEqual(campaign.collected_amount, 500000)
         self.assertEqual(campaign.donors_count, 1)
 
-    @patch('apps.donations.services.requests.post')
+    @patch('apps.payments.gateways.zarinpal.requests.post')
     def test_concurrent_donations_simulation(self, mock_post):
         """
         Simulate settlement of multiple distinct transactions and verify that the final
@@ -168,3 +175,85 @@ class DonationServicesTest(TransactionTestCase):
         expected_total = num_transactions * donation_amount
         self.assertEqual(campaign.collected_amount, expected_total)
         self.assertEqual(campaign.donors_count, num_transactions)
+
+    def test_payout_request_creation_and_balance_tracking(self):
+        """Test creating a payout request reduces available balance and prevents exceeding it."""
+        from rest_framework.exceptions import ValidationError
+
+        campaign = DonationCampaign.objects.create(
+            topic=self.topic,
+            creator=self.creator,
+            title='پویش تأمین وسایل گرمایشی',
+            description='خرید بخاری',
+            target_amount=10000000,
+            collected_amount=4000000,
+            status=DonationCampaign.StatusChoices.ACTIVE
+        )
+
+        self.assertEqual(campaign.available_payout_balance, 4000000)
+
+        # Cannot request payout while campaign is still active and ongoing
+        with self.assertRaises(ValidationError):
+            create_payout_request(
+                campaign_id=campaign.id,
+                user=self.creator,
+                amount=2500000,
+                iban='IR120120000000001234567890',
+                account_holder_name='علی کریمی'
+            )
+
+        # Mark campaign as completed (or reached goal)
+        campaign.status = DonationCampaign.StatusChoices.COMPLETED
+        campaign.save(update_fields=['status'])
+
+        # Valid payout request now succeeds
+        payout = create_payout_request(
+            campaign_id=campaign.id,
+            user=self.creator,
+            amount=2500000,
+            iban='IR120120000000001234567890',
+            account_holder_name='علی کریمی'
+        )
+        self.assertEqual(payout.amount, 2500000)
+        self.assertEqual(payout.status, PayoutRequest.Status.PENDING)
+
+        # Cannot create another request while one is pending
+        with self.assertRaises(ValidationError):
+            create_payout_request(
+                campaign_id=campaign.id,
+                user=self.creator,
+                amount=1000000,
+                iban='IR120120000000001234567890',
+                account_holder_name='علی کریمی'
+            )
+
+        # Admin processes and completes the payout
+        admin_user = User.objects.create_user(phone='09129999999')
+        admin_user.is_staff = True
+        admin_user.save()
+        completed_payout = process_payout_settlement(
+            payout_id=payout.id,
+            admin_user=admin_user,
+            action='complete',
+            tracking_number='SATNA-987654321',
+            notes='واریز شد'
+        )
+        self.assertEqual(completed_payout.status, PayoutRequest.Status.COMPLETED)
+        self.assertEqual(completed_payout.tracking_number, 'SATNA-987654321')
+        self.assertIsNotNone(completed_payout.settled_at)
+
+        # Campaign available balance is now 4,000,000 - 2,500,000 = 1,500,000
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.total_settled_amount, 2500000)
+        self.assertEqual(campaign.available_payout_balance, 1500000)
+
+        # Cannot request more than available balance (1,500,000)
+        with self.assertRaises(ValidationError):
+            create_payout_request(
+                campaign_id=campaign.id,
+                user=self.creator,
+                amount=2000000,
+                iban='IR120120000000001234567890',
+                account_holder_name='علی کریمی'
+            )
+

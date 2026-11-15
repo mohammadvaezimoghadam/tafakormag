@@ -24,9 +24,12 @@ import {
   BanIcon
 } from '@lucide/vue'
 import { useToastStore } from '@/stores/toastStore'
+import { useLanguageStore } from '@/stores/languageStore'
+import { getCampaignCategoryLabel } from '@/utils/kindness'
 import type { CampaignStatus } from '@/types/kindness'
 
 const toastStore = useToastStore()
+const languageStore = useLanguageStore()
 
 export interface DonationChatCardProps {
   id?: string | number
@@ -156,16 +159,9 @@ const handleShareAction = async (e: Event) => {
   }
 }
 
-const CATEGORY_NAMES: Record<CampaignCategory, string> = {
-  mosque: 'مسجد',
-  school: 'مدرسه و آموزش',
-  health: 'درمانی و سلامت',
-  livelihood: 'نیازمندان و معیشت',
-  construction: 'عمرانی و تجهیزات',
-  other: 'متفرقه'
-}
-
-const categoryLabel = computed(() => CATEGORY_NAMES[props.category] || 'پویش مهربانی')
+const categoryLabel = computed(() =>
+  getCampaignCategoryLabel(props.category, languageStore.isFa)
+)
 
 const percentage = computed(() => {
   if (!props.targetAmount || props.targetAmount <= 0) return 0

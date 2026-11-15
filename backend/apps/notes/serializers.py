@@ -215,6 +215,7 @@ class PostSerializer(serializers.ModelSerializer):
     comments_count = serializers.SerializerMethodField(read_only=True)
 
     donation_campaign = serializers.SerializerMethodField(read_only=True)
+    book_donation = serializers.SerializerMethodField(read_only=True)
 
     topic_name = serializers.SerializerMethodField(read_only=True)
 
@@ -242,7 +243,7 @@ class PostSerializer(serializers.ModelSerializer):
 
             'telegram_message_ids', 'bale_message_ids',
 
-            'content_hash', 'published_platforms', 'donation_campaign'
+            'content_hash', 'published_platforms', 'donation_campaign', 'book_donation'
 
         ]
 
@@ -250,7 +251,7 @@ class PostSerializer(serializers.ModelSerializer):
 
             'id', 'author', 'created_at', 'updated_at', 'telegram_message_ids', 'bale_message_ids',
 
-            'content_hash', 'published_platforms', 'donation_campaign',
+            'content_hash', 'published_platforms', 'donation_campaign', 'book_donation',
 
             'topic_name', 'topic_image', 'topic_description'
 
@@ -382,7 +383,47 @@ class PostSerializer(serializers.ModelSerializer):
 
         return None
 
+    def get_book_donation(self, obj):
+        item = getattr(obj, 'book_item', None)
+        if not item or getattr(item, 'is_deleted', False):
+            return None
 
+        request = self.context.get('request')
+        cover_url = None
+        # Try item images gallery or book_title cover
+        if hasattr(item, 'images') and item.images.exists():
+            first_img = item.images.filter(is_cover=True).first() or item.images.first()
+            if first_img and first_img.image_url:
+                cover_url = first_img.image_url
+        if not cover_url and item.book_title and item.book_title.cover_image:
+            try:
+                cover_url = item.book_title.cover_image.url
+            except Exception:
+                cover_url = None
+
+        if cover_url and request and not str(cover_url).startswith(('http://', 'https://')):
+            try:
+                cover_url = request.build_absolute_uri(cover_url)
+            except Exception:
+                pass
+
+        return {
+            'id': item.id,
+            'title': item.title,
+            'author': item.book_title.author if item.book_title else '',
+            'publisher': item.book_title.publisher if item.book_title else '',
+            'description': item.description,
+            'deal_type': item.deal_type,
+            'status': item.status,
+            'condition': item.condition,
+            'condition_display': item.get_condition_display() if item.condition else '',
+            'donation_methods': item.donation_methods or [],
+            'short_code': item.physical_copy.short_code if item.physical_copy else None,
+            'shipping_payer': getattr(item, 'shipping_payer', 'recipient'),
+            'cover_image': cover_url,
+            'seller_name': item.seller.get_full_name() if item.seller else None,
+            'seller_phone': item.seller.phone if item.seller else None,
+        }
 
     def get_topic_name(self, obj):
 

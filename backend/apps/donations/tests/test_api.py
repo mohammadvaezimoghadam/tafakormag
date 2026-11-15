@@ -138,9 +138,11 @@ class DonationAPITest(APITestCase):
 
     def test_campaign_creation_atomic_with_topic_post(self):
         """
-        Creating a campaign via API must atomically create both the DonationCampaign
-        record and a corresponding post in the topic.
+        Creating a campaign by staff via API must atomically create both the DonationCampaign
+        record (in active status) and a corresponding post in the topic.
         """
+        self.creator.is_staff = True
+        self.creator.save()
         self.client.force_authenticate(user=self.creator)
         initial_posts_count = Post.objects.filter(topic=self.topic).count()
 
@@ -156,6 +158,7 @@ class DonationAPITest(APITestCase):
         response = self.client.post('/api/v1/donations/campaigns/', payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['title'], payload['title'])
+        self.assertEqual(response.data['status'], 'active')
         self.assertEqual(response.data['target_amount'], 50000000)
 
         # Assert post was automatically injected into topic
@@ -165,6 +168,63 @@ class DonationAPITest(APITestCase):
         last_post = Post.objects.filter(topic=self.topic).latest('created_at')
         self.assertIn('پویش مهربانی', last_post.content)
         self.assertIn(payload['title'], last_post.content)
+
+    def test_regular_user_campaign_creation_pending_and_admin_approval(self):
+        """
+        Regular non-staff user creates a campaign:
+        - Status is pending_review
+        - NO topic chat post is created
+        - Not visible in public feed (unauthenticated or other users)
+        - Visible to creator in their list
+        - Admin approves it -> Status becomes active and topic chat post is created.
+        """
+        self.client.force_authenticate(user=self.creator)
+        initial_posts_count = Post.objects.filter(topic=self.topic).count()
+
+        payload = {
+            'topic': self.topic.id,
+            'title': 'پویش تأمین دارو توسط کاربر عادی',
+            'description': 'خرید دارو برای بیماران خاص',
+            'category': 'health',
+            'target_amount': 15000000,
+            'is_public_donors_list': True
+        }
+
+        response = self.client.post('/api/v1/donations/campaigns/', payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], 'pending_review')
+        campaign_id = response.data['id']
+
+        # Ensure NO topic post was created while pending review
+        self.assertEqual(Post.objects.filter(topic=self.topic).count(), initial_posts_count)
+
+        # Public user cannot see it
+        self.client.force_authenticate(user=None)
+        public_list = self.client.get('/api/v1/donations/campaigns/')
+        self.assertEqual(public_list.status_code, status.HTTP_200_OK)
+        results = public_list.data.get('results', public_list.data) if isinstance(public_list.data, dict) else public_list.data
+        campaign_ids = [c['id'] for c in results]
+        self.assertNotIn(campaign_id, campaign_ids)
+
+        # Non-staff user cannot approve it (403 Forbidden)
+        self.client.force_authenticate(user=self.creator)
+        approve_fail = self.client.post(f'/api/v1/donations/campaigns/{campaign_id}/approve/')
+        self.assertEqual(approve_fail.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Admin approves it
+        admin_user = User.objects.create_user(phone='09121000099')
+        admin_user.is_staff = True
+        admin_user.save()
+        self.client.force_authenticate(user=admin_user)
+
+        approve_res = self.client.post(f'/api/v1/donations/campaigns/{campaign_id}/approve/')
+        self.assertEqual(approve_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(approve_res.data['campaign']['status'], 'active')
+
+        # Now topic post IS created
+        self.assertEqual(Post.objects.filter(topic=self.topic).count(), initial_posts_count + 1)
+        post = Post.objects.filter(topic=self.topic).latest('created_at')
+        self.assertIn('پویش تأمین دارو توسط کاربر عادی', post.content)
 
     def test_campaign_update_by_creator(self):
         """
@@ -207,7 +267,7 @@ class DonationAPITest(APITestCase):
         self.assertIn('عنوان ویرایش‌شده پویش', post.content)
         self.assertIn('25,000,000', post.content)
 
-    @patch('apps.donations.services.requests.post')
+    @patch('apps.payments.gateways.zarinpal.requests.post')
     def test_donation_initiate_api_success(self, mock_post):
 
         """
@@ -241,7 +301,7 @@ class DonationAPITest(APITestCase):
         self.assertEqual(response.data['authority'], 'S0000000000000000000000000000API123')
         self.assertIn('StartPay/S0000000000000000000000000000API123', response.data['gateway_url'])
 
-    @patch('apps.donations.services.requests.post')
+    @patch('apps.payments.gateways.zarinpal.requests.post')
     def test_donation_callback_success_redirects_and_settles(self, mock_post):
         """
         ZarinPal callback with Status=OK verifies payment and redirects to frontend with success params.
@@ -319,4 +379,31 @@ class DonationAPITest(APITestCase):
         campaign.refresh_from_db()
         self.assertEqual(campaign.collected_amount, 0)
         self.assertEqual(campaign.donors_count, 0)
+
+    def test_lazy_auto_expiry_on_list_view(self):
+        """
+        When listing campaigns, any active campaign with a past deadline is automatically
+        transitioned to 'expired' directly in the database without external cron.
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+
+        overdue_campaign = DonationCampaign.objects.create(
+            topic=self.topic,
+            creator=self.creator,
+            title='پویش منقضی‌شده تستی',
+            description='تست انقضا',
+            target_amount=10000000,
+            deadline=timezone.now() - timedelta(hours=2),
+            status=DonationCampaign.StatusChoices.ACTIVE
+        )
+
+        # Call the campaigns list API
+        response = self.client.get('/api/v1/donations/campaigns/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # The campaign must now be EXPIRED in DB
+        overdue_campaign.refresh_from_db()
+        self.assertEqual(overdue_campaign.status, DonationCampaign.StatusChoices.EXPIRED)
+
 

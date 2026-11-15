@@ -8,8 +8,6 @@ import PlatformHeader from '@/components/PlatformHeader.vue'
 import PlatformNavigation from '@/components/PlatformNavigation.vue'
 import PostCard from '@/components/PostCard.vue'
 import TopicCard from '@/components/TopicCard.vue'
-import ProfileCard from '@/components/ProfileCard.vue'
-import ProfileOptionCard from '@/components/ProfileOptionCard.vue'
 import CreateTopicModal from '@/components/CreateTopicModal.vue'
 import EditProfileModal from '@/components/EditProfileModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -27,14 +25,21 @@ import CreateDonationDialog from '@/components/kindness/CreateDonationDialog.vue
 import DonationChatCard from '@/components/kindness/DonationChatCard.vue'
 import DonationModal from '@/components/kindness/DonationModal.vue'
 import PaymentReceiptModal from '@/components/kindness/PaymentReceiptModal.vue'
-import type { CreateDonationPayload } from '@/types/kindness'
+import type { CreateDonationPayload, DonationCampaignProps } from '@/types/kindness'
 import MarketplaceView from './MarketplaceView.vue'
 import UnderDevelopmentCard from '@/components/UnderDevelopmentCard.vue'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ConstructionIcon, HandHeartIcon, LinkIcon, LogOutIcon, PlusIcon, ChevronRightIcon, SunIcon, MoonIcon, LanguagesIcon, CheckIcon, Loader2Icon, LayersIcon, CheckCircle2Icon } from '@lucide/vue'
+import { ConstructionIcon, PlusIcon, ChevronRightIcon, LanguagesIcon, CheckIcon, Loader2Icon, LayersIcon, CheckCircle2Icon } from '@lucide/vue'
 import TopicEditorialView from '@/components/TopicEditorialView.vue'
+import MyBookshelfView from '@/components/shelf/MyBookshelfView.vue'
+import DonateBookFromShelfDialog from '@/components/shelf/DonateBookFromShelfDialog.vue'
+import BookDonationDetailDialog from '@/components/shelf/BookDonationDetailDialog.vue'
+import BookChatCard from '@/components/shelf/BookChatCard.vue'
+import TopicBookDonationDialog from '@/components/shelf/TopicBookDonationDialog.vue'
+import type { ShelfBook, BookDonationPostData } from '@/types/shelf'
+import PlatformHomeHub from '@/components/home/PlatformHomeHub.vue'
+import PlatformProfileView from '@/components/profile/PlatformProfileView.vue'
 
 import {
   Dialog,
@@ -55,8 +60,18 @@ import { useToastStore } from '@/stores/toastStore'
 // Tab state ('home' | 'donate' | 'marketplace' | 'profile')
 const currentTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
 
-// Subview connection state
-const showConnections = ref(false)
+// Home tab subview ('hub' = main action hub + sliders, 'topics' = topics list)
+const homeSubView = ref<'hub' | 'topics'>('hub')
+const platformHomeHubRef = ref<InstanceType<typeof PlatformHomeHub> | null>(null)
+const isHomeDonateDialogOpen = ref(false)
+const homeDonatePreselectedBookId = ref<number | null>(null)
+const homeDonateInitialMode = ref<'donate' | 'receive'>('donate')
+const isHomeHandoverDialogOpen = ref(false)
+const activeHandoverShortCode = ref('')
+const activeHandoverOtp = ref('')
+
+// Profile subview navigation state
+const activeProfileSubView = ref<'menu' | 'connections' | 'shelf'>('menu')
 
 // Active topic subview ('feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq' | 'editorial')
 const activeTopicSubView = ref<'feed' | 'edit' | 'connections' | 'import' | 'admins' | 'faq' | 'editorial'>('feed')
@@ -104,6 +119,7 @@ const syncRouteToState = () => {
     selectedTopic.value = null
   } else if (route.path.startsWith('/topic/')) {
     currentTab.value = 'home'
+    homeSubView.value = 'topics'
     const topicId = Number(route.params.id)
     if (!isNaN(topicId)) {
       const found = topics.value.find(t => t.id === topicId)
@@ -113,10 +129,80 @@ const syncRouteToState = () => {
         selectedTopic.value = { id: topicId, title: languageStore.t('در حال بارگذاری...', 'Loading...') } as any
       }
     }
+  } else if (route.path.startsWith('/b/')) {
+    currentTab.value = 'home'
+    selectedTopic.value = null
+    homeSubView.value = 'hub'
+    const code = String(route.params.code || '').trim().toUpperCase()
+    const otpQuery = typeof route.query.otp === 'string' ? route.query.otp.trim() : ''
+    if (code) {
+      activeHandoverShortCode.value = code
+      activeHandoverOtp.value = otpQuery
+      isHomeHandoverDialogOpen.value = true
+    }
   } else {
     currentTab.value = 'home'
     selectedTopic.value = null
   }
+}
+
+watch(isHomeHandoverDialogOpen, (open) => {
+  if (!open) {
+    activeHandoverShortCode.value = ''
+    activeHandoverOtp.value = ''
+    if (route.path.startsWith('/b/')) {
+      router.replace('/')
+    }
+  }
+})
+
+const handleOpenHomeBookDonate = (
+  bookId: number | null = null,
+  mode: 'donate' | 'receive' = 'donate'
+) => {
+  homeDonatePreselectedBookId.value = bookId
+  homeDonateInitialMode.value = mode
+  isHomeDonateDialogOpen.value = true
+}
+
+const handleOpenHandoverByCode = (shortCode: string) => {
+  const cleaned = (shortCode || '').trim().toUpperCase()
+  if (!cleaned) return
+  activeHandoverShortCode.value = cleaned
+  isHomeHandoverDialogOpen.value = true
+}
+
+const handleOpenShelfFromHome = () => {
+  if (!userStore.isAuthenticated && !localStorage.getItem('auth_token')) {
+    userStore.isLoginModalOpen = true
+    return
+  }
+  currentTab.value = 'profile'
+  activeProfileSubView.value = 'shelf'
+}
+
+const handleOpenShelfBookFromHome = (book: ShelfBook) => {
+  if (
+    book.disposition === 'for_donation' &&
+    book.donation_methods?.includes('in_person') &&
+    book.physical_copy_summary?.short_code
+  ) {
+    handleOpenHandoverByCode(book.physical_copy_summary.short_code)
+    return
+  }
+  if (!userStore.isAuthenticated) {
+    userStore.isLoginModalOpen = true
+    return
+  }
+  currentTab.value = 'profile'
+  activeProfileSubView.value = 'shelf'
+}
+
+const handleHomeBookMutated = async () => {
+  await Promise.allSettled([
+    userStore.loadProfile(),
+    platformHomeHubRef.value?.reload(),
+  ])
 }
 
 // Watchers to sync state to route
@@ -125,6 +211,11 @@ watch(() => route.path, () => {
 })
 
 watch(currentTab, (newTab) => {
+  if (newTab !== 'donate') {
+    selectedDonationCampaign.value = null
+    pendingDonationId.value = null
+    donationDetailFromHome.value = false
+  }
   if (newTab === 'profile') {
     if (!userStore.isAuthenticated) {
       userStore.isLoginModalOpen = true
@@ -143,7 +234,7 @@ watch(currentTab, (newTab) => {
       router.push('/marketplace')
     }
   } else if (newTab === 'home') {
-    if (route.path !== '/' && !route.path.startsWith('/topic/')) {
+    if (route.path !== '/' && !route.path.startsWith('/topic/') && !route.path.startsWith('/b/')) {
       router.push('/')
     }
   }
@@ -296,22 +387,34 @@ onUnmounted(() => {
 // Header computed states for platform and connections view
 const headerIsInnerPage = computed(() => {
   if (currentTab.value === 'home') {
-    return selectedTopic.value !== null
-  } else {
-    return showConnections.value
+    return selectedTopic.value !== null || homeSubView.value === 'topics'
+  } else if (currentTab.value === 'donate') {
+    return selectedDonationCampaign.value !== null
+  } else if (currentTab.value === 'profile') {
+    return activeProfileSubView.value !== 'menu'
   }
+  return false
 })
 
 const headerInnerTitle = computed(() => {
   if (currentTab.value === 'home') {
+    if (selectedTopic.value === null && homeSubView.value === 'topics') {
+      return languageStore.t('لیست تاپیک‌ها', 'Topics List')
+    }
     if (activeTopicSubView.value === 'faq') {
       const topicName = selectedTopic.value?.title || ''
       return languageStore.t(`دستیار هوشمند ${topicName}`, `${topicName} AI Assistant`)
     }
     return selectedTopic.value?.title || ''
-  } else {
+  } else if (currentTab.value === 'donate' && selectedDonationCampaign.value) {
+    return selectedDonationCampaign.value.title || languageStore.t('جزئیات پویش', 'Campaign Details')
+  } else if (currentTab.value === 'profile') {
+    if (activeProfileSubView.value === 'shelf') {
+      return languageStore.t('قفسه کتاب من', 'My Bookshelf')
+    }
     return languageStore.t('مدیریت اتصالات', 'Connections Management')
   }
+  return ''
 })
 
 const headerTitle = computed(() => {
@@ -329,13 +432,26 @@ const headerTitle = computed(() => {
 
 const handleHeaderBack = () => {
   if (currentTab.value === 'home') {
-    if (activeTopicSubView.value !== 'feed') {
-      activeTopicSubView.value = 'feed'
-    } else {
-      selectedTopic.value = null
+    if (selectedTopic.value !== null) {
+      if (activeTopicSubView.value !== 'feed') {
+        activeTopicSubView.value = 'feed'
+      } else {
+        selectedTopic.value = null
+      }
+    } else if (homeSubView.value === 'topics') {
+      homeSubView.value = 'hub'
+      searchQuery.value = ''
     }
-  } else {
-    showConnections.value = false
+  } else if (currentTab.value === 'donate' && selectedDonationCampaign.value !== null) {
+    donationsFeedRef.value?.closeDetail()
+    selectedDonationCampaign.value = null
+    pendingDonationId.value = null
+    if (donationDetailFromHome.value) {
+      donationDetailFromHome.value = false
+      currentTab.value = 'home'
+    }
+  } else if (currentTab.value === 'profile') {
+    activeProfileSubView.value = 'menu'
   }
 }
 
@@ -402,16 +518,94 @@ const searchQuery = ref('')
 // Create Topic & Donation Modal State
 const isCreateModalOpen = ref(false)
 const isCreateDonationOpen = ref(false)
+const isTopicBookDonationOpen = ref(false)
 const isDonateModalOpen = ref(false)
 const selectedDonationForPayment = ref<any>(null)
 const editingDonation = ref<any>(null)
 const isEditProfileOpen = ref(false)
 const isAdminsModalOpen = ref(false)
 const donationsFeedRef = ref<any>(null)
+const selectedDonationCampaign = ref<DonationCampaignProps | null>(null)
+const pendingDonationId = ref<string | number | null>(null)
+const donationDetailFromHome = ref(false)
+
+const handleOpenDonationsTab = () => {
+  donationDetailFromHome.value = false
+  pendingDonationId.value = null
+  currentTab.value = 'donate'
+}
+
+const handleOpenCampaignFromHome = (campaignId: string | number) => {
+  donationDetailFromHome.value = true
+  pendingDonationId.value = campaignId
+  currentTab.value = 'donate'
+}
 
 const handleOpenCreateDonation = () => {
   editingDonation.value = null
   isCreateDonationOpen.value = true
+}
+
+const handleOpenCreateBookDonation = () => {
+  if (!userStore.isAuthenticated) {
+    toastStore.triggerToast(
+      languageStore.t('برای اهدای کتاب در تاپیک، ابتدا وارد حساب کاربری خود شوید.', 'Please sign in first to donate books in topic.'),
+      'info'
+    )
+    return
+  }
+  isTopicBookDonationOpen.value = true
+}
+
+const handleBookDonationPublished = async () => {
+  if (selectedTopic.value) {
+    await postStore.loadPosts(selectedTopic.value.id)
+    scrollToBottom(true)
+  }
+}
+
+const isBookOwner = (book: any, postAuthor?: any) => {
+  if (!userProfile.value) return false
+  const currentUserId = userProfile.value.id ? String(userProfile.value.id) : null
+  const currentUserPhone = userProfile.value.phone || null
+  if (book?.seller_phone && currentUserPhone && book.seller_phone === currentUserPhone) return true
+  if (postAuthor?.phone && currentUserPhone && postAuthor.phone === currentUserPhone) return true
+  if (postAuthor?.id && currentUserId && String(postAuthor.id) === currentUserId) return true
+  return false
+}
+
+const handleClaimBook = (book: any) => {
+  if (book?.short_code) {
+    activeHandoverShortCode.value = book.short_code
+    isHomeHandoverDialogOpen.value = true
+  } else {
+    toastStore.triggerToast(
+      languageStore.t('درخواست دریافت کتاب برای اهداکننده ارسال گردید.', 'Book claim requested.'),
+      'success'
+    )
+  }
+}
+
+const handleInspectBookShortCode = (shortCode: string) => {
+  if (shortCode) {
+    activeHandoverShortCode.value = shortCode
+    isHomeHandoverDialogOpen.value = true
+  }
+}
+
+const handleShareBook = (book: any) => {
+  const shareTitle = `اهدای کتاب: ${book.title}`
+  const shareUrl = window.location.href
+  if (navigator.share) {
+    navigator.share({
+      title: shareTitle,
+      text: book.description || shareTitle,
+      url: shareUrl,
+    }).catch(() => {})
+  } else {
+    navigator.clipboard.writeText(shareUrl)
+    toastStore.triggerToast(languageStore.t('لینک گفتگو کپی شد.', 'Link copied.'), 'success')
+  }
 }
 
 const isCampaignCreator = (campaign: any, postAuthor?: any) => {
@@ -470,18 +664,35 @@ const handleDonationCreated = async (payload: CreateDonationPayload) => {
       })
     }
 
-    await createDonationCampaign(formData)
-    toastStore.triggerToast(languageStore.t('پویش مهربانی با موفقیت ایجاد و ارسال شد.', 'Donation campaign created and posted successfully.'), 'success')
+    const res = await createDonationCampaign(formData)
+    const isPendingReview = res?.data?.status === 'pending_review'
+
+    if (isPendingReview) {
+      toastStore.triggerToast(
+        languageStore.t(
+          'پویش شما با موفقیت ثبت شد و پس از بررسی و تایید مدیریت منتشر خواهد شد.',
+          'Campaign submitted successfully and will be published upon admin review.'
+        ),
+        'info'
+      )
+    } else {
+      toastStore.triggerToast(
+        languageStore.t(
+          'پویش مهربانی با موفقیت ایجاد و ارسال شد.',
+          'Donation campaign created and posted successfully.'
+        ),
+        'success'
+      )
+      // Reload posts if inside a topic only when published active
+      if (selectedTopic.value) {
+        await postStore.loadPosts(selectedTopic.value.id)
+        scrollToBottom(true)
+      }
+    }
     
     // Refresh donations feed
     if (donationsFeedRef.value) {
       donationsFeedRef.value.loadCampaigns()
-    }
-
-    // Reload posts if inside a topic
-    if (selectedTopic.value) {
-      await postStore.loadPosts(selectedTopic.value.id)
-      scrollToBottom(true)
     }
   } catch (error: any) {
     console.error('Failed to create donation campaign:', error)
@@ -562,7 +773,11 @@ const handleProcessDonationPayment = async (data: { amount: number; isAnonymous:
 
 
 const handleDonationTopicClick = (topicId: string | number) => {
+  selectedDonationCampaign.value = null
+  pendingDonationId.value = null
+  donationDetailFromHome.value = false
   currentTab.value = 'home'
+  homeSubView.value = 'topics'
   const numericId = Number(topicId)
   const found = topics.value.find(t => t.id === numericId)
   if (found) {
@@ -750,6 +965,8 @@ const handleLogout = () => {
   triggerToast(languageStore.t('در حال خروج از سیستم...', 'Logging out...'))
   setTimeout(() => {
     selectedTopic.value = null
+    homeSubView.value = 'hub'
+    activeProfileSubView.value = 'menu'
     currentTab.value = 'home'
     userStore.logout()
     router.push('/')
@@ -914,7 +1131,7 @@ const handleGoToConnections = () => {
   activeTopicSubView.value = 'feed'
   selectedTopic.value = null
   currentTab.value = 'profile'
-  showConnections.value = true
+  activeProfileSubView.value = 'connections'
 }
 
 // Topic Message Input / Attachments flow
@@ -1204,11 +1421,13 @@ const toggleTheme = useToggle(isDark)
       :is-inner-page="headerIsInnerPage" 
       :inner-title="headerInnerTitle" 
       :title="headerTitle" 
+      :center-title="!headerIsInnerPage"
+      :show-theme-toggle="!headerIsInnerPage"
       :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
       :show-options-button="!!(currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
       :show-faq-button="!!(currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
       :is-owner="isTopicCreator"
-      :show-search-button="(currentTab === 'home' && selectedTopic === null) || currentTab === 'donate'"
+      :show-search-button="(currentTab === 'home' && selectedTopic === null && homeSubView === 'topics') || (currentTab === 'donate' && selectedDonationCampaign === null)"
       v-model:search-query="searchQuery"
       @back="handleHeaderBack"
       @edit-topic="handleEditTopic"
@@ -1227,8 +1446,22 @@ const toggleTheme = useToggle(isDark)
         <div v-if="currentTab === 'home'" key="home" class="flex flex-col gap-5 w-full">
           
           <transition name="fade-slide" mode="out-in">
+            <!-- Home Hub View: 3-Button Action Hub + Books, Donations & Marketplace Sliders -->
+            <div v-if="selectedTopic === null && homeSubView === 'hub'" key="hub" class="w-full">
+              <PlatformHomeHub
+                ref="platformHomeHubRef"
+                :topics-count="topics.length"
+                @open-topics="homeSubView = 'topics'"
+                @open-donations="handleOpenDonationsTab"
+                @open-book-donations="handleOpenHomeBookDonate(null, 'donate')"
+                @open-shelf="handleOpenShelfFromHome"
+                @open-shelf-book="handleOpenShelfBookFromHome"
+                @open-campaign="handleOpenCampaignFromHome"
+              />
+            </div>
+
             <!-- List View: Search and vertical TopicCards -->
-            <div v-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full pb-20">
+            <div v-else-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full pb-20">
               <!-- Grouped TopicCards Container (Borderless list grouped inside a single glass card wrapper) -->
               <div class="flex flex-col gap-1 w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-2.5 shadow-xs">
                 <!-- Skeleton Loading -->
@@ -1360,6 +1593,20 @@ const toggleTheme = useToggle(isDark)
                     />
                   </div>
 
+                  <!-- In-Topic Book Donation Card -->
+                  <div v-else-if="post.book_donation" class="w-full">
+                    <BookChatCard
+                      :book="post.book_donation"
+                      :topic-name="selectedTopic?.title"
+                      :author-name="post.author?.name || post.book_donation.seller_name"
+                      :author-avatar="post.author?.avatarUrl || undefined"
+                      :can-edit="isBookOwner(post.book_donation, post.author)"
+                      @claim-click="handleClaimBook"
+                      @inspect-click="handleInspectBookShortCode"
+                      @share-click="handleShareBook"
+                    />
+                  </div>
+
                   <!-- Standard Post Card -->
                   <PostCard 
                     v-else
@@ -1401,6 +1648,7 @@ const toggleTheme = useToggle(isDark)
                   @attach="triggerFileSelect"
                   @attach-file="handlePastedFile"
                   @create-donation="handleOpenCreateDonation"
+                  @create-book-donation="handleOpenCreateBookDonation"
                   :initialAttachments="postAttachments"
                   @removeAttachment="removePostAttachment"
                 />
@@ -1498,6 +1746,8 @@ const toggleTheme = useToggle(isDark)
           <DonationsFeed
             ref="donationsFeedRef"
             :search-query="searchQuery"
+            :initial-campaign-id="pendingDonationId"
+            @detail-change="(camp) => { selectedDonationCampaign = camp; if (!camp) { pendingDonationId = null } }"
             @donate-click="handleOpenDonateModal"
             @create-campaign="handleOpenCreateDonation"
             @edit-campaign="handleEditDonation"
@@ -1518,7 +1768,7 @@ const toggleTheme = useToggle(isDark)
           
           <transition name="fade-slide" mode="out-in">
             <!-- Subview: Connections -->
-            <div v-if="showConnections" key="connections-list" class="flex flex-col gap-4.5">
+            <div v-if="activeProfileSubView === 'connections'" key="connections-list" class="flex flex-col gap-4.5">
               <!-- Connection Cards list -->
               <div class="flex flex-col gap-4.5">
                 <BotConnectionCard 
@@ -1540,86 +1790,27 @@ const toggleTheme = useToggle(isDark)
               </div>
             </div>
 
+            <!-- Subview: My Bookshelf -->
+            <div v-else-if="activeProfileSubView === 'shelf'" key="profile-shelf" class="flex flex-col gap-4">
+              <MyBookshelfView @shelf-changed="userStore.loadProfile()" />
+            </div>
+
             <!-- Main Profile Menu -->
-            <div v-else key="profile-main" class="flex flex-col gap-4.5">
-              <!-- Profile Card -->
-              <ProfileCard 
-                v-if="userProfile"
-                v-bind="userProfile"
+            <div v-else key="profile-main" class="w-full">
+              <PlatformProfileView
+                v-model:dark="isDark"
+                :user-profile="userProfile"
                 :topics-count="topics.length"
                 :posts-count="posts.length"
-                :donations-count="userProfile.donations_count ?? 0"
+                :connections-badge-text="connectionsBadgeText"
+                :connections-badge-variant="connectionsBadgeVariant"
                 @edit="handleProfileEdit"
+                @open-shelf="activeProfileSubView = 'shelf'"
+                @open-donations="currentTab = 'donate'"
+                @open-connections="activeProfileSubView = 'connections'"
+                @open-language="showLanguageDialog = true"
+                @logout="handleLogout"
               />
-
-              <!-- Options -->
-              <div class="flex flex-col gap-3">
-                <ProfileOptionCard 
-                  :title="languageStore.t('پویش‌های اهدا', 'Donation Campaigns')"
-                  :description="languageStore.t('مشاهده و مشارکت در پویش‌های مهربانی و سازندگی', 'View and participate in donation campaigns')"
-                  :icon="HandHeartIcon"
-                  :badge-text="languageStore.n(userProfile?.donations_count ?? 0)"
-                  badge-variant="secondary"
-                  @click="currentTab = 'donate'"
-                />
-
-                <ProfileOptionCard 
-                  :title="languageStore.t('اتصالات پیام‌رسان', 'Messenger Connections')"
-                  :description="languageStore.t('مدیریت حساب‌های متصل و سرویس‌های خارجی', 'Manage connected accounts and external services')"
-                  :icon="LinkIcon"
-                  :badge-text="connectionsBadgeText"
-                  :badge-variant="connectionsBadgeVariant"
-                  @click="showConnections = true"
-                />
-
-                <!-- Light/Dark Mode Switcher -->
-                <div
-                  @click="isDark = !isDark"
-                  class="w-full flex items-center justify-start p-3.5 rounded-2xl bg-card/45 backdrop-blur-md border border-border/40 hover:bg-muted/40 hover:border-primary/20 transition-all duration-200 cursor-pointer select-none relative active:scale-[0.995] group gap-3.5"
-                  :class="[languageStore.isFa ? 'text-right' : 'text-left']"
-                  :dir="languageStore.dir"
-                >
-                  <!-- Right side: Icon Container -->
-                  <div class="size-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary shrink-0 transition-transform duration-200 group-hover:scale-102">
-                    <transition name="icon-pop" mode="out-in">
-                      <component :is="isDark ? MoonIcon : SunIcon" class="size-5 shrink-0" :key="isDark ? 'moon' : 'sun'" />
-                    </transition>
-                  </div>
-
-                  <!-- Middle: Title & Description -->
-                  <div class="flex-1 flex flex-col text-start gap-1 min-w-0">
-                    <span class="text-xs font-bold text-foreground truncate leading-none">
-                      {{ languageStore.t('حالت تاریک', 'Dark Mode') }}
-                    </span>
-                    <span class="text-[10px] text-muted-foreground truncate leading-relaxed">
-                      {{ languageStore.t('تغییر تم رنگی برنامه به حالت شب یا روز', 'Toggle dark or light theme for the app') }}
-                    </span>
-                  </div>
-
-                  <!-- Left side: Switch toggle -->
-                  <div class="flex items-center gap-2 shrink-0" @click.stop>
-                    <Switch v-model:checked="isDark" />
-                  </div>
-                </div>
-
-                <!-- Language Switcher Option -->
-                <ProfileOptionCard 
-                  :title="languageStore.t('زبان برنامه (Language)', 'App Language (Language)')"
-                  :description="languageStore.t('تغییر زبان کلی سامانه و چیدمان راست‌چین/چپ‌چین', 'Toggle global app language and RTL/LTR layout')"
-                  :icon="LanguagesIcon"
-                  :badge-text="languageStore.currentLanguage.toUpperCase()"
-                  badge-variant="secondary"
-                  @click="showLanguageDialog = true"
-                />
-
-                <ProfileOptionCard 
-                  :title="languageStore.t('خروج از حساب کاربری', 'Log Out')"
-                  :description="languageStore.t('خروج امن از سیستم و بازگشت به صفحه ورود', 'Safely log out of system and return to login')"
-                  :icon="LogOutIcon"
-                  badge-variant="destructive"
-                  @click="handleLogout"
-                />
-              </div>
             </div>
           </transition>
 
@@ -1628,15 +1819,18 @@ const toggleTheme = useToggle(isDark)
     </div>
 
     <!-- Bottom Navigation tabs -->
-    <div v-if="selectedTopic === null" class="fixed bottom-6 inset-x-0 flex justify-center z-45 pointer-events-none px-6">
+    <div v-if="selectedTopic === null && selectedDonationCampaign === null" class="fixed bottom-6 inset-x-0 flex justify-center z-45 pointer-events-none px-6">
       <div class="pointer-events-auto">
-        <PlatformNavigation v-model="currentTab" />
+        <PlatformNavigation
+          v-model="currentTab"
+          @change="(tab) => { selectedDonationCampaign = null; pendingDonationId = null; donationDetailFromHome = false; if (tab === 'home') { homeSubView = 'hub'; searchQuery = '' } }"
+        />
       </div>
     </div>
 
     <!-- Floating Plus Button to Create Topic (Bottom Right Corner - Raised above floating tab bar, aligned inside page grid) -->
     <Button 
-      v-if="currentTab === 'home' && selectedTopic === null"
+      v-if="currentTab === 'home' && selectedTopic === null && homeSubView === 'topics'"
       @click="handleCreateTopicClick()"
       class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
@@ -1657,6 +1851,24 @@ const toggleTheme = useToggle(isDark)
       :userProfile="userProfile"
       @close="isEditProfileOpen = false"
       @update="handleProfileSave"
+    />
+
+    <!-- Home In-Person Book Donation Dialog (Direct on Home, no separate catalog page) -->
+    <DonateBookFromShelfDialog
+      v-model:open="isHomeDonateDialogOpen"
+      :initial-book-id="homeDonatePreselectedBookId"
+      :initial-mode="homeDonateInitialMode"
+      @donated="handleHomeBookMutated"
+      @open-handover="handleOpenHandoverByCode"
+    />
+
+    <!-- Direct In-Person QR / 4-Digit OTP Handover Modal (from QR, code input, /b/:code, or 'My Books' card) -->
+    <BookDonationDetailDialog
+      v-model:open="isHomeHandoverDialogOpen"
+      :initial-short-code="activeHandoverShortCode"
+      :initial-otp="activeHandoverOtp"
+      in-person-only
+      @changed="handleHomeBookMutated"
     />
 
     <!-- Language Switcher Dialog -->
@@ -1778,6 +1990,14 @@ const toggleTheme = useToggle(isDark)
       @updated="handleDonationUpdated"
     />
 
+    <!-- Topic Book Donation Dialog -->
+    <TopicBookDonationDialog
+      v-model:open="isTopicBookDonationOpen"
+      :topic-id="selectedTopic?.id"
+      :topic-name="selectedTopic?.title"
+      @published="handleBookDonationPublished"
+    />
+
     <!-- Quick Donation Modal -->
     <DonationModal
       :open="isDonateModalOpen"
@@ -1827,21 +2047,5 @@ const toggleTheme = useToggle(isDark)
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-8px);
-}
-
-/* Icon Pop Transition */
-.icon-pop-enter-active,
-.icon-pop-leave-active {
-  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.icon-pop-enter-from {
-  transform: scale(0.6) rotate(-90deg);
-  opacity: 0;
-}
-
-.icon-pop-leave-to {
-  transform: scale(0.6) rotate(90deg);
-  opacity: 0;
 }
 </style>

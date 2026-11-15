@@ -1,0 +1,618 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useLanguageStore } from '@/stores/languageStore'
+
+import { useUserStore } from '@/stores/userStore'
+import {
+  listHomeDonationCampaigns,
+  listMarketplaceItems,
+  listMyMarketplaceItems,
+  listMyShelfBooks,
+} from '@/api/shelf'
+import type {
+  HomeDonationCampaign,
+  HomeMarketplaceItem,
+  ShelfBook,
+} from '@/types/shelf'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import HorizontalSliderRow from '@/components/home/HorizontalSliderRow.vue'
+import { getCampaignCategoryLabel, getCampaignStatusConfig } from '@/utils/kindness'
+import {
+  BookOpenIcon,
+  BookPlusIcon,
+  CheckCircle2Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  HandHeartIcon,
+  LayersIcon,
+  ShoppingBagIcon,
+  SmartphoneIcon,
+} from '@lucide/vue'
+import AddShelfBookDialog from '@/components/shelf/AddShelfBookDialog.vue'
+import DonateSpecificBookDialog from '@/components/shelf/DonateSpecificBookDialog.vue'
+
+const props = withDefaults(
+  defineProps<{
+    topicsCount?: number
+  }>(),
+  {
+    topicsCount: 0,
+  }
+)
+
+const emit = defineEmits<{
+  (e: 'open-topics'): void
+  (e: 'open-donations'): void
+  (e: 'open-book-donations'): void
+  (e: 'open-shelf'): void
+  (e: 'open-shelf-book', book: ShelfBook): void
+  (e: 'open-campaign', campaignId: string | number): void
+}>()
+
+const languageStore = useLanguageStore()
+const userStore = useUserStore()
+const books = ref<ShelfBook[]>([])
+const campaigns = ref<HomeDonationCampaign[]>([])
+const products = ref<HomeMarketplaceItem[]>([])
+
+const isLoadingBooks = ref(false)
+const isLoadingCampaigns = ref(false)
+const isLoadingProducts = ref(false)
+
+const hasAuthSession = computed(
+  () => userStore.isAuthenticated || Boolean(localStorage.getItem('auth_token'))
+)
+
+const visibleBooks = computed(() =>
+  books.value.filter((book) => (book.quantity ?? 1) > 0)
+)
+
+const topicsSubtitle = computed(() => {
+  if (props.topicsCount > 0) {
+    return languageStore.t(
+      `${languageStore.n(props.topicsCount)} تاپیک و کانال موضوعی`,
+      `${props.topicsCount} topics & channels`
+    )
+  }
+  return languageStore.t('کانال‌ها، مقالات و گفتگوها', 'Channels, notes & discussions')
+})
+
+const getShortCode = (book: ShelfBook): string | null => {
+  return book.physical_copy_summary?.short_code || null
+}
+
+const getFormatBadge = (book: ShelfBook): string => {
+  return book.book_format === 'digital'
+    ? languageStore.t('دیجیتال', 'Digital')
+    : languageStore.t('چاپی', 'Physical')
+}
+
+const getDispositionLabel = (book: ShelfBook): string | null => {
+  if (book.disposition === 'for_donation') {
+    return languageStore.t('اهدا', 'Donate')
+  }
+  if (book.disposition === 'for_sale') {
+    return languageStore.t('فروشی', 'Sale')
+  }
+  if (book.disposition === 'circulating') {
+    return languageStore.t('در گردش', 'Circulating')
+  }
+  return null
+}
+
+const resolveMediaUrl = (raw?: string | null): string | null => {
+  if (!raw) return null
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
+    return raw
+  }
+  return `/${raw}`
+}
+
+const getCampaignCover = (campaign: HomeDonationCampaign): string | null => {
+  const firstAtt = campaign.attachments?.find((a) => !a.is_video && a.url)?.url
+  return resolveMediaUrl(firstAtt || campaign.cover_image)
+}
+
+const getCampaignProgressPercent = (campaign: HomeDonationCampaign): number => {
+  const target = Number(campaign.target_amount) || 0
+  const collected = Number(campaign.collected_amount) || 0
+  if (target <= 0) return 0
+  return Math.min(100, Math.max(0, Math.round((collected / target) * 100)))
+}
+
+const getCampaignStatusLabel = (status: string): string => {
+  return getCampaignStatusConfig(status, languageStore.isFa).label
+}
+
+const formatToman = (val: string | number | null | undefined): string => {
+  const num = Number(val ?? 0)
+  if (!Number.isFinite(num)) return '۰'
+  return num.toLocaleString(languageStore.isFa ? 'fa-IR' : 'en-US')
+}
+
+const loadAllHomeSections = async () => {
+  isLoadingBooks.value = true
+  isLoadingCampaigns.value = true
+  isLoadingProducts.value = true
+
+  const isAuth = hasAuthSession.value
+
+  const booksPromise = isAuth
+    ? listMyShelfBooks()
+    : Promise.resolve([] as ShelfBook[])
+
+  const campaignsPromise = listHomeDonationCampaigns()
+
+  const productsPromise = isAuth
+    ? listMyMarketplaceItems().then((mine) =>
+        mine.length > 0 ? mine : listMarketplaceItems()
+      )
+    : listMarketplaceItems()
+
+  const [booksRes, campaignsRes, productsRes] = await Promise.allSettled([
+    booksPromise,
+    campaignsPromise,
+    productsPromise,
+  ])
+
+  books.value = booksRes.status === 'fulfilled' ? booksRes.value : []
+  campaigns.value = campaignsRes.status === 'fulfilled' ? campaignsRes.value : []
+  products.value = productsRes.status === 'fulfilled' ? productsRes.value : []
+
+  isLoadingBooks.value = false
+  isLoadingCampaigns.value = false
+  isLoadingProducts.value = false
+}
+
+onMounted(() => {
+  loadAllHomeSections()
+})
+
+watch(
+  () => userStore.isAuthenticated,
+  () => {
+    loadAllHomeSections()
+  }
+)
+
+const isAddBookDialogOpen = ref(false)
+const isDonateBookDialogOpen = ref(false)
+const donatingBook = ref<ShelfBook | null>(null)
+
+const handleOpenAddBook = () => {
+  if (!hasAuthSession.value) {
+    userStore.isLoginModalOpen = true
+    return
+  }
+  isAddBookDialogOpen.value = true
+}
+
+const handleBookAdded = () => {
+  loadAllHomeSections()
+}
+
+const handleDonateBookClick = (book: ShelfBook) => {
+  if (!hasAuthSession.value) {
+    userStore.isLoginModalOpen = true
+    return
+  }
+  donatingBook.value = book
+  isDonateBookDialogOpen.value = true
+}
+
+const handleOpenBookDonations = () => {
+  emit('open-book-donations')
+}
+
+defineExpose({
+  reload: loadAllHomeSections,
+})
+</script>
+
+<template>
+  <div class="flex flex-col gap-6 w-full pb-24">
+    <!-- 1. Asymmetric 3-Button Action Hub (Flutter tafakor_shop HomeActionHub style) -->
+    <div class="flex items-stretch gap-2 w-full">
+      <!-- Primary Hero Gateway: Topics List (ONLY working/navigating button) -->
+      <button
+        type="button"
+        @click="emit('open-topics')"
+        class="flex-[4] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-3 py-2.5 flex items-center gap-2.5 text-start cursor-pointer"
+      >
+        <LayersIcon class="size-7 text-foreground shrink-0" />
+
+        <div class="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+          <span class="text-[14px] font-extrabold text-foreground truncate leading-tight">
+            {{ languageStore.t('لیست تاپیک‌ها', 'Topics List') }}
+          </span>
+          <span class="text-[11px] text-muted-foreground truncate leading-tight">
+            {{ topicsSubtitle }}
+          </span>
+        </div>
+
+        <ChevronLeftIcon
+          v-if="languageStore.isFa"
+          class="size-4 text-muted-foreground/70 shrink-0"
+        />
+        <ChevronRightIcon
+          v-else
+          class="size-4 text-muted-foreground/70 shrink-0"
+        />
+      </button>
+
+      <!-- Secondary Compact Card 1: Register Book (Active) -->
+      <button
+        type="button"
+        @click="handleOpenAddBook"
+        class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
+      >
+        <BookPlusIcon class="size-[22px] text-primary shrink-0" />
+        <span class="text-[10.5px] font-bold text-foreground max-w-full text-center leading-tight line-clamp-2">
+          {{ languageStore.t('ثبت کتاب', 'Add Book') }}
+        </span>
+      </button>
+
+      <!-- Secondary Compact Card 2: Book Donations List (Active) -->
+      <button
+        type="button"
+        @click="handleOpenBookDonations"
+        class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
+      >
+        <HandHeartIcon class="size-[22px] text-primary shrink-0" />
+        <span class="text-[10.5px] font-bold text-foreground max-w-full text-center leading-tight line-clamp-2">
+          {{ languageStore.t('اهدای کتاب', 'Donate Book') }}
+        </span>
+      </button>
+    </div>
+
+    <!-- 2. My Shelf Books Horizontal Slider (کتاب‌های من) -->
+    <section v-if="isLoadingBooks || visibleBooks.length > 0" class="flex flex-col gap-3">
+      <div class="flex items-center justify-between px-0.5">
+        <h2 class="text-sm font-extrabold text-foreground">
+          {{ languageStore.t('کتاب‌های من', 'My Books') }}
+        </h2>
+
+        <button
+          type="button"
+          @click="emit('open-shelf')"
+          class="flex items-center gap-0.5 text-xs font-bold text-primary hover:opacity-80 active:scale-95 transition-all select-none cursor-pointer"
+        >
+          <span>{{ languageStore.t('همه', 'All') }}</span>
+          <ChevronLeftIcon v-if="languageStore.isFa" class="size-3.5" />
+          <ChevronRightIcon v-else class="size-3.5" />
+        </button>
+      </div>
+
+      <div v-if="isLoadingBooks" class="grid grid-flow-col auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5 overflow-hidden pb-2">
+        <div
+          v-for="n in 3"
+          :key="'home-book-sk-' + n"
+          class="w-full min-w-0 h-[212px] rounded-2xl border border-border/60 bg-card/70 overflow-hidden flex flex-col"
+        >
+          <Skeleton class="h-[110px] w-full rounded-none" />
+          <div class="p-2.5 flex flex-col gap-2">
+            <Skeleton class="h-3.5 w-24" />
+            <Skeleton class="h-3 w-16" />
+          </div>
+        </div>
+      </div>
+
+      <HorizontalSliderRow
+        v-else
+        layout="grid"
+        track-class="auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5"
+      >
+        <div
+          v-for="book in visibleBooks"
+          :key="book.id"
+          role="button"
+          tabindex="0"
+          @click="emit('open-shelf-book', book)"
+          @keydown.enter.prevent="emit('open-shelf-book', book)"
+          class="w-full min-w-0 h-auto snap-start rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs hover:border-primary/40 hover:shadow-sm transition-all overflow-hidden flex flex-col select-none cursor-pointer"
+        >
+          <div class="h-[112px] w-full bg-muted/50 dark:bg-muted/30 relative flex items-center justify-center overflow-hidden">
+            <img
+              v-if="resolveMediaUrl(book.book_title.cover_image)"
+              :src="resolveMediaUrl(book.book_title.cover_image)!"
+              :alt="book.book_title.title"
+              class="size-full object-cover"
+            />
+            <SmartphoneIcon
+              v-else-if="book.book_format === 'digital'"
+              class="size-7 text-muted-foreground/70"
+            />
+            <BookOpenIcon v-else class="size-7 text-muted-foreground/70" />
+
+            <div class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border border-border/60 text-[10px] font-bold text-foreground shadow-2xs">
+              <span>{{ languageStore.n(book.quantity ?? 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
+            </div>
+
+          </div>
+
+          <div class="p-2.5 flex-1 flex flex-col justify-between gap-2 text-start">
+            <div class="flex flex-col gap-1">
+              <h3 class="text-[11.5px] font-bold text-foreground line-clamp-2 leading-snug">
+                {{ book.book_title.title }}
+              </h3>
+              <p class="text-[10px] text-muted-foreground truncate">
+                {{ book.book_title.author }}
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-1.5 border-t border-border/40">
+              <!-- Dedicated Donate Button on Home -->
+              <Button
+                type="button"
+                size="xs"
+                class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-black text-white hover:bg-neutral-800 dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80 transition-colors shadow-2xs"
+                @click.stop="handleDonateBookClick(book)"
+              >
+                <HandHeartIcon class="size-3.5" />
+                <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </HorizontalSliderRow>
+    </section>
+
+    <!-- 3. Donation Campaigns Horizontal Slider (پویش‌های نیکوکاری و اهدا) -->
+    <section v-if="isLoadingCampaigns || campaigns.length > 0" class="flex flex-col gap-3">
+      <div class="flex items-center justify-between px-0.5">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-extrabold text-foreground">
+            {{ languageStore.t('پویش‌های نیکوکاری و اهدا', 'Donation Campaigns') }}
+          </h2>
+          <span class="size-2 rounded-full bg-primary shrink-0" />
+        </div>
+
+        <button
+          type="button"
+          @click="emit('open-donations')"
+          class="flex items-center gap-0.5 text-xs font-bold text-primary hover:opacity-80 active:scale-95 transition-all select-none cursor-pointer"
+        >
+          <span>{{ languageStore.t('همه', 'All') }}</span>
+          <ChevronLeftIcon v-if="languageStore.isFa" class="size-3.5" />
+          <ChevronRightIcon v-else class="size-3.5" />
+        </button>
+      </div>
+
+      <div v-if="isLoadingCampaigns" class="grid grid-flow-col auto-cols-[100%] sm:auto-cols-[calc((100%-12px)/2)] gap-3 overflow-hidden pb-2">
+        <div
+          v-for="n in 2"
+          :key="'home-camp-sk-' + n"
+          class="w-full min-w-0 h-[238px] rounded-[18px] border border-border/60 bg-card/70 overflow-hidden flex flex-col"
+        >
+          <Skeleton class="h-[110px] w-full rounded-none" />
+          <div class="p-3 flex flex-col gap-2">
+            <Skeleton class="h-4 w-40" />
+            <Skeleton class="h-3 w-full" />
+            <Skeleton class="h-2 w-full rounded-full mt-2" />
+          </div>
+        </div>
+      </div>
+
+      <HorizontalSliderRow
+        v-else
+        layout="grid"
+        track-class="auto-cols-[100%] sm:auto-cols-[calc((100%-12px)/2)] gap-3"
+      >
+        <div
+          v-for="camp in campaigns"
+          :key="camp.id"
+          role="button"
+          tabindex="0"
+          @click="emit('open-campaign', camp.id)"
+          @keydown.enter="emit('open-campaign', camp.id)"
+          class="w-full min-w-0 snap-start rounded-[18px] border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs hover:border-primary/40 hover:shadow-md transition-all overflow-hidden flex flex-col select-none cursor-pointer"
+        >
+          <!-- Cover Header with Status Pill & Category Tag -->
+          <div class="h-[110px] w-full relative bg-gradient-to-br from-primary/10 via-primary/5 to-muted/60 flex items-center justify-center overflow-hidden">
+            <img
+              v-if="getCampaignCover(camp)"
+              :src="getCampaignCover(camp)!"
+              :alt="camp.title"
+              class="size-full object-cover"
+            />
+            <HandHeartIcon v-else class="size-9 text-primary/60" />
+
+            <div class="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+
+            <div
+              class="absolute top-2.5 start-2.5 px-2.5 py-1 rounded-xl backdrop-blur-md text-[10.5px] font-bold flex items-center gap-1.5 shadow-2xs border"
+              :class="
+                camp.status === 'completed' || camp.status === 'executed'
+                  ? 'bg-emerald-600 text-white border-transparent'
+                  : 'bg-background/95 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+              "
+            >
+              <span
+                v-if="camp.status === 'active' || !camp.status"
+                class="size-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"
+              />
+              <CheckCircle2Icon
+                v-else-if="camp.status === 'completed' || camp.status === 'executed'"
+                class="size-3.5 text-white shrink-0"
+              />
+              <span>
+                {{ getCampaignStatusLabel(camp.status) }}
+              </span>
+            </div>
+
+            <div class="absolute bottom-2 end-2.5 px-2 py-0.5 rounded-lg bg-background/90 border border-border/50 text-[10px] font-semibold text-foreground">
+              {{ getCampaignCategoryLabel(camp.category, languageStore.isFa) }}
+            </div>
+          </div>
+
+          <!-- Campaign Details & Progress Bar -->
+          <div class="p-3 flex-1 flex flex-col justify-between gap-2.5 text-start">
+            <div class="flex flex-col gap-1">
+              <h3 class="text-[13px] font-extrabold text-foreground truncate">
+                {{ camp.title }}
+              </h3>
+              <p class="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed min-h-[30px]">
+                {{ camp.description }}
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center justify-between gap-2 text-[11px]">
+                <span class="font-extrabold text-primary truncate">
+                  {{ languageStore.n(getCampaignProgressPercent(camp)) }}٪ {{ languageStore.t('تامین شده', 'funded') }}
+                </span>
+                <span class="text-muted-foreground shrink-0">
+                  {{ languageStore.n(camp.donors_count) }} {{ languageStore.t('حامی', 'supporters') }}
+                </span>
+              </div>
+
+              <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  class="h-full rounded-full bg-primary transition-all duration-300"
+                  :style="{ width: `${getCampaignProgressPercent(camp)}%` }"
+                />
+              </div>
+
+              <div class="flex items-center justify-between text-[10px] text-muted-foreground pt-0.5">
+                <span>
+                  {{ formatToman(camp.collected_amount) }} {{ languageStore.t('تومان', 'Toman') }}
+                </span>
+                <span>
+                  {{ languageStore.t('هدف:', 'Goal:') }} {{ formatToman(camp.target_amount) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </HorizontalSliderRow>
+    </section>
+
+    <!-- 4. Marketplace Products Horizontal Slider (تازه‌های بازارچه و محصولات) -->
+    <section v-if="isLoadingProducts || products.length > 0" class="flex flex-col gap-3">
+      <div class="flex items-center justify-between px-0.5">
+        <h2 class="text-sm font-extrabold text-foreground">
+          {{ languageStore.t('محصولات و تازه‌های بازارچه', 'Marketplace Products') }}
+        </h2>
+
+        <div class="flex items-center gap-0.5 text-xs font-bold text-primary select-none">
+          <span>{{ languageStore.t('همه', 'All') }}</span>
+          <ChevronLeftIcon v-if="languageStore.isFa" class="size-3.5" />
+          <ChevronRightIcon v-else class="size-3.5" />
+        </div>
+      </div>
+
+      <div v-if="isLoadingProducts" class="grid grid-flow-col auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5 overflow-hidden pb-2">
+        <div
+          v-for="n in 3"
+          :key="'home-prod-sk-' + n"
+          class="w-full min-w-0 h-[214px] rounded-2xl border border-border/60 bg-card/70 overflow-hidden flex flex-col"
+        >
+          <Skeleton class="h-[112px] w-full rounded-none" />
+          <div class="p-2.5 flex flex-col gap-2">
+            <Skeleton class="h-3.5 w-24" />
+            <Skeleton class="h-3 w-16" />
+          </div>
+        </div>
+      </div>
+
+      <HorizontalSliderRow
+        v-else
+        layout="grid"
+        track-class="auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5"
+      >
+        <div
+          v-for="item in products"
+          :key="item.id"
+          class="w-full min-w-0 min-h-[214px] snap-start rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs overflow-hidden flex flex-col select-none"
+        >
+          <div class="h-[112px] w-full bg-muted/50 dark:bg-muted/30 relative flex items-center justify-center overflow-hidden">
+            <img
+              v-if="resolveMediaUrl(item.cover_image)"
+              :src="resolveMediaUrl(item.cover_image)!"
+              :alt="item.title"
+              class="size-full object-cover"
+            />
+            <SmartphoneIcon
+              v-else-if="item.delivery_type === 'digital'"
+              class="size-7 text-muted-foreground/70"
+            />
+            <ShoppingBagIcon
+              v-else
+              class="size-7 text-muted-foreground/70"
+            />
+
+            <div
+              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md border text-[10px] font-bold shadow-2xs"
+              :class="
+                item.deal_type === 'donation'
+                  ? 'bg-primary border-primary text-primary-foreground'
+                  : 'bg-background/95 border-border/60 text-foreground'
+              "
+            >
+              {{
+                item.deal_type === 'donation'
+                  ? languageStore.t('اهدای رایگان', 'Free Donation')
+                  : languageStore.t('فروشی', 'For Sale')
+              }}
+            </div>
+
+            <div
+              v-if="item.delivery_type === 'digital'"
+              class="absolute bottom-1.5 end-1.5 px-1.5 py-0.5 rounded-md bg-background/90 border border-border/50 text-[9px] font-semibold text-muted-foreground"
+            >
+              {{ languageStore.t('دیجیتال', 'Digital') }}
+            </div>
+          </div>
+
+          <div class="p-2.5 flex-1 flex flex-col justify-between gap-2 text-start">
+            <div class="flex flex-col gap-1">
+              <h3 class="text-[11.5px] font-bold text-foreground line-clamp-2 leading-snug">
+                {{ item.title }}
+              </h3>
+              <p class="text-[10px] text-muted-foreground truncate">
+                {{ item.category_name || item.seller_name }}
+              </p>
+            </div>
+
+            <div class="flex items-baseline justify-between gap-1 pt-1.5 border-t border-border/40">
+              <span
+                v-if="item.deal_type === 'donation'"
+                class="text-[11.5px] font-extrabold text-primary"
+              >
+                {{ languageStore.t('اهدای رایگان', 'Free') }}
+              </span>
+              <div v-else class="flex items-baseline gap-1 min-w-0 flex-wrap">
+                <span class="text-[11.5px] font-extrabold text-foreground">
+                  {{ formatToman(item.effective_price) }}
+                  <span class="text-[9.5px] font-normal text-muted-foreground">
+                    {{ languageStore.t('تومان', 'Toman') }}
+                  </span>
+                </span>
+                <span
+                  v-if="item.has_active_discount"
+                  class="text-[9.5px] text-muted-foreground line-through"
+                >
+                  {{ formatToman(item.price) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </HorizontalSliderRow>
+    </section>
+
+    <!-- Add Book to Shelf Dialog -->
+    <AddShelfBookDialog
+      v-model:open="isAddBookDialogOpen"
+      @saved="handleBookAdded"
+    />
+
+    <!-- Donate Specific Book Dialog -->
+    <DonateSpecificBookDialog
+      v-model:open="isDonateBookDialogOpen"
+      :book="donatingBook"
+      @donated="handleBookAdded"
+    />
+  </div>
+</template>

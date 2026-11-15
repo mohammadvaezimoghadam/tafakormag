@@ -1,16 +1,20 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import generics, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from apps.notes.models import Post, Topic
-from .models import DonationCampaign, DonationTransaction, TransparencyLog, CampaignAttachment
+from .models import DonationCampaign, DonationTransaction, TransparencyLog, CampaignAttachment, PayoutRequest
 from .serializers import (
     DonationCampaignDetailSerializer,
     DonationCampaignCreateSerializer,
     DonationInitiateSerializer,
     TransparencyLogCreateSerializer,
-    TransparencyLogSerializer
+    TransparencyLogSerializer,
+    PayoutRequestSerializer,
+    PayoutRequestCreateSerializer,
+    PayoutProcessInputSerializer
 )
 from . import services
 
@@ -31,8 +35,16 @@ class DonationCampaignListCreateView(generics.ListCreateAPIView):
         return DonationCampaignDetailSerializer
 
     def get_queryset(self):
+        # Auto-expire overdue active campaigns in a single optimized DB update
+        now = timezone.now()
+        DonationCampaign.objects.filter(
+            status=DonationCampaign.StatusChoices.ACTIVE,
+            deadline__isnull=False,
+            deadline__lt=now
+        ).update(status=DonationCampaign.StatusChoices.EXPIRED, updated_at=now)
+
         qs = DonationCampaign.objects.select_related('topic', 'creator').prefetch_related(
-            'attachments', 'transparency_logs', 'transactions'
+            'attachments', 'transparency_logs', 'transactions__donor'
         ).all()
 
         category = self.request.query_params.get('category')
@@ -51,6 +63,19 @@ class DonationCampaignListCreateView(generics.ListCreateAPIView):
         if search:
             qs = qs.filter(title__icontains=search)
 
+        # Hide pending_review campaigns from public; show to staff and the creator only
+        user = self.request.user
+        if user.is_authenticated and (user.is_staff or user.is_superuser):
+            pass
+        elif user.is_authenticated:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(status=DonationCampaign.StatusChoices.PENDING_REVIEW, creator=user) |
+                ~Q(status=DonationCampaign.StatusChoices.PENDING_REVIEW)
+            )
+        else:
+            qs = qs.exclude(status=DonationCampaign.StatusChoices.PENDING_REVIEW)
+
         return qs
 
     def perform_create(self, serializer):
@@ -58,7 +83,13 @@ class DonationCampaignListCreateView(generics.ListCreateAPIView):
         
         # Transaction Boundary: Ensure both campaign and topic chat post are created atomically
         with transaction.atomic():
-            campaign = serializer.save(creator=self.request.user)
+            # Staff/superuser campaigns go directly to active; regular users need admin approval
+            initial_status = (
+                DonationCampaign.StatusChoices.ACTIVE
+                if self.request.user.is_staff or self.request.user.is_superuser
+                else DonationCampaign.StatusChoices.PENDING_REVIEW
+            )
+            campaign = serializer.save(creator=self.request.user, status=initial_status)
 
             # Save attachments if any
             for file_obj in uploaded_files:
@@ -69,17 +100,19 @@ class DonationCampaignListCreateView(generics.ListCreateAPIView):
                     is_video=is_video
                 )
 
-            # Auto-inject synchronized campaign post into Topic chat
-            post_content = f"🤲 **پویش مهربانی: {campaign.title}**\n\n{campaign.description}\n\n🎯 مبلغ هدف: {campaign.target_amount:,} تومان"
-            post = Post.objects.create(
-                topic=campaign.topic,
-                author=self.request.user,
-                content=post_content,
-                media_type="image" if campaign.cover_image else "text",
-                media_file=campaign.cover_image.name if campaign.cover_image else None
-            )
-            campaign.post = post
-            campaign.save(update_fields=['post'])
+            # Auto-inject synchronized campaign post into Topic chat ONLY if active (staff created)
+            # Pending review campaigns will have their topic chat post created upon admin approval
+            if campaign.status == DonationCampaign.StatusChoices.ACTIVE:
+                post_content = f"🤲 **پویش مهربانی: {campaign.title}**\n\n{campaign.description}\n\n🎯 مبلغ هدف: {campaign.target_amount:,} تومان"
+                post = Post.objects.create(
+                    topic=campaign.topic,
+                    author=self.request.user,
+                    content=post_content,
+                    media_type="image" if campaign.cover_image else "text",
+                    media_file=campaign.cover_image.name if campaign.cover_image else None
+                )
+                campaign.post = post
+                campaign.save(update_fields=['post'])
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -210,7 +243,7 @@ class DonationInitiateView(APIView):
         is_anonymous = serializer.validated_data.get('is_anonymous', False)
         donor = request.user if request.user.is_authenticated else None
 
-        callback_url = request.build_absolute_uri('/api/v1/donations/payment/callback/')
+        callback_url = request.build_absolute_uri('/api/v1/payments/callback/')
 
         trx, gateway_url = services.initiate_donation(
             campaign_id=id,
@@ -230,14 +263,12 @@ class DonationInitiateView(APIView):
 
 
 from django.http import HttpResponseRedirect
-from django.conf import settings
 
 
 class PaymentCallbackView(APIView):
     """
-    GET: Browser return handler from ZarinPal payment gateway.
-    Verifies transaction with ZarinPal API, settles database atomically,
-    and redirects user to frontend with result query params.
+    GET: Compatibility browser return handler for donation ZarinPal callbacks.
+    Delegates verification and atomic settlement to centralized payments services.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -245,65 +276,35 @@ class PaymentCallbackView(APIView):
         authority = request.query_params.get('Authority') or request.query_params.get('authority')
         status_param = (request.query_params.get('Status') or request.query_params.get('status') or '').upper()
 
-        # Dynamically determine frontend URL from current host (e.g. localhost:8085) or fallback to settings
         host = request.get_host()
         scheme = 'https' if request.is_secure() else 'http'
         frontend_base = f"{scheme}://{host}"
 
-
-        if not authority:
-            return HttpResponseRedirect(f"{frontend_base}/donate?payment=failed&reason=missing_authority")
-
-        try:
-            trx = DonationTransaction.objects.get(authority=authority)
-        except DonationTransaction.DoesNotExist:
-            return HttpResponseRedirect(f"{frontend_base}/donate?payment=failed&authority={authority}&reason=not_found")
-
-        # 1. User canceled or payment failed on ZarinPal gateway
-        if status_param != 'OK':
-            if trx.status == DonationTransaction.PaymentStatus.PENDING:
-                trx.status = DonationTransaction.PaymentStatus.FAILED
-                trx.save(update_fields=['status'])
-            return HttpResponseRedirect(
-                f"{frontend_base}/donate?payment=failed&authority={authority}&reason=canceled&campaign_id={trx.campaign_id}"
-            )
-
-        # 2. Payment reported OK -> Verify with ZarinPal
-        if trx.status == DonationTransaction.PaymentStatus.SUCCESSFUL:
-            # Already settled (Idempotency)
-            ref_id = trx.gateway_reference_id or trx.tracking_code or authority
-            return HttpResponseRedirect(
-                f"{frontend_base}/donate?payment=success&authority={authority}&ref_id={ref_id}&amount={trx.amount}&campaign_id={trx.campaign_id}"
-            )
-
-        # Call ZarinPal verify endpoint
-        is_verified, ref_id, card_pan, fee, err_msg = services.ZarinPalService.verify_payment(
+        outcome = services.handle_donation_callback(
             authority=authority,
-            amount_tomans=trx.amount
+            status_param=status_param,
+            frontend_base=frontend_base,
         )
-
-        if is_verified:
-            settled_trx = services.verify_and_settle_transaction(
-                authority=authority,
-                gateway_ref=str(ref_id) if ref_id else None,
-                tracking_code=str(ref_id) if ref_id else None
-            )
-            return HttpResponseRedirect(
-                f"{frontend_base}/donate?payment=success&authority={authority}&ref_id={settled_trx.gateway_reference_id}&amount={settled_trx.amount}&campaign_id={settled_trx.campaign_id}"
-            )
-        else:
-            trx.status = DonationTransaction.PaymentStatus.FAILED
-            trx.save(update_fields=['status'])
-            return HttpResponseRedirect(
-                f"{frontend_base}/donate?payment=failed&authority={authority}&reason=verification_failed&campaign_id={trx.campaign_id}"
-            )
+        return HttpResponseRedirect(outcome.redirect_url or f"{frontend_base}/donate?payment=failed")
 
 
 class PaymentVerifyView(APIView):
     """
-    POST / GET: Programmatic API endpoint for payment verification and settlement.
+    POST / GET: Programmatic API endpoint for donation payment verification and settlement.
     """
     permission_classes = [permissions.AllowAny]
+
+    def _serialize_verified_transaction(self, trx: DonationTransaction, message: str):
+        return Response({
+            'status': 'success',
+            'message': message,
+            'transaction_id': str(trx.id),
+            'campaign_id': str(trx.campaign_id),
+            'amount': trx.amount,
+            'tracking_code': trx.tracking_code,
+            'gateway_reference_id': trx.gateway_reference_id,
+            'completed_at': trx.completed_at.isoformat() if trx.completed_at else None
+        }, status=status.HTTP_200_OK)
 
     def get(self, request):
         authority = request.query_params.get('authority') or request.query_params.get('Authority')
@@ -313,39 +314,12 @@ class PaymentVerifyView(APIView):
         if not authority:
             return Response({'error': 'شناسه تراکنش (Authority) ارسال نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            trx_obj = DonationTransaction.objects.get(authority=authority)
-        except DonationTransaction.DoesNotExist:
-            return Response({'error': 'تراکنش با این شناسه یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if not gateway_ref and trx_obj.status != DonationTransaction.PaymentStatus.SUCCESSFUL:
-            is_verified, ref_id, _, _, err_msg = services.ZarinPalService.verify_payment(
-                authority=authority,
-                amount_tomans=trx_obj.amount
-            )
-            if not is_verified:
-                trx_obj.status = DonationTransaction.PaymentStatus.FAILED
-                trx_obj.save(update_fields=['status'])
-                return Response({'error': err_msg or 'اعتبارسنجی درگاه ناموفق بود.'}, status=status.HTTP_400_BAD_REQUEST)
-            gateway_ref = str(ref_id)
-            tracking_code = str(ref_id)
-
-        trx = services.verify_and_settle_transaction(
+        trx = services.verify_donation_payment(
             authority=authority,
             gateway_ref=gateway_ref,
-            tracking_code=tracking_code
+            tracking_code=tracking_code,
         )
-
-        return Response({
-            'status': 'success',
-            'message': 'پرداخت با موفقیت انجام و ثبت گردید.',
-            'transaction_id': str(trx.id),
-            'campaign_id': str(trx.campaign_id),
-            'amount': trx.amount,
-            'tracking_code': trx.tracking_code,
-            'gateway_reference_id': trx.gateway_reference_id,
-            'completed_at': trx.completed_at.isoformat() if trx.completed_at else None
-        }, status=status.HTTP_200_OK)
+        return self._serialize_verified_transaction(trx, 'پرداخت با موفقیت انجام و ثبت گردید.')
 
     def post(self, request):
         authority = request.data.get('authority')
@@ -355,40 +329,54 @@ class PaymentVerifyView(APIView):
         if not authority:
             return Response({'error': 'شناسه تراکنش (Authority) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            trx_obj = DonationTransaction.objects.get(authority=authority)
-        except DonationTransaction.DoesNotExist:
-            return Response({'error': 'تراکنش با این شناسه یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if not gateway_ref and trx_obj.status != DonationTransaction.PaymentStatus.SUCCESSFUL:
-            is_verified, ref_id, _, _, err_msg = services.ZarinPalService.verify_payment(
-                authority=authority,
-                amount_tomans=trx_obj.amount
-            )
-            if not is_verified:
-                trx_obj.status = DonationTransaction.PaymentStatus.FAILED
-                trx_obj.save(update_fields=['status'])
-                return Response({'error': err_msg or 'اعتبارسنجی درگاه ناموفق بود.'}, status=status.HTTP_400_BAD_REQUEST)
-            gateway_ref = str(ref_id)
-            tracking_code = str(ref_id)
-
-        trx = services.verify_and_settle_transaction(
+        trx = services.verify_donation_payment(
             authority=authority,
             gateway_ref=gateway_ref,
-            tracking_code=tracking_code
+            tracking_code=tracking_code,
         )
+        return self._serialize_verified_transaction(trx, 'پرداخت با موفقیت تأیید و تسویه شد.')
 
+
+
+class CampaignApproveView(APIView):
+    """
+    POST: Approves a pending_review campaign. Staff/superuser only.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, id):
+        try:
+            campaign = DonationCampaign.objects.get(id=id)
+        except DonationCampaign.DoesNotExist:
+            raise NotFound('پویش مورد نظر یافت نشد.')
+
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied('فقط مدیران مجاز به تأیید پویش هستند.')
+
+        if campaign.status != DonationCampaign.StatusChoices.PENDING_REVIEW:
+            raise ValidationError({'status': f'پویش در وضعیت «{campaign.get_status_display()}» است و قابل تأیید نیست.'})
+
+        with transaction.atomic():
+            campaign.status = DonationCampaign.StatusChoices.ACTIVE
+            if not campaign.post:
+                post_content = f"🤲 **پویش مهربانی: {campaign.title}**\n\n{campaign.description}\n\n🎯 مبلغ هدف: {campaign.target_amount:,} تومان"
+                post = Post.objects.create(
+                    topic=campaign.topic,
+                    author=campaign.creator,
+                    content=post_content,
+                    media_type="image" if campaign.cover_image else "text",
+                    media_file=campaign.cover_image.name if campaign.cover_image else None
+                )
+                campaign.post = post
+                campaign.save(update_fields=['status', 'post', 'updated_at'])
+            else:
+                campaign.save(update_fields=['status', 'updated_at'])
+
+        serializer = DonationCampaignDetailSerializer(campaign, context={'request': request})
         return Response({
-            'status': 'success',
-            'message': 'پرداخت با موفقیت تأیید و تسویه شد.',
-            'transaction_id': str(trx.id),
-            'campaign_id': str(trx.campaign_id),
-            'amount': trx.amount,
-            'tracking_code': trx.tracking_code,
-            'gateway_reference_id': trx.gateway_reference_id,
-            'completed_at': trx.completed_at.isoformat() if trx.completed_at else None
+            'detail': 'پویش با موفقیت تأیید و فعال شد.',
+            'campaign': serializer.data
         }, status=status.HTTP_200_OK)
-
 
 
 class TransparencyLogCreateView(APIView):
@@ -411,3 +399,92 @@ class TransparencyLogCreateView(APIView):
         log = serializer.save(campaign=campaign)
 
         return Response(TransparencyLogSerializer(log).data, status=status.HTTP_201_CREATED)
+
+
+class CampaignPayoutListCreateView(APIView):
+    """
+    GET: List payout requests for a campaign (creator or staff only).
+    POST: Submit a new payout request for a campaign.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_campaign(self, campaign_id, user):
+        try:
+            campaign = DonationCampaign.objects.get(id=campaign_id)
+        except DonationCampaign.DoesNotExist:
+            raise NotFound('پویش مورد نظر یافت نشد.')
+
+        if campaign.creator_id != user.id and not (user.is_staff or user.is_superuser):
+            raise PermissionDenied('شما مجاز به مشاهده یا درخواست تسویه این پویش نیستید.')
+        return campaign
+
+    def get(self, request, id):
+        campaign = self._get_campaign(id, request.user)
+        qs = campaign.payout_requests.select_related('requested_by', 'campaign').order_by('-created_at')
+        serializer = PayoutRequestSerializer(qs, many=True, context={'request': request})
+        return Response({
+            'available_balance': campaign.available_payout_balance,
+            'collected_amount': campaign.collected_amount,
+            'total_settled_amount': campaign.total_settled_amount,
+            'default_iban': campaign.iban or '',
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request, id):
+        serializer = PayoutRequestCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        payout = services.create_payout_request(
+            campaign_id=id,
+            user=request.user,
+            amount=data['amount'],
+            iban=data['iban'],
+            account_holder_name=data['account_holder_name'],
+        )
+        return Response(
+            PayoutRequestSerializer(payout, context={'request': request}).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class AdminPayoutListView(generics.ListAPIView):
+    """
+    GET: List all payout requests across all campaigns (Staff only).
+    """
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = PayoutRequestSerializer
+
+    def get_queryset(self):
+        qs = PayoutRequest.objects.select_related('campaign', 'requested_by', 'processed_by').order_by('-created_at')
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
+
+
+class PayoutProcessView(APIView):
+    """
+    POST: Process, complete, or reject a payout request (Staff only).
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, id):
+        serializer = PayoutProcessInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        payout = services.process_payout_settlement(
+            payout_id=id,
+            admin_user=request.user,
+            action=data['action'],
+            tracking_number=data.get('tracking_number', ''),
+            receipt_file=request.FILES.get('receipt_file'),
+            rejection_reason=data.get('rejection_reason', ''),
+            notes=data.get('notes', ''),
+        )
+        return Response(
+            PayoutRequestSerializer(payout, context={'request': request}).data,
+            status=status.HTTP_200_OK
+        )
+

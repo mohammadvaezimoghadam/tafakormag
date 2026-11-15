@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { computed, ref, onMounted, watch, nextTick } from 'vue'
+import { useDark, useToggle } from '@vueuse/core'
 import { 
   ArrowRightIcon, 
   ArrowLeftIcon,
@@ -7,13 +8,22 @@ import {
   MoreVerticalIcon,
   XIcon,
   HelpCircleIcon,
-  SparklesIcon
+  SunIcon,
+  MoonIcon,
 } from '@lucide/vue'
 import TopicSettingsMenu from './TopicSettingsMenu.vue'
 import { Button } from '@/components/ui/button'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const languageStore = useLanguageStore()
+
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: '',
+})
+const toggleTheme = useToggle(isDark)
 
 // Props configuration
 const props = withDefaults(defineProps<{
@@ -25,6 +35,8 @@ const props = withDefaults(defineProps<{
   showOptionsButton?: boolean
   showFaqButton?: boolean
   showSearchButton?: boolean
+  showThemeToggle?: boolean
+  centerTitle?: boolean
   searchQuery?: string
   isOwner?: boolean
 }>(), {
@@ -36,9 +48,19 @@ const props = withDefaults(defineProps<{
   showOptionsButton: true,
   showFaqButton: true,
   showSearchButton: false,
+  showThemeToggle: false,
+  centerTitle: false,
   searchQuery: '',
   isOwner: false
 })
+
+const displayTitle = computed(() =>
+  props.isInnerPage
+    ? props.innerTitle
+    : props.title === 'تفکر'
+      ? languageStore.t('تفکر', 'Tafakor')
+      : props.title
+)
 
 const emit = defineEmits<{
   (e: 'back'): void
@@ -175,9 +197,9 @@ watch(() => props.showSearchButton, (newVal) => {
 
       <transition name="header-content-fade" mode="out-in">
         <!-- Normal Mode Header Content -->
-        <div v-if="!isSearchActive" class="w-full flex items-center justify-between" key="normal">
-          <!-- Title & Status Section -->
-          <div class="flex items-center gap-2">
+        <div v-if="!isSearchActive" class="w-full flex items-center justify-between relative" key="normal">
+          <!-- Error indicator & start-aligned title container -->
+          <div class="flex items-center gap-2 min-w-0 z-10">
             <!-- Dynamic Error Glow Indicator -->
             <span 
               v-if="error" 
@@ -185,13 +207,21 @@ watch(() => props.showSearchButton, (newVal) => {
               :title="languageStore.t('خطای ارتباطی', 'Connection Error')"
             />
             
-            <div class="flex flex-col text-start overflow-hidden">
+            <div
+              class="flex flex-col overflow-hidden"
+              :class="
+                centerTitle
+                  ? 'absolute left-1/2 -translate-x-1/2 max-w-[58%] items-center text-center pointer-events-none'
+                  : 'items-start text-start'
+              "
+            >
               <transition name="header-title-fade" mode="out-in">
                 <span 
-                  :key="isInnerPage ? innerTitle : (title === 'تفکر' ? languageStore.t('تفکر', 'Tafakor') : title)"
-                  class="text-xs font-extrabold text-foreground truncate block"
+                  :key="displayTitle"
+                  class="font-extrabold text-foreground truncate max-w-full block"
+                  :class="centerTitle ? 'text-[13.5px]' : 'text-xs'"
                 >
-                  {{ isInnerPage ? innerTitle : (title === 'تفکر' ? languageStore.t('تفکر', 'Tafakor') : title) }}
+                  {{ displayTitle }}
                 </span>
               </transition>
               <transition name="status-fade">
@@ -206,9 +236,13 @@ watch(() => props.showSearchButton, (newVal) => {
           </div>
 
           <!-- Actions Section -->
-          <div v-if="!isInnerPage && showSearchButton" class="flex items-center gap-1">
+          <div
+            v-if="!isInnerPage && (showSearchButton || showThemeToggle)"
+            class="flex items-center gap-1 shrink-0 ms-auto z-10"
+          >
             <slot name="actions">
               <Button 
+                v-if="showSearchButton"
                 @click="activateSearch"
                 variant="ghost"
                 class="size-7.5 rounded-md hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-0"
@@ -217,6 +251,20 @@ watch(() => props.showSearchButton, (newVal) => {
                 <SearchIcon class="size-4" />
               </Button>
             </slot>
+
+            <Button
+              v-if="showThemeToggle"
+              @click="toggleTheme()"
+              variant="ghost"
+              class="size-7.5 rounded-xl hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-0"
+              :title="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
+              :aria-label="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
+            >
+              <transition name="icon-pop" mode="out-in">
+                <SunIcon v-if="isDark" key="sun" class="size-4" />
+                <MoonIcon v-else key="moon" class="size-4" />
+              </transition>
+            </Button>
           </div>
         </div>
 

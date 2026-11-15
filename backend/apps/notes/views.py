@@ -478,7 +478,14 @@ class PostViewSet(viewsets.ModelViewSet):
         return self._paginator
 
     def get_queryset(self):
-        queryset = Post.objects.select_related('author', 'topic', 'donation_campaign') \
+        queryset = Post.objects.select_related(
+            'author',
+            'topic',
+            'donation_campaign',
+            'book_item__book_title',
+            'book_item__physical_copy',
+            'book_item__seller',
+        ) \
             .prefetch_related('reactions', 'plugin_references__plugin') \
             .annotate(annotated_comments_count=Count('comments', distinct=True)) \
             .all().order_by('-created_at')

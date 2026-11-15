@@ -20,6 +20,7 @@ import {
   CircleFadingArrowUpIcon,
   Wand2Icon,
   HeartIcon,
+  BookOpenIcon,
   BarChart3Icon,
   CalendarDaysIcon,
   BoldIcon,
@@ -93,6 +94,7 @@ const emit = defineEmits<{
   (e: 'attach-file', file: File): void
   (e: 'plus'): void
   (e: 'create-donation'): void
+  (e: 'create-book-donation'): void
   (e: 'recordVoice'): void
   (e: 'removeAttachment', id: string | number): void
   (e: 'save', message: { text: string }): void
@@ -925,6 +927,11 @@ const handlePlusClick = () => {
 const handleSelectDonation = () => {
   isActionSheetOpen.value = false
   emit('create-donation')
+}
+
+const handleSelectBookDonation = () => {
+  isActionSheetOpen.value = false
+  emit('create-book-donation')
 }
 
 const handleRemoveAttachment = (id: string | number) => {
@@ -1871,8 +1878,8 @@ const handlePluginInsert = (insertedMarkdown: string) => {
         </DialogDescription>
       </DialogHeader>
 
-      <!-- 3 Square Action Items in 1 Row -->
-      <div class="grid grid-cols-3 gap-2.5 pt-1">
+      <!-- Action Items Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
         <!-- 1. Kindness / Donation Campaign (Active) -->
         <button
           type="button"
@@ -1883,11 +1890,25 @@ const handlePluginInsert = (insertedMarkdown: string) => {
             <HeartIcon class="size-5 fill-primary/20" />
           </div>
           <span class="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-            {{ languageStore.t('ایجاد اهدا', 'Donation') }}
+            {{ languageStore.t('پویش مهربانی', 'Donation') }}
           </span>
         </button>
 
-        <!-- 2. Poll / Survey (Coming Soon with Blur & Badge) -->
+        <!-- 2. Book Donation (Active) -->
+        <button
+          type="button"
+          class="group relative aspect-square rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/60 flex flex-col items-center justify-center gap-2 p-2 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 text-center select-none"
+          @click="handleSelectBookDonation"
+        >
+          <div class="size-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+            <BookOpenIcon class="size-5" />
+          </div>
+          <span class="text-xs font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+            {{ languageStore.t('اهدای کتاب', 'Donate Book') }}
+          </span>
+        </button>
+
+        <!-- 3. Poll / Survey (Coming Soon with Blur & Badge) -->
         <div
           class="relative aspect-square rounded-2xl border border-border/40 bg-muted/20 flex flex-col items-center justify-center gap-2 p-2 opacity-60 backdrop-blur-sm cursor-not-allowed select-none text-center overflow-hidden"
         >
@@ -1905,7 +1926,7 @@ const handlePluginInsert = (insertedMarkdown: string) => {
           </span>
         </div>
 
-        <!-- 3. Event / Meeting (Coming Soon with Blur & Badge) -->
+        <!-- 4. Event / Meeting (Coming Soon with Blur & Badge) -->
         <div
           class="relative aspect-square rounded-2xl border border-border/40 bg-muted/20 flex flex-col items-center justify-center gap-2 p-2 opacity-60 backdrop-blur-sm cursor-not-allowed select-none text-center overflow-hidden"
         >

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.accounts.serializers import UserSerializer
-from .models import DonationCampaign, DonationTransaction, TransparencyLog, CampaignAttachment
+from .models import DonationCampaign, DonationTransaction, TransparencyLog, CampaignAttachment, PayoutRequest
 
 
 class DonorSerializer(serializers.ModelSerializer):
@@ -62,19 +62,41 @@ class TransparencyLogSerializer(serializers.ModelSerializer):
 
 
 class DonationCampaignDetailSerializer(serializers.ModelSerializer):
+    topic_title = serializers.SerializerMethodField()
     creator_info = serializers.SerializerMethodField()
     donors = serializers.SerializerMethodField()
     transparency_logs = serializers.SerializerMethodField()
     attachments = serializers.SerializerMethodField()
+    available_payout_balance = serializers.IntegerField(read_only=True)
+    total_settled_amount = serializers.IntegerField(read_only=True)
+    is_ended = serializers.BooleanField(read_only=True)
+    can_request_payout = serializers.SerializerMethodField()
 
     class Meta:
         model = DonationCampaign
         fields = [
-            'id', 'topic', 'creator', 'creator_info', 'title', 'description', 'category',
+            'id', 'topic', 'topic_title', 'creator', 'creator_info', 'title', 'description', 'category',
             'target_amount', 'collected_amount', 'donors_count', 'cover_image',
             'deadline', 'iban', 'status', 'is_public_donors_list', 'attachments',
-            'donors', 'transparency_logs', 'created_at', 'updated_at'
+            'donors', 'transparency_logs', 'available_payout_balance', 'total_settled_amount',
+            'is_ended', 'can_request_payout', 'created_at', 'updated_at'
         ]
+
+    def get_can_request_payout(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        is_creator = obj.creator_id == request.user.id
+        is_staff = request.user.is_staff or request.user.is_superuser
+        if not (is_creator or is_staff):
+            return False
+        # Regular creators can only request payout when the campaign has ended
+        if not obj.is_ended and not is_staff:
+            return False
+        return obj.available_payout_balance > 0
+
+    def get_topic_title(self, obj):
+        return obj.topic.name if obj.topic else None
 
     def get_creator_info(self, obj):
         if not obj.creator:
@@ -187,3 +209,49 @@ class TransparencyLogCreateSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError('مبلغ ثبت شده در لاگ شفافیت باید بزرگتر از صفر باشد.')
         return value
+
+
+class PayoutRequestSerializer(serializers.ModelSerializer):
+    campaign_title = serializers.CharField(source='campaign.title', read_only=True)
+    requested_by_phone = serializers.CharField(source='requested_by.phone', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    receipt_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PayoutRequest
+        fields = [
+            'id', 'campaign', 'campaign_title', 'requested_by', 'requested_by_phone',
+            'amount', 'iban', 'account_holder_name', 'status', 'status_display',
+            'tracking_number', 'receipt_file', 'receipt_url', 'rejection_reason',
+            'admin_notes', 'settled_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'campaign', 'requested_by', 'status', 'tracking_number',
+            'receipt_file', 'rejection_reason', 'admin_notes', 'settled_at',
+            'created_at', 'updated_at'
+        ]
+
+    def get_receipt_url(self, obj):
+        if obj.receipt_file:
+            try:
+                request = self.context.get('request')
+                url = obj.receipt_file.url
+                return request.build_absolute_uri(url) if request else url
+            except Exception:
+                return None
+        return None
+
+
+class PayoutRequestCreateSerializer(serializers.Serializer):
+    amount = serializers.IntegerField(min_value=10000, required=True)
+    iban = serializers.CharField(max_length=34, required=True)
+    account_holder_name = serializers.CharField(max_length=150, required=True)
+
+
+class PayoutProcessInputSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=['complete', 'reject', 'approve'])
+    tracking_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    receipt_file = serializers.FileField(required=False, allow_null=True)
+    rejection_reason = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    notes = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
