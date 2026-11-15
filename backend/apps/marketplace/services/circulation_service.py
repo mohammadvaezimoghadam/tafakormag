@@ -147,6 +147,7 @@ class CirculationService:
         author: str = "",
         publisher: str = "",
         quantity: int = 1,
+        cover_image: Any = None,
         condition: str = PhysicalCopy.Condition.GOOD,
         privacy: str = PhysicalCopy.Privacy.FIRST_NAME_ONLY
     ) -> PhysicalCopy:
