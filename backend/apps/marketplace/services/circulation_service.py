@@ -146,6 +146,7 @@ class CirculationService:
         title: str = "",
         author: str = "",
         publisher: str = "",
+        quantity: int = 1,
         condition: str = PhysicalCopy.Condition.GOOD,
         privacy: str = PhysicalCopy.Privacy.FIRST_NAME_ONLY
     ) -> PhysicalCopy:
@@ -187,17 +188,21 @@ class CirculationService:
         )
 
         from ..models.shelf import UserShelfBook
+        qty = max(1, int(quantity))
         shelf_book, created = UserShelfBook.objects.get_or_create(
             user=user,
             book_title=book_title,
             defaults={
-                "quantity": 1,
+                "quantity": qty,
                 "disposition": UserShelfBook.Disposition.FOR_DONATION,
                 "book_format": UserShelfBook.BookFormat.PHYSICAL,
                 "condition": condition,
                 "physical_copy": copy,
             }
         )
+        if not created and shelf_book.quantity < qty:
+            shelf_book.quantity = qty
+            shelf_book.save(update_fields=["quantity", "updated_at"])
         if not shelf_book.physical_copy:
             shelf_book.physical_copy = copy
             shelf_book.save(update_fields=["physical_copy", "updated_at"])

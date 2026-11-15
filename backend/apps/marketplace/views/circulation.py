@@ -172,6 +172,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
                 title=serializer.validated_data.get("title", ""),
                 author=serializer.validated_data.get("author", ""),
                 publisher=serializer.validated_data.get("publisher", ""),
+                quantity=serializer.validated_data.get("quantity", 1),
                 condition=serializer.validated_data["condition"],
                 privacy=serializer.validated_data["privacy"]
             )
