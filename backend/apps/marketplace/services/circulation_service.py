@@ -175,6 +175,10 @@ class CirculationService:
                 }
             )
 
+        if cover_image:
+            book_title.cover_image = cover_image
+            book_title.save(update_fields=["cover_image", "updated_at"])
+
         short_code = PhysicalCopy.generate_unique_short_code()
         copy = PhysicalCopy.objects.create(
             short_code=short_code,

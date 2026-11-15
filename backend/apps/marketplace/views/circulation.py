@@ -1,6 +1,6 @@
 import logging
 from django.db.models import Count, Q
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -117,6 +117,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
     Strictly thin views delegating entirely to CirculationService.
     """
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_permissions(self):
         # Public actions: inspecting a QR code or viewing journey
@@ -173,6 +174,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
                 author=serializer.validated_data.get("author", ""),
                 publisher=serializer.validated_data.get("publisher", ""),
                 quantity=serializer.validated_data.get("quantity", 1),
+                cover_image=serializer.validated_data.get("cover_image"),
                 condition=serializer.validated_data["condition"],
                 privacy=serializer.validated_data["privacy"]
             )

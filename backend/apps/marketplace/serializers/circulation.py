@@ -72,6 +72,7 @@ class RegisterPhysicalCopyInputSerializer(BaseInputSerializer):
     author = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     publisher = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     quantity = serializers.IntegerField(required=False, default=1, min_value=1)
+    cover_image = serializers.FileField(required=False, allow_null=True, default=None)
     condition = serializers.ChoiceField(
         choices=PhysicalCopy.Condition.choices,
         default=PhysicalCopy.Condition.GOOD
