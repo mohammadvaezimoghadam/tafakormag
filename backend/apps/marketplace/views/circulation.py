@@ -168,7 +168,10 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
         try:
             copy = CirculationService.register_physical_copy(
                 user=request.user,
-                book_title_id=serializer.validated_data["book_title_id"],
+                book_title_id=serializer.validated_data.get("book_title_id"),
+                title=serializer.validated_data.get("title", ""),
+                author=serializer.validated_data.get("author", ""),
+                publisher=serializer.validated_data.get("publisher", ""),
                 condition=serializer.validated_data["condition"],
                 privacy=serializer.validated_data["privacy"]
             )

@@ -67,7 +67,10 @@ class BookStationSerializer(BaseModelSerializer):
 
 
 class RegisterPhysicalCopyInputSerializer(BaseInputSerializer):
-    book_title_id = serializers.IntegerField(required=True)
+    book_title_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    author = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    publisher = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     condition = serializers.ChoiceField(
         choices=PhysicalCopy.Condition.choices,
         default=PhysicalCopy.Condition.GOOD
@@ -76,6 +79,11 @@ class RegisterPhysicalCopyInputSerializer(BaseInputSerializer):
         choices=PhysicalCopy.Privacy.choices,
         default=PhysicalCopy.Privacy.FIRST_NAME_ONLY
     )
+
+    def validate(self, attrs):
+        if not attrs.get("book_title_id") and not (attrs.get("title") or "").strip():
+            raise serializers.ValidationError("شناسه کتاب (book_title_id) یا عنوان کتاب (title) الزامی است.")
+        return attrs
 
 
 class PhysicalCopyListSerializer(BaseModelSerializer):

@@ -156,6 +156,20 @@ class ShelfService:
             acquired_from=(data.get("acquired_from") or "").strip(),
             rating=rating,
         )
+        if book_format == UserShelfBook.BookFormat.PHYSICAL:
+            copy = PhysicalCopy.objects.create(
+                short_code=PhysicalCopy.generate_unique_short_code(),
+                book_title=book_title,
+                current_holder=user,
+                registered_by=user,
+                original_donor=user,
+                status=PhysicalCopy.Status.ACTIVE,
+                condition=condition or PhysicalCopy.Condition.GOOD,
+                privacy=PhysicalCopy.Privacy.FIRST_NAME_ONLY,
+            )
+            entry.physical_copy = copy
+            entry.save(update_fields=["physical_copy", "updated_at"])
+
         cover_image = data.get("cover_image")
         if cover_image and not book_title.cover_image:
             book_title.cover_image = cover_image

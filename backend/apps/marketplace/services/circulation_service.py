@@ -142,7 +142,10 @@ class CirculationService:
     def register_physical_copy(
         cls,
         user,
-        book_title_id: int,
+        book_title_id: Optional[int] = None,
+        title: str = "",
+        author: str = "",
+        publisher: str = "",
         condition: str = PhysicalCopy.Condition.GOOD,
         privacy: str = PhysicalCopy.Privacy.FIRST_NAME_ONLY
     ) -> PhysicalCopy:
@@ -153,10 +156,23 @@ class CirculationService:
         if not user or not user.is_authenticated:
             raise UnauthorizedBookActionError("برای ثبت کتاب فیزیکی ورود به حساب کاربری الزامی است.")
 
-        try:
-            book_title = BookTitle.objects.get(id=book_title_id)
-        except BookTitle.DoesNotExist:
-            raise BookCopyNotFoundError("عنوان مرجع کتاب یافت نشد.")
+        if book_title_id:
+            try:
+                book_title = BookTitle.objects.get(id=book_title_id)
+            except BookTitle.DoesNotExist:
+                raise BookCopyNotFoundError("عنوان مرجع کتاب یافت نشد.")
+        else:
+            title_clean = (title or "").strip()
+            author_clean = (author or "").strip()
+            if not title_clean:
+                raise UnauthorizedBookActionError("عنوان کتاب الزامی است.")
+            book_title, _ = BookTitle.objects.get_or_create(
+                title=title_clean,
+                defaults={
+                    "author": author_clean,
+                    "publisher": (publisher or "").strip(),
+                }
+            )
 
         short_code = PhysicalCopy.generate_unique_short_code()
         copy = PhysicalCopy.objects.create(
@@ -169,6 +185,23 @@ class CirculationService:
             condition=condition,
             privacy=privacy
         )
+
+        from ..models.shelf import UserShelfBook
+        shelf_book, created = UserShelfBook.objects.get_or_create(
+            user=user,
+            book_title=book_title,
+            defaults={
+                "quantity": 1,
+                "disposition": UserShelfBook.Disposition.FOR_DONATION,
+                "book_format": UserShelfBook.BookFormat.PHYSICAL,
+                "condition": condition,
+                "physical_copy": copy,
+            }
+        )
+        if not shelf_book.physical_copy:
+            shelf_book.physical_copy = copy
+            shelf_book.save(update_fields=["physical_copy", "updated_at"])
+
         logger.info("PhysicalCopy %s registered for book '%s' by user %s", short_code, book_title.title, user.id)
         return copy
 
