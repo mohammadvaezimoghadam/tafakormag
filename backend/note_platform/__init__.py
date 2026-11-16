@@ -5,16 +5,17 @@ try:
     _orig_check_constraint_init = CheckConstraint.__init__
 
     def _compat_check_constraint_init(self, *args, **kwargs):
-        if "check" in kwargs and "condition" not in kwargs:
-            kwargs["condition"] = kwargs.pop("check")
-        elif "condition" in kwargs and "check" not in kwargs:
-            # If running on an older Django where condition is not accepted, fallback to check
-            try:
+        try:
+            return _orig_check_constraint_init(self, *args, **kwargs)
+        except TypeError as err:
+            if "condition" in str(err) and "check" in kwargs:
+                kwargs["condition"] = kwargs.pop("check")
                 return _orig_check_constraint_init(self, *args, **kwargs)
-            except TypeError:
-                kwargs["check"] = kwargs.pop("condition")
-                return _orig_check_constraint_init(self, *args, **kwargs)
-        return _orig_check_constraint_init(self, *args, **kwargs)
+            elif "check" in str(err) or "unexpected keyword argument 'condition'" in str(err):
+                if "condition" in kwargs:
+                    kwargs["check"] = kwargs.pop("condition")
+                    return _orig_check_constraint_init(self, *args, **kwargs)
+            raise
 
     CheckConstraint.__init__ = _compat_check_constraint_init
 except Exception:
