@@ -70,7 +70,7 @@ const loadShelfBooks = async () => {
     const books = await listMyShelfBooks()
     myBooks.value = books
     if (!selectedBook.value && myBooks.value.length > 0) {
-      selectedBook.value = myBooks.value[0]
+      selectedBook.value = myBooks.value[0] || null
     }
   } catch (err) {
     console.warn('Failed to load shelf books:', err)
