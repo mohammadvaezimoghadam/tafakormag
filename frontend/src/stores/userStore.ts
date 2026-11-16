@@ -13,6 +13,8 @@ export interface UserProfile {
   statusVariant?: 'success' | 'warning' | 'info' | 'muted'
   donations_count?: number
   shelf_books_count?: number
+  is_staff?: boolean
+  is_superuser?: boolean
   
   // Custom bot states
   is_telegram_bot_connected?: boolean
@@ -30,6 +32,8 @@ export const useUserStore = defineStore('user', () => {
   const isLoginModalOpen = ref(false)
 
   const isAuthenticated = computed(() => !!token.value)
+  const user = computed(() => userProfile.value)
+  const isStaff = computed(() => Boolean(userProfile.value?.is_staff || userProfile.value?.is_superuser))
 
   const getImageUrl = (url?: string) => {
     if (!url) return ''
@@ -79,7 +83,9 @@ export const useUserStore = defineStore('user', () => {
       telegram_bot_disconnect_reason: data.telegram_bot_disconnect_reason,
       is_bale_bot_connected: data.is_bale_bot_connected,
       bale_bot_username: data.bale_bot_username,
-      bale_bot_disconnect_reason: data.bale_bot_disconnect_reason
+      bale_bot_disconnect_reason: data.bale_bot_disconnect_reason,
+      is_staff: Boolean(data.is_staff || data.is_superuser),
+      is_superuser: Boolean(data.is_superuser)
     }
   }
 
@@ -155,6 +161,8 @@ export const useUserStore = defineStore('user', () => {
   return {
     token,
     userProfile,
+    user,
+    isStaff,
     loading,
     isAuthenticated,
     isLoginModalOpen,

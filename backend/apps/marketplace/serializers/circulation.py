@@ -91,6 +91,8 @@ class RegisterPhysicalCopyInputSerializer(BaseInputSerializer):
 class PhysicalCopyListSerializer(BaseModelSerializer):
     book_title = BookTitleSerializer(read_only=True)
     station_name = serializers.CharField(source="station.name", read_only=True, default=None)
+    is_holder = serializers.SerializerMethodField()
+    can_claim = serializers.SerializerMethodField()
 
     class Meta:
         model = PhysicalCopy
@@ -104,8 +106,20 @@ class PhysicalCopyListSerializer(BaseModelSerializer):
             "station_name",
             "transfer_count",
             "privacy",
+            "is_holder",
+            "can_claim",
             "created_at",
         ]
+
+    def get_is_holder(self, obj) -> bool:
+        user = self.current_user
+        return bool(user and obj.current_holder_id == user.id)
+
+    def get_can_claim(self, obj) -> bool:
+        user = self.current_user
+        if not user or obj.current_holder_id == user.id:
+            return False
+        return obj.status in [PhysicalCopy.Status.ACTIVE, PhysicalCopy.Status.IN_STATION]
 
 
 class PhysicalCopyDetailSerializer(BaseModelSerializer):

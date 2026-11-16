@@ -625,6 +625,7 @@ class CirculationService:
             recipient_user=transfer.to_user,
             handover_qty=handover_qty,
             acquired_label=f"اهدا حضوری ({copy.short_code})",
+            gifted_by=transfer.from_user,
         )
 
         # Trigger gamification badge evaluation
@@ -796,6 +797,7 @@ class CirculationService:
             recipient_user=user,
             handover_qty=1,
             acquired_label=f"ایستگاه تفاخر ({origin_station.name})",
+            gifted_by=copy.original_donor,
         )
 
         transfer = Transfer.objects.create(
@@ -985,6 +987,7 @@ class CirculationService:
         recipient_user,
         handover_qty: int = 1,
         acquired_label: str = "",
+        gifted_by=None,
     ) -> None:
         """
         Deducts handed-over quantity from the previous holder's shelf & linked donation item
@@ -1100,6 +1103,8 @@ class CirculationService:
         if not recipient_user:
             return
 
+        donor = gifted_by or (existing_linked.user if existing_linked else None) or copy.original_donor
+
         UserShelfBook.objects.create(
             user=recipient_user,
             book_title=copy.book_title,
@@ -1111,4 +1116,6 @@ class CirculationService:
             quantity=qty,
             acquired_from=acquired_label or f"اهدا حضوری ({copy.short_code})",
             physical_copy=copy,
+            is_gift=True,
+            gifted_by=donor,
         )

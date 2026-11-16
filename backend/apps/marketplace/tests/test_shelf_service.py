@@ -62,7 +62,7 @@ class UserShelfBookTests(TestCase):
         self.assertEqual(phys_data["quantity"], 3)
         self.assertNotIn("visibility", phys_data)
         self.assertEqual(phys_data["reading_status"], "reading")
-        self.assertIsNone(phys_data["physical_copy_summary"])
+        self.assertIsNotNone(phys_data["physical_copy_summary"])
         self.assertIsNone(phys_data["marketplace_item_summary"])
 
         # Digital listing without any uploaded file (even if legacy client passes visibility='public')
@@ -635,7 +635,7 @@ class UserShelfBookTests(TestCase):
         )
         self.assertEqual(res_confirm.status_code, status.HTTP_200_OK)
 
-        # 6. Check recipient's shelf: has 2 copies, is_gift=True, can_donate=False
+        # 6. Check recipient's shelf: has 2 copies, is_gift=True, can_donate=False, can_edit=False, can_delete=False
         recip_shelf_list = self.client.get("/api/v1/marketplace/shelf/").json()
         shelf_entries = recip_shelf_list.get("results", recip_shelf_list) if isinstance(recip_shelf_list, dict) else recip_shelf_list
         self.assertEqual(len(shelf_entries), 1)
@@ -643,7 +643,23 @@ class UserShelfBookTests(TestCase):
         self.assertEqual(entry["quantity"], 2)
         self.assertTrue(entry["is_gift"])
         self.assertFalse(entry["can_donate"])
+        self.assertFalse(entry["can_edit"])
+        self.assertFalse(entry["can_delete"])
         self.assertEqual(entry["gifted_by_name"], "زهرا احمدی")
+
+        # 6.1 Verify recipient CANNOT edit gifted book
+        res_edit = self.client.patch(
+            f"/api/v1/marketplace/shelf/{entry['id']}/",
+            {"reading_status": "finished"},
+            format="json",
+        )
+        self.assertEqual(res_edit.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("کتاب‌های هدیه‌گرفته‌شده قابل ویرایش نیستند", res_edit.json()["detail"])
+
+        # 6.2 Verify recipient CANNOT delete gifted book
+        res_del = self.client.delete(f"/api/v1/marketplace/shelf/{entry['id']}/")
+        self.assertEqual(res_del.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("کتاب‌های هدیه‌گرفته‌شده قابل حذف از قفسه نیستند", res_del.json()["detail"])
 
         # 7. Check donor's shelf: quantity=1, reserved_quantity=0, available_quantity=1
         self.client.force_authenticate(user=self.owner)
@@ -685,6 +701,152 @@ class UserShelfBookTests(TestCase):
         self.assertEqual(shelf_after["quantity"], 1)
         self.assertEqual(shelf_after["reserved_quantity"], 0)
         self.assertEqual(shelf_after["available_quantity"], 1)
+
+    def test_admin_user_search_endpoint(self):
+        """Tests the admin-restricted user search endpoint by phone, name, and normalized text."""
+        admin = User.objects.create_user(phone="09120000001", password="password123")
+        admin.is_staff = True
+        admin.first_name = "علی"
+        admin.last_name = "اکبری"
+        admin.save()
+
+        # Non-staff receives 403
+        self.client.force_authenticate(user=self.owner)
+        res_forbidden = self.client.get("/api/v1/accounts/users/search/?q=رضا")
+        self.assertEqual(res_forbidden.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Staff can search
+        self.client.force_authenticate(user=admin)
+
+        # Search by phone
+        res_phone = self.client.get("/api/v1/accounts/users/search/?q=0912222")
+        self.assertEqual(res_phone.status_code, status.HTTP_200_OK)
+        results = res_phone.json()
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["phone"], "09122220002")
+        self.assertEqual(results[0]["full_name"], "رضا")
+
+        # Search with Arabic/Persian normalization
+        res_name = self.client.get("/api/v1/accounts/users/search/?q=زهرا")
+        self.assertEqual(res_name.status_code, status.HTTP_200_OK)
+        results = res_name.json()
+        self.assertTrue(any(u["id"] == self.owner.id for u in results))
+
+    def test_direct_admin_donation_to_existing_user(self):
+        """Tests staff direct instant delivery to an existing user with zero recipient friction."""
+        admin = User.objects.create_user(phone="09120000002", password="password123")
+        admin.is_staff = True
+        admin.first_name = "مدیر"
+        admin.last_name = "تفکر"
+        admin.save()
+
+        self.client.force_authenticate(user=admin)
+        res_create = self.client.post(
+            "/api/v1/marketplace/shelf/",
+            {"title": "داستان راستان", "author": "شهید مطهری", "quantity": 10},
+            format="json",
+        )
+        self.assertEqual(res_create.status_code, status.HTTP_201_CREATED)
+        shelf_id = res_create.json()["id"]
+
+        # Admin donates 2 copies to self.owner
+        res_donate = self.client.post(
+            f"/api/v1/marketplace/shelf/{shelf_id}/admin-donate/",
+            {"quantity": 2, "recipient_phone": self.owner.phone},
+            format="json",
+        )
+        self.assertEqual(res_donate.status_code, status.HTTP_200_OK)
+        data = res_donate.json()
+        self.assertEqual(data["status"], "confirmed")
+        self.assertEqual(data["quantity"], 2)
+        self.assertTrue(data["recipient_registered"])
+
+        # Check admin inventory decremented
+        admin_shelf = self.client.get(f"/api/v1/marketplace/shelf/{shelf_id}/").json()
+        self.assertEqual(admin_shelf["quantity"], 8)
+        self.assertEqual(admin_shelf["reserved_quantity"], 0)
+
+        # Check recipient shelf: instant delivery with is_gift=True
+        self.client.force_authenticate(user=self.owner)
+        res_recipient = self.client.get("/api/v1/marketplace/shelf/").json()
+        recipient_books = res_recipient if isinstance(res_recipient, list) else res_recipient.get("results", [])
+        gifted_book = next((b for b in recipient_books if b["book_title"]["title"] == "داستان راستان"), None)
+        self.assertIsNotNone(gifted_book)
+        self.assertTrue(gifted_book["is_gift"])
+        self.assertEqual(gifted_book["quantity"], 2)
+        self.assertEqual(gifted_book["gifted_by_name"], "مدیر تفکر")
+        self.assertFalse(gifted_book["can_donate"])
+        self.assertFalse(gifted_book["can_edit"])
+        self.assertFalse(gifted_book["can_delete"])
+
+    def test_admin_donation_to_unregistered_phone_and_auto_claim_on_signup(self):
+        """Tests admin donation to an unregistered phone and auto-claim upon registration."""
+        admin = User.objects.create_user(phone="09120000003", password="password123")
+        admin.is_staff = True
+        admin.save()
+
+        self.client.force_authenticate(user=admin)
+        res_create = self.client.post(
+            "/api/v1/marketplace/shelf/",
+            {"title": "جاذبه و دافعه علی (ع)", "author": "شهید مطهری", "quantity": 5},
+            format="json",
+        )
+        shelf_id = res_create.json()["id"]
+
+        # Admin donates to unregistered phone
+        new_phone = "09359998877"
+        res_donate = self.client.post(
+            f"/api/v1/marketplace/shelf/{shelf_id}/admin-donate/",
+            {"quantity": 1, "recipient_phone": new_phone},
+            format="json",
+        )
+        self.assertEqual(res_donate.status_code, status.HTTP_200_OK)
+        data = res_donate.json()
+        self.assertEqual(data["status"], "pending_recipient")
+        self.assertFalse(data["recipient_registered"])
+        self.assertTrue(data["sms_sent"])
+
+        # Admin stock reserved
+        admin_shelf = self.client.get(f"/api/v1/marketplace/shelf/{shelf_id}/").json()
+        self.assertEqual(admin_shelf["quantity"], 5)
+        self.assertEqual(admin_shelf["reserved_quantity"], 1)
+        self.assertEqual(admin_shelf["available_quantity"], 4)
+
+        # New user signs up with that phone
+        new_user = User.objects.create_user(phone=new_phone, password="password123")
+
+        # Auto-claim signal executed on save!
+        self.client.force_authenticate(user=new_user)
+        res_user_shelf = self.client.get("/api/v1/marketplace/shelf/").json()
+        user_books = res_user_shelf if isinstance(res_user_shelf, list) else res_user_shelf.get("results", [])
+        claimed_book = next((b for b in user_books if b["book_title"]["title"] == "جاذبه و دافعه علی (ع)"), None)
+        self.assertIsNotNone(claimed_book)
+        self.assertTrue(claimed_book["is_gift"])
+        self.assertEqual(claimed_book["quantity"], 1)
+
+        # Admin stock deducted from total and reserved
+        self.client.force_authenticate(user=admin)
+        admin_shelf_after = self.client.get(f"/api/v1/marketplace/shelf/{shelf_id}/").json()
+        self.assertEqual(admin_shelf_after["quantity"], 4)
+        self.assertEqual(admin_shelf_after["reserved_quantity"], 0)
+
+    def test_admin_donations_report_endpoint(self):
+        """Tests the admin donations audit report endpoint."""
+        admin = User.objects.create_user(phone="09120000004", password="password123")
+        admin.is_staff = True
+        admin.save()
+
+        # Non-staff receives 403
+        self.client.force_authenticate(user=self.owner)
+        res_forbidden = self.client.get("/api/v1/marketplace/shelf/admin-donations-report/")
+        self.assertEqual(res_forbidden.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Staff receives list of donations
+        self.client.force_authenticate(user=admin)
+        res_report = self.client.get("/api/v1/marketplace/shelf/admin-donations-report/")
+        self.assertEqual(res_report.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(res_report.json(), list)
+
 
 
 

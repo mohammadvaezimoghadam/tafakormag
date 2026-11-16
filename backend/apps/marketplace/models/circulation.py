@@ -222,6 +222,19 @@ class PhysicalCopy(MarketplaceBaseModel):
         return f"{prefix}-{uuid.uuid4().hex[:5].upper()}"
 
 
+def _build_transfer_quantity_constraint():
+    try:
+        return models.CheckConstraint(
+            condition=models.Q(quantity__gte=1),
+            name="chk_transfer_quantity_gte_1",
+        )
+    except TypeError:
+        return models.CheckConstraint(
+            check=models.Q(quantity__gte=1),
+            name="chk_transfer_quantity_gte_1",
+        )
+
+
 class Transfer(TimeStampedModel):
     """
     Immutable handover transaction logging every movement of a PhysicalCopy (سفرنامه کتاب).
@@ -307,10 +320,7 @@ class Transfer(TimeStampedModel):
         verbose_name_plural = "Book Transfers"
         ordering = ["-created_at"]
         constraints = [
-            models.CheckConstraint(
-                check=Q(quantity__gte=1),
-                name="chk_transfer_quantity_gte_1",
-            )
+            _build_transfer_quantity_constraint(),
         ]
         indexes = [
             models.Index(fields=["copy", "-created_at"], name="idx_trf_copy_created"),

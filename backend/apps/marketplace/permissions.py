@@ -44,5 +44,5 @@ class IsShelfBookOwner(permissions.BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and obj.user_id == request.user.id
+            and (obj.user_id == request.user.id or request.user.is_staff)
         )

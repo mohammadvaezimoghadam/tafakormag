@@ -16,6 +16,16 @@ import type {
 } from '@/types/shelf'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useToastStore } from '@/stores/toastStore'
+import { generateQrDataUrl } from '@/utils/qrCode'
 import HorizontalSliderRow from '@/components/home/HorizontalSliderRow.vue'
 import { getCampaignCategoryLabel, getCampaignStatusConfig } from '@/utils/kindness'
 import {
@@ -24,8 +34,11 @@ import {
   CheckCircle2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CopyIcon,
   HandHeartIcon,
   LayersIcon,
+  QrCodeIcon,
+  Share2Icon,
   ShoppingBagIcon,
   SmartphoneIcon,
 } from '@lucide/vue'
@@ -52,6 +65,7 @@ const emit = defineEmits<{
 
 const languageStore = useLanguageStore()
 const userStore = useUserStore()
+const isStaff = computed(() => userStore.user?.is_staff ?? false)
 const books = ref<ShelfBook[]>([])
 const campaigns = ref<HomeDonationCampaign[]>([])
 const products = ref<HomeMarketplaceItem[]>([])
@@ -79,7 +93,7 @@ const topicsSubtitle = computed(() => {
 })
 
 const getShortCode = (book: ShelfBook): string | null => {
-  return book.physical_copy_summary?.short_code || null
+  return book.physical_copy_summary?.short_code || (book as any).short_code || null
 }
 
 const getFormatBadge = (book: ShelfBook): string => {
@@ -180,6 +194,53 @@ const isAddBookDialogOpen = ref(false)
 const isDonateBookDialogOpen = ref(false)
 const donatingBook = ref<ShelfBook | null>(null)
 
+const toastStore = useToastStore()
+const isQrDialogOpen = ref(false)
+const selectedQrBook = ref<ShelfBook | null>(null)
+
+const getQrBookUrl = (book: ShelfBook | null): string => {
+  if (!book) return 'https://tafakormag.ir'
+  const code = getShortCode(book)
+  return code ? `https://tafakormag.ir/b/${code}` : `https://tafakormag.ir/b/${book.id}`
+}
+
+const handleShowBookQr = (book: ShelfBook) => {
+  selectedQrBook.value = book
+  isQrDialogOpen.value = true
+}
+
+const copyShortCode = async (code: string) => {
+  try {
+    await navigator.clipboard.writeText(code)
+    toastStore.triggerToast(
+      languageStore.t('کد کتاب کپی شد', 'Code copied'),
+      'success'
+    )
+  } catch {
+    toastStore.triggerToast(
+      languageStore.t('کپی ناموفق بود', 'Failed to copy'),
+      'error'
+    )
+  }
+}
+
+const copyQrLink = async (book: ShelfBook | null) => {
+  if (!book) return
+  const url = getQrBookUrl(book)
+  try {
+    await navigator.clipboard.writeText(url)
+    toastStore.triggerToast(
+      languageStore.t('لینک شناسنامه کتاب کپی شد', 'Link copied'),
+      'success'
+    )
+  } catch {
+    toastStore.triggerToast(
+      languageStore.t('کپی ناموفق بود', 'Failed to copy'),
+      'error'
+    )
+  }
+}
+
 const handleOpenAddBook = () => {
   if (!hasAuthSession.value) {
     userStore.isLoginModalOpen = true
@@ -212,13 +273,14 @@ defineExpose({
 
 <template>
   <div class="flex flex-col gap-6 w-full pb-24">
-    <!-- 1. Asymmetric 3-Button Action Hub (Flutter tafakor_shop HomeActionHub style) -->
+    <!-- 1. Asymmetric Action Hub: 3-Button for Admins / Single Hero Card for Normal Users -->
     <div class="flex items-stretch gap-2 w-full">
-      <!-- Primary Hero Gateway: Topics List (ONLY working/navigating button) -->
+      <!-- Primary Hero Gateway: Topics List -->
       <button
         type="button"
         @click="emit('open-topics')"
-        class="flex-[4] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-3 py-2.5 flex items-center gap-2.5 text-start cursor-pointer"
+        :class="isStaff ? 'flex-[4]' : 'flex-1 w-full'"
+        class="min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-3 py-2.5 flex items-center gap-2.5 text-start cursor-pointer"
       >
         <LayersIcon class="size-7 text-foreground shrink-0" />
 
@@ -241,8 +303,9 @@ defineExpose({
         />
       </button>
 
-      <!-- Secondary Compact Card 1: Register Book (Active) -->
+      <!-- Secondary Compact Card 1: Register Book (Admins Only) -->
       <button
+        v-if="isStaff"
         type="button"
         @click="handleOpenAddBook"
         class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
@@ -253,8 +316,9 @@ defineExpose({
         </span>
       </button>
 
-      <!-- Secondary Compact Card 2: Book Donations List (Active) -->
+      <!-- Secondary Compact Card 2: Book Donations List (Admins Only) -->
       <button
+        v-if="isStaff"
         type="button"
         @click="handleOpenBookDonations"
         class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
@@ -328,6 +392,16 @@ defineExpose({
             <div class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border border-border/60 text-[10px] font-bold text-foreground shadow-2xs">
               <span>{{ languageStore.n(book.quantity ?? 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
             </div>
+
+            <!-- QR Code Button on Book Cover -->
+            <button
+              type="button"
+              @click.stop="handleShowBookQr(book)"
+              class="absolute top-1.5 end-1.5 p-1 rounded-md bg-background/95 hover:bg-muted border border-border/60 text-foreground shadow-2xs transition-all active:scale-90 select-none cursor-pointer"
+              :title="languageStore.t('شناسنامه و بارکد کتاب', 'Book QR Code')"
+            >
+              <QrCodeIcon class="size-3.5 text-foreground" />
+            </button>
 
           </div>
 
@@ -614,5 +688,67 @@ defineExpose({
       :book="donatingBook"
       @donated="handleBookAdded"
     />
+
+    <!-- Book QR Dialog -->
+    <Dialog v-model:open="isQrDialogOpen">
+      <DialogContent class="sm:max-w-md rounded-2xl bg-card border-border/80">
+        <DialogHeader>
+          <DialogTitle class="text-base font-extrabold flex items-center gap-2 text-foreground">
+            <QrCodeIcon class="size-5 text-primary" />
+            <span>{{ languageStore.t('شناسنامه و بارکد کتاب', 'Book QR Code') }}</span>
+          </DialogTitle>
+          <DialogDescription class="text-xs text-muted-foreground">
+            {{ selectedQrBook?.book_title.title }} — {{ selectedQrBook?.book_title.author }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div v-if="selectedQrBook" class="flex flex-col items-center gap-4 py-3">
+          <div class="p-4 bg-white rounded-2xl border border-border/60 shadow-xs flex items-center justify-center">
+            <img
+              :src="generateQrDataUrl(getQrBookUrl(selectedQrBook), 2)"
+              :alt="selectedQrBook.book_title.title"
+              class="size-48 object-contain"
+            />
+          </div>
+
+          <div
+            v-if="getShortCode(selectedQrBook)"
+            class="flex items-center gap-2 bg-muted/60 px-3 py-1.5 rounded-xl border border-border/60"
+          >
+            <span class="text-xs text-foreground font-mono font-bold tracking-wider">
+              {{ getShortCode(selectedQrBook) }}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              @click="copyShortCode(getShortCode(selectedQrBook)!)"
+              :title="languageStore.t('کپی کد', 'Copy Code')"
+            >
+              <CopyIcon class="size-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter class="flex sm:justify-between items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            class="rounded-xl w-full sm:w-auto"
+            @click="copyQrLink(selectedQrBook)"
+          >
+            <Share2Icon class="size-4" data-icon="inline-start" />
+            <span>{{ languageStore.t('کپی لینک اشتراک', 'Copy Share Link') }}</span>
+          </Button>
+          <Button
+            type="button"
+            class="rounded-xl w-full sm:w-auto"
+            @click="isQrDialogOpen = false"
+          >
+            {{ languageStore.t('بستن', 'Close') }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

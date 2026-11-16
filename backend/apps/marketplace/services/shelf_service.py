@@ -184,6 +184,9 @@ class ShelfService:
         """Updates personal shelf fields such as reading status, format, and notes."""
         cls._assert_owner(user, shelf_book)
 
+        if shelf_book.is_gift:
+            raise ShelfBookError("کتاب‌های هدیه‌گرفته‌شده قابل ویرایش نیستند.")
+
         new_format = data.get("book_format", shelf_book.book_format)
         if (
             new_format == UserShelfBook.BookFormat.DIGITAL
@@ -242,6 +245,10 @@ class ShelfService:
         and archiving any active marketplace offering.
         """
         cls._assert_owner(user, shelf_book)
+
+        if shelf_book.is_gift:
+            raise ShelfBookError("کتاب‌های هدیه‌گرفته‌شده قابل حذف از قفسه نیستند.")
+
         cls._ensure_withdrawable_copy(user, shelf_book)
 
         if shelf_book.disposition != UserShelfBook.Disposition.KEEPING:
@@ -954,4 +961,341 @@ class ShelfService:
 
         thread = threading.Thread(target=_send, daemon=True)
         thread.start()
+
+    # ------------------------------------------------------------------
+    # Tafakor Admin Direct Book Donation Architecture (اهدای سازمانی تفکر)
+    # ------------------------------------------------------------------
+    @classmethod
+    @transaction.atomic
+    def admin_donate_book(
+        cls,
+        admin_user,
+        shelf_book_id: int,
+        recipient_phone: str,
+        quantity: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Direct organization donation executed by Tafakor staff/admins.
+        - Asserts admin_user.is_staff.
+        - Validates available quantity in inventory.
+        - Normalizes recipient phone.
+        - If recipient user exists:
+          - Direct instant delivery! Get or create UserShelfBook on recipient with:
+            quantity += quantity, is_gift=True, gifted_by=admin_user,
+            gifted_by_name=admin_user.get_full_name() or admin_user.username.
+          - Create confirmed Transfer(from_user=admin_user, to_user=recipient, quantity=quantity,
+            status=Transfer.Status.CONFIRMED, confirmed_at=timezone.now()).
+          - Deduct quantity from admin shelf book stock.
+        - If recipient user does NOT exist:
+          - Create pending Transfer(from_user=admin_user, recipient_phone=norm_phone,
+            quantity=quantity, status=Transfer.Status.PENDING_RECIPIENT).
+          - Deduct from available stock (reserved_quantity += quantity).
+          - Send SMS via Kavenegar without "لغو ۱۱" text:
+            «سلام! کتاب {title} از طرف {admin_name} به شما اهدا شد. برای مشاهده در تفکر ثبت‌نام فرمایید: https://tafakormag.ir/dl»
+        """
+        if not admin_user or not admin_user.is_authenticated or not getattr(admin_user, "is_staff", False):
+            raise ShelfBookError("فقط مدیران و ادمین‌های تفکر مجاز به اهدای سازمانی کتاب هستند.")
+
+        locked_shelf_book = (
+            UserShelfBook.objects.select_for_update()
+            .filter(id=shelf_book_id)
+            .first()
+        )
+        if not locked_shelf_book:
+            raise ShelfBookError("کتاب مورد نظر در انبار یافت نشد.")
+
+        if locked_shelf_book.is_gift:
+            raise ShelfBookError("کتاب‌های هدیه در انبار قابل اهدا نیستند.")
+
+        handover_qty = cls._validate_quantity(quantity, min_value=1)
+        available_qty = locked_shelf_book.available_quantity
+        if handover_qty > available_qty:
+            raise ShelfBookError(
+                f"موجودی آزاد این کتاب {available_qty} جلد است؛ امکان اهدای {handover_qty} جلد وجود ندارد."
+            )
+
+        norm_phone = CirculationService._normalize_phone(recipient_phone)
+        if not norm_phone or len(norm_phone) < 10:
+            raise ShelfBookError("شماره موبایل گیرنده معتبر نیست.")
+
+        admin_phone = CirculationService._normalize_phone(getattr(admin_user, "phone", "") or "")
+        if admin_phone and norm_phone == admin_phone:
+            raise ShelfBookError("امکان اهدای کتاب به خودتان وجود ندارد.")
+
+        recipient_user = User.objects.filter(phone=norm_phone).first()
+
+        copy = locked_shelf_book.physical_copy
+        if not copy:
+            copy = CirculationService.register_physical_copy(
+                user=admin_user,
+                book_title_id=locked_shelf_book.book_title_id,
+                condition=locked_shelf_book.condition or PhysicalCopy.Condition.NEW,
+            )
+            locked_shelf_book.physical_copy = copy
+
+        admin_name = admin_user.get_full_name() or getattr(admin_user, "username", "") or "ادمین تفکر"
+        book_title_obj = locked_shelf_book.book_title
+        book_title_str = book_title_obj.title
+
+        if recipient_user:
+            recipient_shelf, created = UserShelfBook.objects.select_for_update().get_or_create(
+                user=recipient_user,
+                book_title=book_title_obj,
+                is_gift=True,
+                defaults={
+                    "quantity": handover_qty,
+                    "gifted_by": admin_user,
+                    "book_format": locked_shelf_book.book_format or UserShelfBook.BookFormat.PHYSICAL,
+                    "disposition": UserShelfBook.Disposition.KEEPING,
+                    "condition": locked_shelf_book.condition or PhysicalCopy.Condition.NEW,
+                    "acquired_from": f"هدیه از طرف {admin_name}",
+                },
+            )
+            if not created:
+                recipient_shelf.quantity += handover_qty
+                if not recipient_shelf.gifted_by:
+                    recipient_shelf.gifted_by = admin_user
+                recipient_shelf.is_gift = True
+                recipient_shelf.save(update_fields=["quantity", "gifted_by", "is_gift", "updated_at"])
+
+            transfer = Transfer.objects.create(
+                copy=copy,
+                from_user=admin_user,
+                to_user=recipient_user,
+                recipient_phone=norm_phone,
+                quantity=handover_qty,
+                method=Transfer.Method.SCAN_CONFIRM,
+                status=Transfer.Status.CONFIRMED,
+                confirmed_at=timezone.now(),
+            )
+
+            locked_shelf_book.quantity = max(0, locked_shelf_book.quantity - handover_qty)
+            locked_shelf_book.save(update_fields=["quantity", "physical_copy", "updated_at"])
+
+            copy.current_holder = recipient_user
+            copy.status = PhysicalCopy.Status.ACTIVE
+            copy.transfer_count += 1
+            copy.save(update_fields=["current_holder", "status", "transfer_count", "updated_at"])
+
+            return {
+                "transfer_id": transfer.id,
+                "book_title": book_title_str,
+                "quantity": handover_qty,
+                "recipient_phone": norm_phone,
+                "recipient_name": recipient_user.get_full_name(),
+                "recipient_registered": True,
+                "status": "confirmed",
+                "admin_name": admin_name,
+                "message": f"کتاب «{book_title_str}» با موفقیت به قفسه {recipient_user.get_full_name()} اضافه شد.",
+            }
+        else:
+            transfer = Transfer.objects.create(
+                copy=copy,
+                from_user=admin_user,
+                to_user=None,
+                recipient_phone=norm_phone,
+                quantity=handover_qty,
+                method=Transfer.Method.SCAN_CONFIRM,
+                status=Transfer.Status.PENDING_RECIPIENT,
+            )
+
+            locked_shelf_book.reserved_quantity += handover_qty
+            locked_shelf_book.save(update_fields=["reserved_quantity", "physical_copy", "updated_at"])
+
+            cls._dispatch_admin_donation_sms(
+                phone=norm_phone,
+                admin_name=admin_name,
+                book_title=book_title_str,
+            )
+
+            return {
+                "transfer_id": transfer.id,
+                "book_title": book_title_str,
+                "quantity": handover_qty,
+                "recipient_phone": norm_phone,
+                "recipient_name": None,
+                "recipient_registered": False,
+                "status": "pending_recipient",
+                "admin_name": admin_name,
+                "sms_sent": True,
+                "message": f"کتاب «{book_title_str}» رزرو شد و پیامک دعوت برای {norm_phone} ارسال گردید.",
+            }
+
+    @classmethod
+    def _dispatch_admin_donation_sms(
+        cls,
+        phone: str,
+        admin_name: str,
+        book_title: str,
+    ) -> None:
+        """
+        Sends admin book donation invitation SMS asynchronously in a background thread.
+        Matches exact text format:
+        «سلام! کتاب {title} از طرف {admin_name} به شما اهدا شد. برای مشاهده در تفکر ثبت‌نام فرمایید: https://tafakormag.ir/dl»
+        """
+        import threading
+        from django.conf import settings
+
+        def _send():
+            try:
+                from apps.accounts.services import kavenegar_configured
+                if not kavenegar_configured():
+                    logger.info("[MOCK SMS] Admin donation SMS to %s: %s donated '%s'", phone, admin_name, book_title)
+                    return
+
+                try:
+                    from kavenegar import KavenegarAPI
+                except ImportError:
+                    logger.info("[MOCK SMS] kavenegar package not installed; logged SMS to %s: %s donated '%s'", phone, admin_name, book_title)
+                    return
+
+                api = KavenegarAPI(settings.KAVENEGAR_API_KEY.strip())
+                message = f"سلام! کتاب {book_title} از طرف {admin_name} به شما اهدا شد. برای مشاهده در تفکر ثبت‌نام فرمایید: https://tafakormag.ir/dl"
+                params = {
+                    "sender": settings.KAVENEGAR_SENDER.strip(),
+                    "receptor": phone,
+                    "message": message,
+                }
+                api.sms_send(params)
+                logger.info("Admin donation SMS dispatched successfully to %s", phone)
+            except Exception as e:
+                logger.exception("Failed to send admin donation SMS to %s: %s", phone, e)
+
+        thread = threading.Thread(target=_send, daemon=True)
+        thread.start()
+
+    @classmethod
+    def get_admin_donations_report(cls, admin_user) -> List[Dict[str, Any]]:
+        """
+        Audit report listing all completed and pending donations performed by admin staff.
+        Zero N+1 queries enforced with select_related.
+        """
+        if not admin_user or not admin_user.is_authenticated or not getattr(admin_user, "is_staff", False):
+            raise ShelfBookError("فقط مدیران و ادمین‌های تفکر مجاز به مشاهده گزارش اهدا هستند.")
+
+        transfers = (
+            Transfer.objects.filter(
+                from_user__is_staff=True,
+                status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT],
+            )
+            .select_related("copy__book_title", "from_user", "to_user")
+            .order_by("-created_at")
+        )
+
+        results = []
+        for trf in transfers:
+            book_title = trf.copy.book_title if trf.copy else None
+            cover_url = None
+            if book_title and book_title.cover_image:
+                cover_url = book_title.cover_image.url
+
+            recipient_name = None
+            if trf.to_user:
+                recipient_name = trf.to_user.get_full_name()
+
+            admin_name = trf.from_user.get_full_name() if trf.from_user else "ادمین تفکر"
+
+            results.append({
+                "id": trf.id,
+                "book_title": book_title.title if book_title else "",
+                "book_author": book_title.author if book_title else "",
+                "cover_image": cover_url,
+                "quantity": trf.quantity,
+                "recipient_name": recipient_name,
+                "recipient_phone": trf.recipient_phone or (trf.to_user.phone if trf.to_user else ""),
+                "admin_name": admin_name,
+                "admin_id": trf.from_user_id,
+                "status": trf.status,
+                "status_display": trf.get_status_display(),
+                "created_at": trf.created_at.isoformat(),
+                "confirmed_at": trf.confirmed_at.isoformat() if trf.confirmed_at else None,
+            })
+        return results
+
+    @classmethod
+    @transaction.atomic
+    def claim_pending_gifts_for_user(cls, user) -> List[Dict[str, Any]]:
+        """
+        Auto-claims all pending book transfers for a newly registered or logged-in user.
+        Converts Transfer status from PENDING_RECIPIENT to CONFIRMED, updates copy,
+        deducts donor reserved/total quantity, and creates or increments recipient's
+        UserShelfBook with is_gift=True.
+        """
+        if not user or not user.is_authenticated:
+            return []
+
+        user_phone = CirculationService._normalize_phone(getattr(user, "phone", "") or "")
+        if not user_phone:
+            return []
+
+        pending_transfers = list(
+            Transfer.objects.select_for_update()
+            .filter(
+                Q(recipient_phone=user_phone) | Q(to_user=user),
+                status=Transfer.Status.PENDING_RECIPIENT,
+            )
+            .select_related("copy__book_title", "from_user")
+        )
+
+        claimed = []
+        for transfer in pending_transfers:
+            donor = transfer.from_user
+            gift_qty = transfer.quantity
+            book_title = transfer.copy.book_title if transfer.copy else None
+            if not book_title:
+                continue
+
+            if donor:
+                donor_shelf = (
+                    UserShelfBook.objects.select_for_update()
+                    .filter(user=donor, book_title=book_title)
+                    .first()
+                )
+                if donor_shelf:
+                    donor_shelf.quantity = max(0, donor_shelf.quantity - gift_qty)
+                    donor_shelf.reserved_quantity = max(0, donor_shelf.reserved_quantity - gift_qty)
+                    donor_shelf.save(update_fields=["quantity", "reserved_quantity", "updated_at"])
+
+            donor_name = donor.get_full_name() if donor else "ادمین تفکر"
+
+            recipient_shelf, created = UserShelfBook.objects.select_for_update().get_or_create(
+                user=user,
+                book_title=book_title,
+                is_gift=True,
+                defaults={
+                    "quantity": gift_qty,
+                    "gifted_by": donor,
+                    "book_format": UserShelfBook.BookFormat.PHYSICAL,
+                    "disposition": UserShelfBook.Disposition.KEEPING,
+                    "condition": transfer.copy.condition if transfer.copy else PhysicalCopy.Condition.NEW,
+                    "acquired_from": f"هدیه از طرف {donor_name}",
+                },
+            )
+            if not created:
+                recipient_shelf.quantity += gift_qty
+                if not recipient_shelf.gifted_by and donor:
+                    recipient_shelf.gifted_by = donor
+                recipient_shelf.is_gift = True
+                recipient_shelf.save(update_fields=["quantity", "gifted_by", "is_gift", "updated_at"])
+
+            transfer.to_user = user
+            transfer.status = Transfer.Status.CONFIRMED
+            transfer.confirmed_at = timezone.now()
+            transfer.save(update_fields=["to_user", "status", "confirmed_at", "updated_at"])
+
+            if transfer.copy:
+                transfer.copy.current_holder = user
+                transfer.copy.status = PhysicalCopy.Status.ACTIVE
+                transfer.copy.transfer_count += 1
+                transfer.copy.save(update_fields=["current_holder", "status", "transfer_count", "updated_at"])
+
+            claimed.append({
+                "transfer_id": transfer.id,
+                "book_title": book_title.title,
+                "quantity": gift_qty,
+                "donor_name": donor_name,
+            })
+
+        return claimed
+
 

@@ -94,6 +94,12 @@ class AuthViewSet(viewsets.GenericViewSet):
         user, created = User.objects.get_or_create(phone=phone)
         token, _ = Token.objects.get_or_create(user=user)
 
+        try:
+            from apps.marketplace.services.shelf_service import ShelfService
+            ShelfService.claim_pending_gifts_for_user(user)
+        except Exception as e:
+            logger.exception("Failed to auto-claim gifts on verify_otp: %s", e)
+
         return Response({
             "token": token.key,
             "user": UserSerializer(user).data
@@ -450,3 +456,57 @@ class AuthViewSet(viewsets.GenericViewSet):
             return Response({"success": True})
         except MessagingTarget.DoesNotExist:
             return Response({"error": "مقصد یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class UserViewSet(viewsets.GenericViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='search')
+    def search(self, request):
+        """
+        Staff-restricted user search by phone, first_name, last_name, or username.
+        Used for autocomplete in book donation and admin attribution.
+        Returns: [{ id, phone, full_name, avatar }]
+        """
+        if not request.user or not request.user.is_staff:
+            return Response(
+                {"error": "فقط مدیران و ادمین‌های تفکر مجاز به جستجوی کاربران هستند."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        q = (request.query_params.get('q') or '').strip()
+        if not q:
+            return Response([])
+
+        from apps.notes.models import normalize_persian_text
+        q_norm = normalize_persian_text(q)
+
+        q_filter = (
+            Q(phone__icontains=q)
+            | Q(phone__icontains=q_norm)
+            | Q(first_name__icontains=q)
+            | Q(first_name__icontains=q_norm)
+            | Q(last_name__icontains=q)
+            | Q(last_name__icontains=q_norm)
+        )
+
+        user_fields = [f.name for f in User._meta.get_fields()]
+        if 'username' in user_fields:
+            q_filter |= Q(username__icontains=q) | Q(username__icontains=q_norm)
+
+        users = User.objects.filter(q_filter).order_by('-id')[:25]
+
+        results = []
+        for u in users:
+            avatar_url = None
+            if u.profile_image:
+                avatar_url = request.build_absolute_uri(u.profile_image.url)
+
+            results.append({
+                "id": u.id,
+                "phone": u.phone,
+                "full_name": u.get_full_name(),
+                "avatar": avatar_url,
+            })
+
+        return Response(results)

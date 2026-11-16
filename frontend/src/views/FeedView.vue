@@ -369,10 +369,12 @@ watch(() => route.query, () => {
 // Fetch data on mount
 onMounted(async () => {
   window.addEventListener('scroll', handleFeedScroll)
+  syncRouteToState()
   try {
-    await userStore.loadProfile()
-    await topicStore.loadTopics()
-    syncRouteToState()
+    await Promise.allSettled([
+      userStore.loadProfile(),
+      topicStore.loadTopics()
+    ])
     checkPaymentCallbackParams()
   } catch (err) {
     console.error('Error on FeedView mount:', err)

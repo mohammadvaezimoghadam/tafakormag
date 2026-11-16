@@ -9,6 +9,7 @@ from ..exceptions import MarketplaceError
 from ..models.shelf import UserShelfBook
 from ..permissions import IsShelfBookOwner
 from ..serializers.shelf import (
+    ShelfAdminDonateInputSerializer,
     ShelfBookCreateInputSerializer,
     ShelfBookSerializer,
     ShelfBookUpdateInputSerializer,
@@ -65,7 +66,10 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return qs.none()
 
-        qs = qs.filter(user=user)
+        if user.is_staff:
+            qs = qs.filter(Q(user=user) | Q(user__is_staff=True))
+        else:
+            qs = qs.filter(user=user)
         if self.action == "list":
             qs = _apply_shelf_search(qs, self.request.query_params.get("search", ""))
             for param, field in (
@@ -248,3 +252,39 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
             return Response(result, status=status.HTTP_200_OK)
         except MarketplaceError as e:
             return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"], url_path="admin-donate")
+    def admin_donate(self, request, pk=None):
+        """Direct staff donation of books to a user or phone number."""
+        if not request.user or not request.user.is_staff:
+            return Response(
+                {"detail": "فقط مدیران و ادمین‌های تفکر مجاز به اهدای سازمانی هستند."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = ShelfAdminDonateInputSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = ShelfService.admin_donate_book(
+                admin_user=request.user,
+                shelf_book_id=int(pk),
+                recipient_phone=serializer.validated_data["recipient_phone"],
+                quantity=serializer.validated_data.get("quantity", 1),
+            )
+            return Response(result, status=status.HTTP_200_OK)
+        except MarketplaceError as e:
+            return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"], url_path="admin-donations-report")
+    def admin_donations_report(self, request):
+        """Audit report of all organization donations made by admin staff."""
+        if not request.user or not request.user.is_staff:
+            return Response(
+                {"detail": "فقط مدیران تفکر مجاز به مشاهده گزارش اهدا هستند."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            reports = ShelfService.get_admin_donations_report(request.user)
+            return Response(reports, status=status.HTTP_200_OK)
+        except MarketplaceError as e:
+            return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+

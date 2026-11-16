@@ -1,6 +1,9 @@
+import logging
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from apps.payments.handlers import register_payment_handler
 from apps.payments.models import PaymentTransaction
@@ -76,20 +79,18 @@ def register_marketplace_payment_handlers() -> None:
 
 def link_pending_gifts_on_user_save(sender, instance, created, **kwargs) -> None:
     """
-    Automatically links pending book transfers to newly registered or phone-updated users.
-    Ensures that when a recipient signs up, their gifted books appear in their account immediately.
+    Automatically claims pending book transfers to newly registered or phone-updated users.
+    Ensures that when a recipient signs up, their gifted books appear in their account immediately
+    with is_gift=True and status=CONFIRMED.
     """
     phone = getattr(instance, "phone", None) or getattr(instance, "username", None)
     if not phone:
         return
-    from .models.circulation import Transfer
-    from .services.circulation_service import CirculationService
+    from .services.shelf_service import ShelfService
 
-    norm_phone = CirculationService._normalize_phone(phone)
-    if norm_phone:
-        Transfer.objects.filter(
-            recipient_phone=norm_phone,
-            to_user__isnull=True,
-            status=Transfer.Status.PENDING_RECIPIENT,
-        ).update(to_user=instance)
+    try:
+        ShelfService.claim_pending_gifts_for_user(instance)
+    except Exception as e:
+        logger.exception("Error auto-claiming pending gifts on user save: %s", e)
+
 

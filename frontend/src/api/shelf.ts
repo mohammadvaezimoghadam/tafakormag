@@ -1,5 +1,7 @@
 import api, { fetchDonationCampaigns } from './index'
 import type {
+  AdminDonationReportItem,
+  AdminDonatePayload,
   BookCopyInspectResult,
   BookCopyJourneyResult,
   BookStationSummary,
@@ -21,6 +23,7 @@ import type {
   ShelfStartCirculationPayload,
   ShelfSummary,
   ShippingPayer,
+  UserSearchResult,
 } from '@/types/shelf'
 
 function unwrapList<T>(data: T[] | { results?: T[] }): T[] {
@@ -307,6 +310,34 @@ export async function listMyMarketplaceItems(): Promise<HomeMarketplaceItem[]> {
 export async function listHomeDonationCampaigns(): Promise<HomeDonationCampaign[]> {
   const { data } = await fetchDonationCampaigns()
   return unwrapList<HomeDonationCampaign>(data)
+}
+
+export async function searchUsers(query: string): Promise<UserSearchResult[]> {
+  const q = query.trim()
+  if (!q) return []
+  const { data } = await api.get<UserSearchResult[] | { results: UserSearchResult[] }>(
+    '/api/v1/accounts/users/search/',
+    { params: { q } }
+  )
+  return unwrapList(data)
+}
+
+export async function listAdminDonationsReport(): Promise<AdminDonationReportItem[]> {
+  const { data } = await api.get<AdminDonationReportItem[] | { results: AdminDonationReportItem[] }>(
+    '/api/v1/marketplace/shelf/admin-donations-report/'
+  )
+  return unwrapList(data)
+}
+
+export async function adminDonateBook(
+  shelfBookId: number,
+  payload: AdminDonatePayload
+): Promise<{ status: string; message: string; transfer_id?: number }> {
+  const { data } = await api.post<{ status: string; message: string; transfer_id?: number }>(
+    `/api/v1/marketplace/shelf/${shelfBookId}/admin-donate/`,
+    payload
+  )
+  return data
 }
 
 export function extractApiErrorMessage(err: unknown, fallback = 'خطا در برقراری ارتباط با سرور'): string {

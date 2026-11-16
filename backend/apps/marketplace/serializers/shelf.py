@@ -88,6 +88,8 @@ class ShelfBookSerializer(BaseModelSerializer):
     available_quantity = serializers.IntegerField(read_only=True)
     is_gift = serializers.BooleanField(read_only=True)
     can_donate = serializers.BooleanField(read_only=True)
+    can_edit = serializers.BooleanField(read_only=True)
+    can_delete = serializers.BooleanField(read_only=True)
     gifted_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -110,6 +112,8 @@ class ShelfBookSerializer(BaseModelSerializer):
             "available_quantity",
             "is_gift",
             "can_donate",
+            "can_edit",
+            "can_delete",
             "gifted_by_name",
             "condition",
             "condition_display",
@@ -155,8 +159,10 @@ class ShelfBookSerializer(BaseModelSerializer):
         return _ShelfLinkedItemSerializer(item).data
 
     def get_gifted_by_name(self, obj) -> str | None:
-        if obj.is_gift and obj.gifted_by:
-            return obj.gifted_by.get_full_name() or "همراه تفاخر"
+        if obj.is_gift:
+            if obj.gifted_by:
+                return obj.gifted_by.get_full_name() or getattr(obj.gifted_by, "username", "") or "ادمین تفکر"
+            return "ادمین تفکر"
         return None
 
 
@@ -278,3 +284,9 @@ class ShelfDonateToPhoneInputSerializer(BaseInputSerializer):
 
 class ShelfGiftActionInputSerializer(BaseInputSerializer):
     transfer_id = serializers.IntegerField(required=True)
+
+
+class ShelfAdminDonateInputSerializer(BaseInputSerializer):
+    quantity = serializers.IntegerField(min_value=1, default=1, required=False)
+    recipient_phone = serializers.CharField(max_length=20, required=True)
+

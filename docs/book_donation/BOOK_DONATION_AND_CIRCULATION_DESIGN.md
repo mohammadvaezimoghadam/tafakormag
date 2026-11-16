@@ -1,160 +1,116 @@
-# 📖 سند جامع گردش و اهدای حضوری کتاب در پلتفرم تفاخر
-> **Tafakor Book Circulation, In-Person Handover & Smart Kiosk Master Architecture**  
-> *تاریخ: ۹ نوامبر ۲۰۲۶ | وضعیت: مصوب و در حال آماده‌سازی فاز ۱*
+# 📖 سند معماری و طراحی سامانه انبار و اهدای کتاب پلتفرم تفکر
+> **Tafakor Book Inventory, Donation & Circulation Master Architecture**  
+> *تاریخ نگارش: ۲۵ آبان ۱۴۰۵ (16 Nov 2026) | نسخه: ۲.۰ (معماری اهدای مستقیم سازمانی تفکر)*
 
 ---
 
 ## ۱. بیانیه چشم‌انداز (Vision Statement)
-پلتفرم تفاخر علاوه بر بازارچه آنلاین و دونیت‌های مالی، بستر یک **«شبکه اجتماعی گردش فیزیکی کتاب (Book Circulation Network)»** است.
-کتاب‌ها در این سیستم هویت فیزیکی یکتا دارند، دست‌به‌دست در ملاقات‌های حضوری افراد هدیه داده می‌شوند، بعدها در ایستگاه‌ها و کیوسک‌های فیزیکی هوشمند تفاخر قرار می‌گیرند، و سرگذشت (سفرنامه) خوانندگان خود را در طول زمان ثبت و حفظ می‌کنند.
+
+پلتفرم تفکر رسالت توزیع و اهدای متمرکز کتاب به جامعه مخاطبان و کاربران را بر عهده دارد. در این معماری:
+- **سازمان تفکر (ادمین‌ها):** به عنوان منبع موثق و ناشر/اهداکننده رسمی کتاب‌ها شناخته می‌شود.
+- **انبار متمرکز تفکر:** موجودی کتاب‌ها، بارکدهای شناسایی و تیراژ اهدایی را در یک پایگاه داده یکپارچه مدیریت می‌کند.
+- **توزیع بدون اصطکاک (Zero Friction):** تحویل کتاب‌ها به صورت قطعی و مستقیم، چه در ملاقات‌های حضوری و چه با شماره تلفن همراه، انجام می‌شود و در قفسه کاربر با برچسب اهداکننده («هدیه از طرف [نام ادمین]») جاودانه می‌ماند.
 
 ---
 
-## ۲. پاسخ به سوالات کلیدی معماری و فرآیند
+## ۲. مدل هویت و بارکدگذاری (Barcode & QR Architecture)
 
-### ۲.۱. آیا در مارکت‌پلیس هم کاربر باید بتواند کتاب برای اهدا بگذارد؟
-**بله، ۱۰۰٪ بله.** به دلایل زیر:
-1. **هویت‌بخشی و تولید QR Code:** اولین بار که کاربر کتابی را به عنوان «کتاب اهدایی» در سیستم ثبت می‌کند، رکورد دیجیتال آن ساخته شده و شناسنامه و QR Code کتاب متولد می‌شود.
-2. **دیده‌شدن در شهر و تاپیک‌ها:** مخاطبان در سایت یا اپلیکیشن می‌توانند کتاب‌های اهدایی آماده در شهر خود را ببینند و قرار ملاقات حضوری بگذارند.
-3. **انعطاف در نحوه تحویل:** اهداکننده می‌تواند مشخص کند که این کتاب:
-   * الف) فقط برای **تحویل حضوری در ملاقات‌ها** است.
-   * ب) برای **ارسال پستی** هم امکان‌پذیر است.
-   * ج) در آینده: در **کیوسک تفاخر** قرار می‌گیرد.
+### ۲.۱. الگوی Title / Batch QR Code
+برای تسهیل لجستیک چاپخانه و توزیع در همایش‌ها و دفاتر تفکر:
+- به ازای هر **عنوان کتاب** در انبار تفکر، یک شناسه کوتاه منحصر‌به‌فرد (مانند `TK-RASTAN`) تولید می‌شود.
+- برچسب QR یکسانی بر روی تمامی نسخه‌های چاپی این عنوان الصاق می‌گردد:  
+  `https://tafakormag.ir/b/TK-RASTAN`
+- با اسکن این برچسب توسط اپلیکیشن یا وب‌سایت توسط **ادمین تفکر**، سیستم مستقیماً وارد فرم اهدای این کتاب می‌شود.
 
 ---
 
-### ۲.۲. ساختار بارکد و QR Code برای هر جلد کتاب
-هر عنوان کتاب ممکن است صدها نسخه فیزیکی در گردش داشته باشد. بنابراین:
-* یک صفحه مرجع برای کتاب وجود دارد (مثلاً: *انسان ۲۵۰ ساله*).
-* به ازای هر «جلد فیزیکی کتاب»، یک شناسه یکتای کوتاه و امن (مانند `TK-8492` یا UUID) و یک **QR Code اختصاصی** تولید می‌شود.
-* کاربر برچسب یا شناسه را در صفحه اول کتاب می‌چسباند یا یادداشت می‌کند. این بارکد به لینکی مانند زیر متصل است:  
-  `https://tafakormag.ir/b/TK-8492` (با پشتیبانی از Deep Link در اپ فلاتر).
+## ۳. معماری پایگاه داده و مدل‌ها (Database Domain Models)
 
----
-
-## ۳. سناریوی اسکن QR Code: رابط کاربری بر اساس نقش کاربر
-
-وقتی دوربین موبایل (یا اپلیکیشن فلاتر تفاخر) بارکد روی کتاب را اسکن می‌کند، سیستم نقش اسکن‌کننده را تشخیص می‌دهد:
-
-```mermaid
-flowchart TD
-    Scan["اسکن QR Code روی کتاب"] --> AuthCheck{"کاربر لاگین است؟"}
-    AuthCheck -- خیر --> FastAuth["احراز سریع با شماره تلفن (OTP)"] --> RoleCheck
-    AuthCheck -- بله --> RoleCheck{"این کتاب در حال حاضر نزد کیست؟"}
-    
-    RoleCheck -- "نزد خود من است (مالک فعلی)" --> OwnerView["صفحه مدیریت کتاب توسط دارنده"]
-    RoleCheck -- "نزد شخص دیگری است (گیرنده / متقاضی)" --> RecipientView["صفحه دریافت کتاب و مشاهده سفرنامه"]
-    RoleCheck -- "در کیوسک هوشمند است (فاز ۲)" --> KioskPickView["صفحه برداشت کتاب از کیوسک"]
-```
-
----
-
-### ۳.۱. حالت اول: اگر «مالک / دارنده فعلی کتاب» بارکد را اسکن کند
-سیستم پیام می‌دهد: **«این کتاب در حال حاضر در دستان شماست»**.
-
-#### اطلاعات و گزینه‌هایی که مالک می‌بیند:
-1. **مشخصات کتاب:** نام کتاب، نویسنده، ناشر، عکس جلد، وضعیت ظاهری.
-2. **وضعیت گردش:** مدت زمانی که کتاب نزد او بوده است.
-3. **دکمه اصلی: «انتقال حضوری به شخص دیگر (اهدا/هدیه)»:**
-   * با لمس این دکمه، سیستم یک **«کد تایید ۴ رقمی موقت»** تولید می‌کند یا دوربین اسکنر را باز می‌کند تا بارکد پروفایل گیرنده را بخواند.
-4. **دکمه: «ثبت یادداشت و خاطره در سفرنامه کتاب»:**
-   * امکان نوشتن چند خط نظر، بریده‌ای از کتاب، یا پیامی انگیزشی برای خواننده بعدی که روی شناسنامه این جلد برای همیشه ثبت می‌شود.
-5. **دکمه: «چاپ مجدد برچسب / ذخیره تصویر QR Code»**.
-
----
-
-### ۳.۲. حالت دوم: اگر «گیرنده یا شخص دیگر» بارکد را اسکن کند
-سیستم تشخیص می‌دهد این کتاب متعلق به کاربر دیگری است.
-
-#### اطلاعات و گزینه‌هایی که گیرنده می‌بیند:
-1. **مشخصات کتاب:** عنوان، تصویر جلد، نام نویسنده و خلاصه‌ای از کتاب.
-2. **شناسنامه دارنده فعلی:** نام یا تصویر اهداکننده (مثلاً: *در دست محمد رضایی*).
-3. **سرگذشت و سفرنامه کتاب (Book Journey):**
-   * خط زمانی از اینکه این کتاب تاکنون از دست چه کسانی گذشته، در چه تاریخ‌هایی و چه یادداشت‌هایی برای آن گذاشته‌اند.
-4. **دکمه اصلی برجسته (Call to Action):**
-   * **«دریافت این کتاب در ملاقات حضوری» (Claim Book)**.
-   * با لمس این دکمه:
-     * کد ۴ رقمی موقت دارنده را وارد می‌کند (یا دارنده درخواست را در گوشی خود تایید می‌زند).
-     * به صورت آنی مالکیت کتاب در سیستم به گیرنده جدید منتقل می‌شود.
-     * پیام تبریک، نشان افتخار (Badge) برای اهداکننده و گیرنده، و ثبت کتاب در «در حال مطالعه» گیرنده.
-5. **اگر در ملاقات حضوری نیستند:** دکمه «درخواست هدیه / ارسال پستی» در صورت تمایل اهداکننده.
-
----
-
-## ۴. طراحی دیتابیس پایه‌ای (آماده برای اهدا حضوری فعلی + کیوسک‌های آینده)
-
-برای اینکه در آینده نیازی به تغییر یا بازنویسی دیتابیس نباشد، ساختار زیر با کمترین پیچیدگی هر دو فاز را پوشش می‌دهد:
-
-### ۴.۱. مدل کاتالوگ کتاب (`BookCatalog` یا `Item + BookDetail`)
-اطلاعات عمومی کتاب: عنوان، شابک، ناشر، نویسنده، خلاصه و عکس رسمی.
-
-### ۴.۲. مدل نسخه فیزیکی کتاب (`BookCopy`)
+### ۳.۱. مدل کتاب‌های انبار تفکر (`TafakorWarehouseBook` یا `UserShelfBook(admin)`)
 ```python
-# جدول اختصاصی هر جلد کتاب فیزیکی
-class BookCopy(models.Model):
-    class Status(models.TextChoices):
-        WITH_USER = 'with_user', 'نزد کاربر'
-        IN_KIOSK = 'in_kiosk', 'موجود در کیوسک تفاخر (فاز ۲)'
-        IN_TRANSIT = 'in_transit', 'در حال انتقال/ارسال'
-        COMPLETED = 'completed', 'بایگانی/پایان گردش'
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    short_code = models.CharField(max_length=12, unique=True, db_index=True) # مثلا TK-9842
-    item = models.ForeignKey('marketplace.Item', on_delete=models.PROTECT, related_name='copies')
+class WarehouseBook(models.Model):
+    book_title = models.ForeignKey('BookTitle', on_delete=models.PROTECT, related_name='warehouse_stock')
+    total_quantity = models.PositiveIntegerField(default=1, verbose_name="کل موجودی انبار")
+    donated_quantity = models.PositiveIntegerField(default=0, verbose_name="تعداد اهدا شده")
+    short_code = models.CharField(max_length=20, unique=True, db_index=True) # مثلا TK-RASTAN
     
-    current_holder = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='held_books')
-    original_donor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='donated_book_copies')
-    
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.WITH_USER)
-    current_kiosk = models.ForeignKey('marketplace.BookKiosk', null=True, blank=True, on_delete=models.SET_NULL) # فاز ۲
-    
-    handover_count = models.PositiveIntegerField(default=0) # تعداد دفعات اهدا/گردش
+    is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def available_quantity(self):
+        return max(0, self.total_quantity - self.donated_quantity)
 ```
 
-### ۴.۳. مدل تاریخچه انتقال و سفرنامه (`BookHandover`)
+### ۳.۲. مدل قفسه کتاب کاربر عادی (`UserGiftedBook` / `UserShelfBook`)
 ```python
-class BookHandover(models.Model):
-    class Method(models.TextChoices):
-        IN_PERSON = 'in_person', 'انتقال و اهدا حضوری'
-        KIOSK_DEPOSIT = 'kiosk_deposit', 'تحویل به کیوسک'
-        KIOSK_PICKUP = 'kiosk_pickup', 'برداشت از کیوسک'
-        POSTAL = 'postal', 'ارسال پستی'
-
-    book_copy = models.ForeignKey(BookCopy, on_delete=models.CASCADE, related_name='handovers')
-    from_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name='given_handovers')
-    to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='received_handovers')
+class UserShelfBook(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='shelf_books')
+    book_title = models.ForeignKey('BookTitle', on_delete=models.PROTECT, related_name='recipient_shelves')
     
-    method = models.CharField(max_length=20, choices=Method.choices, default=Method.IN_PERSON)
-    donor_note = models.TextField(blank=True, default='') # یادداشت اهداکننده برای خواننده بعدی
-    recipient_feedback = models.TextField(blank=True, default='') # نظر و برداشت گیرنده
+    quantity = models.PositiveIntegerField(default=1)
+    is_gift = models.BooleanField(default=True, editable=False)
+    gifted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='administered_gifts')
+    gifted_by_name = models.CharField(max_length=150, blank=True, default='') # نام ادمین اهداکننده
     
-    transferred_at = models.DateTimeField(auto_now_add=True)
+    gift_received_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 ```
 
-### ۴.۴. مدل کیوسک‌ها (`BookKiosk` — آماده‌سازی برای فاز بعدی)
-جدول شامل: نام کیوسک، استان، شهر، نشانی دقیق، مختصات جغرافیایی (Latitude/Longitude)، وضعیت فعال بودن، و ظرفیت کل/پر.
+### ۳.۳. مدل گزارش و تاریخچه اهداها (`DonationLog` / `Transfer`)
+```python
+class DonationLog(models.Model):
+    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='performed_donations')
+    recipient_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='received_donations')
+    recipient_phone = models.CharField(max_length=20, db_index=True)
+    
+    book_title = models.ForeignKey('BookTitle', on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=1)
+    
+    sms_sent = models.BooleanField(default=False)
+    donated_at = models.DateTimeField(default=timezone.now)
+```
 
 ---
 
-## ۵. نقشه راه اپلیکیشن فلاتر (Flutter Mobile App)
+## ۴. سرویس‌ها و اندپوینت‌های API (API Specifications)
 
-توسعه اپلیکیشن موبایل با فلاتر برای این سناریو انتخاب فوق‌العاده‌ای است چون:
-1. **اسکنر بومی و پرسرعت QR:** بدون نیاز به تاخیرهای مرورگر، با کتابخانه‌های بومی موبایل سریعاً بارکد خوانده می‌شود.
-2. **پشتیبانی کامل از هر ۳ بال پلتفرم تفاخر در یک اپلیکیشن یکپارچه:**
-   * **بال اول: پویش‌های مالی نیکوکاری (Donations):** مشاهده پویش‌ها، کارت‌های چت و پرداخت آنلاین سریع.
-   * **بال دوم: بازارچه (Marketplace):** ثبت کالا و کتاب، سبد خرید، پیگیری سفارشات و بسته‌های پستی.
-   * **بال سوم: گردش و اهدای کتاب (Book Circulation):** قفسه کتاب‌های من، اسکنر اهدا حضوری، تاریخچه سفرنامه‌ها و مشاهده کیوسک‌های مجاور روی نقشه.
-3. **زیرساخت موجود:** به دلیل حضور سرویس `apps.ota` (Flutter Patcher) در بک‌اند، امکان انتشار آپدیت‌های Over-The-Air برای اپلیکیشن فلاتر از همین حالا پیش‌بینی شده است.
+### ۴.۱. اندپوینت‌های ویژه ادمین تفکر (`Admin Only: is_staff=True`)
+1. **لیست کتاب‌های انبار تفکر (تب ۱):**  
+   `GET /api/v1/marketplace/warehouse/books/`
+2. **ثبت عنوان جدید در انبار تفکر:**  
+   `POST /api/v1/marketplace/warehouse/books/`
+3. **افزایش موجودی انبار:**  
+   `POST /api/v1/marketplace/warehouse/books/{id}/add-stock/`
+4. **جستجوی کاربران جهت اتوکامپلیت اهدا:**  
+   `GET /api/v1/accounts/users/search/?q={query}`  
+   *خروجی: لیست کاربران شامل شناسه، شماره تلفن، نام و تصویر آواتار.*
+5. **اهدای مستقیم کتاب به کاربر یا شماره جدید:**  
+   `POST /api/v1/marketplace/warehouse/books/{id}/donate/`  
+   *ورودی:*
+   ```json
+   {
+     "quantity": 1,
+     "recipient_phone": "09121234567"
+   }
+   ```
+6. **گزارش اهدا شده‌ها (تب ۲ - Read-only Audit Log):**  
+   `GET /api/v1/marketplace/warehouse/donations-report/`
+
+### ۴.۲. اندپوینت‌های کاربر عادی (`Recipient`)
+1. **کتاب‌های اهدایی به من («اهدا شده به من»):**  
+   `GET /api/v1/marketplace/shelf/my-gifts/`  
+   *خروجی: فقط کتاب‌هایی که با برچسب هدیه تفکر به کاربر اهدا شده است.*
 
 ---
 
-## ۶. اقدامات فاز فعلی (Phase 1 Checklist)
-- [x] ثبت سند معماری و نیازمندی‌ها در مستندات پروژه.
-- [ ] پیاده‌سازی مدل‌های `BookCopy` و `BookHandover` در لایه بک‌اند.
-- [ ] پیاده‌سازی سرویس `HandoverService` (شامل متد تولید کد تایید موقت، اسکن و تایید انتقال).
-- [ ] ساخت اندپوینت‌های اختصاصی API:
-  - `GET /api/v1/marketplace/copies/{short_code}/inspect/`: بررسی وضعیت جلد بر اساس لاگین کاربر.
-  - `POST /api/v1/marketplace/copies/{short_code}/transfer-in-person/`: تایید و نهایی‌سازی انتقال حضوری.
-- [ ] آماده‌سازی صفحه وب نسخه سبک برای اسکن دوربین در مرورگر (PWA) تا زمان آماده‌شدن اپلیکیشن فلاتر.
+## ۵. امنیت و قوانین یکپارچگی داده‌ها (Data Integrity & Safety)
 
+1. **جلوگیری از تغییر یا حذف کتاب هدیه:**
+   - توابع مربوط به ویرایش یا حذف کتاب در قفسه کاربر، به دلیل وجود فیلد `is_gift=True` خطای مجوز برمی‌گردانند.
+2. **اتصال خودکار پس از ثبت‌نام با شماره:**
+   - با ثبت‌نام هر کاربر جدید، فرآیند احراز، لاگ‌های اهدای ثبت‌شده برای آن شماره تلفن را جستجو کرده و موجودی قفسه را همگام‌سازی می‌کند.
+3. **حفظ تاریخچه با Soft-Delete:**
+   - در صورت لغو یا حذف یک کتاب از انبار موجودی، رکوردهای گزارش تاریخی و قفسه کاربران به هیچ وجه از بین نمی‌روند.

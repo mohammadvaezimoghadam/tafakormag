@@ -6,6 +6,26 @@ from .base import MarketplaceBaseModel
 from .circulation import PhysicalCopy
 
 
+def _safe_check_constraint(*args, **kwargs):
+    """
+    Constructs a CheckConstraint compatible across Django versions
+    (Django 4.2 uses 'check', Django 5.1+ uses 'condition').
+    """
+    if "condition" in kwargs and "check" not in kwargs:
+        try:
+            return models.CheckConstraint(*args, **kwargs)
+        except TypeError:
+            cond = kwargs.pop("condition")
+            return models.CheckConstraint(*args, check=cond, **kwargs)
+    elif "check" in kwargs and "condition" not in kwargs:
+        try:
+            return models.CheckConstraint(*args, **kwargs)
+        except TypeError:
+            chk = kwargs.pop("check")
+            return models.CheckConstraint(*args, condition=chk, **kwargs)
+    return models.CheckConstraint(*args, **kwargs)
+
+
 class UserShelfBook(MarketplaceBaseModel):
     """
     Personal book shelf entry owned by a Tafakor user (قفسه شخصی کتاب کاربر).
@@ -172,11 +192,11 @@ class UserShelfBook(MarketplaceBaseModel):
         verbose_name_plural = "User Shelf Books"
         ordering = ["-created_at"]
         constraints = [
-            models.CheckConstraint(
+            _safe_check_constraint(
                 check=Q(rating__isnull=True) | (Q(rating__gte=1) & Q(rating__lte=5)),
                 name="chk_shelf_book_rating_1_to_5",
             ),
-            models.CheckConstraint(
+            _safe_check_constraint(
                 check=Q(quantity__gte=0),
                 name="chk_shelf_book_quantity_gte_0",
             ),
@@ -201,6 +221,14 @@ class UserShelfBook(MarketplaceBaseModel):
         if self.is_gift:
             return False
         return self.available_quantity > 0
+
+    @property
+    def can_edit(self) -> bool:
+        return not self.is_gift
+
+    @property
+    def can_delete(self) -> bool:
+        return not self.is_gift
 
     def get_effective_donation_methods(self) -> list[str]:
         """Returns normalized handover/donation methods for display & publishing."""

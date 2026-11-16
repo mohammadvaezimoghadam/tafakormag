@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import connection
 from django.db.models import Q, F, Prefetch
 from decimal import Decimal
 
@@ -122,20 +123,27 @@ class ItemViewSet(viewsets.ModelViewSet):
 
         # 4b. Filter by Donation Method (in_person, postal, station, digital)
         donation_method = (self.request.query_params.get("donation_method") or "").strip()
+        is_sqlite = connection.vendor == "sqlite"
+
+        def _method_filter(method: str) -> Q:
+            if is_sqlite:
+                return Q(donation_methods__icontains=method)
+            return Q(donation_methods__contains=[method])
+
         if donation_method == Item.DonationMethod.DIGITAL:
             qs = qs.filter(deal_type=Item.DealType.DONATION).filter(
-                Q(donation_methods__contains=[Item.DonationMethod.DIGITAL])
+                _method_filter(Item.DonationMethod.DIGITAL)
                 | Q(delivery_type=Item.DeliveryType.DIGITAL)
             )
         elif donation_method == Item.DonationMethod.STATION:
             qs = qs.filter(deal_type=Item.DealType.DONATION).filter(
-                Q(donation_methods__contains=[Item.DonationMethod.STATION])
+                _method_filter(Item.DonationMethod.STATION)
                 | Q(book_station__isnull=False)
                 | Q(physical_copy__status=PhysicalCopy.Status.IN_STATION)
             )
         elif donation_method == Item.DonationMethod.IN_PERSON:
             qs = qs.filter(deal_type=Item.DealType.DONATION).filter(
-                Q(donation_methods__contains=[Item.DonationMethod.IN_PERSON])
+                _method_filter(Item.DonationMethod.IN_PERSON)
                 | (
                     Q(donation_methods=[])
                     & Q(delivery_type=Item.DeliveryType.PHYSICAL)
@@ -145,7 +153,7 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         elif donation_method == Item.DonationMethod.POSTAL:
             qs = qs.filter(deal_type=Item.DealType.DONATION).filter(
-                Q(donation_methods__contains=[Item.DonationMethod.POSTAL])
+                _method_filter(Item.DonationMethod.POSTAL)
                 | (
                     Q(donation_methods=[])
                     & Q(delivery_type=Item.DeliveryType.PHYSICAL)

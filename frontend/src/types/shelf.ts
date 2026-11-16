@@ -353,4 +353,31 @@ export interface DonateToPhoneResult {
   message: string
 }
 
+export interface UserSearchResult {
+  id: number
+  phone: string
+  name: string
+  first_name?: string
+  last_name?: string
+}
+
+export interface AdminDonationReportItem {
+  id: number
+  book_title: string
+  cover_image: string | null
+  quantity: number
+  recipient_phone: string
+  recipient_name: string | null
+  admin_name: string
+  status?: string
+  status_display?: string
+  created_at: string
+}
+
+export interface AdminDonatePayload {
+  quantity: number
+  recipient_phone: string
+}
+
+
 
