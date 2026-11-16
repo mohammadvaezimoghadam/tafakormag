@@ -21,6 +21,7 @@ export const useToastStore = defineStore('toast', () => {
     toastMsg,
     isToastActive,
     toastType,
-    triggerToast
+    triggerToast,
+    showToast: triggerToast
   }
 })

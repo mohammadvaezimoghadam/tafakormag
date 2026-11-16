@@ -67,8 +67,8 @@ const loadShelfBooks = async () => {
   if (!userStore.isAuthenticated) return
   loadingBooks.value = true
   try {
-    const res = await listMyShelfBooks({ limit: 50 })
-    myBooks.value = res.results || []
+    const books = await listMyShelfBooks()
+    myBooks.value = books
     if (!selectedBook.value && myBooks.value.length > 0) {
       selectedBook.value = myBooks.value[0]
     }

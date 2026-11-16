@@ -51,6 +51,7 @@ export interface Post {
     cover_image?: string
     deadline?: string | null
   }
+  book_donation?: any
 }
 
 export const usePostStore = defineStore('post', () => {
@@ -135,7 +136,8 @@ export const usePostStore = defineStore('post', () => {
       donation_campaign: p.donation_campaign ? {
         ...p.donation_campaign,
         cover_image: p.donation_campaign.cover_image ? getImageUrl(p.donation_campaign.cover_image) : undefined
-      } : undefined
+      } : undefined,
+      book_donation: p.book_donation || undefined
     }
   }
 

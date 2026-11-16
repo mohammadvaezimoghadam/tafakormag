@@ -46,7 +46,7 @@ export const shopManifest: PluginManifest = {
       icon: '📖',
       tooltip: 'درج ارجاع به کتاب یا محصول در متن یادداشت',
       tooltipFa: 'درج ارجاع به کتاب یا محصول در متن یادداشت',
-      modalComponent: BookCitationDialog,
+      dialogComponent: BookCitationDialog,
     },
   ],
 }
