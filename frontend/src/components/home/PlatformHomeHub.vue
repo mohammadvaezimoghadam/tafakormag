@@ -378,10 +378,10 @@ defineExpose({
         </Button>
       </div>
 
-      <!-- Empty State Card (Authenticated with 0 books) -->
+      <!-- Empty State (Authenticated with 0 books - Seamless / No Box) -->
       <div
         v-else-if="visibleBooks.length === 0"
-        class="rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md p-6 flex flex-col items-center justify-center text-center gap-3 shadow-xs"
+        class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2.5"
       >
         <div class="size-14 flex items-center justify-center">
           <!-- Admin Empty State Vector (Bookshelf Stack) -->
@@ -526,7 +526,7 @@ defineExpose({
     </section>
 
     <!-- 3. Donation Campaigns Horizontal Slider (پویش‌های نیکوکاری و اهدا) -->
-    <section v-if="isLoadingCampaigns || campaigns.length > 0" class="flex flex-col gap-3">
+    <section class="flex flex-col gap-3">
       <div class="flex items-center justify-between px-0.5">
         <div class="flex items-center gap-2">
           <h2 class="text-sm font-extrabold text-foreground">
@@ -536,6 +536,7 @@ defineExpose({
         </div>
 
         <button
+          v-if="campaigns.length > 0"
           type="button"
           @click="emit('open-donations')"
           class="flex items-center gap-0.5 text-xs font-bold text-primary hover:opacity-80 active:scale-95 transition-all select-none cursor-pointer"
@@ -546,6 +547,7 @@ defineExpose({
         </button>
       </div>
 
+      <!-- Loading State: Skeletons -->
       <div v-if="isLoadingCampaigns" class="grid grid-flow-col auto-cols-[100%] sm:auto-cols-[calc((100%-12px)/2)] gap-3 overflow-hidden pb-2">
         <div
           v-for="n in 2"
@@ -558,6 +560,35 @@ defineExpose({
             <Skeleton class="h-3 w-full" />
             <Skeleton class="h-2 w-full rounded-full mt-2" />
           </div>
+        </div>
+      </div>
+
+      <!-- Seamless Empty State (No Box) -->
+      <div
+        v-else-if="campaigns.length === 0"
+        class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2.5"
+      >
+        <div class="size-14 flex items-center justify-center">
+          <svg
+            viewBox="0 0 100 100"
+            class="size-14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M 22 62 C 28 54 40 56 46 62 L 50 66 L 54 62 C 60 56 72 54 78 62" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="text-muted-foreground/50" />
+            <path d="M 28 68 C 36 74 64 74 72 68" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-opacity="0.5" class="text-muted-foreground" />
+            <path d="M 50 30 C 47 24 38 24 38 32 C 38 40 50 46 50 46 C 50 46 62 40 62 32 C 62 24 53 24 50 30 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
+            <circle cx="50" cy="22" r="1.5" fill="currentColor" class="text-primary" />
+          </svg>
+        </div>
+
+        <div class="flex flex-col gap-1 max-w-sm">
+          <span class="text-xs font-bold text-foreground">
+            {{ languageStore.t('در حال حاضر پویش نیکوکاری فعالی وجود ندارد', 'No active donation campaigns at the moment') }}
+          </span>
+          <span class="text-[11px] text-muted-foreground leading-relaxed">
+            {{ languageStore.t('پویش‌های جدید نیکوکاری و اهدای تفکر به‌زودی در این بخش قرار می‌گیرند.', 'New charity campaigns will be published here soon.') }}
+          </span>
         </div>
       </div>
 

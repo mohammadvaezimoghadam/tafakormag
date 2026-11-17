@@ -586,77 +586,75 @@ const formatDateTime = (raw: string): string => {
         </div>
       </div>
 
-      <!-- Empty state -->
-      <Card v-else-if="filteredBooks.length === 0" class="rounded-3xl border border-border/70 bg-card/85 dark:bg-card/65 backdrop-blur-md py-8 shadow-xs">
-        <CardContent class="px-6 flex flex-col items-center text-center gap-3">
-          <div class="size-14 flex items-center justify-center">
-            <!-- Search Empty State -->
-            <div v-if="hasActiveFilter" class="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
-              <BookOpenIcon class="size-6" />
-            </div>
+      <!-- Empty state (Seamless / No Box) -->
+      <div v-else-if="filteredBooks.length === 0" class="py-10 px-6 flex flex-col items-center text-center gap-3">
+        <div class="size-14 flex items-center justify-center">
+          <!-- Search Empty State -->
+          <div v-if="hasActiveFilter" class="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+            <BookOpenIcon class="size-6" />
+          </div>
 
-            <!-- Admin Empty State Vector (Bookshelf Stack) -->
-            <svg
-              v-else-if="isStaff"
-              viewBox="0 0 100 100"
-              class="size-14"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-              <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
-              <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
-              <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-              <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
-              <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
-              <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
-            </svg>
+          <!-- Admin Empty State Vector (Bookshelf Stack) -->
+          <svg
+            v-else-if="isStaff"
+            viewBox="0 0 100 100"
+            class="size-14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+            <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+            <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+            <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+            <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+            <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+            <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+          </svg>
 
-            <!-- Normal User Empty State Vector (Gift Book with Ribbon & Heart) -->
-            <svg
-              v-else
-              viewBox="0 0 100 100"
-              class="size-14"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect x="24" y="44" width="52" height="28" rx="4" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-              <line x1="50" y1="44" x2="50" y2="72" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity="0.4" class="text-muted-foreground" />
-              <path d="M 38 44 L 38 58 L 43 54 L 48 58 L 48 44" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
-              <path d="M 50 32 C 47 26 38 26 38 34 C 38 41 50 46 50 46 C 50 46 62 41 62 34 C 62 26 53 26 50 32 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
-            </svg>
-          </div>
-          <div class="flex flex-col gap-1 max-w-sm">
-            <span class="text-sm font-bold text-foreground">
-              {{
-                hasActiveFilter
-                  ? languageStore.t('کتابی با این عبارت پیدا نشد', 'No matching books found')
-                  : isStaff
-                  ? languageStore.t('هنوز کتابی در انبار تفکر ثبت نشده است', 'No books registered in inventory yet')
-                  : languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
-              }}
-            </span>
-            <span class="text-xs text-muted-foreground leading-relaxed">
-              {{
-                hasActiveFilter
-                  ? languageStore.t('عبارت جستجو را تغییر دهید یا پاک کنید.', 'Try changing or clearing your search.')
-                  : isStaff
-                  ? languageStore.t('با دکمه «ثبت کتاب جدید»، عناوین موجود در انبار تفکر را اضافه فرمایید.', 'Click "Add Book" to add inventory copies.')
-                  : languageStore.t('کتاب‌هایی که از طرف تفکر به شما اهدا شود، پس از تحویل در اینجا نمایش داده خواهند شد.', 'Books gifted to you will appear here.')
-              }}
-            </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <Button v-if="hasActiveFilter" type="button" variant="outline" size="sm" class="rounded-xl" @click="clearFilters">
-              {{ languageStore.t('پاک کردن جستجو', 'Reset Search') }}
-            </Button>
-            <Button v-else-if="isStaff" type="button" size="sm" class="rounded-xl" @click="openAddDialog">
-              <PlusIcon data-icon="inline-start" />
-              <span>{{ languageStore.t('ثبت اولین کتاب', 'Add First Book') }}</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <!-- Normal User Empty State Vector (Gift Book with Ribbon & Heart) -->
+          <svg
+            v-else
+            viewBox="0 0 100 100"
+            class="size-14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="24" y="44" width="52" height="28" rx="4" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+            <line x1="50" y1="44" x2="50" y2="72" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity="0.4" class="text-muted-foreground" />
+            <path d="M 38 44 L 38 58 L 43 54 L 48 58 L 48 44" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+            <path d="M 50 32 C 47 26 38 26 38 34 C 38 41 50 46 50 46 C 50 46 62 40 62 32 C 62 24 53 24 50 32 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
+          </svg>
+        </div>
+        <div class="flex flex-col gap-1 max-w-sm">
+          <span class="text-sm font-bold text-foreground">
+            {{
+              hasActiveFilter
+                ? languageStore.t('کتابی با این عبارت پیدا نشد', 'No matching books found')
+                : isStaff
+                ? languageStore.t('هنوز کتابی در انبار تفکر ثبت نشده است', 'No books registered in inventory yet')
+                : languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
+            }}
+          </span>
+          <span class="text-xs text-muted-foreground leading-relaxed">
+            {{
+              hasActiveFilter
+                ? languageStore.t('عبارت جستجو را تغییر دهید یا پاک کنید.', 'Try changing or clearing your search.')
+                : isStaff
+                ? languageStore.t('با دکمه «ثبت کتاب جدید»، عناوین موجود در انبار تفکر را اضافه فرمایید.', 'Click "Add Book" to add inventory copies.')
+                : languageStore.t('کتاب‌هایی که از طرف تفکر به شما اهدا شود، پس از تحویل در اینجا نمایش داده خواهند شد.', 'Books gifted to you will appear here.')
+            }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <Button v-if="hasActiveFilter" type="button" variant="outline" size="sm" class="rounded-xl" @click="clearFilters">
+            {{ languageStore.t('پاک کردن جستجو', 'Reset Search') }}
+          </Button>
+          <Button v-else-if="isStaff" type="button" size="sm" class="rounded-xl" @click="openAddDialog">
+            <PlusIcon data-icon="inline-start" />
+            <span>{{ languageStore.t('ثبت اولین کتاب', 'Add First Book') }}</span>
+          </Button>
+        </div>
+      </div>
 
       <!-- Shelf Books Grid: 3 columns -->
       <div v-else class="grid grid-cols-3 gap-2.5 sm:gap-3.5">
