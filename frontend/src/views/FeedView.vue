@@ -1448,7 +1448,7 @@ const toggleTheme = useToggle(isDark)
         <div v-if="currentTab === 'home'" key="home" class="flex flex-col gap-5 w-full">
           
           <transition name="fade-slide" mode="out-in">
-            <!-- Home Hub View: 3-Button Action Hub + Books, Donations & Marketplace Sliders -->
+            <!-- Home Hub View: 3-Button Action Hub + Books & Donations Sliders -->
             <div v-if="selectedTopic === null && homeSubView === 'hub'" key="hub" class="w-full">
               <PlatformHomeHub
                 ref="platformHomeHubRef"

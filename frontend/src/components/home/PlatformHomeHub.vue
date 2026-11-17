@@ -5,13 +5,10 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { useUserStore } from '@/stores/userStore'
 import {
   listHomeDonationCampaigns,
-  listMarketplaceItems,
-  listMyMarketplaceItems,
   listMyShelfBooks,
 } from '@/api/shelf'
 import type {
   HomeDonationCampaign,
-  HomeMarketplaceItem,
   ShelfBook,
 } from '@/types/shelf'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -39,7 +36,6 @@ import {
   LayersIcon,
   QrCodeIcon,
   Share2Icon,
-  ShoppingBagIcon,
   SmartphoneIcon,
 } from '@lucide/vue'
 import AddShelfBookDialog from '@/components/shelf/AddShelfBookDialog.vue'
@@ -68,11 +64,9 @@ const userStore = useUserStore()
 const isStaff = computed(() => userStore.user?.is_staff ?? false)
 const books = ref<ShelfBook[]>([])
 const campaigns = ref<HomeDonationCampaign[]>([])
-const products = ref<HomeMarketplaceItem[]>([])
 
 const isLoadingBooks = ref(false)
 const isLoadingCampaigns = ref(false)
-const isLoadingProducts = ref(false)
 
 const hasAuthSession = computed(
   () => userStore.isAuthenticated || Boolean(localStorage.getItem('auth_token'))
@@ -148,7 +142,6 @@ const formatToman = (val: string | number | null | undefined): string => {
 const loadAllHomeSections = async () => {
   isLoadingBooks.value = true
   isLoadingCampaigns.value = true
-  isLoadingProducts.value = true
 
   const isAuth = hasAuthSession.value
 
@@ -158,25 +151,16 @@ const loadAllHomeSections = async () => {
 
   const campaignsPromise = listHomeDonationCampaigns()
 
-  const productsPromise = isAuth
-    ? listMyMarketplaceItems().then((mine) =>
-        mine.length > 0 ? mine : listMarketplaceItems()
-      )
-    : listMarketplaceItems()
-
-  const [booksRes, campaignsRes, productsRes] = await Promise.allSettled([
+  const [booksRes, campaignsRes] = await Promise.allSettled([
     booksPromise,
     campaignsPromise,
-    productsPromise,
   ])
 
   books.value = booksRes.status === 'fulfilled' ? booksRes.value : []
   campaigns.value = campaignsRes.status === 'fulfilled' ? campaignsRes.value : []
-  products.value = productsRes.status === 'fulfilled' ? productsRes.value : []
 
   isLoadingBooks.value = false
   isLoadingCampaigns.value = false
-  isLoadingProducts.value = false
 }
 
 onMounted(() => {
@@ -554,120 +538,6 @@ defineExpose({
                 </span>
                 <span>
                   {{ languageStore.t('هدف:', 'Goal:') }} {{ formatToman(camp.target_amount) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </HorizontalSliderRow>
-    </section>
-
-    <!-- 4. Marketplace Products Horizontal Slider (تازه‌های بازارچه و محصولات) -->
-    <section v-if="isLoadingProducts || products.length > 0" class="flex flex-col gap-3">
-      <div class="flex items-center justify-between px-0.5">
-        <h2 class="text-sm font-extrabold text-foreground">
-          {{ languageStore.t('محصولات و تازه‌های بازارچه', 'Marketplace Products') }}
-        </h2>
-
-        <div class="flex items-center gap-0.5 text-xs font-bold text-primary select-none">
-          <span>{{ languageStore.t('همه', 'All') }}</span>
-          <ChevronLeftIcon v-if="languageStore.isFa" class="size-3.5" />
-          <ChevronRightIcon v-else class="size-3.5" />
-        </div>
-      </div>
-
-      <div v-if="isLoadingProducts" class="grid grid-flow-col auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5 overflow-hidden pb-2">
-        <div
-          v-for="n in 3"
-          :key="'home-prod-sk-' + n"
-          class="w-full min-w-0 h-[214px] rounded-2xl border border-border/60 bg-card/70 overflow-hidden flex flex-col"
-        >
-          <Skeleton class="h-[112px] w-full rounded-none" />
-          <div class="p-2.5 flex flex-col gap-2">
-            <Skeleton class="h-3.5 w-24" />
-            <Skeleton class="h-3 w-16" />
-          </div>
-        </div>
-      </div>
-
-      <HorizontalSliderRow
-        v-else
-        layout="grid"
-        track-class="auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5"
-      >
-        <div
-          v-for="item in products"
-          :key="item.id"
-          class="w-full min-w-0 min-h-[214px] snap-start rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs overflow-hidden flex flex-col select-none"
-        >
-          <div class="h-[112px] w-full bg-muted/50 dark:bg-muted/30 relative flex items-center justify-center overflow-hidden">
-            <img
-              v-if="resolveMediaUrl(item.cover_image)"
-              :src="resolveMediaUrl(item.cover_image)!"
-              :alt="item.title"
-              class="size-full object-cover"
-            />
-            <SmartphoneIcon
-              v-else-if="item.delivery_type === 'digital'"
-              class="size-7 text-muted-foreground/70"
-            />
-            <ShoppingBagIcon
-              v-else
-              class="size-7 text-muted-foreground/70"
-            />
-
-            <div
-              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md border text-[10px] font-bold shadow-2xs"
-              :class="
-                item.deal_type === 'donation'
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'bg-background/95 border-border/60 text-foreground'
-              "
-            >
-              {{
-                item.deal_type === 'donation'
-                  ? languageStore.t('اهدای رایگان', 'Free Donation')
-                  : languageStore.t('فروشی', 'For Sale')
-              }}
-            </div>
-
-            <div
-              v-if="item.delivery_type === 'digital'"
-              class="absolute bottom-1.5 end-1.5 px-1.5 py-0.5 rounded-md bg-background/90 border border-border/50 text-[9px] font-semibold text-muted-foreground"
-            >
-              {{ languageStore.t('دیجیتال', 'Digital') }}
-            </div>
-          </div>
-
-          <div class="p-2.5 flex-1 flex flex-col justify-between gap-2 text-start">
-            <div class="flex flex-col gap-1">
-              <h3 class="text-[11.5px] font-bold text-foreground line-clamp-2 leading-snug">
-                {{ item.title }}
-              </h3>
-              <p class="text-[10px] text-muted-foreground truncate">
-                {{ item.category_name || item.seller_name }}
-              </p>
-            </div>
-
-            <div class="flex items-baseline justify-between gap-1 pt-1.5 border-t border-border/40">
-              <span
-                v-if="item.deal_type === 'donation'"
-                class="text-[11.5px] font-extrabold text-primary"
-              >
-                {{ languageStore.t('اهدای رایگان', 'Free') }}
-              </span>
-              <div v-else class="flex items-baseline gap-1 min-w-0 flex-wrap">
-                <span class="text-[11.5px] font-extrabold text-foreground">
-                  {{ formatToman(item.effective_price) }}
-                  <span class="text-[9.5px] font-normal text-muted-foreground">
-                    {{ languageStore.t('تومان', 'Toman') }}
-                  </span>
-                </span>
-                <span
-                  v-if="item.has_active_discount"
-                  class="text-[9.5px] text-muted-foreground line-through"
-                >
-                  {{ formatToman(item.price) }}
                 </span>
               </div>
             </div>
