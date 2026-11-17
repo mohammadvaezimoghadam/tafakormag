@@ -594,9 +594,9 @@ const formatDateTime = (raw: string): string => {
             <BookOpenIcon class="size-6" />
           </div>
 
-          <!-- Admin Empty State Vector (Bookshelf Stack) -->
+          <!-- Bookshelf Stack Vector -->
           <svg
-            v-else-if="isStaff"
+            v-else
             viewBox="0 0 100 100"
             class="size-14"
             fill="none"
@@ -610,20 +610,6 @@ const formatDateTime = (raw: string): string => {
             <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
             <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
           </svg>
-
-          <!-- Normal User Empty State Vector (Gift Book with Ribbon & Heart) -->
-          <svg
-            v-else
-            viewBox="0 0 100 100"
-            class="size-14"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="24" y="44" width="52" height="28" rx="4" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-            <line x1="50" y1="44" x2="50" y2="72" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity="0.4" class="text-muted-foreground" />
-            <path d="M 38 44 L 38 58 L 43 54 L 48 58 L 48 44" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
-            <path d="M 50 32 C 47 26 38 26 38 34 C 38 41 50 46 50 46 C 50 46 62 40 62 32 C 62 24 53 24 50 32 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
-          </svg>
         </div>
         <div class="flex flex-col gap-1 max-w-sm">
           <span class="text-sm font-bold text-foreground">
@@ -635,13 +621,11 @@ const formatDateTime = (raw: string): string => {
                 : languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
             }}
           </span>
-          <span class="text-xs text-muted-foreground leading-relaxed">
+          <span v-if="hasActiveFilter || isStaff" class="text-xs text-muted-foreground leading-relaxed">
             {{
               hasActiveFilter
                 ? languageStore.t('عبارت جستجو را تغییر دهید یا پاک کنید.', 'Try changing or clearing your search.')
-                : isStaff
-                ? languageStore.t('با دکمه «ثبت کتاب جدید»، عناوین موجود در انبار تفکر را اضافه فرمایید.', 'Click "Add Book" to add inventory copies.')
-                : languageStore.t('کتاب‌هایی که از طرف تفکر به شما اهدا شود، پس از تحویل در اینجا نمایش داده خواهند شد.', 'Books gifted to you will appear here.')
+                : languageStore.t('با دکمه «ثبت کتاب جدید»، عناوین موجود در انبار تفکر را اضافه فرمایید.', 'Click "Add Book" to add inventory copies.')
             }}
           </span>
         </div>
