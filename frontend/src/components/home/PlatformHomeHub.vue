@@ -566,30 +566,15 @@ defineExpose({
       <!-- Seamless Empty State (No Box) -->
       <div
         v-else-if="campaigns.length === 0"
-        class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2.5"
+        class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2"
       >
-        <div class="size-14 flex items-center justify-center">
-          <svg
-            viewBox="0 0 100 100"
-            class="size-14"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M 22 62 C 28 54 40 56 46 62 L 50 66 L 54 62 C 60 56 72 54 78 62" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="text-muted-foreground/50" />
-            <path d="M 28 68 C 36 74 64 74 72 68" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-opacity="0.5" class="text-muted-foreground" />
-            <path d="M 50 30 C 47 24 38 24 38 32 C 38 40 50 46 50 46 C 50 46 62 40 62 32 C 62 24 53 24 50 30 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
-            <circle cx="50" cy="22" r="1.5" fill="currentColor" class="text-primary" />
-          </svg>
+        <div class="size-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/70">
+          <HandHeartIcon class="size-5.5" />
         </div>
 
-        <div class="flex flex-col gap-1 max-w-sm">
-          <span class="text-xs font-bold text-foreground">
-            {{ languageStore.t('در حال حاضر پویش نیکوکاری فعالی وجود ندارد', 'No active donation campaigns at the moment') }}
-          </span>
-          <span class="text-[11px] text-muted-foreground leading-relaxed">
-            {{ languageStore.t('پویش‌های جدید نیکوکاری و اهدای تفکر به‌زودی در این بخش قرار می‌گیرند.', 'New charity campaigns will be published here soon.') }}
-          </span>
-        </div>
+        <span class="text-xs font-semibold text-muted-foreground">
+          {{ languageStore.t('در حال حاضر پویش نیکوکاری فعالی وجود ندارد', 'No active donation campaigns at the moment') }}
+        </span>
       </div>
 
       <HorizontalSliderRow
