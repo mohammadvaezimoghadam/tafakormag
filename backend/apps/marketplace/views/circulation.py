@@ -125,6 +125,97 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
+    def _enrich_inspect_data(self, request, copy, result):
+        detail_data = PhysicalCopyDetailSerializer(copy, context={"request": request}).data
+        detail_data["can_claim"] = result["can_claim"]
+        detail_data["is_holder"] = result["is_holder"]
+        detail_data["available_quantity"] = result["available_quantity"]
+
+        if result.get("active_transfer"):
+            active = result["active_transfer"]
+            detail_data["active_transfer_status"] = active.status
+            detail_data["active_transfer_method"] = active.method
+            detail_data["active_transfer_id"] = active.id
+            detail_data["active_transfer_quantity"] = active.quantity
+
+        is_auth = bool(request.user and request.user.is_authenticated)
+        is_staff = bool(is_auth and getattr(request.user, "is_staff", False))
+        detail_data["is_staff"] = is_staff
+
+        from ..models.shelf import UserShelfBook
+        from ..models.circulation import Transfer
+
+        if is_auth:
+            shelf_book = UserShelfBook.objects.filter(user=request.user, book_title=copy.book_title).first()
+            if shelf_book:
+                detail_data["shelf_id"] = shelf_book.id
+                if result["is_holder"]:
+                    detail_data["available_quantity"] = max(1, shelf_book.available_quantity)
+
+        # Check donation/transfer history
+        last_transfer = copy.transfers.filter(
+            status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT]
+        ).select_related("from_user", "to_user").order_by("-created_at").first()
+
+        is_gifted_to_other = bool(
+            (copy.current_holder_id and copy.current_holder_id != getattr(request.user, "id", None))
+            or (last_transfer and (last_transfer.to_user_id != getattr(request.user, "id", None) or last_transfer.recipient_phone))
+        )
+
+        detail_data["is_gifted"] = is_gifted_to_other
+
+        if is_staff:
+            admin_shelf = UserShelfBook.objects.filter(
+                user=request.user,
+                book_title=copy.book_title,
+                is_gift=False,
+            ).first()
+            detail_data["is_in_warehouse"] = bool(admin_shelf and admin_shelf.available_quantity > 0 and not is_gifted_to_other)
+
+            if is_gifted_to_other:
+                if last_transfer:
+                    to_user = last_transfer.to_user
+                    from_user = last_transfer.from_user
+                    recip_name = to_user.get_full_name() if to_user else ""
+                    if not recip_name and to_user:
+                        recip_name = to_user.phone
+                    recip_phone = last_transfer.recipient_phone or (to_user.phone if to_user else "")
+                    donor_name = from_user.get_full_name() if from_user else getattr(from_user, "phone", "ادمین تفکر")
+
+                    detail_data["donation_info"] = {
+                        "is_gifted": True,
+                        "transfer_id": last_transfer.id,
+                        "status": last_transfer.status,
+                        "status_display": last_transfer.get_status_display(),
+                        "recipient_name": recip_name or "کاربر تفکر",
+                        "recipient_phone": recip_phone or "",
+                        "donor_name": donor_name or "ادمین تفکر",
+                        "donated_at": (last_transfer.confirmed_at or last_transfer.created_at).isoformat(),
+                        "quantity": last_transfer.quantity,
+                    }
+                elif copy.current_holder:
+                    holder = copy.current_holder
+                    detail_data["donation_info"] = {
+                        "is_gifted": True,
+                        "transfer_id": None,
+                        "status": "confirmed",
+                        "status_display": "تحویل شده به کاربر",
+                        "recipient_name": holder.get_full_name() or holder.phone or "کاربر تفکر",
+                        "recipient_phone": holder.phone or "",
+                        "donor_name": "ادمین تفکر",
+                        "donated_at": copy.updated_at.isoformat() if copy.updated_at else copy.created_at.isoformat(),
+                        "quantity": 1,
+                    }
+                else:
+                    detail_data["donation_info"] = None
+            else:
+                detail_data["donation_info"] = None
+        else:
+            detail_data["is_in_warehouse"] = False
+            detail_data["donation_info"] = None
+
+        return detail_data
+
     def retrieve(self, request, pk=None):
         """
         Resolves short_code from URL path /copies/{short_code}/, returning book status and allowed actions.
@@ -136,25 +227,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
             result = CirculationService.inspect_copy_by_code(user=request.user, raw_short_code=pk)
             copy = result["copy"]
             copy._active_transfer = result["active_transfer"]
-
-            detail_data = PhysicalCopyDetailSerializer(copy, context={"request": request}).data
-            detail_data["can_claim"] = result["can_claim"]
-            detail_data["is_holder"] = result["is_holder"]
-            detail_data["available_quantity"] = result["available_quantity"]
-            if result["active_transfer"]:
-                detail_data["active_transfer_status"] = result["active_transfer"].status
-                detail_data["active_transfer_method"] = result["active_transfer"].method
-                detail_data["active_transfer_id"] = result["active_transfer"].id
-                detail_data["active_transfer_quantity"] = result["active_transfer"].quantity
-
-            if result["is_holder"] and request.user and request.user.is_authenticated:
-                from ..models.shelf import UserShelfBook
-                shelf_book = UserShelfBook.objects.filter(user=request.user, book_title=copy.book_title).first()
-                if shelf_book:
-                    detail_data["shelf_id"] = shelf_book.id
-                    detail_data["available_quantity"] = max(1, shelf_book.available_quantity)
-
-            return Response(detail_data)
+            return Response(self._enrich_inspect_data(request, copy, result))
         except MarketplaceError as e:
             return Response({"detail": e.message}, status=status.HTTP_404_NOT_FOUND)
 
@@ -195,25 +268,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
             result = CirculationService.inspect_copy_by_code(user=request.user, raw_short_code=code)
             copy = result["copy"]
             copy._active_transfer = result["active_transfer"]
-
-            detail_data = PhysicalCopyDetailSerializer(copy, context={"request": request}).data
-            detail_data["can_claim"] = result["can_claim"]
-            detail_data["is_holder"] = result["is_holder"]
-            detail_data["available_quantity"] = result["available_quantity"]
-            if result["active_transfer"]:
-                detail_data["active_transfer_status"] = result["active_transfer"].status
-                detail_data["active_transfer_method"] = result["active_transfer"].method
-                detail_data["active_transfer_id"] = result["active_transfer"].id
-                detail_data["active_transfer_quantity"] = result["active_transfer"].quantity
-
-            if result["is_holder"] and request.user and request.user.is_authenticated:
-                from ..models.shelf import UserShelfBook
-                shelf_book = UserShelfBook.objects.filter(user=request.user, book_title=copy.book_title).first()
-                if shelf_book:
-                    detail_data["shelf_id"] = shelf_book.id
-                    detail_data["available_quantity"] = max(1, shelf_book.available_quantity)
-
-            return Response(detail_data)
+            return Response(self._enrich_inspect_data(request, copy, result))
         except MarketplaceError as e:
             return Response({"detail": e.message}, status=status.HTTP_404_NOT_FOUND)
 

@@ -58,6 +58,8 @@ class CirculationService:
         if not raw_code:
             return ""
         code = str(raw_code).strip()
+        if "?" in code:
+            code = code.split("?")[0]
         if "/" in code:
             code = code.rstrip("/").split("/")[-1]
         return code.strip().upper()

@@ -192,9 +192,10 @@ const isQrDialogOpen = ref(false)
 const selectedQrBook = ref<ShelfBook | null>(null)
 
 const getQrBookUrl = (book: ShelfBook | null): string => {
-  if (!book) return 'https://tafakormag.ir'
+  const origin = typeof window !== 'undefined' && window.location ? window.location.origin : 'https://tafakormag.ir'
+  if (!book) return origin
   const code = getShortCode(book)
-  return code ? `https://tafakormag.ir/b/${code}` : `https://tafakormag.ir/b/${book.id}`
+  return code ? `${origin}/b/${code}` : `${origin}/b/${book.id}`
 }
 
 const handleShowBookQr = (book: ShelfBook) => {
