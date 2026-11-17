@@ -124,8 +124,8 @@ const donatedCount = computed(() => books.value.filter((b) => !b.is_gift).length
 
 const filteredBooks = computed(() => {
   if (!isStaff.value) {
-    // Normal user: show received/gifted books
-    return books.value
+    // Normal user: show received/gifted books only
+    return books.value.filter((b) => b.is_gift === true)
   }
   // Admin inventory
   return books.value
@@ -421,7 +421,7 @@ const formatDateTime = (raw: string): string => {
           </span>
           <div class="flex items-center gap-2">
             <span class="font-extrabold text-foreground text-sm">
-              {{ languageStore.n(isStaff ? (summary.total_copies ?? summary.total) : books.length) }} {{ languageStore.t('جلد', 'copies') }}
+              {{ languageStore.n(isStaff ? (summary.total_copies ?? summary.total) : filteredBooks.length) }} {{ languageStore.t('جلد', 'copies') }}
             </span>
             <span v-if="isStaff" class="text-muted-foreground text-[11px]">
               ({{ languageStore.n(summary.total) }} {{ languageStore.t('عنوان', 'titles') }})
@@ -587,10 +587,44 @@ const formatDateTime = (raw: string): string => {
       </div>
 
       <!-- Empty state -->
-      <Card v-else-if="filteredBooks.length === 0" class="rounded-3xl border-dashed border-border/70 py-8">
+      <Card v-else-if="filteredBooks.length === 0" class="rounded-3xl border border-border/70 bg-card/85 dark:bg-card/65 backdrop-blur-md py-8 shadow-xs">
         <CardContent class="px-6 flex flex-col items-center text-center gap-3">
-          <div class="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
-            <BookOpenIcon class="size-6" />
+          <div class="size-14 flex items-center justify-center">
+            <!-- Search Empty State -->
+            <div v-if="hasActiveFilter" class="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+              <BookOpenIcon class="size-6" />
+            </div>
+
+            <!-- Admin Empty State Vector (Bookshelf Stack) -->
+            <svg
+              v-else-if="isStaff"
+              viewBox="0 0 100 100"
+              class="size-14"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+              <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+              <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+              <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+              <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+              <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+              <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+            </svg>
+
+            <!-- Normal User Empty State Vector (Gift Book with Ribbon & Heart) -->
+            <svg
+              v-else
+              viewBox="0 0 100 100"
+              class="size-14"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect x="24" y="44" width="52" height="28" rx="4" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+              <line x1="50" y1="44" x2="50" y2="72" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity="0.4" class="text-muted-foreground" />
+              <path d="M 38 44 L 38 58 L 43 54 L 48 58 L 48 44" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+              <path d="M 50 32 C 47 26 38 26 38 34 C 38 41 50 46 50 46 C 50 46 62 41 62 34 C 62 26 53 26 50 32 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
+            </svg>
           </div>
           <div class="flex flex-col gap-1 max-w-sm">
             <span class="text-sm font-bold text-foreground">

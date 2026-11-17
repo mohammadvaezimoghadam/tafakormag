@@ -37,6 +37,7 @@ import {
   QrCodeIcon,
   Share2Icon,
   SmartphoneIcon,
+  SparklesIcon,
 } from '@lucide/vue'
 import AddShelfBookDialog from '@/components/shelf/AddShelfBookDialog.vue'
 import DonateSpecificBookDialog from '@/components/shelf/DonateSpecificBookDialog.vue'
@@ -72,9 +73,12 @@ const hasAuthSession = computed(
   () => userStore.isAuthenticated || Boolean(localStorage.getItem('auth_token'))
 )
 
-const visibleBooks = computed(() =>
-  books.value.filter((book) => (book.quantity ?? 1) > 0)
-)
+const visibleBooks = computed(() => {
+  const pool = isStaff.value
+    ? books.value
+    : books.value.filter((b) => (b as any).is_gift === true)
+  return pool.filter((book) => (book.quantity ?? 1) > 0)
+})
 
 const topicsSubtitle = computed(() => {
   if (props.topicsCount > 0) {
@@ -168,7 +172,7 @@ onMounted(() => {
 })
 
 watch(
-  () => userStore.isAuthenticated,
+  () => [userStore.isAuthenticated, userStore.user?.id],
   () => {
     loadAllHomeSections()
   }
@@ -314,14 +318,15 @@ defineExpose({
       </button>
     </div>
 
-    <!-- 2. My Shelf Books Horizontal Slider (کتاب‌های من) -->
-    <section v-if="isLoadingBooks || visibleBooks.length > 0" class="flex flex-col gap-3">
+    <!-- 2. My Shelf / Gifted Books Horizontal Slider -->
+    <section class="flex flex-col gap-3">
       <div class="flex items-center justify-between px-0.5">
         <h2 class="text-sm font-extrabold text-foreground">
-          {{ languageStore.t('کتاب‌های من', 'My Books') }}
+          {{ isStaff ? languageStore.t('کتاب‌های من', 'My Books') : languageStore.t('کتاب‌های هدیه گرفته', 'Gifted Books') }}
         </h2>
 
         <button
+          v-if="hasAuthSession"
           type="button"
           @click="emit('open-shelf')"
           class="flex items-center gap-0.5 text-xs font-bold text-primary hover:opacity-80 active:scale-95 transition-all select-none cursor-pointer"
@@ -332,6 +337,7 @@ defineExpose({
         </button>
       </div>
 
+      <!-- Loading State: Skeletons -->
       <div v-if="isLoadingBooks" class="grid grid-flow-col auto-cols-[calc((100%-10px)/2)] sm:auto-cols-[calc((100%-20px)/3)] gap-2.5 overflow-hidden pb-2">
         <div
           v-for="n in 3"
@@ -346,6 +352,100 @@ defineExpose({
         </div>
       </div>
 
+      <!-- Unauthenticated State Card -->
+      <div
+        v-else-if="!hasAuthSession"
+        class="rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md p-6 flex flex-col items-center justify-center text-center gap-3 shadow-xs"
+      >
+        <div class="size-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
+          <HandHeartIcon class="size-5.5" />
+        </div>
+        <div class="flex flex-col gap-1 max-w-xs">
+          <span class="text-xs font-bold text-foreground">
+            {{ languageStore.t('مشاهده کتاب‌های اهدایی', 'View Gifted Books') }}
+          </span>
+          <span class="text-[11px] text-muted-foreground leading-relaxed">
+            {{ languageStore.t('برای مشاهده کتاب‌های اهدایی تفکر، وارد حساب کاربری خود شوید.', 'Login to your account to view books gifted through Tafakor.') }}
+          </span>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          class="rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-4 text-xs"
+          @click="userStore.isLoginModalOpen = true"
+        >
+          {{ languageStore.t('ورود به حساب', 'Login') }}
+        </Button>
+      </div>
+
+      <!-- Empty State Card (Authenticated with 0 books) -->
+      <div
+        v-else-if="visibleBooks.length === 0"
+        class="rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md p-6 flex flex-col items-center justify-center text-center gap-3 shadow-xs"
+      >
+        <div class="size-14 flex items-center justify-center">
+          <!-- Admin Empty State Vector (Bookshelf Stack) -->
+          <svg
+            v-if="isStaff"
+            viewBox="0 0 100 100"
+            class="size-14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+            <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+            <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+            <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+            <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+            <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+            <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+          </svg>
+
+          <!-- Normal User Empty State Vector (Gift Book with Ribbon & Heart) -->
+          <svg
+            v-else
+            viewBox="0 0 100 100"
+            class="size-14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="24" y="44" width="52" height="28" rx="4" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+            <line x1="50" y1="44" x2="50" y2="72" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity="0.4" class="text-muted-foreground" />
+            <path d="M 38 44 L 38 58 L 43 54 L 48 58 L 48 44" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+            <path d="M 50 32 C 47 26 38 26 38 34 C 38 41 50 46 50 46 C 50 46 62 41 62 34 C 62 26 53 26 50 32 Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-primary" />
+          </svg>
+        </div>
+
+        <div class="flex flex-col gap-1 max-w-sm">
+          <span class="text-xs font-bold text-foreground">
+            {{
+              isStaff
+                ? languageStore.t('کتابی در انبار جهت نمایش یافت نشد', 'No books found in shelf')
+                : languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
+            }}
+          </span>
+          <span class="text-[11px] text-muted-foreground leading-relaxed">
+            {{
+              isStaff
+                ? languageStore.t('می‌توانید با دکمه ثبت کتاب، اثر جدیدی به انبار تفکر بیفزایید.', 'You can add books to Tafakor shelf.')
+                : languageStore.t('کتاب‌های اهدایی که از طریق تفکر دریافت می‌کنید در این بخش قرار می‌گیرند.', 'Gifted books received through Tafakor will appear here.')
+            }}
+          </span>
+        </div>
+
+        <Button
+          v-if="isStaff"
+          type="button"
+          size="sm"
+          class="rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3.5 text-xs gap-1.5"
+          @click="handleOpenAddBook"
+        >
+          <BookPlusIcon class="size-3.5" />
+          <span>{{ languageStore.t('ثبت کتاب جدید', 'Add Book') }}</span>
+        </Button>
+      </div>
+
+      <!-- Book Slider Row -->
       <HorizontalSliderRow
         v-else
         layout="grid"
@@ -386,7 +486,6 @@ defineExpose({
             >
               <QrCodeIcon class="size-3.5 text-foreground" />
             </button>
-
           </div>
 
           <div class="p-2.5 flex-1 flex flex-col justify-between gap-2 text-start">
@@ -400,8 +499,9 @@ defineExpose({
             </div>
 
             <div class="flex flex-col gap-2 pt-1.5 border-t border-border/40">
-              <!-- Dedicated Donate Button on Home -->
+              <!-- Admin: Dedicated Donate Button -->
               <Button
+                v-if="isStaff && !book.is_gift"
                 type="button"
                 size="xs"
                 class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-black text-white hover:bg-neutral-800 dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80 transition-colors shadow-2xs"
@@ -410,6 +510,15 @@ defineExpose({
                 <HandHeartIcon class="size-3.5" />
                 <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
               </Button>
+
+              <!-- Recipient / Gift: Show Emerald Gift Badge -->
+              <div
+                v-else
+                class="w-full py-1 text-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
+              >
+                <SparklesIcon class="size-3 text-emerald-600 shrink-0" />
+                <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
+              </div>
             </div>
           </div>
         </div>
