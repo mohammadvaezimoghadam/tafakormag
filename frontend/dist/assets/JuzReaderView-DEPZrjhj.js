@@ -1,1 +1,0 @@
-import{JuzReaderView as e}from"./quran-CcVMTTFm.js";export{e as default};

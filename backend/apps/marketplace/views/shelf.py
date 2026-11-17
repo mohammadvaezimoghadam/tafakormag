@@ -1,4 +1,4 @@
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -46,19 +46,38 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsShelfBookOwner]
 
     def _base_queryset(self):
-        return UserShelfBook.objects.select_related(
-            "user",
-            "gifted_by",
-            "book_title",
-            "preferred_station",
-            "preferred_station__city",
-            "physical_copy",
-            "physical_copy__current_holder",
-            "physical_copy__station",
-            "marketplace_item",
-            "marketplace_item__category",
-            "marketplace_item__book_station",
-        ).order_by("-created_at")
+        from ..models.circulation import Transfer
+
+        transfer_subquery = (
+            Transfer.objects.filter(
+                from_user=OuterRef("user"),
+                copy__book_title=OuterRef("book_title"),
+                status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT],
+            )
+            .values("copy__book_title")
+            .annotate(total=Sum("quantity"))
+            .values("total")
+        )
+
+        return (
+            UserShelfBook.objects.annotate(
+                donated_count=Coalesce(Subquery(transfer_subquery, output_field=IntegerField()), 0)
+            )
+            .select_related(
+                "user",
+                "gifted_by",
+                "book_title",
+                "preferred_station",
+                "preferred_station__city",
+                "physical_copy",
+                "physical_copy__current_holder",
+                "physical_copy__station",
+                "marketplace_item",
+                "marketplace_item__category",
+                "marketplace_item__book_station",
+            )
+            .order_by("-created_at")
+        )
 
     def get_queryset(self):
         qs = self._base_queryset()

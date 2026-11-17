@@ -217,6 +217,19 @@ class UserShelfBook(MarketplaceBaseModel):
         return max(0, self.quantity - self.reserved_quantity)
 
     @property
+    def donated_count(self) -> int:
+        if hasattr(self, "_donated_count"):
+            return getattr(self, "_donated_count", 0)
+        from .circulation import Transfer
+        from django.db.models import Sum
+        val = Transfer.objects.filter(
+            from_user_id=self.user_id,
+            copy__book_title_id=self.book_title_id,
+            status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT],
+        ).aggregate(total=Sum("quantity"))["total"]
+        return val or 0
+
+    @property
     def can_donate(self) -> bool:
         if self.is_gift:
             return False

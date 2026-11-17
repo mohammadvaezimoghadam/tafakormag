@@ -86,6 +86,7 @@ class ShelfBookSerializer(BaseModelSerializer):
     marketplace_item_summary = serializers.SerializerMethodField()
     reserved_quantity = serializers.IntegerField(read_only=True)
     available_quantity = serializers.IntegerField(read_only=True)
+    donated_count = serializers.IntegerField(read_only=True)
     is_gift = serializers.BooleanField(read_only=True)
     can_donate = serializers.BooleanField(read_only=True)
     can_edit = serializers.BooleanField(read_only=True)
@@ -110,6 +111,7 @@ class ShelfBookSerializer(BaseModelSerializer):
             "quantity",
             "reserved_quantity",
             "available_quantity",
+            "donated_count",
             "is_gift",
             "can_donate",
             "can_edit",

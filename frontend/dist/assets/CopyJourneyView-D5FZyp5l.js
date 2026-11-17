@@ -1,0 +1,1 @@
+import{CopyJourneyView as e}from"./shop-VFdRNsL7.js";export{e as default};

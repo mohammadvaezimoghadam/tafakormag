@@ -82,7 +82,7 @@ const visibleBooks = computed(() => {
   const pool = isStaff.value
     ? books.value
     : books.value.filter((b) => (b as any).is_gift === true)
-  return pool.filter((book) => (book.quantity ?? 1) > 0)
+  return pool.filter((book) => (book.available_quantity ?? book.quantity ?? 1) > 0)
 })
 
 const topicsSubtitle = computed(() => {
@@ -454,7 +454,17 @@ defineExpose({
             />
             <BookOpenIcon v-else class="size-7 text-muted-foreground/70" />
 
-            <div class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border border-border/60 text-[10px] font-bold text-foreground shadow-2xs">
+            <!-- Donated badge for admin or quantity badge -->
+            <div
+              v-if="isStaff && ((book as any).donated_count ?? 0) > 0"
+              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600/90 text-white text-[10px] font-bold shadow-2xs flex items-center gap-1"
+            >
+              <span>{{ languageStore.n((book as any).donated_count) }} {{ languageStore.t('اهدا شده', 'donated') }}</span>
+            </div>
+            <div
+              v-else
+              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border border-border/60 text-[10px] font-bold text-foreground shadow-2xs"
+            >
               <span>{{ languageStore.n(book.quantity ?? 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
             </div>
 
@@ -494,7 +504,7 @@ defineExpose({
 
               <!-- Recipient / Gift: Show Emerald Gift Badge -->
               <div
-                v-else
+                v-else-if="!isStaff && book.is_gift"
                 class="w-full py-1 text-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
               >
                 <SparklesIcon class="size-3 text-emerald-600 shrink-0" />
