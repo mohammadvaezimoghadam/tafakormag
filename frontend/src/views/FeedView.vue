@@ -173,7 +173,9 @@ const handleOpenHandoverByCode = (shortCode: string) => {
 }
 
 const handleOpenShelfFromHome = () => {
-  if (!userStore.isAuthenticated && !localStorage.getItem('auth_token')) {
+  const hasToken = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('auth_token')) ||
+    (typeof localStorage !== 'undefined' && localStorage.getItem('auth_token'))
+  if (!userStore.isAuthenticated && !hasToken) {
     userStore.isLoginModalOpen = true
     return
   }

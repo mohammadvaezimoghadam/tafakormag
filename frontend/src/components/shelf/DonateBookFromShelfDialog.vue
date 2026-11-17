@@ -116,7 +116,12 @@ const isCompletingReceive = ref(false)
 const receiveCompletedTitle = ref('')
 
 const hasAuthSession = computed(
-  () => userStore.isAuthenticated || Boolean(localStorage.getItem('auth_token'))
+  () =>
+    userStore.isAuthenticated ||
+    Boolean(
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('auth_token')) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem('auth_token'))
+    )
 )
 
 const stopPolling = () => {

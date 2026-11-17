@@ -114,7 +114,12 @@ const isSubmittingAction = ref(false)
 const maxHandoverQty = computed(() => Math.max(1, copyInspect.value?.available_quantity ?? 1))
 
 const isAuthenticated = computed(
-  () => userStore.isAuthenticated || Boolean(localStorage.getItem('auth_token'))
+  () =>
+    userStore.isAuthenticated ||
+    Boolean(
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('auth_token')) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem('auth_token'))
+    )
 )
 
 const shareQrUrl = computed(() => {

@@ -1,0 +1,1 @@
+import{ct as e}from"./vue.runtime.esm-bundler-D3aNl0rY.js";import{r as t}from"./languageStore-B0CqPsJR.js";var n=t(`toast`,()=>{let t=e(``),n=e(!1),r=e(`success`),i=(e,i=`success`)=>{t.value=e,r.value=i,n.value=!0,setTimeout(()=>{n.value=!1},3e3)};return{toastMsg:t,isToastActive:n,toastType:r,triggerToast:i,showToast:i}});export{n as t};

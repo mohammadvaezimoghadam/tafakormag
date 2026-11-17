@@ -26,7 +26,21 @@ export interface UserProfile {
 }
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref(localStorage.getItem('auth_token') || '')
+  // Check URL query parameter ?token= or ?auth_token= on initialization for isolated multi-tab sessions
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search)
+    const queryToken = urlParams.get('token') || urlParams.get('auth_token')
+    if (queryToken) {
+      sessionStorage.setItem('auth_token', queryToken)
+    }
+  }
+
+  const getStoredToken = () => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || ''
+  }
+
+  const token = ref(getStoredToken())
   const userProfile = ref<UserProfile | null>(null)
   const loading = ref(false)
   const isLoginModalOpen = ref(false)
@@ -126,6 +140,7 @@ export const useUserStore = defineStore('user', () => {
       const res = await api.verifyOtp(phone, code)
       const tokenVal = res.data.token
       token.value = tokenVal
+      sessionStorage.setItem('auth_token', tokenVal)
       localStorage.setItem('auth_token', tokenVal)
       await loadProfile()
       return res.data
@@ -154,6 +169,7 @@ export const useUserStore = defineStore('user', () => {
   const logout = () => {
     token.value = ''
     userProfile.value = null
+    sessionStorage.removeItem('auth_token')
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_phone')
   }

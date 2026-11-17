@@ -48,6 +48,8 @@ const emit = defineEmits<{
 
 const languageStore = useLanguageStore()
 
+const isStaff = computed(() => Boolean(props.userProfile?.is_staff || props.userProfile?.is_superuser))
+
 const nameLetter = computed(() => {
   return props.userProfile?.name ? props.userProfile.name.trim().charAt(0) : ''
 })
@@ -87,7 +89,9 @@ const stats = computed(() => [
 const settingsTiles = computed(() => [
   {
     key: 'shelf',
-    title: languageStore.t('قفسه کتاب من', 'My Bookshelf'),
+    title: isStaff.value
+      ? languageStore.t('انبار و اهدای کتاب تفکر', 'Inventory & Book Donations')
+      : languageStore.t('قفسه کتاب من', 'My Bookshelf'),
     icon: BookOpenIcon,
     badgeText: languageStore.n(props.userProfile?.shelf_books_count ?? 0),
     badgeVariant: 'secondary' as OptionBadgeVariant,

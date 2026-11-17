@@ -1,0 +1,1 @@
+import{QuranSearchView as e}from"./quran-CcVMTTFm.js";export{e as default};
