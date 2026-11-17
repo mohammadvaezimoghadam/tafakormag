@@ -229,6 +229,10 @@ class UserShelfBook(MarketplaceBaseModel):
         ).aggregate(total=Sum("quantity"))["total"]
         return val or 0
 
+    @donated_count.setter
+    def donated_count(self, value: int):
+        self._donated_count = value
+
     @property
     def can_donate(self) -> bool:
         if self.is_gift:
