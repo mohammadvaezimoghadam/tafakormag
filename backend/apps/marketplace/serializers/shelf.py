@@ -153,6 +153,18 @@ class ShelfBookSerializer(BaseModelSerializer):
                 current_holder_id=obj.user_id,
                 status="active"
             ).first()
+        if not copy and obj.book_format == "physical" and obj.available_quantity > 0:
+            from ..services.circulation_service import CirculationService
+            try:
+                copy = CirculationService.register_physical_copy(
+                    user=obj.user,
+                    book_title_id=obj.book_title_id,
+                    condition=obj.condition or PhysicalCopy.Condition.NEW,
+                )
+                obj.physical_copy = copy
+                obj.save(update_fields=["physical_copy"])
+            except Exception:
+                copy = None
         if not copy:
             return None
         return _ShelfLinkedCopySerializer(

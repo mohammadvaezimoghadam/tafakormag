@@ -776,6 +776,12 @@ class ShelfService:
                 donor_shelf.physical_copy = None
             donor_shelf.quantity = max(0, donor_shelf.quantity - gift_qty)
             donor_shelf.reserved_quantity = max(0, donor_shelf.reserved_quantity - gift_qty)
+            if donor_shelf.quantity > 0 and not donor_shelf.physical_copy:
+                donor_shelf.physical_copy = CirculationService.register_physical_copy(
+                    user=donor_shelf.user,
+                    book_title_id=donor_shelf.book_title_id,
+                    condition=donor_shelf.condition or PhysicalCopy.Condition.NEW,
+                )
             donor_shelf.save(update_fields=["quantity", "reserved_quantity", "physical_copy", "updated_at"])
 
         recipient_shelf, created = UserShelfBook.objects.select_for_update().get_or_create(
@@ -1076,6 +1082,12 @@ class ShelfService:
             # Detach copy from donor shelf so unique OneToOne constraint allows attaching to recipient
             locked_shelf_book.physical_copy = None
             locked_shelf_book.quantity = max(0, locked_shelf_book.quantity - handover_qty)
+            if locked_shelf_book.quantity > 0:
+                locked_shelf_book.physical_copy = CirculationService.register_physical_copy(
+                    user=admin_user,
+                    book_title_id=locked_shelf_book.book_title_id,
+                    condition=locked_shelf_book.condition or PhysicalCopy.Condition.NEW,
+                )
             locked_shelf_book.save(update_fields=["quantity", "physical_copy", "updated_at"])
 
             recipient_shelf.physical_copy = copy
@@ -1269,6 +1281,12 @@ class ShelfService:
                         donor_shelf.physical_copy = None
                     donor_shelf.quantity = max(0, donor_shelf.quantity - gift_qty)
                     donor_shelf.reserved_quantity = max(0, donor_shelf.reserved_quantity - gift_qty)
+                    if donor_shelf.quantity > 0 and not donor_shelf.physical_copy:
+                        donor_shelf.physical_copy = CirculationService.register_physical_copy(
+                            user=donor_shelf.user,
+                            book_title_id=donor_shelf.book_title_id,
+                            condition=donor_shelf.condition or PhysicalCopy.Condition.NEW,
+                        )
                     donor_shelf.save(update_fields=["quantity", "reserved_quantity", "physical_copy", "updated_at"])
 
             donor_name = donor.get_full_name() if donor else "ادمین تفکر"
