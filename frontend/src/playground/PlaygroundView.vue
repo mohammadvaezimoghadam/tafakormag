@@ -971,9 +971,9 @@ const getImageUrl = (image: string | File | null | undefined): string => {
 }
 
 // Platform Navigation simulation variables
-const simulatorActiveTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
+const simulatorActiveTab = ref<'home' | 'topics' | 'donate' | 'marketplace' | 'profile'>('home')
 
-const handleNavChange = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
+const handleNavChange = (tab: 'home' | 'topics' | 'donate' | 'marketplace' | 'profile') => {
   logEvent('Nav: Active Tab Changed', { tab })
 }
 

@@ -1,0 +1,1 @@
+import{SurahReaderView as e}from"./quran-BSuQZST3.js";export{e as default};

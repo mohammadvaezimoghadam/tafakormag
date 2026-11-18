@@ -195,7 +195,7 @@ const getQrBookUrl = (book: ShelfBook | null): string => {
   const origin = typeof window !== 'undefined' && window.location ? window.location.origin : 'https://tafakormag.ir'
   if (!book) return origin
   const code = getShortCode(book)
-  return code ? `${origin}/b/${code}` : `${origin}/b/${book.id}`
+  return code ? `${origin}/b/${code}` : `${origin}/marketplace`
 }
 
 const handleShowBookQr = (book: ShelfBook) => {

@@ -772,9 +772,11 @@ class ShelfService:
             .first()
         )
         if donor_shelf:
+            if donor_shelf.physical_copy_id == transfer.copy_id:
+                donor_shelf.physical_copy = None
             donor_shelf.quantity = max(0, donor_shelf.quantity - gift_qty)
             donor_shelf.reserved_quantity = max(0, donor_shelf.reserved_quantity - gift_qty)
-            donor_shelf.save(update_fields=["quantity", "reserved_quantity", "updated_at"])
+            donor_shelf.save(update_fields=["quantity", "reserved_quantity", "physical_copy", "updated_at"])
 
         recipient_shelf, created = UserShelfBook.objects.select_for_update().get_or_create(
             user=user,
@@ -786,6 +788,7 @@ class ShelfService:
                 "book_format": UserShelfBook.BookFormat.PHYSICAL,
                 "disposition": UserShelfBook.Disposition.KEEPING,
                 "condition": transfer.copy.condition,
+                "physical_copy": transfer.copy,
             },
         )
         if not created:
@@ -793,7 +796,8 @@ class ShelfService:
             if not recipient_shelf.gifted_by and donor:
                 recipient_shelf.gifted_by = donor
             recipient_shelf.is_gift = True
-            recipient_shelf.save(update_fields=["quantity", "gifted_by", "is_gift", "updated_at"])
+            recipient_shelf.physical_copy = transfer.copy
+            recipient_shelf.save(update_fields=["quantity", "gifted_by", "is_gift", "physical_copy", "updated_at"])
 
         transfer.to_user = user
         transfer.status = Transfer.Status.CONFIRMED
@@ -1069,8 +1073,13 @@ class ShelfService:
                 confirmed_at=timezone.now(),
             )
 
+            # Detach copy from donor shelf so unique OneToOne constraint allows attaching to recipient
+            locked_shelf_book.physical_copy = None
             locked_shelf_book.quantity = max(0, locked_shelf_book.quantity - handover_qty)
             locked_shelf_book.save(update_fields=["quantity", "physical_copy", "updated_at"])
+
+            recipient_shelf.physical_copy = copy
+            recipient_shelf.save(update_fields=["physical_copy", "updated_at"])
 
             copy.current_holder = recipient_user
             copy.status = PhysicalCopy.Status.ACTIVE
@@ -1228,12 +1237,16 @@ class ShelfService:
         if not user_phone:
             return []
 
-        pending_transfers = list(
+        transfer_ids = list(
             Transfer.objects.select_for_update()
             .filter(
                 Q(recipient_phone=user_phone) | Q(to_user=user),
                 status=Transfer.Status.PENDING_RECIPIENT,
             )
+            .values_list("id", flat=True)
+        )
+        pending_transfers = list(
+            Transfer.objects.filter(id__in=transfer_ids)
             .select_related("copy__book_title", "from_user")
         )
 
@@ -1252,9 +1265,11 @@ class ShelfService:
                     .first()
                 )
                 if donor_shelf:
+                    if transfer.copy_id and donor_shelf.physical_copy_id == transfer.copy_id:
+                        donor_shelf.physical_copy = None
                     donor_shelf.quantity = max(0, donor_shelf.quantity - gift_qty)
                     donor_shelf.reserved_quantity = max(0, donor_shelf.reserved_quantity - gift_qty)
-                    donor_shelf.save(update_fields=["quantity", "reserved_quantity", "updated_at"])
+                    donor_shelf.save(update_fields=["quantity", "reserved_quantity", "physical_copy", "updated_at"])
 
             donor_name = donor.get_full_name() if donor else "ادمین تفکر"
 
@@ -1269,6 +1284,7 @@ class ShelfService:
                     "disposition": UserShelfBook.Disposition.KEEPING,
                     "condition": transfer.copy.condition if transfer.copy else PhysicalCopy.Condition.NEW,
                     "acquired_from": f"هدیه از طرف {donor_name}",
+                    "physical_copy": transfer.copy,
                 },
             )
             if not created:
@@ -1276,7 +1292,9 @@ class ShelfService:
                 if not recipient_shelf.gifted_by and donor:
                     recipient_shelf.gifted_by = donor
                 recipient_shelf.is_gift = True
-                recipient_shelf.save(update_fields=["quantity", "gifted_by", "is_gift", "updated_at"])
+                if transfer.copy:
+                    recipient_shelf.physical_copy = transfer.copy
+                recipient_shelf.save(update_fields=["quantity", "gifted_by", "is_gift", "physical_copy", "updated_at"])
 
             transfer.to_user = user
             transfer.status = Transfer.Status.CONFIRMED

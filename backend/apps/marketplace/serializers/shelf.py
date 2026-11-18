@@ -147,10 +147,16 @@ class ShelfBookSerializer(BaseModelSerializer):
         }
 
     def get_physical_copy_summary(self, obj):
-        if not obj.physical_copy_id or not obj.physical_copy:
+        copy = obj.physical_copy
+        if not copy:
+            copy = obj.book_title.physical_copies.filter(
+                current_holder_id=obj.user_id,
+                status="active"
+            ).first()
+        if not copy:
             return None
         return _ShelfLinkedCopySerializer(
-            obj.physical_copy,
+            copy,
             context={"shelf_user_id": obj.user_id},
         ).data
 
