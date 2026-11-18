@@ -913,7 +913,13 @@ class CirculationService:
     def _verify_cooldown(cls, copy: PhysicalCopy, user) -> None:
         """
         Anti-fraud rule: 72h cooldown before book can return to previous holder (ADR-009).
+        Exempt staff/admin to allow administrative returns, inventory handling, and testing.
         """
+        if not user or not user.is_authenticated:
+            return
+        if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+            return
+
         cutoff = timezone.now() - timedelta(hours=cls.COOLDOWN_HOURS)
         recent_held = Transfer.objects.filter(
             copy=copy,
@@ -929,7 +935,13 @@ class CirculationService:
     def _verify_daily_limit(cls, user) -> None:
         """
         Anti-fraud rule: Max 2 handovers/day per user (ADR-009).
+        Exempt staff/admin to allow administrative mass donations/testing.
         """
+        if not user or not user.is_authenticated:
+            return
+        if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+            return
+
         cutoff = timezone.now() - timedelta(days=1)
         recent_count = Transfer.objects.filter(
             from_user=user,
