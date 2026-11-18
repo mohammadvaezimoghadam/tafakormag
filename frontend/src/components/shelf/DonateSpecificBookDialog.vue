@@ -372,9 +372,9 @@ const closeDialog = () => {
         <!-- 2A. Admin Success Screen -->
         <div
           v-if="adminSuccessMessage"
-          class="flex flex-col items-center text-center gap-3 py-4 px-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30"
+          class="flex flex-col items-center text-center gap-3 py-4 px-3 rounded-2xl bg-muted/50 border border-border/70"
         >
-          <div class="size-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+          <div class="size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
             <CheckIcon class="size-6 stroke-[3]" />
           </div>
 
@@ -389,7 +389,7 @@ const closeDialog = () => {
 
           <Button
             type="button"
-            class="w-full rounded-2xl bg-black text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:text-white font-bold mt-2"
+            class="w-full rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold mt-2"
             @click="closeDialog"
           >
             <span>{{ languageStore.t('متوجه شدم و بستن', 'Done') }}</span>
@@ -399,9 +399,9 @@ const closeDialog = () => {
         <!-- 2B. Normal User Phone Success Screen -->
         <div
           v-else-if="phoneSuccessResult"
-          class="flex flex-col items-center text-center gap-3 py-3 px-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/30"
+          class="flex flex-col items-center text-center gap-3 py-3 px-2 rounded-2xl bg-muted/50 border border-border/70"
         >
-          <div class="size-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+          <div class="size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
             <CheckIcon class="size-6 stroke-[3]" />
           </div>
 
@@ -436,7 +436,7 @@ const closeDialog = () => {
               class="rounded-xl gap-1"
               @click="copyShortCode"
             >
-              <CheckIcon v-if="isCopied" class="size-3.5 text-emerald-600" />
+              <CheckIcon v-if="isCopied" class="size-3.5 text-primary" />
               <CopyIcon v-else class="size-3.5" />
               <span class="text-[11px]">{{ isCopied ? languageStore.t('کپی شد', 'Copied') : languageStore.t('کپی کد', 'Copy') }}</span>
             </Button>
@@ -449,7 +449,7 @@ const closeDialog = () => {
 
           <Button
             type="button"
-            class="w-full rounded-2xl bg-black text-white hover:bg-neutral-800 dark:bg-primary dark:text-primary-foreground font-bold mt-2"
+            class="w-full rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold mt-2"
             @click="closeDialog"
           >
             <span>{{ languageStore.t('متوجه شدم و بستن', 'Done') }}</span>
@@ -501,10 +501,10 @@ const closeDialog = () => {
               <!-- Selected Recipient Card -->
               <div
                 v-if="selectedUser"
-                class="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3 flex items-center justify-between gap-2"
+                class="rounded-2xl border border-border/70 bg-muted/40 p-3 flex items-center justify-between gap-2"
               >
                 <div class="flex items-center gap-2.5 min-w-0">
-                  <div class="size-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <div class="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">
                     <UserCheckIcon class="size-4" />
                   </div>
                   <div class="flex flex-col min-w-0">

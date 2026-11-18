@@ -392,7 +392,7 @@ const hasDonations = computed(() =>
               type="button"
               variant="outline"
               size="sm"
-              class="h-8 px-2.5 rounded-xl text-[11px] font-semibold gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
+              class="h-8 px-2.5 rounded-xl text-[11px] font-semibold gap-1 text-foreground border-border/70 hover:bg-muted/50 cursor-pointer"
               @click="openPayoutModal"
             >
               <CreditCardIcon class="size-3.5" />
@@ -794,7 +794,7 @@ const hasDonations = computed(() =>
       <DialogContent class="max-w-[480px] p-5 rounded-2xl max-h-[85vh] overflow-y-auto font-sans" :dir="languageStore.dir">
         <DialogHeader class="text-start pb-2 border-b border-border/50">
           <div class="flex items-center gap-2">
-            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div class="p-2 rounded-xl bg-muted/60 text-foreground">
               <WalletIcon class="size-5" />
             </div>
             <div>
@@ -810,9 +810,9 @@ const hasDonations = computed(() =>
 
         <!-- Balance Summary Card -->
         <div class="grid grid-cols-3 gap-2 my-3">
-          <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col gap-0.5 text-start">
+          <div class="p-2.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col gap-0.5 text-start">
             <span class="text-[10px] text-muted-foreground">{{ languageStore.t('قابل تسویه', 'Available') }}</span>
-            <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+            <span class="text-xs font-extrabold text-foreground">
               {{ formatKindnessNumber(availablePayoutBalance, languageStore.isFa) }}
             </span>
             <span class="text-[9px] text-muted-foreground">{{ languageStore.t('تومان', 'Toman') }}</span>
@@ -845,7 +845,7 @@ const hasDonations = computed(() =>
               type="button"
               variant="ghost"
               size="sm"
-              class="h-6 px-2 rounded-lg text-[10.5px] font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+              class="h-6 px-2 rounded-lg text-[10.5px] font-semibold text-foreground hover:text-foreground/80 cursor-pointer"
               @click="fillMaxPayoutAmount"
             >
               <ArrowDownToLineIcon class="size-3 mr-1" />
@@ -864,7 +864,7 @@ const hasDonations = computed(() =>
                 type="number"
                 min="10000"
                 :max="availablePayoutBalance"
-                class="w-full h-9 px-3 text-start rounded-xl border border-border/60 bg-background text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                class="w-full h-9 px-3 text-start rounded-xl border border-border/60 bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
                 :placeholder="languageStore.t('حداقل ۱۰,۰۰۰ تومان', 'Min 10,000 Tomans')"
               />
             </div>
@@ -880,7 +880,7 @@ const hasDonations = computed(() =>
               type="text"
               dir="ltr"
               maxlength="26"
-              class="w-full h-9 px-3 font-mono text-xs rounded-xl border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-start"
+              class="w-full h-9 px-3 font-mono text-xs rounded-xl border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-start"
               placeholder="IR000000000000000000000000"
             />
           </div>
@@ -893,7 +893,7 @@ const hasDonations = computed(() =>
             <input
               v-model="payoutForm.account_holder_name"
               type="text"
-              class="w-full h-9 px-3 text-xs rounded-xl border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-start"
+              class="w-full h-9 px-3 text-xs rounded-xl border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-start"
               :placeholder="languageStore.t('مطابق با کارت بانکی', 'As on bank card')"
             />
           </div>
@@ -902,7 +902,7 @@ const hasDonations = computed(() =>
             type="button"
             variant="default"
             size="sm"
-            class="h-9 rounded-xl text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer mt-1"
+            class="h-9 rounded-xl text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer mt-1"
             :disabled="payoutSubmitting"
             @click="submitPayoutRequest"
           >
@@ -946,7 +946,7 @@ const hasDonations = computed(() =>
                   "
                   class="text-[10px] px-2 py-0.5 rounded-lg font-semibold"
                   :class="
-                    p.status === 'completed' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' :
+                    p.status === 'completed' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' :
                     p.status === 'pending' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30' :
                     ''
                   "
@@ -960,7 +960,7 @@ const hasDonations = computed(() =>
                 <span>{{ p.account_holder_name }}</span>
               </div>
 
-              <div v-if="p.tracking_number" class="text-[10.5px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+              <div v-if="p.tracking_number" class="text-[10.5px] text-foreground flex items-center gap-1 font-semibold">
                 <span>{{ languageStore.t('کد پیگیری ساتنا/پایا:', 'Tracking Code:') }}</span>
                 <span dir="ltr" class="font-mono">{{ p.tracking_number }}</span>
               </div>

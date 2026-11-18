@@ -389,23 +389,11 @@ const formatDateTime = (raw: string): string => {
 
           <!-- Header Action Buttons -->
           <div class="flex items-center gap-2 flex-wrap">
-            <!-- QR Claim Button (Available for all) -->
-            <Button
-              v-if="isStaff"
-              type="button"
-              variant="outline"
-              class="rounded-2xl shrink-0 gap-1.5"
-              @click="isClaimDialogOpen = true"
-            >
-              <QrCodeIcon class="size-4 text-primary" />
-              <span>{{ languageStore.t('تحویل یا دریافت با بارکد (QR)', 'Handover / Claim by QR') }}</span>
-            </Button>
-
             <!-- Add Book Button (Only for Admin) -->
             <Button
               v-if="isStaff"
               type="button"
-              class="rounded-2xl shrink-0 bg-black text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:text-white font-bold"
+              class="rounded-2xl shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
               @click="openAddDialog"
             >
               <PlusIcon data-icon="inline-start" />
@@ -434,17 +422,17 @@ const formatDateTime = (raw: string): string => {
     <!-- Incoming Gifts Banner (Pending receipt) -->
     <Card
       v-if="incomingGifts.length > 0"
-      class="rounded-3xl border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10 overflow-hidden shadow-xs"
+      class="rounded-3xl border-border/60 bg-muted/30 overflow-hidden shadow-xs"
     >
       <CardContent class="p-4 flex flex-col gap-3">
         <div class="flex items-center gap-2.5">
-          <div class="size-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+          <div class="size-9 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-2xs">
             <GiftIcon class="size-4.5" />
           </div>
           <div class="flex flex-col">
             <h3 class="text-sm font-extrabold text-foreground flex items-center gap-1.5">
               <span>{{ languageStore.t('هدایای در انتظار دریافت', 'Pending Book Gifts') }}</span>
-              <Badge class="bg-emerald-600 text-white text-[10px] px-1.5 py-0 h-4 rounded-full">
+              <Badge class="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-4 rounded-full">
                 {{ languageStore.n(incomingGifts.length) }}
               </Badge>
             </h3>
@@ -502,7 +490,7 @@ const formatDateTime = (raw: string): string => {
               <Button
                 type="button"
                 size="xs"
-                class="rounded-xl bg-black text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:text-white font-bold text-[11px] h-8 gap-1.5 shadow-2xs"
+                class="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-[11px] h-8 gap-1.5 shadow-2xs"
                 :disabled="isActioningGift === gift.transfer_id"
                 @click="handleConfirmGift(gift.transfer_id)"
               >
@@ -526,10 +514,10 @@ const formatDateTime = (raw: string): string => {
       </CardContent>
     </Card>
 
-    <!-- Admin 2 Tabs: Inventory vs Reports -->
+    <!-- Admin 2 Tabs: Inventory vs Reports (Centered) -->
     <div
       v-if="isStaff"
-      class="flex items-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-start text-xs flex-wrap"
+      class="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-center mx-auto text-xs flex-wrap"
     >
       <button
         type="button"
@@ -677,7 +665,7 @@ const formatDateTime = (raw: string): string => {
             <!-- Gift Badge (Recipient Mode) -->
             <div
               v-if="!isStaff || book.is_gift"
-              class="absolute bottom-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600/90 text-white text-[9.5px] font-bold shadow-2xs flex items-center gap-1 backdrop-blur-xs"
+              class="absolute bottom-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-foreground text-background text-[9.5px] font-bold shadow-2xs flex items-center gap-1 backdrop-blur-xs"
             >
               <SparklesIcon class="size-2.5" />
               <span>{{ languageStore.t('هدیه', 'Gift') }}</span>
@@ -695,12 +683,12 @@ const formatDateTime = (raw: string): string => {
             </div>
 
             <div class="flex flex-col gap-1.5 pt-1.5 border-t border-border/40">
-              <!-- ── RECIPIENT MODE: Emerald Gift Badge Only (No Edit, Delete, Donate) ── -->
+              <!-- ── RECIPIENT MODE: Neutral Gift Badge Only ── -->
               <div
                 v-if="!isStaff"
-                class="w-full py-1.5 px-2 text-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
+                class="w-full py-1.5 px-2 text-center text-[10px] font-bold text-foreground bg-muted/80 border border-border/70 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
               >
-                <SparklesIcon class="size-3 text-emerald-600 shrink-0" />
+                <SparklesIcon class="size-3 text-muted-foreground shrink-0" />
                 <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
               </div>
 
@@ -710,7 +698,7 @@ const formatDateTime = (raw: string): string => {
                 <Button
                   type="button"
                   size="xs"
-                  class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-black text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 transition-colors shadow-2xs"
+                  class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs"
                   :disabled="(book.available_quantity ?? (book.quantity - (book.reserved_quantity ?? 0))) <= 0"
                   @click.stop="handleDonateClick(book)"
                 >
@@ -728,7 +716,7 @@ const formatDateTime = (raw: string): string => {
                 <div class="flex items-center justify-between gap-1 pt-0.5">
                   <button
                     type="button"
-                    class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] font-bold text-emerald-600 hover:text-emerald-700 py-1 rounded-md hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                    class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] font-bold text-foreground hover:text-foreground/80 py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
                     :title="languageStore.t('افزایش موجودی', '+ Stock')"
                     @click.stop="openStockDialog(book)"
                   >
@@ -836,7 +824,7 @@ const formatDateTime = (raw: string): string => {
                     </span>
                     <span>•</span>
                     <span class="flex items-center gap-1">
-                      <UserCheckIcon class="size-3 text-emerald-600" />
+                      <UserCheckIcon class="size-3 text-foreground" />
                       <span>گیرنده:</span>
                       <strong class="text-foreground">{{ rep.recipient_name || rep.recipient_phone }}</strong>
                       <span v-if="rep.recipient_name" class="font-mono text-[10px]" dir="ltr">({{ rep.recipient_phone }})</span>
@@ -854,7 +842,7 @@ const formatDateTime = (raw: string): string => {
               </div>
 
               <div class="self-end sm:self-center shrink-0">
-                <Badge class="bg-emerald-600 text-white text-[10.5px] px-2 py-0.5 rounded-xl font-bold">
+                <Badge class="bg-secondary text-secondary-foreground border border-border text-[10.5px] px-2 py-0.5 rounded-xl font-bold">
                   {{ rep.status_display || 'اهدا شده' }}
                 </Badge>
               </div>
@@ -869,7 +857,7 @@ const formatDateTime = (raw: string): string => {
       <DialogContent class="sm:max-w-md rounded-3xl p-5">
         <DialogHeader class="gap-1 text-start">
           <DialogTitle class="text-base font-extrabold text-foreground flex items-center gap-2">
-            <BookOpenIcon class="size-5 text-emerald-600 shrink-0" />
+            <BookOpenIcon class="size-5 text-foreground shrink-0" />
             <span>{{ languageStore.t('مشخصات کتاب اهدایی', 'Book Details') }}</span>
           </DialogTitle>
           <DialogDescription class="text-xs text-muted-foreground">
@@ -898,7 +886,7 @@ const formatDateTime = (raw: string): string => {
                 {{ viewingBook.book_title.author }}
               </p>
               <div class="flex items-center gap-1.5 mt-1">
-                <Badge class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                <Badge class="bg-secondary text-secondary-foreground border border-border text-[10px] px-2 py-0.5 rounded-full font-bold">
                   هدیه از طرف {{ viewingBook.gifted_by_name || 'ادمین تفکر' }}
                 </Badge>
               </div>
@@ -923,7 +911,7 @@ const formatDateTime = (raw: string): string => {
         </div>
 
         <DialogFooter>
-          <Button type="button" class="w-full rounded-2xl bg-black text-white dark:bg-emerald-600 font-bold" @click="isViewDetailOpen = false">
+          <Button type="button" class="w-full rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold" @click="isViewDetailOpen = false">
             {{ languageStore.t('بستن', 'Close') }}
           </Button>
         </DialogFooter>
@@ -935,7 +923,7 @@ const formatDateTime = (raw: string): string => {
       <DialogContent class="sm:max-w-sm rounded-3xl p-5">
         <DialogHeader class="gap-1 text-start">
           <DialogTitle class="text-base font-extrabold text-foreground flex items-center gap-2">
-            <PlusIcon class="size-5 text-emerald-600 shrink-0" />
+            <PlusIcon class="size-5 text-foreground shrink-0" />
             <span>{{ languageStore.t('افزایش موجودی انبار', 'Increase Stock') }}</span>
           </DialogTitle>
           <DialogDescription class="text-xs text-muted-foreground">
@@ -987,7 +975,7 @@ const formatDateTime = (raw: string): string => {
         <DialogFooter class="gap-2">
           <Button
             type="button"
-            class="rounded-2xl bg-black text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:text-white font-bold"
+            class="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             :disabled="isUpdatingStock || stockAdjustment < 1"
             @click="handleStockIncrease"
           >

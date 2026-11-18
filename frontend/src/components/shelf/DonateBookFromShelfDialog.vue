@@ -750,9 +750,9 @@ const downloadQrSvg = () => {
           <!-- Receive Success Screen -->
           <div
             v-if="receiveCompletedTitle"
-            class="rounded-3xl border border-emerald-500/35 bg-emerald-500/10 p-5 flex flex-col items-center text-center gap-3"
+            class="rounded-3xl border border-border/70 bg-muted/40 p-5 flex flex-col items-center text-center gap-3"
           >
-            <CheckCircle2Icon class="size-9 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2Icon class="size-9 text-primary" />
             <div class="flex flex-col gap-1">
               <span class="text-sm font-extrabold text-foreground">
                 {{ languageStore.t('تحویل با موفقیت ثبت شد!', 'Book Received!') }}
@@ -972,9 +972,9 @@ const downloadQrSvg = () => {
         <!-- Completed Celebration -->
         <div
           v-if="handoverCompleted"
-          class="rounded-3xl border border-emerald-500/35 bg-emerald-500/10 p-6 flex flex-col items-center text-center gap-3 my-1"
+          class="rounded-3xl border border-border/70 bg-muted/40 p-6 flex flex-col items-center text-center gap-3 my-1"
         >
-          <CheckCircle2Icon class="size-10 text-emerald-600 dark:text-emerald-400" />
+          <CheckCircle2Icon class="size-10 text-primary" />
           <div class="flex flex-col gap-1">
             <span class="text-sm font-extrabold text-foreground">
               {{ languageStore.t('کتاب با موفقیت تحویل داده شد!', 'Book Handover Completed!') }}

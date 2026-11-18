@@ -152,7 +152,7 @@ const handleSubmit = async () => {
   <Dialog :open="open" @update:open="(val) => emit('update:open', val)">
     <DialogContent class="sm:max-w-lg p-0 overflow-hidden rounded-3xl bg-card border border-border/60 shadow-2xl">
       <!-- Decorative Header -->
-      <div class="h-1.5 w-full bg-linear-to-r from-amber-500 via-emerald-500 to-teal-500" />
+      <div class="h-1 w-full bg-primary/20" />
 
       <DialogHeader class="p-5 pb-3 text-start">
         <div class="flex items-center gap-2.5">
@@ -269,12 +269,12 @@ const handleSubmit = async () => {
             <!-- In-person QR handover -->
             <label 
               class="p-3 rounded-2xl border transition-colors cursor-pointer flex items-start gap-2.5 select-none"
-              :class="enableInPerson ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border/60 bg-card'"
+              :class="enableInPerson ? 'border-primary/50 bg-primary/5' : 'border-border/60 bg-card'"
             >
-              <input type="checkbox" v-model="enableInPerson" class="mt-0.5 rounded text-emerald-600 cursor-pointer" />
+              <input type="checkbox" v-model="enableInPerson" class="mt-0.5 rounded text-primary cursor-pointer" />
               <div class="flex flex-col gap-0.5">
                 <div class="flex items-center gap-1.5">
-                  <QrCodeIcon class="size-3.5 text-emerald-600" />
+                  <QrCodeIcon class="size-3.5 text-primary" />
                   <span class="text-xs font-bold text-foreground">
                     {{ languageStore.t('تحویل حضوری (کد QR)', 'In-Person (QR)') }}
                   </span>
@@ -347,7 +347,7 @@ const handleSubmit = async () => {
         <Button
           type="button"
           size="sm"
-          class="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 bg-linear-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 text-white shadow-xs cursor-pointer active:scale-95 transition-all"
+          class="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer active:scale-95 transition-all"
           :disabled="!isReadyToSubmit"
           @click="handleSubmit"
         >

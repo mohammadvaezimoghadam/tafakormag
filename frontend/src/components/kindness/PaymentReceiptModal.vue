@@ -58,7 +58,7 @@ const handleViewCampaign = () => {
       :show-close-button="false"
     >
       <DialogHeader class="flex flex-col items-center text-center gap-1.5 pb-0.5">
-        <div class="size-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 shadow-xs">
+        <div class="size-12 rounded-2xl bg-muted/60 text-foreground flex items-center justify-center shrink-0 border border-border/70 shadow-xs">
           <CheckCircle2Icon class="size-6 stroke-[2.5]" />
         </div>
         <DialogTitle class="text-xs sm:text-[13px] font-bold text-foreground">
@@ -80,7 +80,7 @@ const handleViewCampaign = () => {
         <!-- Amount -->
         <div v-if="amount" class="flex items-center justify-between py-1.5 border-b border-border/40">
           <span class="text-[10.5px] sm:text-[11px] text-muted-foreground font-medium">{{ languageStore.t('مبلغ اهدایی:', 'Donation Amount:') }}</span>
-          <span class="font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">{{ formattedAmount }} {{ languageStore.t('تومان', 'Tomans') }}</span>
+          <span class="font-black text-foreground text-xs sm:text-sm">{{ formattedAmount }} {{ languageStore.t('تومان', 'Tomans') }}</span>
         </div>
 
         <!-- Ref ID -->
@@ -99,7 +99,7 @@ const handleViewCampaign = () => {
       <DialogFooter class="flex flex-col sm:flex-row gap-2 sm:justify-end pt-1">
         <Button
           type="button"
-          class="w-full font-bold text-xs gap-1.5 rounded-xl h-11 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+          class="w-full font-bold text-xs gap-1.5 rounded-xl h-11 active:scale-95 transition-all cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
           @click="handleViewCampaign"
         >
           <CheckCircle2Icon class="size-3.5" />

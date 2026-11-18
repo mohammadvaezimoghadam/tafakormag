@@ -87,20 +87,20 @@ const handleShare = () => {
 
 <template>
   <div class="relative w-full max-w-md mx-auto my-2 group transition-all duration-300">
-    <!-- Ambient glow container matching Tafakor book aesthetic -->
+    <!-- Ambient subtle shadow container -->
     <div 
-      class="absolute -inset-0.5 rounded-3xl opacity-30 group-hover:opacity-75 blur-md transition duration-500 bg-linear-to-r from-amber-500/20 via-emerald-500/25 to-teal-500/20 pointer-events-none" 
+      class="absolute -inset-0.5 rounded-3xl opacity-20 group-hover:opacity-40 blur-md transition duration-500 bg-muted/60 pointer-events-none" 
     />
 
-    <Card class="relative overflow-hidden rounded-3xl border border-amber-500/30 dark:border-amber-500/20 bg-card/95 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 p-0 gap-0">
+    <Card class="relative overflow-hidden rounded-3xl border border-border/70 bg-card/95 backdrop-blur-xl shadow-sm hover:shadow-md transition-all duration-300 p-0 gap-0">
       <!-- Top Decorative Banner -->
-      <div class="h-1.5 w-full bg-linear-to-r from-amber-500 via-emerald-500 to-teal-500" />
+      <div class="h-1 w-full bg-border" />
 
       <!-- Header: Topic, Badge & Donor info -->
       <CardHeader class="p-3.5 pb-2.5 flex flex-col gap-2">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 min-w-0">
-            <div class="size-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+            <div class="size-8 rounded-xl bg-muted text-foreground flex items-center justify-center shrink-0 border border-border/60">
               <BookOpenIcon class="size-4" />
             </div>
             <div class="flex flex-col min-w-0">
@@ -108,7 +108,7 @@ const handleShare = () => {
                 <span class="text-xs font-extrabold text-foreground truncate">
                   {{ languageStore.t('کتاب اهدایی', 'Book Donation') }}
                 </span>
-                <Badge variant="outline" class="text-[9px] px-1.5 py-0 h-4 font-bold rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                <Badge variant="outline" class="text-[9px] px-1.5 py-0 h-4 font-bold rounded-md bg-secondary text-secondary-foreground border-border">
                   {{ languageStore.t('رایگان', 'Free') }}
                 </Badge>
               </div>
@@ -128,7 +128,7 @@ const handleShare = () => {
           >
             <QrCodeIcon class="size-3 text-primary shrink-0" />
             <span>{{ book.short_code }}</span>
-            <CheckIcon v-if="isCopied" class="size-2.5 text-emerald-500" />
+            <CheckIcon v-if="isCopied" class="size-2.5 text-primary" />
             <CopyIcon v-else class="size-2.5 text-muted-foreground" />
           </button>
         </div>
@@ -217,7 +217,7 @@ const handleShare = () => {
             <span class="text-[10px] text-muted-foreground">{{ languageStore.t('اهداکننده:', 'Donor:') }}</span>
             <span class="font-semibold text-foreground">{{ book.seller_name || authorName || 'همراه تفاخر' }}</span>
           </div>
-          <span v-if="book.shipping_payer === 'donor'" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+          <span v-if="book.shipping_payer === 'donor'" class="text-[10px] text-muted-foreground font-semibold">
             {{ languageStore.t('هزینه ارسال با اهداکننده', 'Free shipping') }}
           </span>
         </div>
@@ -229,7 +229,7 @@ const handleShare = () => {
         <Button
           type="button"
           size="sm"
-          class="flex-1 h-9 rounded-xl text-xs font-bold gap-1.5 bg-linear-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 text-white shadow-xs cursor-pointer active:scale-95 transition-all"
+          class="flex-1 h-9 rounded-xl text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer active:scale-95 transition-all"
           @click="emit('claim-click', book)"
         >
           <HandHeartIcon class="size-3.5" />

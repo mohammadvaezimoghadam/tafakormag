@@ -502,10 +502,13 @@ class UserViewSet(viewsets.GenericViewSet):
             if u.profile_image:
                 avatar_url = request.build_absolute_uri(u.profile_image.url)
 
+            name = (u.get_full_name() or "").strip()
+            display_name = name if name else u.phone
             results.append({
                 "id": u.id,
                 "phone": u.phone,
-                "full_name": u.get_full_name(),
+                "name": display_name,
+                "full_name": display_name,
                 "avatar": avatar_url,
             })
 

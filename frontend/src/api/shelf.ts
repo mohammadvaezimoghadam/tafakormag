@@ -319,7 +319,15 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     '/api/v1/accounts/users/search/',
     { params: { q } }
   )
-  return unwrapList(data)
+  const list = unwrapList<UserSearchResult>(data)
+  return list.map((u: any) => {
+    const displayName = (u.full_name || u.name || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.phone || '').trim()
+    return {
+      ...u,
+      name: displayName,
+      full_name: displayName,
+    }
+  })
 }
 
 export async function listAdminDonationsReport(): Promise<AdminDonationReportItem[]> {

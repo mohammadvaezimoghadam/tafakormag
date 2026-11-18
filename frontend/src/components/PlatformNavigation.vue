@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { HomeIcon, HandHeartIcon, UserIcon, LayersIcon } from '@lucide/vue'
+import { HomeIcon, LayersIcon, HandHeartIcon, UserIcon } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const languageStore = useLanguageStore()
 
-// V-model active tab binding ('home' | 'donate' | 'marketplace' | 'profile')
-const activeTab = defineModel<'home' | 'donate' | 'marketplace' | 'profile'>({ default: 'home' })
+// V-model active tab binding ('home' | 'topics' | 'donate' | 'marketplace' | 'profile')
+const activeTab = defineModel<'home' | 'topics' | 'donate' | 'marketplace' | 'profile'>({ default: 'home' })
 
 const emit = defineEmits<{
-  (e: 'change', tab: 'home' | 'donate' | 'marketplace' | 'profile'): void
+  (e: 'change', tab: 'home' | 'topics' | 'donate' | 'marketplace' | 'profile'): void
 }>()
 
-const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
+const selectTab = (tab: 'home' | 'topics' | 'donate' | 'marketplace' | 'profile') => {
   activeTab.value = tab
   emit('change', tab)
 }
@@ -38,6 +38,21 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
       <span>{{ languageStore.t('خانه', 'Home') }}</span>
     </button>
 
+    <!-- Topics Tab -->
+    <button
+      @click="selectTab('topics')"
+      :class="[
+        'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent',
+        activeTab === 'topics'
+          ? 'bg-primary/10 text-primary font-bold shadow-xs'
+          : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+      ]"
+      :title="languageStore.t('تاپیک‌ها', 'Topics')"
+    >
+      <LayersIcon class="size-3.5 shrink-0" />
+      <span>{{ languageStore.t('تاپیک‌ها', 'Topics') }}</span>
+    </button>
+
     <!-- Donate Tab -->
     <button
       @click="selectTab('donate')"
@@ -52,23 +67,6 @@ const selectTab = (tab: 'home' | 'donate' | 'marketplace' | 'profile') => {
       <HandHeartIcon class="size-3.5 shrink-0" />
       <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
     </button>
-
-    <!-- Marketplace Tab (Temporarily disabled as requested) -->
-    <!--
-    <button
-      @click="selectTab('marketplace')"
-      :class="[
-        'px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent',
-        activeTab === 'marketplace'
-          ? 'bg-primary/10 text-primary font-bold shadow-xs'
-          : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
-      ]"
-      :title="languageStore.t('بازارچه', 'Marketplace')"
-    >
-      <LayersIcon class="size-3.5 shrink-0" />
-      <span>{{ languageStore.t('بازارچه', 'Marketplace') }}</span>
-    </button>
-    -->
 
     <!-- Profile Tab -->
     <button

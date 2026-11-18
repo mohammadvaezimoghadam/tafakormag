@@ -787,29 +787,6 @@ const handleSubmitRequest = async () => {
             </div>
 
             <div v-else class="flex flex-col gap-2.5 pt-1">
-              <QuantityStepper
-                v-model="handoverQty"
-                :min="1"
-                :max="maxHandoverQty"
-                :label="languageStore.t('تعداد جلد برای تحویل', 'Copies to Hand Over')"
-                :hint="languageStore.t(`موجود: ${languageStore.n(maxHandoverQty)} جلد`, `Available: ${maxHandoverQty}`)"
-                compact
-              />
-              <Input
-                v-model="donorNote"
-                :placeholder="languageStore.t('یادداشت یا خاطره در سفرنامه برای گیرنده (اختیاری)', 'Optional journey note for the next reader')"
-              />
-              <Button
-                type="button"
-                size="sm"
-                :disabled="isSubmittingAction"
-                @click="handleGenerateOtp"
-              >
-                <Loader2Icon v-if="isSubmittingAction" data-icon="inline-start" class="animate-spin" />
-                <KeyRoundIcon v-else data-icon="inline-start" />
-                <span>{{ languageStore.t('ایجاد کد ۴ رقمی تحویل حضوری (OTP)', 'Generate 4-Digit Meetup OTP') }}</span>
-              </Button>
-
               <div v-if="!inPersonOnly && stations.length > 0" class="flex items-center gap-2 pt-1 border-t border-border/40">
                 <Select v-model="selectedStationId" class="flex-1">
                   <SelectTrigger class="rounded-2xl bg-input/50 border-transparent text-xs font-semibold">

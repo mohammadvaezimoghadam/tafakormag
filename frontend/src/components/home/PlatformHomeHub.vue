@@ -314,7 +314,7 @@ defineExpose({
       <button
         v-if="isStaff"
         type="button"
-        @click="handleOpenBookDonations"
+        @click="emit('open-shelf')"
         class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
       >
         <HandHeartIcon class="size-[22px] text-primary shrink-0" />
@@ -384,30 +384,16 @@ defineExpose({
         </Button>
       </div>
 
-      <!-- Empty State (Authenticated with 0 books - Seamless / No Box) -->
+      <!-- Empty State (Authenticated with 0 books - Seamless Icon matching campaigns) -->
       <div
         v-else-if="visibleBooks.length === 0"
-        class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2.5"
+        class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2"
       >
-        <div class="size-14 flex items-center justify-center">
-          <!-- Bookshelf Stack Vector -->
-          <svg
-            viewBox="0 0 100 100"
-            class="size-14"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-            <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
-            <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
-            <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-            <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
-            <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
-            <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
-          </svg>
+        <div class="size-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground/70">
+          <BookOpenIcon class="size-5.5" />
         </div>
 
-        <span class="text-xs font-bold text-foreground">
+        <span class="text-xs font-semibold text-muted-foreground">
           {{
             isStaff
               ? languageStore.t('کتابی در انبار جهت نمایش یافت نشد', 'No books found in shelf')
@@ -419,7 +405,7 @@ defineExpose({
           v-if="isStaff"
           type="button"
           size="sm"
-          class="rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3.5 text-xs gap-1.5"
+          class="rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3.5 text-xs gap-1.5 mt-1"
           @click="handleOpenAddBook"
         >
           <BookPlusIcon class="size-3.5" />
@@ -458,7 +444,7 @@ defineExpose({
             <!-- Donated badge for admin or quantity badge -->
             <div
               v-if="isStaff && ((book as any).donated_count ?? 0) > 0"
-              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600/90 text-white text-[10px] font-bold shadow-2xs flex items-center gap-1"
+              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-foreground text-background text-[10px] font-bold shadow-2xs flex items-center gap-1"
             >
               <span>{{ languageStore.n((book as any).donated_count) }} {{ languageStore.t('اهدا شده', 'donated') }}</span>
             </div>
@@ -503,12 +489,12 @@ defineExpose({
                 <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
               </Button>
 
-              <!-- Recipient / Gift: Show Emerald Gift Badge -->
+              <!-- Recipient / Gift: Show Neutral Gift Badge -->
               <div
                 v-else-if="!isStaff && book.is_gift"
-                class="w-full py-1 text-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
+                class="w-full py-1 text-center text-[10px] font-bold text-foreground bg-muted/80 border border-border/70 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
               >
-                <SparklesIcon class="size-3 text-emerald-600 shrink-0" />
+                <SparklesIcon class="size-3 text-muted-foreground shrink-0" />
                 <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
               </div>
             </div>
@@ -599,17 +585,17 @@ defineExpose({
               class="absolute top-2.5 start-2.5 px-2.5 py-1 rounded-xl backdrop-blur-md text-[10.5px] font-bold flex items-center gap-1.5 shadow-2xs border"
               :class="
                 camp.status === 'completed' || camp.status === 'executed'
-                  ? 'bg-emerald-600 text-white border-transparent'
-                  : 'bg-background/95 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                  ? 'bg-foreground text-background border-transparent'
+                  : 'bg-background/95 text-foreground border-border/60'
               "
             >
               <span
                 v-if="camp.status === 'active' || !camp.status"
-                class="size-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"
+                class="size-1.5 rounded-full bg-primary animate-pulse shrink-0"
               />
               <CheckCircle2Icon
                 v-else-if="camp.status === 'completed' || camp.status === 'executed'"
-                class="size-3.5 text-white shrink-0"
+                class="size-3.5 text-background shrink-0"
               />
               <span>
                 {{ getCampaignStatusLabel(camp.status) }}

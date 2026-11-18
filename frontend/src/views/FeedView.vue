@@ -57,8 +57,8 @@ import { useTopicStore } from '@/stores/topicStore'
 import { usePostStore } from '@/stores/postStore'
 import { useToastStore } from '@/stores/toastStore'
 
-// Tab state ('home' | 'donate' | 'marketplace' | 'profile')
-const currentTab = ref<'home' | 'donate' | 'marketplace' | 'profile'>('home')
+// Tab state ('home' | 'topics' | 'donate' | 'marketplace' | 'profile')
+const currentTab = ref<'home' | 'topics' | 'donate' | 'marketplace' | 'profile'>('home')
 
 // Home tab subview ('hub' = main action hub + sliders, 'topics' = topics list)
 const homeSubView = ref<'hub' | 'topics'>('hub')
@@ -117,9 +117,11 @@ const syncRouteToState = () => {
   } else if (route.path === '/marketplace') {
     currentTab.value = 'marketplace'
     selectedTopic.value = null
+  } else if (route.path === '/topics') {
+    currentTab.value = 'topics'
+    selectedTopic.value = null
   } else if (route.path.startsWith('/topic/')) {
-    currentTab.value = 'home'
-    homeSubView.value = 'topics'
+    currentTab.value = 'topics'
     const topicId = Number(route.params.id)
     if (!isNaN(topicId)) {
       const found = topics.value.find(t => t.id === topicId)
@@ -184,14 +186,6 @@ const handleOpenShelfFromHome = () => {
 }
 
 const handleOpenShelfBookFromHome = (book: ShelfBook) => {
-  if (
-    book.disposition === 'for_donation' &&
-    book.donation_methods?.includes('in_person') &&
-    book.physical_copy_summary?.short_code
-  ) {
-    handleOpenHandoverByCode(book.physical_copy_summary.short_code)
-    return
-  }
   if (!userStore.isAuthenticated) {
     userStore.isLoginModalOpen = true
     return
@@ -231,12 +225,16 @@ watch(currentTab, (newTab) => {
     if (route.path !== '/donate') {
       router.push('/donate')
     }
+  } else if (newTab === 'topics') {
+    if (route.path !== '/topics' && !route.path.startsWith('/topic/')) {
+      router.push('/topics')
+    }
   } else if (newTab === 'marketplace') {
     if (route.path !== '/marketplace') {
       router.push('/marketplace')
     }
   } else if (newTab === 'home') {
-    if (route.path !== '/' && !route.path.startsWith('/topic/') && !route.path.startsWith('/b/')) {
+    if (route.path !== '/' && !route.path.startsWith('/b/')) {
       router.push('/')
     }
   }
@@ -392,6 +390,8 @@ onUnmounted(() => {
 const headerIsInnerPage = computed(() => {
   if (currentTab.value === 'home') {
     return selectedTopic.value !== null || homeSubView.value === 'topics'
+  } else if (currentTab.value === 'topics') {
+    return selectedTopic.value !== null
   } else if (currentTab.value === 'donate') {
     return selectedDonationCampaign.value !== null
   } else if (currentTab.value === 'profile') {
@@ -401,7 +401,7 @@ const headerIsInnerPage = computed(() => {
 })
 
 const headerInnerTitle = computed(() => {
-  if (currentTab.value === 'home') {
+  if (currentTab.value === 'home' || currentTab.value === 'topics') {
     if (selectedTopic.value === null && homeSubView.value === 'topics') {
       return languageStore.t('لیست تاپیک‌ها', 'Topics List')
     }
@@ -425,6 +425,9 @@ const headerTitle = computed(() => {
   if (currentTab.value === 'profile') {
     return languageStore.t('پروفایل', 'Profile')
   }
+  if (currentTab.value === 'topics') {
+    return languageStore.t('تاپیک‌ها', 'Topics')
+  }
   if (currentTab.value === 'donate') {
     return languageStore.t('پویش‌های اهدا', 'Donation Campaigns')
   }
@@ -445,6 +448,14 @@ const handleHeaderBack = () => {
     } else if (homeSubView.value === 'topics') {
       homeSubView.value = 'hub'
       searchQuery.value = ''
+    }
+  } else if (currentTab.value === 'topics') {
+    if (selectedTopic.value !== null) {
+      if (activeTopicSubView.value !== 'feed') {
+        activeTopicSubView.value = 'feed'
+      } else {
+        selectedTopic.value = null
+      }
     }
   } else if (currentTab.value === 'donate' && selectedDonationCampaign.value !== null) {
     donationsFeedRef.value?.closeDetail()
@@ -1421,17 +1432,17 @@ const toggleTheme = useToggle(isDark)
     
     <!-- Header - Sticky (Shown on main views, custom views render their own headers) -->
     <PlatformHeader 
-      v-if="currentTab === 'profile' || currentTab === 'donate' || currentTab === 'marketplace' || (currentTab === 'home' && selectedTopic === null) || (currentTab === 'home' && selectedTopic !== null && (activeTopicSubView === 'feed' || activeTopicSubView === 'faq'))"
+      v-if="currentTab === 'profile' || currentTab === 'donate' || currentTab === 'marketplace' || ((currentTab === 'home' || currentTab === 'topics') && selectedTopic === null) || ((currentTab === 'home' || currentTab === 'topics') && selectedTopic !== null && (activeTopicSubView === 'feed' || activeTopicSubView === 'faq'))"
       :is-inner-page="headerIsInnerPage" 
       :inner-title="headerInnerTitle" 
       :title="headerTitle" 
       :center-title="!headerIsInnerPage"
       :show-theme-toggle="!headerIsInnerPage"
       :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
-      :show-options-button="!!(currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
-      :show-faq-button="!!(currentTab === 'home' && selectedTopic !== null && activeTopicSubView === 'feed')"
+      :show-options-button="!!((currentTab === 'home' || currentTab === 'topics') && selectedTopic !== null && activeTopicSubView === 'feed')"
+      :show-faq-button="!!((currentTab === 'home' || currentTab === 'topics') && selectedTopic !== null && activeTopicSubView === 'feed')"
       :is-owner="isTopicCreator"
-      :show-search-button="(currentTab === 'home' && selectedTopic === null && homeSubView === 'topics') || (currentTab === 'donate' && selectedDonationCampaign === null)"
+      :show-search-button="(currentTab === 'home' && selectedTopic === null && homeSubView === 'topics') || (currentTab === 'topics' && selectedTopic === null) || (currentTab === 'donate' && selectedDonationCampaign === null)"
       v-model:search-query="searchQuery"
       @back="handleHeaderBack"
       @edit-topic="handleEditTopic"
@@ -1446,18 +1457,18 @@ const toggleTheme = useToggle(isDark)
     <!-- MAIN CONTENT AREA -->
     <div class="w-full flex-1">
       <transition name="fade-slide" mode="out-in">
-        <!-- TAB 1: HOME (TOPIC LIST & DETAILS & SUBVIEWS) -->
-        <div v-if="currentTab === 'home'" key="home" class="flex flex-col gap-5 w-full">
+        <!-- TAB 1: HOME & TOPICS (TOPIC LIST & DETAILS & SUBVIEWS) -->
+        <div v-if="currentTab === 'home' || currentTab === 'topics'" key="home" class="flex flex-col gap-5 w-full">
           
           <transition name="fade-slide" mode="out-in">
             <!-- Home Hub View: 3-Button Action Hub + Books & Donations Sliders -->
-            <div v-if="selectedTopic === null && homeSubView === 'hub'" key="hub" class="w-full">
+            <div v-if="selectedTopic === null && currentTab === 'home' && homeSubView === 'hub'" key="hub" class="w-full">
               <PlatformHomeHub
                 ref="platformHomeHubRef"
                 :topics-count="topics.length"
-                @open-topics="homeSubView = 'topics'"
+                @open-topics="currentTab = 'topics'; selectedTopic = null"
                 @open-donations="handleOpenDonationsTab"
-                @open-book-donations="handleOpenHomeBookDonate(null, 'donate')"
+                @open-book-donations="handleOpenShelfFromHome"
                 @open-shelf="handleOpenShelfFromHome"
                 @open-shelf-book="handleOpenShelfBookFromHome"
                 @open-campaign="handleOpenCampaignFromHome"
@@ -1827,14 +1838,26 @@ const toggleTheme = useToggle(isDark)
       <div class="pointer-events-auto">
         <PlatformNavigation
           v-model="currentTab"
-          @change="(tab) => { selectedDonationCampaign = null; pendingDonationId = null; donationDetailFromHome = false; if (tab === 'home') { homeSubView = 'hub'; searchQuery = '' } }"
+          @change="(tab) => {
+            selectedDonationCampaign = null;
+            pendingDonationId = null;
+            donationDetailFromHome = false;
+            if (tab === 'home') {
+              homeSubView = 'hub';
+              selectedTopic = null;
+              searchQuery = '';
+            } else if (tab === 'topics') {
+              selectedTopic = null;
+              searchQuery = '';
+            }
+          }"
         />
       </div>
     </div>
 
     <!-- Floating Plus Button to Create Topic (Bottom Right Corner - Raised above floating tab bar, aligned inside page grid) -->
     <Button 
-      v-if="currentTab === 'home' && selectedTopic === null && homeSubView === 'topics'"
+      v-if="(currentTab === 'topics' || (currentTab === 'home' && homeSubView === 'topics')) && selectedTopic === null"
       @click="handleCreateTopicClick()"
       class="fixed bottom-24 right-6 md:right-[calc(50vw-226px)] z-45 pointer-events-auto size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"

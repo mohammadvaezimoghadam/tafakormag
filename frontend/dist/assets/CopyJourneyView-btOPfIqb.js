@@ -1,0 +1,1 @@
+import{CopyJourneyView as e}from"./shop-KK2rhefk.js";export{e as default};

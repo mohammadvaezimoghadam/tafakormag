@@ -357,8 +357,10 @@ export interface UserSearchResult {
   id: number
   phone: string
   name: string
+  full_name?: string
   first_name?: string
   last_name?: string
+  avatar?: string | null
 }
 
 export interface AdminDonationReportItem {
