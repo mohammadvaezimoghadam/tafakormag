@@ -150,6 +150,25 @@ export async function cancelGift(transferId: number): Promise<{ status: string; 
   return data
 }
 
+export async function returnGiftToWarehouse(payload: {
+  short_code?: string
+  transfer_id?: number
+  quantity?: number
+  note?: string
+}): Promise<{
+  status: string
+  short_code: string
+  book_title: string
+  returned_quantity: number
+  remaining_gift_quantity: number
+  warehouse_stock: number
+  message: string
+}> {
+  const { data } = await api.post('/api/v1/marketplace/shelf/return-gift-to-warehouse/', payload)
+  return data
+}
+
+
 export async function searchCatalogBookTitles(query: string): Promise<ShelfBookTitle[]> {
   const q = query.trim()
   if (!q) return []

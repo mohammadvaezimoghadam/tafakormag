@@ -310,3 +310,11 @@ class ShelfAdminDonateInputSerializer(BaseInputSerializer):
     quantity = serializers.IntegerField(min_value=1, default=1, required=False)
     recipient_phone = serializers.CharField(max_length=20, required=True)
 
+
+class ShelfReturnDonationInputSerializer(BaseInputSerializer):
+    short_code = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
+    transfer_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+    quantity = serializers.IntegerField(min_value=1, default=1, required=False)
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+

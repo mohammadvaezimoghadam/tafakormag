@@ -889,6 +889,181 @@ class ShelfService:
         return {"transfer_id": transfer.id, "status": "cancelled"}
 
     @classmethod
+    @transaction.atomic
+    def return_donation_to_warehouse(
+        cls,
+        admin_user,
+        short_code: str = "",
+        transfer_id: Optional[int] = None,
+        quantity: int = 1,
+        note: str = "",
+    ) -> Dict[str, Any]:
+        """
+        Direct reversion/return of a donated book back to Tafakor warehouse.
+        Only staff/admin users are authorized.
+        Supports both PENDING_RECIPIENT and CONFIRMED transfers.
+        Allows specifying the exact number of copies (quantity) to return.
+        """
+        if not admin_user or not admin_user.is_authenticated or not getattr(admin_user, "is_staff", False):
+            raise ShelfBookError("فقط مدیران تفکر مجاز به بازگردانی کتاب به انبار هستند.")
+
+        requested_qty = cls._validate_quantity(quantity, min_value=1)
+
+        transfer = None
+        copy = None
+
+        if transfer_id:
+            transfer = (
+                Transfer.objects.select_for_update()
+                .select_related("copy__book_title", "from_user", "to_user")
+                .filter(id=transfer_id)
+                .first()
+            )
+            if transfer:
+                copy = transfer.copy
+
+        if not copy and short_code:
+            clean_code = CirculationService.clean_short_code(short_code)
+            copy = (
+                PhysicalCopy.objects.select_for_update()
+                .select_related("book_title", "current_holder")
+                .filter(short_code=clean_code)
+                .first()
+            )
+            if copy and not transfer:
+                transfer = (
+                    copy.transfers.select_for_update()
+                    .select_related("copy__book_title", "from_user", "to_user")
+                    .filter(status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT])
+                    .order_by("-created_at")
+                    .first()
+                )
+
+        if not copy:
+            raise ShelfBookError("نسخه فیزیکی کتاب جهت بازگردانی به انبار یافت نشد.")
+
+        book_title = copy.book_title
+
+        # Determine how many copies are actually available to return
+        # Case 1: Pending Recipient transfer
+        if transfer and transfer.status == Transfer.Status.PENDING_RECIPIENT:
+            max_returnable = transfer.quantity
+            return_qty = min(requested_qty, max_returnable)
+
+            # Release reserved quantity from admin shelf
+            admin_shelf = (
+                UserShelfBook.objects.select_for_update()
+                .filter(user=admin_user, book_title=book_title, is_gift=False)
+                .first()
+            )
+            if admin_shelf:
+                admin_shelf.reserved_quantity = max(0, admin_shelf.reserved_quantity - return_qty)
+                admin_shelf.save(update_fields=["reserved_quantity", "updated_at"])
+
+            if return_qty >= transfer.quantity:
+                transfer.status = Transfer.Status.CANCELLED
+                transfer.recipient_note = (note.strip() if note else "لغو و بازگردانی به انبار توسط ادمین")
+                transfer.save(update_fields=["status", "recipient_note", "updated_at"])
+            else:
+                transfer.quantity -= return_qty
+                transfer.save(update_fields=["quantity", "updated_at"])
+
+            copy.current_holder = admin_user
+            copy.status = PhysicalCopy.Status.ACTIVE
+            copy.save(update_fields=["current_holder", "status", "updated_at"])
+
+            wh_stock = admin_shelf.available_quantity if admin_shelf else return_qty
+            return {
+                "status": "success",
+                "short_code": copy.short_code,
+                "book_title": book_title.title,
+                "returned_quantity": return_qty,
+                "remaining_gift_quantity": max(0, transfer.quantity if transfer.status != Transfer.Status.CANCELLED else 0),
+                "warehouse_stock": wh_stock,
+                "message": f"{return_qty} جلد از کتاب «{book_title.title}» با موفقیت به انبار تفکر بازگردانده شد.",
+            }
+
+        # Case 2: Confirmed gift or copy held by recipient
+        recipient_user = None
+        if transfer and transfer.to_user:
+            recipient_user = transfer.to_user
+        elif copy.current_holder and copy.current_holder_id != admin_user.id:
+            recipient_user = copy.current_holder
+
+        recipient_shelf = None
+        if recipient_user:
+            recipient_shelf = (
+                UserShelfBook.objects.select_for_update()
+                .filter(user=recipient_user, book_title=book_title, is_gift=True)
+                .first()
+            )
+
+        max_returnable = recipient_shelf.quantity if recipient_shelf else (transfer.quantity if transfer else 1)
+        return_qty = min(requested_qty, max_returnable)
+        if return_qty < 1:
+            raise ShelfBookError("جلدی از این کتاب نزد گیرنده جهت بازگردانی موجود نیست.")
+
+        # Deduct from recipient shelf
+        if recipient_shelf:
+            recipient_shelf.quantity = max(0, recipient_shelf.quantity - return_qty)
+            if recipient_shelf.quantity == 0:
+                recipient_shelf.delete()
+            else:
+                recipient_shelf.save(update_fields=["quantity", "updated_at"])
+
+        # Add back to admin warehouse shelf
+        admin_shelf = (
+            UserShelfBook.objects.select_for_update()
+            .filter(user=admin_user, book_title=book_title, is_gift=False)
+            .first()
+        )
+        if admin_shelf:
+            admin_shelf.quantity += return_qty
+            if not admin_shelf.physical_copy:
+                admin_shelf.physical_copy = copy
+            admin_shelf.save(update_fields=["quantity", "physical_copy", "updated_at"])
+        else:
+            admin_shelf = UserShelfBook.objects.create(
+                user=admin_user,
+                book_title=book_title,
+                quantity=return_qty,
+                physical_copy=copy,
+                is_gift=False,
+                disposition=UserShelfBook.Disposition.CIRCULATING,
+                condition=copy.condition,
+            )
+
+        copy.current_holder = admin_user
+        copy.status = PhysicalCopy.Status.ACTIVE
+        copy.transfer_count += 1
+        copy.save(update_fields=["current_holder", "status", "transfer_count", "updated_at"])
+
+        # Audit transfer record
+        Transfer.objects.create(
+            copy=copy,
+            from_user=recipient_user or admin_user,
+            to_user=admin_user,
+            quantity=return_qty,
+            method=Transfer.Method.SCAN_CONFIRM,
+            status=Transfer.Status.CONFIRMED,
+            confirmed_at=timezone.now(),
+            recipient_note=note.strip() if note else f"بازگردانی به انبار تفکر توسط مدیریت ({admin_user.get_full_name() or getattr(admin_user, 'phone', '')})",
+        )
+
+        rem_gift_qty = recipient_shelf.quantity if (recipient_shelf and recipient_shelf.pk) else 0
+
+        return {
+            "status": "success",
+            "short_code": copy.short_code,
+            "book_title": book_title.title,
+            "returned_quantity": return_qty,
+            "remaining_gift_quantity": rem_gift_qty,
+            "warehouse_stock": admin_shelf.quantity,
+            "message": f"{return_qty} جلد از کتاب «{book_title.title}» با موفقیت به انبار تفکر بازگردانده شد.",
+        }
+
+
+    @classmethod
     def get_incoming_gifts(cls, user) -> List[Dict[str, Any]]:
         """
         Returns all incoming pending gifts for the authenticated user (by user_id or phone).
@@ -1100,6 +1275,7 @@ class ShelfService:
 
             return {
                 "transfer_id": transfer.id,
+                "short_code": copy.short_code,
                 "book_title": book_title_str,
                 "quantity": handover_qty,
                 "recipient_phone": norm_phone,
@@ -1131,6 +1307,7 @@ class ShelfService:
 
             return {
                 "transfer_id": transfer.id,
+                "short_code": copy.short_code,
                 "book_title": book_title_str,
                 "quantity": handover_qty,
                 "recipient_phone": norm_phone,

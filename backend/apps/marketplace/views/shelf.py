@@ -16,6 +16,7 @@ from ..serializers.shelf import (
     ShelfDonateToPhoneInputSerializer,
     ShelfGiftActionInputSerializer,
     ShelfPublishListingInputSerializer,
+    ShelfReturnDonationInputSerializer,
     ShelfStartCirculationInputSerializer,
 )
 from ..services.shelf_service import ShelfService
@@ -306,4 +307,27 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
             return Response(reports, status=status.HTTP_200_OK)
         except MarketplaceError as e:
             return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["post"], url_path="return-gift-to-warehouse")
+    def return_gift_to_warehouse(self, request):
+        """Staff reverts / returns donated books back to warehouse inventory."""
+        if not request.user or not getattr(request.user, "is_staff", False):
+            return Response(
+                {"detail": "فقط مدیران تفکر مجاز به بازگردانی کتاب به انبار هستند."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = ShelfReturnDonationInputSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = ShelfService.return_donation_to_warehouse(
+                admin_user=request.user,
+                short_code=serializer.validated_data.get("short_code", ""),
+                transfer_id=serializer.validated_data.get("transfer_id"),
+                quantity=serializer.validated_data.get("quantity", 1),
+                note=serializer.validated_data.get("note", ""),
+            )
+            return Response(result, status=status.HTTP_200_OK)
+        except MarketplaceError as e:
+            return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
+
 

@@ -8,13 +8,13 @@ try:
         try:
             return _orig_check_constraint_init(self, *args, **kwargs)
         except TypeError as err:
-            if "condition" in str(err) and "check" in kwargs:
+            err_msg = str(err)
+            if "unexpected keyword argument 'check'" in err_msg and "check" in kwargs:
                 kwargs["condition"] = kwargs.pop("check")
                 return _orig_check_constraint_init(self, *args, **kwargs)
-            elif "check" in str(err) or "unexpected keyword argument 'condition'" in str(err):
-                if "condition" in kwargs:
-                    kwargs["check"] = kwargs.pop("condition")
-                    return _orig_check_constraint_init(self, *args, **kwargs)
+            elif "unexpected keyword argument 'condition'" in err_msg and "condition" in kwargs:
+                kwargs["check"] = kwargs.pop("condition")
+                return _orig_check_constraint_init(self, *args, **kwargs)
             raise
 
     CheckConstraint.__init__ = _compat_check_constraint_init

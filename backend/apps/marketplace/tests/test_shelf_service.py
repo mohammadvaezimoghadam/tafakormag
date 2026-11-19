@@ -847,6 +847,88 @@ class UserShelfBookTests(TestCase):
         self.assertEqual(res_report.status_code, status.HTTP_200_OK)
         self.assertIsInstance(res_report.json(), list)
 
+    def test_admin_return_gift_to_warehouse(self):
+        """Tests returning a donated book back to warehouse inventory with custom quantity."""
+        admin = User.objects.create_user(phone="09120000005", password="password123")
+        admin.is_staff = True
+        admin.save()
+
+        # Non-staff receives 403
+        self.client.force_authenticate(user=self.owner)
+        res_forbidden = self.client.post(
+            "/api/v1/marketplace/shelf/return-gift-to-warehouse/",
+            {"short_code": "TK-NONEXIST"},
+            format="json",
+        )
+        self.assertEqual(res_forbidden.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Admin creates book with 5 copies in warehouse
+        self.client.force_authenticate(user=admin)
+        res_add = self.client.post(
+            "/api/v1/marketplace/shelf/",
+            {"title": "کتاب بازگشت تستی", "author": "نویسنده تست", "quantity": 5},
+            format="json",
+        )
+        self.assertEqual(res_add.status_code, status.HTTP_201_CREATED)
+        shelf_id = res_add.json()["id"]
+
+        # Admin donates 3 copies to self.owner
+        res_donate = self.client.post(
+            f"/api/v1/marketplace/shelf/{shelf_id}/admin-donate/",
+            {"quantity": 3, "recipient_phone": self.owner.phone},
+            format="json",
+        )
+        self.assertEqual(res_donate.status_code, status.HTTP_200_OK)
+        short_code = res_donate.json()["short_code"]
+        transfer_id = res_donate.json()["transfer_id"]
+
+        # Verify initial stocks: Admin has 2 left, recipient has 3 gifted
+        admin_shelf = self.client.get(f"/api/v1/marketplace/shelf/{shelf_id}/").json()
+        self.assertEqual(admin_shelf["quantity"], 2)
+
+        # Admin returns 1 copy back to warehouse
+        res_return_1 = self.client.post(
+            "/api/v1/marketplace/shelf/return-gift-to-warehouse/",
+            {"short_code": short_code, "quantity": 1},
+            format="json",
+        )
+        self.assertEqual(res_return_1.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_return_1.json()["returned_quantity"], 1)
+        self.assertEqual(res_return_1.json()["remaining_gift_quantity"], 2)
+
+        # Verify stocks after returning 1 copy: Admin has 3, recipient has 2
+        admin_shelf_after_1 = self.client.get(f"/api/v1/marketplace/shelf/{shelf_id}/").json()
+        self.assertEqual(admin_shelf_after_1["quantity"], 3)
+
+        self.client.force_authenticate(user=self.owner)
+        owner_shelf = self.client.get("/api/v1/marketplace/shelf/").json()
+        owner_books = owner_shelf if isinstance(owner_shelf, list) else owner_shelf.get("results", [])
+        owner_book = next((b for b in owner_books if b["book_title"]["title"] == "کتاب بازگشت تستی"), None)
+        self.assertIsNotNone(owner_book)
+        self.assertEqual(owner_book["quantity"], 2)
+
+        # Admin returns remaining 2 copies
+        self.client.force_authenticate(user=admin)
+        res_return_2 = self.client.post(
+            "/api/v1/marketplace/shelf/return-gift-to-warehouse/",
+            {"short_code": short_code, "transfer_id": transfer_id, "quantity": 2},
+            format="json",
+        )
+        self.assertEqual(res_return_2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_return_2.json()["returned_quantity"], 2)
+        self.assertEqual(res_return_2.json()["remaining_gift_quantity"], 0)
+
+        # Admin has all 5 copies back in warehouse
+        admin_shelf_final = self.client.get(f"/api/v1/marketplace/shelf/{shelf_id}/").json()
+        self.assertEqual(admin_shelf_final["quantity"], 5)
+
+        # Recipient shelf book is removed (0 copies)
+        self.client.force_authenticate(user=self.owner)
+        owner_shelf_final = self.client.get("/api/v1/marketplace/shelf/").json()
+        owner_books_final = owner_shelf_final if isinstance(owner_shelf_final, list) else owner_shelf_final.get("results", [])
+        self.assertFalse(any(b["book_title"]["title"] == "کتاب بازگشت تستی" for b in owner_books_final))
+
+
 
 
 
