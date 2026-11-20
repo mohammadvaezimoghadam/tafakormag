@@ -1000,13 +1000,21 @@ class ShelfService:
         if return_qty < 1:
             raise ShelfBookError("جلدی از این کتاب نزد گیرنده جهت بازگردانی موجود نیست.")
 
-        # Deduct from recipient shelf
+        # Deduct from recipient shelf and release OneToOne physical_copy link
         if recipient_shelf:
+            recipient_shelf.physical_copy = None
             recipient_shelf.quantity = max(0, recipient_shelf.quantity - return_qty)
             if recipient_shelf.quantity == 0:
+                recipient_shelf.save(update_fields=["physical_copy", "updated_at"])
                 recipient_shelf.delete()
             else:
-                recipient_shelf.save(update_fields=["quantity", "updated_at"])
+                # Recipient still keeps remaining copies; allocate their own active copy
+                recipient_shelf.physical_copy = CirculationService.register_physical_copy(
+                    user=recipient_user,
+                    book_title_id=book_title.id,
+                    condition=copy.condition or PhysicalCopy.Condition.NEW,
+                )
+                recipient_shelf.save(update_fields=["quantity", "physical_copy", "updated_at"])
 
         # Add back to admin warehouse shelf
         admin_shelf = (
