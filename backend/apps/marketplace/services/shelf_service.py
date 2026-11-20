@@ -915,7 +915,6 @@ class ShelfService:
         if transfer_id:
             transfer = (
                 Transfer.objects.select_for_update()
-                .select_related("copy__book_title", "from_user", "to_user")
                 .filter(id=transfer_id)
                 .first()
             )
@@ -926,14 +925,12 @@ class ShelfService:
             clean_code = CirculationService.clean_short_code(short_code)
             copy = (
                 PhysicalCopy.objects.select_for_update()
-                .select_related("book_title", "current_holder")
                 .filter(short_code=clean_code)
                 .first()
             )
             if copy and not transfer:
                 transfer = (
                     copy.transfers.select_for_update()
-                    .select_related("copy__book_title", "from_user", "to_user")
                     .filter(status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT])
                     .order_by("-created_at")
                     .first()

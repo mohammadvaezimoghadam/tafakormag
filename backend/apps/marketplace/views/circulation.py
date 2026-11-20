@@ -173,8 +173,24 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
             detail_data["is_in_warehouse"] = bool(admin_shelf and admin_shelf.available_quantity > 0 and not is_gifted_to_other)
 
             if is_gifted_to_other:
+                # Resolve recipient user and their actual current gifted shelf stock
+                recip_user = (last_transfer.to_user if last_transfer else None) or (copy.current_holder if copy.current_holder_id != request.user.id else None)
+                recip_shelf = None
+                if recip_user:
+                    recip_shelf = UserShelfBook.objects.filter(
+                        user=recip_user,
+                        book_title=copy.book_title,
+                        is_gift=True,
+                    ).first()
+
+                gift_qty = 1
+                if recip_shelf and recip_shelf.quantity > 0:
+                    gift_qty = recip_shelf.quantity
+                elif last_transfer and last_transfer.quantity:
+                    gift_qty = last_transfer.quantity
+
                 if last_transfer:
-                    to_user = last_transfer.to_user
+                    to_user = last_transfer.to_user or recip_user
                     from_user = last_transfer.from_user
                     recip_name = to_user.get_full_name() if to_user else ""
                     if not recip_name and to_user:
@@ -191,7 +207,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
                         "recipient_phone": recip_phone or "",
                         "donor_name": donor_name or "ادمین تفکر",
                         "donated_at": (last_transfer.confirmed_at or last_transfer.created_at).isoformat(),
-                        "quantity": last_transfer.quantity,
+                        "quantity": gift_qty,
                     }
                 elif copy.current_holder:
                     holder = copy.current_holder
@@ -204,7 +220,7 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
                         "recipient_phone": holder.phone or "",
                         "donor_name": "ادمین تفکر",
                         "donated_at": copy.updated_at.isoformat() if copy.updated_at else copy.created_at.isoformat(),
-                        "quantity": 1,
+                        "quantity": gift_qty,
                     }
                 else:
                     detail_data["donation_info"] = None
