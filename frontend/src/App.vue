@@ -83,18 +83,6 @@ const handleLoginStateChange = (state: string) => {
       class="min-h-screen bg-background text-foreground font-sans transition-colors duration-300 flex flex-col relative" 
       :dir="languageStore.dir"
     >
-      <!-- Desktop Floating Dark/Light Mode Switcher (Visible on Laptop/Desktop >= md, at Top-Left, Bigger) -->
-      <button
-        type="button"
-        @click="toggleDark()"
-        class="hidden md:flex fixed top-5 left-5 z-50 size-11 rounded-2xl bg-card/85 dark:bg-card/75 backdrop-blur-md border border-border/70 shadow-md hover:shadow-lg text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all duration-300 items-center justify-center cursor-pointer outline-none select-none"
-        :title="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-        :aria-label="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-      >
-        <SunIcon v-if="isDark" class="size-6 text-amber-400 hover:rotate-45 transition-transform duration-300" />
-        <MoonIcon v-else class="size-6 text-foreground/80 hover:-rotate-12 transition-transform duration-300" />
-      </button>
-
       <!-- Main Application Container -->
       <main class="w-full flex-1 flex flex-col items-center p-4 sm:p-6">
         <router-view v-slot="{ Component }">

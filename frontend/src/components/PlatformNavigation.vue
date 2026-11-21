@@ -137,35 +137,30 @@ const navItems = [
       ]"
       :dir="languageStore.dir"
     >
-      <!-- Top Section: Brand Typography (تفکر) - Fixed position, unclipped throughout transitions -->
+      <!-- Top Section: Brand Typography (تفکر) - Stationary in place, unclipped throughout transitions -->
       <div 
         @click="selectTab('home')"
-        class="h-12 flex items-center rounded-xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none overflow-visible"
-        :class="isHovered ? 'justify-start px-2.5' : 'justify-center px-0'"
+        class="h-12 w-full flex items-center justify-start rounded-xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none overflow-hidden"
         :title="languageStore.t('صفحه اصلی تفکر', 'Tafakor Home')"
       >
-        <span 
-          class="font-black text-2xl text-foreground whitespace-nowrap overflow-visible"
-          :class="isHovered ? 'opacity-100' : 'text-xl'"
-        >
-          {{ languageStore.t('تفکر', 'Tafakor') }}
-        </span>
+        <div class="w-12 h-12 flex items-center justify-center shrink-0">
+          <span class="font-black text-2xl text-foreground select-none">
+            {{ languageStore.t('تفکر', 'Tafakor') }}
+          </span>
+        </div>
       </div>
 
-      <!-- Navigation Links (Centered vertically like Instagram) -->
+      <!-- Navigation Links (Centered vertically like Instagram, 100% stationary icons with animated text) -->
       <nav class="flex-1 flex flex-col justify-center gap-3 w-full my-auto">
         <button
           v-for="item in navItems"
           :key="'desktop-' + item.id"
           @click="selectTab(item.id)"
-          :class="[
-            'w-full h-12 rounded-xl flex items-center transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden',
-            isHovered ? 'justify-start px-3.5 gap-4' : 'justify-center px-0 gap-0'
-          ]"
+          class="w-full h-12 rounded-xl flex items-center justify-start p-0 transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden"
           :title="languageStore.t(item.labelFa, item.labelEn)"
         >
-          <!-- Nav Icon (Stationary in place, standard size-6 / 24px) -->
-          <div class="size-6 flex items-center justify-center shrink-0">
+          <!-- Nav Icon (Permanently fixed 48px slot, strictly stationary with zero sub-pixel shift) -->
+          <div class="w-12 h-12 flex items-center justify-center shrink-0">
             <component 
               :is="item.icon" 
               class="size-6 shrink-0 transition-colors duration-200"
@@ -177,11 +172,11 @@ const navItems = [
             />
           </div>
 
-          <!-- Nav Label (Smooth slide/fade) -->
+          <!-- Nav Label (Smooth slide/fade animation while icon stays completely still) -->
           <span 
-            class="inline-block whitespace-nowrap text-base transition-all duration-300 overflow-hidden"
+            class="inline-block whitespace-nowrap text-base transition-all duration-300 overflow-hidden pe-3"
             :class="[
-              isHovered ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none',
+              isHovered ? 'max-w-[160px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none',
               activeTab === item.id 
                 ? 'font-bold text-foreground' 
                 : 'font-normal text-muted-foreground'
@@ -192,15 +187,12 @@ const navItems = [
         </button>
       </nav>
 
-      <!-- Bottom Section: Dark/Light Mode Toggle Button (Icon only, at the bottom) -->
-      <div 
-        class="mt-auto w-full pt-2 flex items-center"
-        :class="isHovered ? 'justify-start px-1' : 'justify-center'"
-      >
+      <!-- Bottom Section: Dark/Light Mode Toggle Button (Icon only, 100% stationary at the bottom) -->
+      <div class="mt-auto w-full pt-2 flex items-center justify-start">
         <button
           type="button"
           @click="emit('toggle-theme')"
-          class="size-11 rounded-xl flex items-center justify-center hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer active:scale-95 outline-none"
+          class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer active:scale-95 outline-none"
           :title="props.dark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
           :aria-label="props.dark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
         >
