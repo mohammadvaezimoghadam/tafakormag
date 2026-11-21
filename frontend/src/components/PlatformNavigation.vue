@@ -233,7 +233,7 @@ const navItems = [
           :title="languageStore.t('پروفایل کاربری', 'User Profile')"
         >
           <div class="size-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0 overflow-hidden">
-            <span v-if="userStore.user?.username">{{ userStore.user.username.slice(0, 2).toUpperCase() }}</span>
+            <span v-if="userStore.user?.name">{{ userStore.user.name.slice(0, 2) }}</span>
             <UserIcon v-else class="size-4" />
           </div>
 
@@ -242,7 +242,7 @@ const navItems = [
             :class="isHovered ? 'max-w-[130px] opacity-100 ms-2.5' : 'max-w-0 opacity-0 ms-0 pointer-events-none'"
           >
             <span class="text-xs font-bold text-foreground truncate">
-              {{ userStore.user?.phone_number || userStore.user?.username || languageStore.t('حساب کاربری', 'Account') }}
+              {{ userStore.user?.name || userStore.user?.phone || languageStore.t('حساب کاربری', 'Account') }}
             </span>
             <span class="text-[10px] text-muted-foreground truncate">
               {{ userStore.isAuthenticated ? languageStore.t('مشاهده پروفایل', 'View Profile') : languageStore.t('ورود به حساب', 'Sign In') }}
