@@ -126,13 +126,16 @@ const handleCreateTopic = () => {
       </template>
     </div>
 
-    <!-- Floating Action Button (FAB) to Create Topic (iOS 18 pill/fab style) -->
+    <!-- Floating Action Button (FAB) to Create Topic (Responsive: Minimal Circle on Mobile, Extended Action Button on Tablet/Desktop) -->
     <Button
       @click="handleCreateTopic"
-      class="fixed bottom-24 right-6 md:right-[max(1.5rem,calc(50vw-32rem+1.5rem))] z-45 size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg outline-none cursor-pointer p-0"
+      class="fixed bottom-24 rtl:right-6 ltr:left-6 md:bottom-8 rtl:md:right-[calc(50vw-240px)] ltr:md:left-[calc(50vw-240px)] z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
     >
-      <PlusIcon class="size-6" />
+      <PlusIcon class="size-5 shrink-0" />
+      <span class="hidden sm:inline-block font-bold text-sm whitespace-nowrap tracking-wide">
+        {{ languageStore.t('ایجاد تاپیک جدید', 'Create New Topic') }}
+      </span>
     </Button>
   </div>
 </template>

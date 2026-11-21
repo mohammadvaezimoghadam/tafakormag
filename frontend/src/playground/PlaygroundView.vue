@@ -3797,6 +3797,7 @@ const handleComposerProposalCancel = () => {
 
                   <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-auto">
                     <PlatformNavigation 
+                      mode="inline"
                       v-model="simulatorActiveTab"
                       @change="handleNavChange"
                     />
