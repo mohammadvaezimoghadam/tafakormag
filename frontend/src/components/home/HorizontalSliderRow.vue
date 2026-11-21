@@ -133,9 +133,9 @@ onBeforeUnmount(() => {
       type="button"
       @click="scrollHorizontal(1)"
       :aria-label="languageStore.t('اسکرول به راست', 'Scroll right')"
-      class="absolute top-1/2 -translate-y-1/2 right-1.5 z-10 size-8 rounded-full bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border/70 text-foreground shadow-md hover:bg-primary hover:text-primary-foreground hover:border-primary active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+      class="absolute top-1/2 -translate-y-1/2 right-1.5 z-10 size-8 rounded-full bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border/70 text-foreground shadow-md hover:bg-muted dark:hover:bg-accent hover:text-foreground hover:border-border active:scale-95 transition-all flex items-center justify-center cursor-pointer"
     >
-      <ChevronRightIcon class="size-4" />
+      <ChevronRightIcon class="size-4 shrink-0 text-foreground" />
     </button>
 
     <button
@@ -143,9 +143,9 @@ onBeforeUnmount(() => {
       type="button"
       @click="scrollHorizontal(-1)"
       :aria-label="languageStore.t('اسکرول به چپ', 'Scroll left')"
-      class="absolute top-1/2 -translate-y-1/2 left-1.5 z-10 size-8 rounded-full bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border/70 text-foreground shadow-md hover:bg-primary hover:text-primary-foreground hover:border-primary active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+      class="absolute top-1/2 -translate-y-1/2 left-1.5 z-10 size-8 rounded-full bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border/70 text-foreground shadow-md hover:bg-muted dark:hover:bg-accent hover:text-foreground hover:border-border active:scale-95 transition-all flex items-center justify-center cursor-pointer"
     >
-      <ChevronLeftIcon class="size-4" />
+      <ChevronLeftIcon class="size-4 shrink-0 text-foreground" />
     </button>
   </div>
 </template>
