@@ -186,13 +186,22 @@ class ShelfBookSerializer(BaseModelSerializer):
         return None
 
     def get_can_donate(self, obj) -> bool:
-        return False
+        request = self.context.get("request")
+        if not request or not getattr(request.user, "is_staff", False):
+            return False
+        return obj.can_donate
 
     def get_can_edit(self, obj) -> bool:
-        return False
+        request = self.context.get("request")
+        if not request or not getattr(request.user, "is_staff", False):
+            return False
+        return obj.can_edit
 
     def get_can_delete(self, obj) -> bool:
-        return False
+        request = self.context.get("request")
+        if not request or not getattr(request.user, "is_staff", False):
+            return False
+        return obj.can_delete
 
 
 class ShelfBookCreateInputSerializer(BaseInputSerializer):

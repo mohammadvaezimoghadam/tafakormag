@@ -1,0 +1,1 @@
+import{QuranHomeView as e}from"./quran-DZCgzKds.js";export{e as default};

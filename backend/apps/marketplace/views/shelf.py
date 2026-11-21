@@ -86,7 +86,15 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return qs.none()
 
-        qs = qs.filter(user=user, is_gift=True)
+        is_gift_param = self.request.query_params.get("is_gift")
+        if is_gift_param is not None:
+            val = is_gift_param.lower() in ("true", "1", "yes")
+            qs = qs.filter(user=user, is_gift=val)
+        elif not getattr(user, "is_staff", False):
+            qs = qs.filter(user=user, is_gift=True)
+        else:
+            qs = qs.filter(user=user)
+
         if self.action == "list":
             qs = _apply_shelf_search(qs, self.request.query_params.get("search", ""))
             for param, field in (
@@ -161,7 +169,20 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request):
         """Returns aggregate personal bookshelf counters in a single SQL query."""
-        stats = UserShelfBook.objects.filter(user=request.user, is_gift=True).aggregate(
+        user = request.user
+        if not user or not user.is_authenticated:
+            return Response({"total": 0, "total_copies": 0})
+
+        is_gift_param = request.query_params.get("is_gift")
+        if is_gift_param is not None:
+            val = is_gift_param.lower() in ("true", "1", "yes")
+            shelf_qs = UserShelfBook.objects.filter(user=user, is_gift=val)
+        elif not getattr(user, "is_staff", False):
+            shelf_qs = UserShelfBook.objects.filter(user=user, is_gift=True)
+        else:
+            shelf_qs = UserShelfBook.objects.filter(user=user)
+
+        stats = shelf_qs.aggregate(
             total=Count("id"),
             total_copies=Coalesce(Sum("quantity"), 0),
         )

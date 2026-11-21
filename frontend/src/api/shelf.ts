@@ -34,7 +34,9 @@ function unwrapList<T>(data: T[] | { results?: T[] }): T[] {
 }
 
 export async function listMyShelfBooks(filters: ShelfListFilters = {}): Promise<ShelfBook[]> {
-  const params: Record<string, string> = {}
+  const params: Record<string, string> = {
+    is_gift: 'true',
+  }
   if (filters.search?.trim()) params.search = filters.search.trim()
   if (filters.reading_status) params.reading_status = filters.reading_status
   if (filters.disposition) params.disposition = filters.disposition
@@ -45,7 +47,9 @@ export async function listMyShelfBooks(filters: ShelfListFilters = {}): Promise<
 }
 
 export async function getMyShelfSummary(): Promise<ShelfSummary> {
-  const { data } = await api.get<ShelfSummary>('/api/v1/marketplace/shelf/summary/')
+  const { data } = await api.get<ShelfSummary>('/api/v1/marketplace/shelf/summary/', {
+    params: { is_gift: 'true' },
+  })
   return data
 }
 
