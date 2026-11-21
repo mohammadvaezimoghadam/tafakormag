@@ -208,7 +208,7 @@ const formatHistoryTime = (rawTime?: string): string => {
 
                 <!-- Approver Badge (if available) -->
                 <div v-if="getItemApprover(item)" class="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-lg border border-border/30">
-                  <UserCheckIcon class="size-3 text-emerald-500 shrink-0" />
+                  <UserCheckIcon class="size-3 text-primary shrink-0" />
                   <span>{{ languageStore.t('تاییدکننده:', 'Approved by:') }}</span>
                   <span class="font-bold text-foreground">{{ getItemApprover(item)?.name }}</span>
                 </div>

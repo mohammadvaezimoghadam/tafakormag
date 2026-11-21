@@ -131,9 +131,9 @@ const handleSubmit = async () => {
         <!-- Success Alert -->
         <div 
           v-if="isSuccess" 
-          class="p-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs flex items-center gap-2 font-medium"
+          class="p-2.5 bg-primary/10 border border-primary/20 text-primary rounded-xl text-xs flex items-center gap-2 font-medium"
         >
-          <CheckCircle2Icon class="size-4 shrink-0 text-emerald-500" />
+          <CheckCircle2Icon class="size-4 shrink-0 text-primary" />
           <span>{{ languageStore.t('پیشنهاد ویرایش با موفقیت ثبت شد و به صف ویراستاری رفت.', 'Proposal submitted successfully to review queue.') }}</span>
         </div>
 

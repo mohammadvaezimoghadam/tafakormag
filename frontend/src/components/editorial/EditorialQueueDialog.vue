@@ -101,7 +101,7 @@ const handleReject = (proposal: PostEditProposal) => {
           v-if="pendingProposals.length === 0" 
           class="flex flex-col items-center justify-center py-10 px-4 text-center my-auto"
         >
-          <div class="size-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-3 shadow-xs">
+          <div class="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3 shadow-xs">
             <CheckCircle2Icon class="size-6" />
           </div>
           <h4 class="text-xs sm:text-sm font-bold text-foreground mb-1">

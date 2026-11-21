@@ -146,10 +146,10 @@ const handleToggleNotification = () => {
                 'text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs leading-tight',
                 appIsComingSoon 
                   ? 'border-border/80 bg-background/80 text-muted-foreground'
-                  : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : 'border-primary/40 bg-primary/10 text-primary'
               ]"
             >
-              <CheckIcon v-if="appIsInstalled && !appIsComingSoon" class="size-2.5 me-0.5 shrink-0 inline-block text-emerald-500" />
+              <CheckIcon v-if="appIsInstalled && !appIsComingSoon" class="size-2.5 me-0.5 shrink-0 inline-block text-primary" />
               <span>{{ appIsComingSoon ? languageStore.t('به‌زودی', 'Coming Soon') : (appIsInstalled ? languageStore.t('نصب‌شده', 'Installed') : languageStore.t('رسمی', 'Official')) }}</span>
             </Badge>
 
@@ -345,7 +345,7 @@ const handleToggleNotification = () => {
             :variant="isNotificationSubscribed ? 'secondary' : 'default'"
             class="w-full rounded-xl text-xs font-bold h-9 shadow-xs active:scale-95 transition-all cursor-pointer gap-1.5"
           >
-            <CheckIcon v-if="isNotificationSubscribed" class="size-3.5 text-emerald-500 shrink-0" />
+            <CheckIcon v-if="isNotificationSubscribed" class="size-3.5 text-primary shrink-0" />
             <BellIcon v-else class="size-3.5 shrink-0" />
             <span>{{ isNotificationSubscribed ? languageStore.t('اطلاع‌رسانی برای شما فعال شد', 'Subscribed to Release Alerts') : languageStore.t('اطلاع‌رسانی هنگام انتشار', 'Notify Me on Release') }}</span>
           </Button>

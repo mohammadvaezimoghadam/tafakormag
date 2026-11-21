@@ -199,7 +199,7 @@ const handleActionClick = () => {
             <!-- Completed Check -->
             <CheckCircle2Icon
               v-else-if="stage.status === 'completed'"
-              class="size-4.5 text-green-500 fill-green-500/10"
+              class="size-4.5 text-primary fill-primary/10"
             />
             <!-- Failed X icon -->
             <XCircleIcon
@@ -219,7 +219,7 @@ const handleActionClick = () => {
               class="text-xs font-bold transition-colors duration-200"
               :class="{
                 'text-foreground font-extrabold': stage.status === 'processing',
-                'text-green-600': stage.status === 'completed',
+                'text-primary font-semibold': stage.status === 'completed',
                 'text-destructive': stage.status === 'failed',
                 'text-muted-foreground/60': stage.status === 'pending'
               }"

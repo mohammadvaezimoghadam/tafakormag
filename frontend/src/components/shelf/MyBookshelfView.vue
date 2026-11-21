@@ -81,8 +81,8 @@ const summary = ref<ShelfSummary>({
 const isLoading = ref(true)
 const searchQuery = ref('')
 
-type ShelfTab = 'all' | 'gifts' | 'reading' | 'finished'
-const activeTab = ref<ShelfTab>('all')
+type ShelfTab = 'gifts' | 'reading' | 'finished'
+const activeTab = ref<ShelfTab>('gifts')
 
 const isAddEditDialogOpen = ref(false)
 const editingBook = ref<ShelfBook | null>(null)
@@ -106,14 +106,14 @@ const finishedCount = computed(() => books.value.filter((b) => b.reading_status 
 
 const filteredBooks = computed(() => {
   let list = books.value
-  if (activeTab.value === 'gifts') {
-    list = list.filter((b) => b.is_gift === true)
-  } else if (activeTab.value === 'reading') {
-    list = list.filter((b) => b.reading_status === 'reading')
+  if (activeTab.value === 'reading') {
+    return list.filter((b) => b.reading_status === 'reading')
   } else if (activeTab.value === 'finished') {
-    list = list.filter((b) => b.reading_status === 'finished')
+    return list.filter((b) => b.reading_status === 'finished')
   }
-  return list
+  // Default 'gifts': show all gifted books (or all shelf books if none explicitly marked)
+  const gifted = list.filter((b) => b.is_gift === true)
+  return gifted.length > 0 ? gifted : list
 })
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
@@ -422,42 +422,31 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
     </Card>
 
     <!-- Client Filter Tabs -->
-    <div class="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-center mx-auto text-xs flex-wrap">
+    <div
+      v-if="readingCount > 0 || finishedCount > 0"
+      class="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-center mx-auto text-xs flex-wrap"
+    >
       <button
         type="button"
-        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-        :class="activeTab === 'all' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-        @click="activeTab = 'all'"
-      >
-        <BookOpenIcon class="size-3.5" />
-        <span>{{ languageStore.t('همه کتاب‌ها', 'All') }}</span>
-        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
-          {{ languageStore.n(books.length) }}
-        </Badge>
-      </button>
-
-      <button
-        v-if="giftsCount > 0"
-        type="button"
-        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
         :class="activeTab === 'gifts' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
         @click="activeTab = 'gifts'"
       >
         <SparklesIcon class="size-3.5 text-primary" />
-        <span>{{ languageStore.t('هدایای دریافتی', 'Gifts') }}</span>
+        <span>{{ languageStore.t('کتاب‌های اهدایی', 'Gifted Books') }}</span>
         <Badge class="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-4 rounded-full">
-          {{ languageStore.n(giftsCount) }}
+          {{ languageStore.n(giftsCount || books.length) }}
         </Badge>
       </button>
 
       <button
         v-if="readingCount > 0"
         type="button"
-        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
         :class="activeTab === 'reading' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
         @click="activeTab = 'reading'"
       >
-        <BookOpenIcon class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+        <BookOpenIcon class="size-3.5 text-primary" />
         <span>{{ languageStore.t('در حال مطالعه', 'Reading') }}</span>
         <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
           {{ languageStore.n(readingCount) }}
@@ -467,11 +456,11 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
       <button
         v-if="finishedCount > 0"
         type="button"
-        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
         :class="activeTab === 'finished' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
         @click="activeTab = 'finished'"
       >
-        <BookCheckIcon class="size-3.5 text-blue-600 dark:text-blue-400" />
+        <BookCheckIcon class="size-3.5 text-primary" />
         <span>{{ languageStore.t('خوانده شده', 'Finished') }}</span>
         <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
           {{ languageStore.n(finishedCount) }}
@@ -594,13 +583,13 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
           </div>
           <div
             v-else-if="book.reading_status === 'reading'"
-            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9.5px] font-bold shadow-2xs"
+            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[9.5px] font-bold shadow-2xs"
           >
             <span>{{ languageStore.t('در حال مطالعه', 'Reading') }}</span>
           </div>
           <div
             v-else-if="book.reading_status === 'finished'"
-            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-blue-600 text-white text-[9.5px] font-bold shadow-2xs"
+            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground border border-border/60 text-[9.5px] font-bold shadow-2xs"
           >
             <span>{{ languageStore.t('خوانده شده', 'Finished') }}</span>
           </div>

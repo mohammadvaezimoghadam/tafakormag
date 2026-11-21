@@ -555,7 +555,7 @@ const closeDialog = () => {
             <Button
               v-if="activeTab === 'phone'"
               type="button"
-              class="rounded-2xl bg-black text-white hover:bg-neutral-800 dark:bg-emerald-600 dark:text-white font-bold"
+              class="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
               :disabled="isSubmitting || !recipientPhone.trim()"
               @click="handlePhoneSubmit"
             >
@@ -566,7 +566,7 @@ const closeDialog = () => {
             <Button
               v-else
               type="button"
-              class="rounded-2xl bg-black text-white hover:bg-neutral-800 dark:bg-primary dark:text-primary-foreground font-bold"
+              class="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
               :disabled="isSubmitting || (!enableInPerson && !enablePostal)"
               @click="handleMarketplaceSubmit"
             >
