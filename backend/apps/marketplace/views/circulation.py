@@ -252,11 +252,6 @@ class PhysicalCopyViewSet(viewsets.GenericViewSet):
         """
         Registers a new physical book into circulation with a generated short_code.
         """
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به ثبت کتاب در انبار هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         serializer = RegisterPhysicalCopyInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 

@@ -90,8 +90,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
         if is_gift_param is not None:
             val = is_gift_param.lower() in ("true", "1", "yes")
             qs = qs.filter(user=user, is_gift=val)
-        elif not getattr(user, "is_staff", False):
-            qs = qs.filter(user=user, is_gift=True)
         else:
             qs = qs.filter(user=user)
 
@@ -111,11 +109,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
         return ShelfBookSerializer
 
     def create(self, request, *args, **kwargs):
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به افزودن کتاب به قفسه هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         serializer = ShelfBookCreateInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         try:
@@ -129,11 +122,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
             return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به ویرایش کتاب هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = ShelfBookUpdateInputSerializer(
@@ -154,11 +142,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
             return Response({"detail": e.message}, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به حذف کتاب از قفسه هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         instance = self.get_object()
         try:
             ShelfService.remove_book(user=request.user, shelf_book=instance)
@@ -177,25 +160,23 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
         if is_gift_param is not None:
             val = is_gift_param.lower() in ("true", "1", "yes")
             shelf_qs = UserShelfBook.objects.filter(user=user, is_gift=val)
-        elif not getattr(user, "is_staff", False):
-            shelf_qs = UserShelfBook.objects.filter(user=user, is_gift=True)
         else:
             shelf_qs = UserShelfBook.objects.filter(user=user)
 
         stats = shelf_qs.aggregate(
             total=Count("id"),
             total_copies=Coalesce(Sum("quantity"), 0),
+            reading_count=Count("id", filter=Q(reading_status=UserShelfBook.ReadingStatus.READING)),
+            finished_count=Count("id", filter=Q(reading_status=UserShelfBook.ReadingStatus.FINISHED)),
+            want_to_read_count=Count("id", filter=Q(reading_status=UserShelfBook.ReadingStatus.WANT_TO_READ)),
+            keeping_count=Count("id", filter=Q(disposition=UserShelfBook.Disposition.KEEPING)),
+            offering_count=Count("id", filter=~Q(disposition=UserShelfBook.Disposition.KEEPING)),
         )
         return Response(stats)
 
     @action(detail=True, methods=["post"], url_path="start-circulation")
     def start_circulation(self, request, pk=None):
         """Registers or reactivates QR circulation (TK-XXXX) for a physical shelf book."""
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به شروع گردش کتاب هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         instance = self.get_object()
         serializer = ShelfStartCirculationInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -214,11 +195,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="publish-listing")
     def publish_listing(self, request, pk=None):
         """Publishes a shelf book as a donation or sale listing in the marketplace catalog."""
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به انتشار آگهی کتاب هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         instance = self.get_object()
         serializer = ShelfPublishListingInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -236,11 +212,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="withdraw-offering")
     def withdraw_offering(self, request, pk=None):
         """Returns a shelf book back to purely personal keeping status."""
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به تغییر وضعیت عرضه کتاب هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         instance = self.get_object()
         try:
             updated = ShelfService.withdraw_offering(user=request.user, shelf_book=instance)
@@ -252,11 +223,6 @@ class UserShelfBookViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="donate-to-phone")
     def donate_to_phone(self, request, pk=None):
         """Donates copies of a shelf book to a phone number (with optional async SMS)."""
-        if not request.user or not getattr(request.user, "is_staff", False):
-            return Response(
-                {"detail": "فقط مدیران تفکر مجاز به اهدای کتاب هستند."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         instance = self.get_object()
         serializer = ShelfDonateToPhoneInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)

@@ -148,12 +148,7 @@ class ShelfBookSerializer(BaseModelSerializer):
 
     def get_physical_copy_summary(self, obj):
         copy = obj.physical_copy
-        if not copy:
-            copy = obj.book_title.physical_copies.filter(
-                current_holder_id=obj.user_id,
-                status="active"
-            ).first()
-        if not copy and obj.book_format == "physical" and obj.available_quantity > 0:
+        if not copy and getattr(obj.user, "is_staff", False) and obj.book_format == "physical" and obj.available_quantity > 0:
             from ..services.circulation_service import CirculationService
             try:
                 copy = CirculationService.register_physical_copy(
@@ -186,21 +181,12 @@ class ShelfBookSerializer(BaseModelSerializer):
         return None
 
     def get_can_donate(self, obj) -> bool:
-        request = self.context.get("request")
-        if not request or not getattr(request.user, "is_staff", False):
-            return False
         return obj.can_donate
 
     def get_can_edit(self, obj) -> bool:
-        request = self.context.get("request")
-        if not request or not getattr(request.user, "is_staff", False):
-            return False
         return obj.can_edit
 
     def get_can_delete(self, obj) -> bool:
-        request = self.context.get("request")
-        if not request or not getattr(request.user, "is_staff", False):
-            return False
         return obj.can_delete
 
 
