@@ -7,7 +7,7 @@ export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '') {
     return import.meta.env.VITE_API_BASE_URL
   }
-  return import.meta.env.DEV ? 'http://localhost:8000' : ''
+  return ''
 }
 
 const instance = axios.create({

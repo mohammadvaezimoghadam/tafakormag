@@ -38,6 +38,18 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: isLabs ? 5002 : 5001,
       strictPort: false,
+      proxy: {
+        '/api': {
+          target: 'https://tafakormag.ir',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/media': {
+          target: 'https://tafakormag.ir',
+          changeOrigin: true,
+          secure: false,
+        }
+      }
     },
     build: {
       rollupOptions: {

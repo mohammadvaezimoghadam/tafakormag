@@ -111,23 +111,23 @@ const navItems = [
         'bg-background border-none shadow-none',
         'flex flex-col py-8 px-3',
         'transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-        isHovered ? 'w-60' : 'w-[88px]'
+        isHovered ? 'w-60' : 'w-[92px]'
       ]"
       :dir="languageStore.dir"
     >
       <!-- Top Section: Brand Typography (تفکر) - Fixed position, unclipped throughout transitions -->
       <div 
         @click="selectTab('home')"
-        class="h-14 flex items-center justify-start px-2.5 rounded-2xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none"
+        class="h-14 flex items-center justify-start px-2 rounded-2xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none mb-6 overflow-visible"
         :title="languageStore.t('صفحه اصلی تفکر', 'Tafakor Home')"
       >
-        <span class="font-black text-xl text-foreground tracking-tight whitespace-nowrap">
+        <span class="font-black text-2xl text-foreground whitespace-nowrap overflow-visible">
           {{ languageStore.t('تفکر', 'Tafakor') }}
         </span>
       </div>
 
-      <!-- Center Navigation Links (Vertically Centered in Screen, icons completely stationary) -->
-      <nav class="flex flex-col gap-3.5 w-full my-auto">
+      <!-- Navigation Links (Under the brand logo, icons completely stationary with zero shift) -->
+      <nav class="flex flex-col gap-2 w-full">
         <button
           v-for="item in navItems"
           :key="'desktop-' + item.id"
@@ -164,9 +164,6 @@ const navItems = [
           </span>
         </button>
       </nav>
-
-      <!-- Bottom Balanced Invisible Spacer for Symmetric Centering -->
-      <div class="h-14 shrink-0 pointer-events-none select-none" />
 
     </aside>
   </template>
