@@ -100,7 +100,7 @@ const navItems = [
 
     <!-- ======================================================================= -->
     <!-- 3. DESKTOP INSTAGRAM-STYLE SIDEBAR (Visible on laptop/desktop >= md)   -->
-    <!-- Seamless blend, no contrasting box, no divider, bold active style      -->
+    <!-- Seamless blend, stationary icons with zero shift, smooth text fade      -->
     <!-- ======================================================================= -->
     <aside
       v-if="props.mode === 'auto' || props.mode === 'desktop'"
@@ -115,58 +115,46 @@ const navItems = [
       ]"
       :dir="languageStore.dir"
     >
-      <!-- Top Section: Brand Typography (تفکر) -->
+      <!-- Top Section: Brand Typography (تفکر) - Fixed position, no shifting -->
       <div 
         @click="selectTab('home')"
-        class="h-14 flex items-center rounded-2xl cursor-pointer hover:bg-muted/30 transition-all duration-200 overflow-hidden mb-8"
-        :class="isHovered ? 'px-4 justify-start' : 'px-0 justify-center'"
+        class="h-14 flex items-center justify-start px-3 rounded-2xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 overflow-hidden shrink-0 select-none"
         :title="languageStore.t('صفحه اصلی تفکر', 'Tafakor Home')"
       >
-        <!-- Collapsed Minimal Glyph (ت) -->
-        <span 
-          v-if="!isHovered"
-          class="font-black text-2xl text-foreground select-none"
-        >
-          ت
-        </span>
-
-        <!-- Expanded Clean Brand Name: تفکر -->
-        <span 
-          v-else
-          class="font-black text-2xl text-foreground tracking-tight whitespace-nowrap select-none transition-all duration-300"
-        >
+        <span class="font-black text-2xl text-foreground tracking-tight whitespace-nowrap">
           {{ languageStore.t('تفکر', 'Tafakor') }}
         </span>
       </div>
 
-      <!-- Navigation Links (Instagram-style: no background boxes, bold when active) -->
-      <nav class="flex flex-col gap-2 w-full">
+      <!-- Center Navigation Links (Vertically Centered in Screen, icons completely stationary) -->
+      <nav class="flex flex-col gap-3.5 w-full my-auto">
         <button
           v-for="item in navItems"
           :key="'desktop-' + item.id"
           @click="selectTab(item.id)"
           :class="[
-            'w-full h-12 rounded-xl flex items-center transition-all duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden',
-            isHovered ? 'px-3.5 justify-start' : 'px-0 justify-center'
+            'w-full h-12 rounded-xl flex items-center justify-start px-3 gap-5 transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden'
           ]"
           :title="languageStore.t(item.labelFa, item.labelEn)"
         >
-          <!-- Nav Icon (Thicker stroke & highlighted when active) -->
-          <component 
-            :is="item.icon" 
-            class="size-6 shrink-0 transition-all duration-200"
-            :class="[
-              activeTab === item.id 
-                ? 'stroke-[2.5px] text-foreground scale-105' 
-                : 'stroke-[1.75px] text-muted-foreground'
-            ]"
-          />
+          <!-- Nav Icon (Stationary in place, size strictly fixed at size-6, bolder stroke when active) -->
+          <div class="size-6 flex items-center justify-center shrink-0">
+            <component 
+              :is="item.icon" 
+              class="size-6 shrink-0 transition-colors duration-200"
+              :class="[
+                activeTab === item.id 
+                  ? 'stroke-[2.5px] text-foreground' 
+                  : 'stroke-[1.75px] text-muted-foreground'
+              ]"
+            />
+          </div>
 
-          <!-- Nav Label (Generous spacing ms-5, bold text when active) -->
+          <!-- Nav Label (Generous gap-5, smooth slide/fade, no layout shift for icon) -->
           <span 
-            class="whitespace-nowrap text-base transition-all duration-300 overflow-hidden"
+            class="inline-block whitespace-nowrap text-base transition-all duration-300 overflow-hidden"
             :class="[
-              isHovered ? 'max-w-[140px] opacity-100 ms-5' : 'max-w-0 opacity-0 ms-0 pointer-events-none',
+              isHovered ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none',
               activeTab === item.id 
                 ? 'font-bold text-foreground' 
                 : 'font-normal text-muted-foreground'
@@ -176,6 +164,9 @@ const navItems = [
           </span>
         </button>
       </nav>
+
+      <!-- Bottom Balanced Invisible Spacer for Symmetric Centering -->
+      <div class="h-14 shrink-0 pointer-events-none select-none" />
 
     </aside>
   </template>
