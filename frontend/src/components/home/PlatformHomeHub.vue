@@ -27,7 +27,6 @@ import HorizontalSliderRow from '@/components/home/HorizontalSliderRow.vue'
 import { getCampaignCategoryLabel, getCampaignStatusConfig } from '@/utils/kindness'
 import {
   BookOpenIcon,
-  BookPlusIcon,
   CheckCircle2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -39,8 +38,6 @@ import {
   SmartphoneIcon,
   SparklesIcon,
 } from '@lucide/vue'
-import AddShelfBookDialog from '@/components/shelf/AddShelfBookDialog.vue'
-import DonateSpecificBookDialog from '@/components/shelf/DonateSpecificBookDialog.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -62,7 +59,6 @@ const emit = defineEmits<{
 
 const languageStore = useLanguageStore()
 const userStore = useUserStore()
-const isStaff = computed(() => userStore.user?.is_staff ?? false)
 const books = ref<ShelfBook[]>([])
 const campaigns = ref<HomeDonationCampaign[]>([])
 
@@ -79,10 +75,7 @@ const hasAuthSession = computed(
 )
 
 const visibleBooks = computed(() => {
-  const pool = isStaff.value
-    ? books.value
-    : books.value.filter((b) => (b as any).is_gift === true)
-  return pool.filter((book) => (book.available_quantity ?? book.quantity ?? 1) > 0)
+  return books.value.filter((book) => (book.available_quantity ?? book.quantity ?? 1) > 0)
 })
 
 const topicsSubtitle = computed(() => {
@@ -183,10 +176,6 @@ watch(
   }
 )
 
-const isAddBookDialogOpen = ref(false)
-const isDonateBookDialogOpen = ref(false)
-const donatingBook = ref<ShelfBook | null>(null)
-
 const toastStore = useToastStore()
 const isQrDialogOpen = ref(false)
 const selectedQrBook = ref<ShelfBook | null>(null)
@@ -235,27 +224,6 @@ const copyQrLink = async (book: ShelfBook | null) => {
   }
 }
 
-const handleOpenAddBook = () => {
-  if (!hasAuthSession.value) {
-    userStore.isLoginModalOpen = true
-    return
-  }
-  isAddBookDialogOpen.value = true
-}
-
-const handleBookAdded = () => {
-  loadAllHomeSections()
-}
-
-const handleDonateBookClick = (book: ShelfBook) => {
-  if (!hasAuthSession.value) {
-    userStore.isLoginModalOpen = true
-    return
-  }
-  donatingBook.value = book
-  isDonateBookDialogOpen.value = true
-}
-
 const handleOpenBookDonations = () => {
   emit('open-book-donations')
 }
@@ -267,14 +235,12 @@ defineExpose({
 
 <template>
   <div class="flex flex-col gap-6 w-full pb-24">
-    <!-- 1. Asymmetric Action Hub: 3-Button for Admins / Single Hero Card for Normal Users -->
-    <div class="flex items-stretch gap-2 w-full">
-      <!-- Primary Hero Gateway: Topics List -->
+    <!-- 1. Hero Gateway: Topics List -->
+    <div class="w-full">
       <button
         type="button"
         @click="emit('open-topics')"
-        :class="isStaff ? 'flex-[4]' : 'flex-1 w-full'"
-        class="min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-3 py-2.5 flex items-center gap-2.5 text-start cursor-pointer"
+        class="w-full min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-3 py-2.5 flex items-center gap-2.5 text-start cursor-pointer"
       >
         <LayersIcon class="size-7 text-foreground shrink-0" />
 
@@ -296,39 +262,13 @@ defineExpose({
           class="size-4 text-muted-foreground/70 shrink-0"
         />
       </button>
-
-      <!-- Secondary Compact Card 1: Register Book (Admins Only) -->
-      <button
-        v-if="isStaff"
-        type="button"
-        @click="handleOpenAddBook"
-        class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
-      >
-        <BookPlusIcon class="size-[22px] text-primary shrink-0" />
-        <span class="text-[10.5px] font-bold text-foreground max-w-full text-center leading-tight line-clamp-2">
-          {{ languageStore.t('ثبت کتاب', 'Add Book') }}
-        </span>
-      </button>
-
-      <!-- Secondary Compact Card 2: Book Donations List (Admins Only) -->
-      <button
-        v-if="isStaff"
-        type="button"
-        @click="emit('open-shelf')"
-        class="flex-[2] min-w-0 h-[84px] rounded-2xl bg-card/85 dark:bg-card/65 backdrop-blur-md border border-border/70 hover:border-primary/40 hover:bg-muted/40 active:scale-[0.985] transition-all duration-150 shadow-xs px-1.5 py-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none"
-      >
-        <HandHeartIcon class="size-[22px] text-primary shrink-0" />
-        <span class="text-[10.5px] font-bold text-foreground max-w-full text-center leading-tight line-clamp-2">
-          {{ languageStore.t('اهدای کتاب', 'Donate Book') }}
-        </span>
-      </button>
     </div>
 
-    <!-- 2. My Shelf / Gifted Books Horizontal Slider -->
+    <!-- 2. My Bookshelf Horizontal Slider -->
     <section class="flex flex-col gap-3">
       <div class="flex items-center justify-between px-0.5">
         <h2 class="text-sm font-extrabold text-foreground">
-          {{ isStaff ? languageStore.t('کتاب‌های من', 'My Books') : languageStore.t('کتاب‌های هدیه گرفته', 'Gifted Books') }}
+          {{ languageStore.t('قفسه کتاب من', 'My Bookshelf') }}
         </h2>
 
         <button
@@ -384,7 +324,7 @@ defineExpose({
         </Button>
       </div>
 
-      <!-- Empty State (Authenticated with 0 books - Seamless Icon matching campaigns) -->
+      <!-- Empty State -->
       <div
         v-else-if="visibleBooks.length === 0"
         class="py-6 px-4 flex flex-col items-center justify-center text-center gap-2"
@@ -394,23 +334,8 @@ defineExpose({
         </div>
 
         <span class="text-xs font-semibold text-muted-foreground">
-          {{
-            isStaff
-              ? languageStore.t('کتابی در انبار جهت نمایش یافت نشد', 'No books found in shelf')
-              : languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
-          }}
+          {{ languageStore.t('هنوز کتابی در قفسه شما ثبت نشده است', 'No books in your shelf yet') }}
         </span>
-
-        <Button
-          v-if="isStaff"
-          type="button"
-          size="sm"
-          class="rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3.5 text-xs gap-1.5 mt-1"
-          @click="handleOpenAddBook"
-        >
-          <BookPlusIcon class="size-3.5" />
-          <span>{{ languageStore.t('ثبت کتاب جدید', 'Add Book') }}</span>
-        </Button>
       </div>
 
       <!-- Book Slider Row -->
@@ -441,15 +366,8 @@ defineExpose({
             />
             <BookOpenIcon v-else class="size-7 text-muted-foreground/70" />
 
-            <!-- Donated badge for admin or quantity badge -->
+            <!-- Quantity badge -->
             <div
-              v-if="isStaff && ((book as any).donated_count ?? 0) > 0"
-              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-foreground text-background text-[10px] font-bold shadow-2xs flex items-center gap-1"
-            >
-              <span>{{ languageStore.n((book as any).donated_count) }} {{ languageStore.t('اهدا شده', 'donated') }}</span>
-            </div>
-            <div
-              v-else
               class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border border-border/60 text-[10px] font-bold text-foreground shadow-2xs"
             >
               <span>{{ languageStore.n(book.quantity ?? 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
@@ -477,25 +395,19 @@ defineExpose({
             </div>
 
             <div class="flex flex-col gap-2 pt-1.5 border-t border-border/40">
-              <!-- Admin: Dedicated Donate Button -->
-              <Button
-                v-if="isStaff && !book.is_gift"
-                type="button"
-                size="xs"
-                class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-black text-white hover:bg-neutral-800 dark:bg-secondary dark:text-secondary-foreground dark:hover:bg-secondary/80 transition-colors shadow-2xs"
-                @click.stop="handleDonateBookClick(book)"
-              >
-                <HandHeartIcon class="size-3.5" />
-                <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
-              </Button>
-
               <!-- Recipient / Gift: Show Neutral Gift Badge -->
               <div
-                v-else-if="!isStaff && book.is_gift"
+                v-if="book.is_gift"
                 class="w-full py-1 text-center text-[10px] font-bold text-foreground bg-muted/80 border border-border/70 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
               >
                 <SparklesIcon class="size-3 text-muted-foreground shrink-0" />
                 <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
+              </div>
+              <div
+                v-else
+                class="w-full py-1 text-center text-[10px] font-medium text-muted-foreground bg-muted/40 border border-border/40 rounded-xl truncate"
+              >
+                <span>{{ book.reading_status_display || languageStore.t('در قفسه', 'In Shelf') }}</span>
               </div>
             </div>
           </div>
@@ -648,19 +560,6 @@ defineExpose({
         </div>
       </HorizontalSliderRow>
     </section>
-
-    <!-- Add Book to Shelf Dialog -->
-    <AddShelfBookDialog
-      v-model:open="isAddBookDialogOpen"
-      @saved="handleBookAdded"
-    />
-
-    <!-- Donate Specific Book Dialog -->
-    <DonateSpecificBookDialog
-      v-model:open="isDonateBookDialogOpen"
-      :book="donatingBook"
-      @donated="handleBookAdded"
-    />
 
     <!-- Book QR Dialog -->
     <Dialog v-model:open="isQrDialogOpen">

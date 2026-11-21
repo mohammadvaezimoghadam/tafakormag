@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useToastStore } from '@/stores/toastStore'
-import { useUserStore } from '@/stores/userStore'
 import {
   confirmGift,
   deleteShelfBook,
   extractApiErrorMessage,
   getMyShelfSummary,
-  listAdminDonationsReport,
   listIncomingGifts,
   listMyShelfBooks,
   rejectGift,
-  updateShelfBook,
 } from '@/api/shelf'
 import type {
-  AdminDonationReportItem,
   IncomingGiftItem,
   ShelfBook,
   ShelfSummary,
@@ -47,24 +43,19 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
+  BookCheckIcon,
   BookOpenIcon,
   CheckIcon,
-  ClockIcon,
   EyeIcon,
-  FileTextIcon,
   GiftIcon,
   HandHeartIcon,
-  LayersIcon,
   Loader2Icon,
   PencilIcon,
   PlusIcon,
-  QrCodeIcon,
   SearchIcon,
   SmartphoneIcon,
   SparklesIcon,
   Trash2Icon,
-  UserCheckIcon,
-  UserIcon,
 } from '@lucide/vue'
 
 const emit = defineEmits<{
@@ -73,17 +64,10 @@ const emit = defineEmits<{
 
 const languageStore = useLanguageStore()
 const toastStore = useToastStore()
-const userStore = useUserStore()
-
-const isStaff = computed(() => userStore.isStaff)
 
 const books = ref<ShelfBook[]>([])
 const incomingGifts = ref<IncomingGiftItem[]>([])
 const isActioningGift = ref<number | null>(null)
-
-// Admin Reports State
-const adminReports = ref<AdminDonationReportItem[]>([])
-const isLoadingReports = ref(false)
 
 const summary = ref<ShelfSummary>({
   total: 0,
@@ -96,43 +80,43 @@ const summary = ref<ShelfSummary>({
 
 const isLoading = ref(true)
 const searchQuery = ref('')
+
+type ShelfTab = 'all' | 'gifts' | 'reading' | 'finished'
+const activeTab = ref<ShelfTab>('all')
+
 const isAddEditDialogOpen = ref(false)
 const editingBook = ref<ShelfBook | null>(null)
+
 const isDeleteDialogOpen = ref(false)
 const deletingBook = ref<ShelfBook | null>(null)
 const isDeleting = ref(false)
+
 const isDonateDialogOpen = ref(false)
 const donatingBook = ref<ShelfBook | null>(null)
+
 const isClaimDialogOpen = ref(false)
 
-// View-Only Book Detail Modal for recipients
+// View-Only Book Detail Modal
 const isViewDetailOpen = ref(false)
 const viewingBook = ref<ShelfBook | null>(null)
 
-// Quick Stock Adjust Dialog for Admin
-const isStockDialogOpen = ref(false)
-const stockBook = ref<ShelfBook | null>(null)
-const stockAdjustment = ref(1)
-const isUpdatingStock = ref(false)
-
-// Tabs: Admin has 'inventory' | 'reports', Normal user has 'all'
-const adminActiveTab = ref<'inventory' | 'reports'>('inventory')
-const recipientActiveTab = ref<'all' | 'gifts'>('all')
-
-const receivedCount = computed(() => books.value.filter((b) => b.is_gift === true).length)
-const donatedCount = computed(() => books.value.filter((b) => !b.is_gift).length)
+const giftsCount = computed(() => books.value.filter((b) => b.is_gift === true).length)
+const readingCount = computed(() => books.value.filter((b) => b.reading_status === 'reading').length)
+const finishedCount = computed(() => books.value.filter((b) => b.reading_status === 'finished').length)
 
 const filteredBooks = computed(() => {
-  if (!isStaff.value) {
-    // Normal user: show received/gifted books only
-    return books.value.filter((b) => b.is_gift === true)
+  let list = books.value
+  if (activeTab.value === 'gifts') {
+    list = list.filter((b) => b.is_gift === true)
+  } else if (activeTab.value === 'reading') {
+    list = list.filter((b) => b.reading_status === 'reading')
+  } else if (activeTab.value === 'finished') {
+    list = list.filter((b) => b.reading_status === 'finished')
   }
-  // Admin inventory
-  return books.value
+  return list
 })
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
-
 const hasActiveFilter = computed(() => Boolean(searchQuery.value.trim()))
 
 const loadShelfData = async () => {
@@ -164,30 +148,6 @@ const loadShelfData = async () => {
     isLoading.value = false
   }
 }
-
-const loadAdminReports = async () => {
-  if (!isStaff.value) return
-  isLoadingReports.value = true
-  try {
-    adminReports.value = await listAdminDonationsReport()
-  } catch (err) {
-    toastStore.triggerToast(
-      extractApiErrorMessage(err, 'خطا در دریافت گزارش اهدا شده‌ها'),
-      'error'
-    )
-  } finally {
-    isLoadingReports.value = false
-  }
-}
-
-watch(
-  () => adminActiveTab.value,
-  (tab) => {
-    if (tab === 'reports' && isStaff.value) {
-      loadAdminReports()
-    }
-  }
-)
 
 const refreshSummaryOnly = async () => {
   try {
@@ -268,34 +228,6 @@ const openViewDetailDialog = (book: ShelfBook) => {
   isViewDetailOpen.value = true
 }
 
-const openStockDialog = (book: ShelfBook) => {
-  stockBook.value = book
-  stockAdjustment.value = 1
-  isStockDialogOpen.value = true
-}
-
-const handleStockIncrease = async () => {
-  if (!stockBook.value) return
-  isUpdatingStock.value = true
-  try {
-    const newQty = (stockBook.value.quantity || 1) + stockAdjustment.value
-    await updateShelfBook(stockBook.value.id, {
-      quantity: newQty,
-    })
-    toastStore.triggerToast('موجودی کتاب با موفقیت افزایش یافت', 'success')
-    isStockDialogOpen.value = false
-    await loadShelfData()
-    emit('shelf-changed')
-  } catch (err) {
-    toastStore.triggerToast(
-      extractApiErrorMessage(err, 'خطا در افزایش موجودی کتاب'),
-      'error'
-    )
-  } finally {
-    isUpdatingStock.value = false
-  }
-}
-
 const handleDonateClick = (book: ShelfBook) => {
   donatingBook.value = book
   isDonateDialogOpen.value = true
@@ -303,9 +235,6 @@ const handleDonateClick = (book: ShelfBook) => {
 
 const handleBookSaved = async () => {
   await loadShelfData()
-  if (isStaff.value && adminActiveTab.value === 'reports') {
-    await loadAdminReports()
-  }
   emit('shelf-changed')
 }
 
@@ -323,7 +252,7 @@ const executeDeleteBook = async () => {
     await refreshSummaryOnly()
     emit('shelf-changed')
     toastStore.triggerToast(
-      languageStore.t('کتاب از انبار حذف شد', 'Book removed from shelf'),
+      languageStore.t('کتاب از قفسه حذف شد', 'Book removed from shelf'),
       'success'
     )
     isDeleteDialogOpen.value = false
@@ -345,21 +274,6 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
   }
   return `/${raw}`
 }
-
-const formatDateTime = (raw: string): string => {
-  try {
-    const d = new Date(raw)
-    return new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(d)
-  } catch {
-    return raw
-  }
-}
 </script>
 
 <template>
@@ -370,34 +284,27 @@ const formatDateTime = (raw: string): string => {
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div class="flex items-center gap-2.5">
             <div class="size-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <BookOpenIcon v-if="!isStaff" class="size-5 text-emerald-600" />
-              <LayersIcon v-else class="size-5" />
+              <BookOpenIcon class="size-5 text-primary" />
             </div>
             <div class="flex flex-col">
               <h2 class="text-base font-extrabold text-foreground">
-                {{ isStaff ? languageStore.t('انبار و اهدای کتاب تفکر', 'Tafakor Book Inventory & Donation') : languageStore.t('اهدا شده به من', 'Gifted to Me') }}
+                {{ languageStore.t('قفسه کتاب من', 'My Bookshelf') }}
               </h2>
               <p class="text-xs text-muted-foreground">
-                {{
-                  isStaff
-                    ? languageStore.t('مدیریت موجودی کتاب‌های انبار تفکر و ثبت اهدای حضوری', 'Manage inventory and donate')
-                    : languageStore.t('فهرست کتاب‌هایی که از طرف تفکر به شما اهدا شده است', 'Books gifted to you by Tafakor')
-                }}
+                {{ languageStore.t('مدیریت کتاب‌های شخصی، در حال مطالعه و هدایای دریافتی', 'Manage personal books, reading list and received gifts') }}
               </p>
             </div>
           </div>
 
-          <!-- Header Action Buttons -->
+          <!-- Header Action Button: Add Book to Shelf -->
           <div class="flex items-center gap-2 flex-wrap">
-            <!-- Add Book Button (Only for Admin) -->
             <Button
-              v-if="isStaff"
               type="button"
               class="rounded-2xl shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
               @click="openAddDialog"
             >
               <PlusIcon data-icon="inline-start" />
-              <span>{{ languageStore.t('ثبت کتاب جدید', 'Add Book') }}</span>
+              <span>{{ languageStore.t('افزودن کتاب', 'Add Book') }}</span>
             </Button>
           </div>
         </div>
@@ -405,14 +312,14 @@ const formatDateTime = (raw: string): string => {
         <!-- Clean Summary Banner -->
         <div class="rounded-2xl bg-muted/40 border border-border/40 px-3.5 py-2.5 flex items-center justify-between text-xs">
           <span class="text-muted-foreground font-medium">
-            {{ isStaff ? languageStore.t('موجودی کل کتاب‌های انبار:', 'Total Inventory:') : languageStore.t('تعداد کل کتاب‌های اهدایی:', 'Total Gifted Books:') }}
+            {{ languageStore.t('موجودی کل کتاب‌های قفسه:', 'Total Shelf Books:') }}
           </span>
           <div class="flex items-center gap-2">
             <span class="font-extrabold text-foreground text-sm">
-              {{ languageStore.n(isStaff ? (summary.total_copies ?? summary.total) : filteredBooks.length) }} {{ languageStore.t('جلد', 'copies') }}
+              {{ languageStore.n(books.reduce((acc, b) => acc + (b.quantity || 1), 0)) }} {{ languageStore.t('جلد', 'copies') }}
             </span>
-            <span v-if="isStaff" class="text-muted-foreground text-[11px]">
-              ({{ languageStore.n(summary.total) }} {{ languageStore.t('عنوان', 'titles') }})
+            <span class="text-muted-foreground text-[11px]">
+              ({{ languageStore.n(books.length) }} {{ languageStore.t('عنوان', 'titles') }})
             </span>
           </div>
         </div>
@@ -514,359 +421,288 @@ const formatDateTime = (raw: string): string => {
       </CardContent>
     </Card>
 
-    <!-- Admin 2 Tabs: Inventory vs Reports (Centered) -->
-    <div
-      v-if="isStaff"
-      class="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-center mx-auto text-xs flex-wrap"
-    >
+    <!-- Client Filter Tabs -->
+    <div class="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-center mx-auto text-xs flex-wrap">
       <button
         type="button"
-        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-        :class="adminActiveTab === 'inventory' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-        @click="adminActiveTab = 'inventory'"
+        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        :class="activeTab === 'all' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+        @click="activeTab = 'all'"
       >
-        <LayersIcon class="size-3.5" />
-        <span>{{ languageStore.t('کتاب‌های موجود تفکر', 'Current Inventory') }}</span>
+        <BookOpenIcon class="size-3.5" />
+        <span>{{ languageStore.t('همه کتاب‌ها', 'All') }}</span>
         <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
           {{ languageStore.n(books.length) }}
         </Badge>
       </button>
 
       <button
+        v-if="giftsCount > 0"
         type="button"
-        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-        :class="adminActiveTab === 'reports' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-        @click="adminActiveTab = 'reports'"
+        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        :class="activeTab === 'gifts' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+        @click="activeTab = 'gifts'"
       >
-        <FileTextIcon class="size-3.5 text-primary" />
-        <span>{{ languageStore.t('گزارش اهدا شده‌ها', 'Donations Report') }}</span>
-        <Badge v-if="adminReports.length > 0" class="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-4 rounded-full">
-          {{ languageStore.n(adminReports.length) }}
+        <SparklesIcon class="size-3.5 text-primary" />
+        <span>{{ languageStore.t('هدایای دریافتی', 'Gifts') }}</span>
+        <Badge class="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-4 rounded-full">
+          {{ languageStore.n(giftsCount) }}
+        </Badge>
+      </button>
+
+      <button
+        v-if="readingCount > 0"
+        type="button"
+        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        :class="activeTab === 'reading' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+        @click="activeTab = 'reading'"
+      >
+        <BookOpenIcon class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+        <span>{{ languageStore.t('در حال مطالعه', 'Reading') }}</span>
+        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
+          {{ languageStore.n(readingCount) }}
+        </Badge>
+      </button>
+
+      <button
+        v-if="finishedCount > 0"
+        type="button"
+        class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+        :class="activeTab === 'finished' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+        @click="activeTab = 'finished'"
+      >
+        <BookCheckIcon class="size-3.5 text-blue-600 dark:text-blue-400" />
+        <span>{{ languageStore.t('خوانده شده', 'Finished') }}</span>
+        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
+          {{ languageStore.n(finishedCount) }}
         </Badge>
       </button>
     </div>
 
-    <!-- ── TAB 1: INVENTORY (Admin) OR GIFTS (Normal User) ── -->
-    <template v-if="!isStaff || adminActiveTab === 'inventory'">
-      <!-- Search input -->
-      <div class="relative">
-        <SearchIcon class="size-4 text-muted-foreground absolute top-1/2 -translate-y-1/2 start-3.5 pointer-events-none" />
-        <Input
-          v-model="searchQuery"
-          class="ps-10 h-10 bg-card border-border/60 rounded-2xl"
-          :placeholder="isStaff ? languageStore.t('جستجو در کتاب‌های انبار تفکر...', 'Search inventory...') : languageStore.t('جستجو در کتاب‌های اهدا شده به من...', 'Search gifted books...')"
-          @input="handleSearchInput"
-        />
-      </div>
+    <!-- Search Input -->
+    <div class="relative">
+      <SearchIcon class="size-4 text-muted-foreground absolute top-1/2 -translate-y-1/2 start-3.5 pointer-events-none" />
+      <Input
+        v-model="searchQuery"
+        class="ps-10 h-10 bg-card border-border/60 rounded-2xl"
+        :placeholder="languageStore.t('جستجو در قفسه کتاب من...', 'Search my bookshelf...')"
+        @input="handleSearchInput"
+      />
+    </div>
 
-      <!-- Loading state: 3-column grid -->
-      <div v-if="isLoading" class="grid grid-cols-3 gap-2.5 sm:gap-3.5">
-        <div
-          v-for="n in 6"
-          :key="n"
-          class="rounded-2xl border border-border/60 bg-card/50 p-2.5 flex flex-col gap-2"
+    <!-- Loading State: 3-Column Skeletons -->
+    <div v-if="isLoading" class="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+      <div
+        v-for="n in 6"
+        :key="n"
+        class="rounded-2xl border border-border/60 bg-card/50 p-2.5 flex flex-col gap-2"
+      >
+        <Skeleton class="h-[112px] w-full rounded-xl" />
+        <div class="flex flex-col gap-1.5">
+          <Skeleton class="h-3.5 w-full rounded-md" />
+          <Skeleton class="h-2.5 w-2/3 rounded-md" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="filteredBooks.length === 0" class="py-10 px-6 flex flex-col items-center text-center gap-3">
+      <div class="size-14 flex items-center justify-center">
+        <!-- Search Empty State -->
+        <div v-if="hasActiveFilter" class="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+          <BookOpenIcon class="size-6" />
+        </div>
+
+        <!-- Bookshelf Stack Vector -->
+        <svg
+          v-else
+          viewBox="0 0 100 100"
+          class="size-14"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <Skeleton class="h-[112px] w-full rounded-xl" />
-          <div class="flex flex-col gap-1.5">
-            <Skeleton class="h-3.5 w-full rounded-md" />
-            <Skeleton class="h-2.5 w-2/3 rounded-md" />
-          </div>
-        </div>
+          <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+          <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+          <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+          <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
+          <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
+          <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
+          <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
+        </svg>
       </div>
-
-      <!-- Empty state (Seamless / No Box) -->
-      <div v-else-if="filteredBooks.length === 0" class="py-10 px-6 flex flex-col items-center text-center gap-3">
-        <div class="size-14 flex items-center justify-center">
-          <!-- Search Empty State -->
-          <div v-if="hasActiveFilter" class="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
-            <BookOpenIcon class="size-6" />
-          </div>
-
-          <!-- Bookshelf Stack Vector -->
-          <svg
-            v-else
-            viewBox="0 0 100 100"
-            class="size-14"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="22" y="56" width="56" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-            <line x1="28" y1="56" x2="28" y2="70" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
-            <line x1="36" y1="63" x2="68" y2="63" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
-            <rect x="26" y="38" width="48" height="14" rx="2" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground/50" />
-            <line x1="32" y1="38" x2="32" y2="52" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.3" class="text-muted-foreground" />
-            <line x1="40" y1="45" x2="64" y2="45" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" stroke-opacity="0.3" class="text-muted-foreground" />
-            <path d="M 46 38 L 46 48 L 50 45 L 54 48 L 54 38" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" class="text-primary" />
-          </svg>
-        </div>
-        <div class="flex flex-col gap-1 max-w-sm">
-          <span class="text-sm font-bold text-foreground">
-            {{
-              hasActiveFilter
-                ? languageStore.t('کتابی با این عبارت پیدا نشد', 'No matching books found')
-                : isStaff
-                ? languageStore.t('هنوز کتابی در انبار تفکر ثبت نشده است', 'No books registered in inventory yet')
-                : languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
-            }}
-          </span>
-          <span v-if="hasActiveFilter || isStaff" class="text-xs text-muted-foreground leading-relaxed">
-            {{
-              hasActiveFilter
-                ? languageStore.t('عبارت جستجو را تغییر دهید یا پاک کنید.', 'Try changing or clearing your search.')
-                : languageStore.t('با دکمه «ثبت کتاب جدید»، عناوین موجود در انبار تفکر را اضافه فرمایید.', 'Click "Add Book" to add inventory copies.')
-            }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <Button v-if="hasActiveFilter" type="button" variant="outline" size="sm" class="rounded-xl" @click="clearFilters">
-            {{ languageStore.t('پاک کردن جستجو', 'Reset Search') }}
-          </Button>
-          <Button v-else-if="isStaff" type="button" size="sm" class="rounded-xl" @click="openAddDialog">
-            <PlusIcon data-icon="inline-start" />
-            <span>{{ languageStore.t('ثبت اولین کتاب', 'Add First Book') }}</span>
-          </Button>
-        </div>
+      <div class="flex flex-col gap-1 max-w-sm">
+        <span class="text-sm font-bold text-foreground">
+          {{
+            hasActiveFilter
+              ? languageStore.t('کتابی با این عبارت پیدا نشد', 'No matching books found')
+              : activeTab === 'gifts'
+              ? languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
+              : languageStore.t('هنوز کتابی در قفسه خود ثبت نکرده‌اید', 'No books in your bookshelf yet')
+          }}
+        </span>
+        <span class="text-xs text-muted-foreground leading-relaxed">
+          {{
+            hasActiveFilter
+              ? languageStore.t('عبارت جستجو را تغییر دهید یا پاک کنید.', 'Try changing or clearing your search.')
+              : languageStore.t('با دکمه «افزودن کتاب»، کتب مورد علاقه یا مطالعه خود را ثبت نمایید.', 'Click "Add Book" to add titles to your personal shelf.')
+          }}
+        </span>
       </div>
-
-      <!-- Shelf Books Grid: 3 columns -->
-      <div v-else class="grid grid-cols-3 gap-2.5 sm:gap-3.5">
-        <div
-          v-for="book in filteredBooks"
-          :key="book.id"
-          role="button"
-          tabindex="0"
-          @click="isStaff ? openEditDialog(book) : openViewDetailDialog(book)"
-          @keydown.enter.prevent="isStaff ? openEditDialog(book) : openViewDetailDialog(book)"
-          class="w-full min-w-0 h-auto rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs transition-all overflow-hidden flex flex-col select-none cursor-pointer hover:border-primary/40 hover:shadow-sm group"
-        >
-          <!-- Cover Container -->
-          <div class="h-[112px] w-full bg-muted/50 dark:bg-muted/30 relative flex items-center justify-center overflow-hidden">
-            <img
-              v-if="resolveMediaUrl(book.book_title.cover_image)"
-              :src="resolveMediaUrl(book.book_title.cover_image)!"
-              :alt="book.book_title.title"
-              class="size-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <SmartphoneIcon
-              v-else-if="book.book_format === 'digital'"
-              class="size-7 text-muted-foreground/70"
-            />
-            <BookOpenIcon v-else class="size-7 text-muted-foreground/70" />
-
-            <!-- Stock / Quantity Badge (Admin Mode) -->
-            <div
-              v-if="isStaff"
-              class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border text-[10px] font-bold shadow-2xs"
-              :class="(book.quantity ?? 1) <= 0 ? 'text-amber-600 dark:text-amber-400 border-amber-500/40' : 'text-foreground border-border/60'"
-            >
-              <span>{{ languageStore.n(book.quantity ?? 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
-            </div>
-
-            <!-- Gift Badge (Recipient Mode) -->
-            <div
-              v-if="!isStaff || book.is_gift"
-              class="absolute bottom-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-foreground text-background text-[9.5px] font-bold shadow-2xs flex items-center gap-1 backdrop-blur-xs"
-            >
-              <SparklesIcon class="size-2.5" />
-              <span>{{ languageStore.t('هدیه', 'Gift') }}</span>
-            </div>
-          </div>
-
-          <div class="p-2.5 flex-1 flex flex-col justify-between gap-2 text-start">
-            <div class="flex flex-col gap-1">
-              <h3 class="text-[11.5px] font-bold text-foreground line-clamp-2 leading-snug">
-                {{ book.book_title.title }}
-              </h3>
-              <p class="text-[10px] text-muted-foreground truncate">
-                {{ book.book_title.author }}
-              </p>
-            </div>
-
-            <div class="flex flex-col gap-1.5 pt-1.5 border-t border-border/40">
-              <!-- ── RECIPIENT MODE: Neutral Gift Badge Only ── -->
-              <div
-                v-if="!isStaff"
-                class="w-full py-1.5 px-2 text-center text-[10px] font-bold text-foreground bg-muted/80 border border-border/70 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
-              >
-                <SparklesIcon class="size-3 text-muted-foreground shrink-0" />
-                <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
-              </div>
-
-              <!-- ── ADMIN MODE: Stock Count, + افزایش موجودی, ویرایش, and اهدا ── -->
-              <template v-else>
-                <!-- Dedicated Donate Button -->
-                <Button
-                  type="button"
-                  size="xs"
-                  class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs"
-                  :disabled="(book.available_quantity ?? (book.quantity - (book.reserved_quantity ?? 0))) <= 0"
-                  @click.stop="handleDonateClick(book)"
-                >
-                  <HandHeartIcon class="size-3.5" />
-                  <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
-                  <span
-                    v-if="book.reserved_quantity && book.reserved_quantity > 0"
-                    class="text-[9.5px] opacity-75 font-normal ms-0.5"
-                  >
-                    ({{ languageStore.n(book.available_quantity ?? (book.quantity - book.reserved_quantity)) }})
-                  </span>
-                </Button>
-
-                <!-- Admin Action Row: Increase Stock, Edit, Delete -->
-                <div class="flex items-center justify-between gap-1 pt-0.5">
-                  <button
-                    type="button"
-                    class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] font-bold text-foreground hover:text-foreground/80 py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                    :title="languageStore.t('افزایش موجودی', '+ Stock')"
-                    @click.stop="openStockDialog(book)"
-                  >
-                    <PlusIcon class="size-2.5" />
-                    <span>موجودی</span>
-                  </button>
-                  <div class="h-3 w-px bg-border/50" />
-                  <button
-                    type="button"
-                    class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] text-muted-foreground hover:text-foreground py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                    :title="languageStore.t('ویرایش', 'Edit')"
-                    @click.stop="openEditDialog(book)"
-                  >
-                    <PencilIcon class="size-2.5" />
-                    <span>ویرایش</span>
-                  </button>
-                  <div class="h-3 w-px bg-border/50" />
-                  <button
-                    type="button"
-                    class="flex items-center justify-center p-1 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10 transition-colors cursor-pointer"
-                    :title="languageStore.t('حذف', 'Delete')"
-                    @click.stop="confirmDeleteBook(book)"
-                  >
-                    <Trash2Icon class="size-3" />
-                  </button>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
+      <div class="flex items-center gap-2">
+        <Button v-if="hasActiveFilter" type="button" variant="outline" size="sm" class="rounded-xl" @click="clearFilters">
+          {{ languageStore.t('پاک کردن جستجو', 'Reset Search') }}
+        </Button>
+        <Button v-else type="button" size="sm" class="rounded-xl" @click="openAddDialog">
+          <PlusIcon data-icon="inline-start" />
+          <span>{{ languageStore.t('افزودن اولین کتاب', 'Add First Book') }}</span>
+        </Button>
       </div>
-    </template>
+    </div>
 
-    <!-- ── TAB 2: ADMIN DONATIONS REPORT (Read-Only) ── -->
-    <template v-else-if="isStaff && adminActiveTab === 'reports'">
-      <Card class="rounded-3xl border-border/60 shadow-sm overflow-hidden">
-        <CardContent class="p-4 flex flex-col gap-3">
-          <div class="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-border/40">
-            <div class="flex items-center gap-2">
-              <div class="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <FileTextIcon class="size-4" />
-              </div>
-              <div class="flex flex-col">
-                <h3 class="text-sm font-extrabold text-foreground">
-                  {{ languageStore.t('سوابق و گزارش اهدای کتاب تفکر', 'Donation Records') }}
-                </h3>
-                <span class="text-[11px] text-muted-foreground">
-                  {{ languageStore.t('فهرست کامل کتب اهدا شده به همراه مشخصات گیرنده و تاریخ', 'Complete log of gifted books') }}
-                </span>
-              </div>
-            </div>
+    <!-- Books Grid: 3 columns -->
+    <div v-else class="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+      <div
+        v-for="book in filteredBooks"
+        :key="book.id"
+        role="button"
+        tabindex="0"
+        @click="book.is_gift ? openViewDetailDialog(book) : openEditDialog(book)"
+        @keydown.enter.prevent="book.is_gift ? openViewDetailDialog(book) : openEditDialog(book)"
+        class="w-full min-w-0 h-auto rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs transition-all overflow-hidden flex flex-col select-none cursor-pointer hover:border-primary/40 hover:shadow-sm group"
+      >
+        <!-- Cover Container -->
+        <div class="h-[112px] w-full bg-muted/50 dark:bg-muted/30 relative flex items-center justify-center overflow-hidden">
+          <img
+            v-if="resolveMediaUrl(book.book_title.cover_image)"
+            :src="resolveMediaUrl(book.book_title.cover_image)!"
+            :alt="book.book_title.title"
+            class="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          <SmartphoneIcon
+            v-else-if="book.book_format === 'digital'"
+            class="size-7 text-muted-foreground/70"
+          />
+          <BookOpenIcon v-else class="size-7 text-muted-foreground/70" />
 
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              class="rounded-xl gap-1 text-[11px]"
-              :disabled="isLoadingReports"
-              @click="loadAdminReports"
-            >
-              <Loader2Icon v-if="isLoadingReports" class="size-3 animate-spin" />
-              <span>{{ languageStore.t('بروزرسانی', 'Refresh') }}</span>
-            </Button>
-          </div>
-
-          <!-- Loading -->
-          <div v-if="isLoadingReports" class="flex flex-col gap-2 py-4">
-            <Skeleton v-for="n in 4" :key="n" class="h-16 w-full rounded-2xl" />
-          </div>
-
-          <!-- Empty Reports -->
+          <!-- Top-Start Badge: Gift or Reading Status -->
           <div
-            v-else-if="adminReports.length === 0"
-            class="py-12 flex flex-col items-center text-center gap-2 text-muted-foreground"
+            v-if="book.is_gift"
+            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-foreground text-background text-[9.5px] font-bold shadow-2xs flex items-center gap-1 backdrop-blur-xs"
           >
-            <HandHeartIcon class="size-10 text-muted-foreground/40" />
-            <span class="text-xs font-bold">{{ languageStore.t('هنوز گزارشی از اهدای کتاب ثبت نشده است', 'No donation records yet') }}</span>
+            <SparklesIcon class="size-2.5" />
+            <span>{{ languageStore.t('هدیه', 'Gift') }}</span>
+          </div>
+          <div
+            v-else-if="book.reading_status === 'reading'"
+            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9.5px] font-bold shadow-2xs"
+          >
+            <span>{{ languageStore.t('در حال مطالعه', 'Reading') }}</span>
+          </div>
+          <div
+            v-else-if="book.reading_status === 'finished'"
+            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-blue-600 text-white text-[9.5px] font-bold shadow-2xs"
+          >
+            <span>{{ languageStore.t('خوانده شده', 'Finished') }}</span>
           </div>
 
-          <!-- Reports List / Table -->
-          <div v-else class="flex flex-col gap-2.5">
+          <!-- Quantity Badge (if multiple copies) -->
+          <div
+            v-if="(book.quantity ?? 1) > 1"
+            class="absolute top-1.5 end-1.5 px-1.5 py-0.5 rounded-md bg-background/95 border border-border/60 text-[9.5px] font-bold text-foreground shadow-2xs"
+          >
+            <span>{{ languageStore.n(book.quantity ?? 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
+          </div>
+        </div>
+
+        <div class="p-2.5 flex-1 flex flex-col justify-between gap-2 text-start">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-[11.5px] font-bold text-foreground line-clamp-2 leading-snug">
+              {{ book.book_title.title }}
+            </h3>
+            <p class="text-[10px] text-muted-foreground truncate">
+              {{ book.book_title.author }}
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-1.5 pt-1.5 border-t border-border/40">
+            <!-- Gift Origin Label -->
             <div
-              v-for="rep in adminReports"
-              :key="rep.id"
-              class="rounded-2xl border border-border/50 bg-card p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-primary/30 transition-colors"
+              v-if="book.is_gift"
+              class="w-full py-1.5 px-2 text-center text-[10px] font-bold text-foreground bg-muted/80 border border-border/70 rounded-xl truncate flex items-center justify-center gap-1 shadow-2xs"
             >
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-14 rounded-xl bg-muted/60 border border-border/40 overflow-hidden shrink-0 flex items-center justify-center">
-                  <img
-                    v-if="resolveMediaUrl(rep.cover_image)"
-                    :src="resolveMediaUrl(rep.cover_image)!"
-                    :alt="rep.book_title"
-                    class="size-full object-cover"
-                  />
-                  <BookOpenIcon v-else class="size-5 text-muted-foreground/60" />
-                </div>
+              <SparklesIcon class="size-3 text-muted-foreground shrink-0" />
+              <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
+            </div>
 
-                <div class="flex flex-col gap-0.5 min-w-0">
-                  <span class="text-xs font-bold text-foreground truncate">
-                    {{ rep.book_title }}
-                  </span>
-                  <div class="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
-                    <span class="font-bold text-foreground">
-                      {{ languageStore.n(rep.quantity) }} {{ languageStore.t('جلد', 'copies') }}
-                    </span>
-                    <span>•</span>
-                    <span class="flex items-center gap-1">
-                      <UserCheckIcon class="size-3 text-foreground" />
-                      <span>گیرنده:</span>
-                      <strong class="text-foreground">{{ rep.recipient_name || rep.recipient_phone }}</strong>
-                      <span v-if="rep.recipient_name" class="font-mono text-[10px]" dir="ltr">({{ rep.recipient_phone }})</span>
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-2 mt-1 text-[10.5px] text-muted-foreground flex-wrap">
-                    <span>ثبت توسط: <strong class="text-foreground">{{ rep.admin_name || 'ادمین تفکر' }}</strong></span>
-                    <span>•</span>
-                    <span class="flex items-center gap-1">
-                      <ClockIcon class="size-3 text-muted-foreground" />
-                      <span>{{ formatDateTime(rep.created_at) }}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <!-- Donate Button (if can donate) -->
+            <Button
+              v-if="(book.available_quantity ?? book.quantity ?? 1) > 0 && book.can_donate !== false"
+              type="button"
+              size="xs"
+              class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs"
+              @click.stop="handleDonateClick(book)"
+            >
+              <HandHeartIcon class="size-3.5" />
+              <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
+              <span
+                v-if="book.reserved_quantity && book.reserved_quantity > 0"
+                class="text-[9.5px] opacity-75 font-normal ms-0.5"
+              >
+                ({{ languageStore.n(book.available_quantity ?? (book.quantity - book.reserved_quantity)) }})
+              </span>
+            </Button>
 
-              <div class="self-end sm:self-center shrink-0">
-                <Badge class="bg-secondary text-secondary-foreground border border-border text-[10.5px] px-2 py-0.5 rounded-xl font-bold">
-                  {{ rep.status_display || 'اهدا شده' }}
-                </Badge>
-              </div>
+            <!-- Action Row: Details/Edit & Delete -->
+            <div class="flex items-center justify-between gap-1 pt-0.5">
+              <button
+                type="button"
+                class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] text-muted-foreground hover:text-foreground py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                :title="languageStore.t('مشخصات', 'Details')"
+                @click.stop="openViewDetailDialog(book)"
+              >
+                <EyeIcon class="size-2.5" />
+                <span>مشخصات</span>
+              </button>
+              <div class="h-3 w-px bg-border/50" />
+              <button
+                type="button"
+                class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] text-muted-foreground hover:text-foreground py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                :title="languageStore.t('ویرایش', 'Edit')"
+                @click.stop="openEditDialog(book)"
+              >
+                <PencilIcon class="size-2.5" />
+                <span>ویرایش</span>
+              </button>
+              <div class="h-3 w-px bg-border/50" />
+              <button
+                type="button"
+                class="flex items-center justify-center p-1 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10 transition-colors cursor-pointer"
+                :title="languageStore.t('حذف', 'Delete')"
+                @click.stop="confirmDeleteBook(book)"
+              >
+                <Trash2Icon class="size-3" />
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </template>
+        </div>
+      </div>
+    </div>
 
-    <!-- ── RECIPIENT VIEW-ONLY DETAILS DIALOG ── -->
+    <!-- Client View-Only Details Dialog -->
     <Dialog v-model:open="isViewDetailOpen">
       <DialogContent class="sm:max-w-md rounded-3xl p-5">
         <DialogHeader class="gap-1 text-start">
           <DialogTitle class="text-base font-extrabold text-foreground flex items-center gap-2">
             <BookOpenIcon class="size-5 text-foreground shrink-0" />
-            <span>{{ languageStore.t('مشخصات کتاب اهدایی', 'Book Details') }}</span>
+            <span>{{ languageStore.t('مشخصات کتاب', 'Book Details') }}</span>
           </DialogTitle>
           <DialogDescription class="text-xs text-muted-foreground">
-            {{ languageStore.t('کتاب اهدایی موجود در قفسه شما', 'Gifted book in your shelf') }}
+            {{ viewingBook?.book_title.title }}
           </DialogDescription>
         </DialogHeader>
 
         <div v-if="viewingBook" class="flex flex-col gap-4 py-2">
-          <!-- Book Header -->
+          <!-- Book Header Card -->
           <div class="flex items-center gap-3 bg-muted/30 p-3 rounded-2xl border border-border/50">
             <div class="w-14 h-20 rounded-xl overflow-hidden bg-muted/60 border border-border/40 shrink-0 flex items-center justify-center">
               <img
@@ -885,9 +721,19 @@ const formatDateTime = (raw: string): string => {
               <p class="text-xs text-muted-foreground">
                 {{ viewingBook.book_title.author }}
               </p>
-              <div class="flex items-center gap-1.5 mt-1">
-                <Badge class="bg-secondary text-secondary-foreground border border-border text-[10px] px-2 py-0.5 rounded-full font-bold">
+              <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                <Badge
+                  v-if="viewingBook.is_gift"
+                  class="bg-secondary text-secondary-foreground border border-border text-[10px] px-2 py-0.5 rounded-full font-bold"
+                >
                   هدیه از طرف {{ viewingBook.gifted_by_name || 'ادمین تفکر' }}
+                </Badge>
+                <Badge
+                  v-if="viewingBook.reading_status_display"
+                  variant="outline"
+                  class="text-[10px] px-2 py-0.5 rounded-full"
+                >
+                  {{ viewingBook.reading_status_display }}
                 </Badge>
               </div>
             </div>
@@ -903,8 +749,12 @@ const formatDateTime = (raw: string): string => {
               <span class="text-muted-foreground">دسته‌بندی:</span>
               <span class="font-bold text-foreground">{{ viewingBook.book_title.category }}</span>
             </div>
+            <div v-if="viewingBook.personal_note" class="flex flex-col gap-1 p-2.5 rounded-xl bg-card border border-border/40">
+              <span class="text-muted-foreground font-semibold">یادداشت شخصی شما:</span>
+              <p class="text-foreground leading-relaxed text-[11.5px]">{{ viewingBook.personal_note }}</p>
+            </div>
             <div v-if="viewingBook.book_title.description" class="flex flex-col gap-1 p-2.5 rounded-xl bg-card border border-border/40">
-              <span class="text-muted-foreground font-semibold">توضیحات:</span>
+              <span class="text-muted-foreground font-semibold">توضیحات کتاب:</span>
               <p class="text-muted-foreground leading-relaxed text-[11.5px]">{{ viewingBook.book_title.description }}</p>
             </div>
           </div>
@@ -913,77 +763,6 @@ const formatDateTime = (raw: string): string => {
         <DialogFooter>
           <Button type="button" class="w-full rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold" @click="isViewDetailOpen = false">
             {{ languageStore.t('بستن', 'Close') }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <!-- ── ADMIN QUICK STOCK INCREASE DIALOG ── -->
-    <Dialog v-model:open="isStockDialogOpen">
-      <DialogContent class="sm:max-w-sm rounded-3xl p-5">
-        <DialogHeader class="gap-1 text-start">
-          <DialogTitle class="text-base font-extrabold text-foreground flex items-center gap-2">
-            <PlusIcon class="size-5 text-foreground shrink-0" />
-            <span>{{ languageStore.t('افزایش موجودی انبار', 'Increase Stock') }}</span>
-          </DialogTitle>
-          <DialogDescription class="text-xs text-muted-foreground">
-            {{ stockBook?.book_title.title }}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div v-if="stockBook" class="flex flex-col gap-3 py-2">
-          <div class="flex items-center justify-between text-xs bg-muted/40 p-2.5 rounded-2xl border border-border/40">
-            <span class="text-muted-foreground">موجودی فعلی:</span>
-            <span class="font-bold text-foreground text-sm">{{ languageStore.n(stockBook.quantity) }} جلد</span>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-bold text-foreground">تعداد جلدهای جدید برای افزودن:</span>
-            <div class="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                class="rounded-xl px-3 font-bold"
-                :disabled="stockAdjustment <= 1"
-                @click="stockAdjustment = Math.max(1, stockAdjustment - 1)"
-              >
-                -
-              </Button>
-              <Input
-                v-model.number="stockAdjustment"
-                type="number"
-                min="1"
-                class="text-center font-bold text-sm h-9 rounded-xl"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                class="rounded-xl px-3 font-bold"
-                @click="stockAdjustment += 1"
-              >
-                +
-              </Button>
-            </div>
-            <span class="text-[11px] text-muted-foreground text-center">
-              موجودی جدید: {{ languageStore.n((stockBook.quantity || 1) + stockAdjustment) }} جلد
-            </span>
-          </div>
-        </div>
-
-        <DialogFooter class="gap-2">
-          <Button
-            type="button"
-            class="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-            :disabled="isUpdatingStock || stockAdjustment < 1"
-            @click="handleStockIncrease"
-          >
-            <Loader2Icon v-if="isUpdatingStock" class="size-3.5 animate-spin" />
-            <span>{{ languageStore.t('ثبت افزایش موجودی', 'Save Stock') }}</span>
-          </Button>
-          <Button type="button" variant="outline" class="rounded-2xl" @click="isStockDialogOpen = false">
-            {{ languageStore.t('انصراف', 'Cancel') }}
           </Button>
         </DialogFooter>
       </DialogContent>
