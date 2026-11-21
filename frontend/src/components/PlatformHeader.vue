@@ -236,13 +236,10 @@ watch(() => props.showSearchButton, (newVal) => {
           </div>
 
           <!-- Actions Section -->
-          <div
-            v-if="!isInnerPage && showSearchButton"
-            class="flex items-center gap-1 shrink-0 ms-auto z-10"
-          >
+          <div class="flex items-center gap-1.5 shrink-0 ms-auto z-10">
             <slot name="actions">
               <Button 
-                v-if="showSearchButton"
+                v-if="!isInnerPage && showSearchButton"
                 @click="activateSearch"
                 variant="ghost"
                 class="size-7.5 rounded-md hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-0"
@@ -251,6 +248,18 @@ watch(() => props.showSearchButton, (newVal) => {
                 <SearchIcon class="size-4" />
               </Button>
             </slot>
+
+            <!-- Mobile Theme Toggle Button (Inside header on mobile screens) -->
+            <button
+              type="button"
+              @click="toggleTheme()"
+              class="md:hidden size-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95 transition-all cursor-pointer outline-none"
+              :title="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
+              :aria-label="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
+            >
+              <SunIcon v-if="isDark" class="size-4.5 text-amber-400 hover:rotate-45 transition-transform duration-300" />
+              <MoonIcon v-else class="size-4.5 text-foreground/80 hover:-rotate-12 transition-transform duration-300" />
+            </button>
           </div>
         </div>
 
