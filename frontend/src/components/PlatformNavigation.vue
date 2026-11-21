@@ -4,13 +4,9 @@ import {
   HomeIcon, 
   LayersIcon, 
   HandHeartIcon, 
-  UserIcon, 
-  SunIcon, 
-  MoonIcon
+  UserIcon
 } from '@lucide/vue'
-import { useDark, useToggle } from '@vueuse/core'
 import { useLanguageStore } from '@/stores/languageStore'
-import { useUserStore } from '@/stores/userStore'
 
 const props = withDefaults(defineProps<{
   mode?: 'auto' | 'inline' | 'mobile' | 'desktop'
@@ -21,7 +17,6 @@ const props = withDefaults(defineProps<{
 })
 
 const languageStore = useLanguageStore()
-const userStore = useUserStore()
 
 // V-model active tab binding ('home' | 'topics' | 'donate' | 'marketplace' | 'profile')
 const activeTab = defineModel<'home' | 'topics' | 'donate' | 'marketplace' | 'profile'>({ default: 'home' })
@@ -37,15 +32,6 @@ const selectTab = (tab: 'home' | 'topics' | 'donate' | 'marketplace' | 'profile'
 
 // Hover state for Desktop Sidebar expansion
 const isHovered = ref(false)
-
-// Theme toggle
-const isDark = useDark({
-  selector: 'html',
-  attribute: 'class',
-  valueDark: 'dark',
-  valueLight: '',
-})
-const toggleTheme = useToggle(isDark)
 
 // Navigation items definition
 const navItems = [
@@ -114,6 +100,7 @@ const navItems = [
 
     <!-- ======================================================================= -->
     <!-- 3. DESKTOP INSTAGRAM-STYLE SIDEBAR (Visible on laptop/desktop >= md)   -->
+    <!-- Seamless blend, no contrasting box, no divider, bold active style      -->
     <!-- ======================================================================= -->
     <aside
       v-if="props.mode === 'auto' || props.mode === 'desktop'"
@@ -121,135 +108,74 @@ const navItems = [
       @mouseleave="isHovered = false"
       :class="[
         'hidden md:flex fixed top-0 bottom-0 start-0 z-50 h-screen select-none font-sans',
-        'bg-background/90 dark:bg-card/90 backdrop-blur-2xl border-e border-border/60',
-        'flex flex-col justify-between py-6 px-3',
-        'transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-        isHovered 
-          ? 'w-60 shadow-2xl shadow-black/10 dark:shadow-black/50' 
-          : 'w-20 shadow-none'
+        'bg-background border-none shadow-none',
+        'flex flex-col py-8 px-3',
+        'transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+        isHovered ? 'w-60' : 'w-20'
       ]"
       :dir="languageStore.dir"
     >
-      <!-- Top Section: Brand & Logo -->
+      <!-- Top Section: Brand Typography (تفکر) -->
       <div 
         @click="selectTab('home')"
-        class="h-14 flex items-center rounded-2xl cursor-pointer hover:bg-muted/40 active:scale-98 transition-all duration-200 overflow-hidden"
-        :class="isHovered ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'"
+        class="h-14 flex items-center rounded-2xl cursor-pointer hover:bg-muted/30 transition-all duration-200 overflow-hidden mb-8"
+        :class="isHovered ? 'px-4 justify-start' : 'px-0 justify-center'"
         :title="languageStore.t('صفحه اصلی تفکر', 'Tafakor Home')"
       >
-        <!-- Modern Geometric Brand Mark -->
-        <div class="size-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 shadow-xs transition-transform duration-300 group-hover:scale-105">
-          <svg class="size-6 text-primary fill-primary/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
-            <path d="M6 6h10" />
-            <path d="M6 10h7" />
-          </svg>
-        </div>
-
-        <!-- Brand Name & Tagline (Smooth Slide/Fade on Hover) -->
-        <div 
-          class="flex flex-col text-start overflow-hidden transition-all duration-300"
-          :class="isHovered ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none'"
+        <!-- Collapsed Minimal Glyph (ت) -->
+        <span 
+          v-if="!isHovered"
+          class="font-black text-2xl text-foreground select-none"
         >
-          <span class="font-black text-lg text-foreground tracking-tight whitespace-nowrap leading-tight">
-            {{ languageStore.t('تفکر', 'Tafakor') }}
-          </span>
-          <span class="text-[10px] text-muted-foreground font-medium truncate">
-            {{ languageStore.t('ترویج اندیشه و دانایی', 'Thought & Wisdom') }}
-          </span>
-        </div>
+          ت
+        </span>
+
+        <!-- Expanded Clean Brand Name: تفکر -->
+        <span 
+          v-else
+          class="font-black text-2xl text-foreground tracking-tight whitespace-nowrap select-none transition-all duration-300"
+        >
+          {{ languageStore.t('تفکر', 'Tafakor') }}
+        </span>
       </div>
 
-      <!-- Center Section: Navigation Links -->
-      <nav class="flex flex-col gap-2 w-full my-auto">
+      <!-- Navigation Links (Instagram-style: no background boxes, bold when active) -->
+      <nav class="flex flex-col gap-2 w-full">
         <button
           v-for="item in navItems"
           :key="'desktop-' + item.id"
           @click="selectTab(item.id)"
           :class="[
-            'relative w-full h-12 rounded-2xl flex items-center transition-all duration-200 active:scale-95 cursor-pointer outline-none border border-transparent overflow-hidden',
-            isHovered ? 'px-3.5 justify-start' : 'px-0 justify-center',
-            activeTab === item.id
-              ? 'bg-primary/10 text-primary font-bold shadow-xs'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            'w-full h-12 rounded-xl flex items-center transition-all duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden',
+            isHovered ? 'px-3.5 justify-start' : 'px-0 justify-center'
           ]"
           :title="languageStore.t(item.labelFa, item.labelEn)"
         >
-          <!-- Nav Icon -->
+          <!-- Nav Icon (Thicker stroke & highlighted when active) -->
           <component 
             :is="item.icon" 
-            class="size-6 shrink-0 transition-transform duration-200"
-            :class="activeTab === item.id ? 'scale-105' : ''"
+            class="size-6 shrink-0 transition-all duration-200"
+            :class="[
+              activeTab === item.id 
+                ? 'stroke-[2.5px] text-foreground scale-105' 
+                : 'stroke-[1.75px] text-muted-foreground'
+            ]"
           />
 
-          <!-- Nav Label (Smooth Slide/Fade) -->
+          <!-- Nav Label (Generous spacing ms-5, bold text when active) -->
           <span 
-            class="whitespace-nowrap text-sm font-semibold transition-all duration-300 overflow-hidden"
-            :class="isHovered ? 'max-w-[140px] opacity-100 ms-3.5' : 'max-w-0 opacity-0 ms-0 pointer-events-none'"
+            class="whitespace-nowrap text-base transition-all duration-300 overflow-hidden"
+            :class="[
+              isHovered ? 'max-w-[140px] opacity-100 ms-5' : 'max-w-0 opacity-0 ms-0 pointer-events-none',
+              activeTab === item.id 
+                ? 'font-bold text-foreground' 
+                : 'font-normal text-muted-foreground'
+            ]"
           >
             {{ languageStore.t(item.labelFa, item.labelEn) }}
           </span>
-
-          <!-- Active Indicator Pill on the start edge -->
-          <span 
-            v-if="activeTab === item.id"
-            class="absolute start-1 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-primary"
-          />
         </button>
       </nav>
-
-      <!-- Bottom Section: Theme Toggle & User Info -->
-      <div class="border-t border-border/50 pt-4 flex flex-col gap-2 w-full">
-        <!-- Theme Toggle -->
-        <button
-          @click="toggleTheme()"
-          :class="[
-            'w-full h-11 rounded-2xl flex items-center transition-all duration-200 active:scale-95 cursor-pointer outline-none border border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40 overflow-hidden',
-            isHovered ? 'px-3.5 justify-start' : 'px-0 justify-center'
-          ]"
-          :title="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-        >
-          <SunIcon v-if="isDark" class="size-5 shrink-0 text-amber-400" />
-          <MoonIcon v-else class="size-5 shrink-0 text-slate-600 dark:text-slate-300" />
-
-          <span 
-            class="whitespace-nowrap text-xs font-semibold overflow-hidden transition-all duration-300"
-            :class="isHovered ? 'max-w-[140px] opacity-100 ms-3' : 'max-w-0 opacity-0 ms-0 pointer-events-none'"
-          >
-            {{ isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode') }}
-          </span>
-        </button>
-
-        <!-- User Quick Profile Summary Button -->
-        <button
-          @click="selectTab('profile')"
-          :class="[
-            'w-full h-11 rounded-2xl flex items-center transition-all duration-200 active:scale-95 cursor-pointer outline-none border border-transparent overflow-hidden',
-            activeTab === 'profile'
-              ? 'bg-primary/10 text-primary font-bold'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted/40',
-            isHovered ? 'px-3.5 justify-start' : 'px-0 justify-center'
-          ]"
-          :title="languageStore.t('پروفایل کاربری', 'User Profile')"
-        >
-          <div class="size-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0 overflow-hidden">
-            <span v-if="userStore.user?.name">{{ userStore.user.name.slice(0, 2) }}</span>
-            <UserIcon v-else class="size-4" />
-          </div>
-
-          <div 
-            class="flex flex-col text-start overflow-hidden transition-all duration-300"
-            :class="isHovered ? 'max-w-[130px] opacity-100 ms-2.5' : 'max-w-0 opacity-0 ms-0 pointer-events-none'"
-          >
-            <span class="text-xs font-bold text-foreground truncate">
-              {{ userStore.user?.name || userStore.user?.phone || languageStore.t('حساب کاربری', 'Account') }}
-            </span>
-            <span class="text-[10px] text-muted-foreground truncate">
-              {{ userStore.isAuthenticated ? languageStore.t('مشاهده پروفایل', 'View Profile') : languageStore.t('ورود به حساب', 'Sign In') }}
-            </span>
-          </div>
-        </button>
-      </div>
 
     </aside>
   </template>
