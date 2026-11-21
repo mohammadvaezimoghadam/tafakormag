@@ -6,7 +6,9 @@ import {
   CheckCircle2Icon,
   AlertCircleIcon,
   AlertTriangleIcon,
-  InfoIcon
+  InfoIcon,
+  SunIcon,
+  MoonIcon
 } from '@lucide/vue'
 import { useToastStore } from '@/stores/toastStore'
 import { useUserStore } from '@/stores/userStore'
@@ -81,7 +83,6 @@ const handleLoginStateChange = (state: string) => {
       class="min-h-screen bg-background text-foreground font-sans transition-colors duration-300 flex flex-col relative" 
       :dir="languageStore.dir"
     >
-      
       <!-- Main Application Container -->
       <main class="w-full flex-1 flex flex-col items-center p-4 sm:p-6">
         <router-view v-slot="{ Component }">

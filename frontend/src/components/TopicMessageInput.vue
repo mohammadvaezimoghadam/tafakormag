@@ -144,25 +144,39 @@ const handleApplyRefinedText = (refinedText: string) => {
 }
 const actualHeight = ref(40)
 
-// Check if line count is more than 4 lines
+// Check if line count is more than 3 lines
 const lineCount = computed(() => {
   if (!text.value) return 0
   return text.value.split('\n').length
 })
 
-const isLongText = computed(() => {
-  if (!text.value) return false
-  
-  // 1. Explicit line breaks (4 lines or more)
-  if (lineCount.value >= 4) return true
+// Hysteresis-protected isLongText to prevent cyclic bouncing/jittering when typing on line 3
+const isLongText = ref(false)
 
-  // 2. Character length fallback (> 100 characters roughly equals 3-4 lines)
-  if (text.value.length > 100) return true
+const checkLongText = () => {
+  if (!text.value || text.value.trim() === '') {
+    isLongText.value = false
+    return
+  }
+  const lines = lineCount.value
+  const len = text.value.length
+  const h = actualHeight.value
 
-  // 3. Rendered height fallback (> 75px)
-  if (actualHeight.value > 75) return true
+  if (!isLongText.value) {
+    // Threshold to activate: 3 or more lines, or >= 120 chars, or measured height >= 85px
+    if (lines >= 3 || len >= 120 || h >= 85) {
+      isLongText.value = true
+    }
+  } else {
+    // Hysteresis buffer: Only deactivate if user clearly deletes back down to short text
+    if (lines <= 2 && len < 70 && h < 65) {
+      isLongText.value = false
+    }
+  }
+}
 
-  return false
+watch([text, actualHeight], () => {
+  checkLongText()
 })
 
 // Watch edit mode to automatically trigger expanded modal
@@ -333,7 +347,7 @@ const adjustHeight = () => {
   const el = textareaRef.value
   if (!el) return
   el.style.height = 'auto'
-  const minHeight = hasAttachments.value ? 36 : 40
+  const minHeight = 40
   const newHeight = Math.min(Math.max(el.scrollHeight, minHeight), 140)
   el.style.height = `${newHeight}px`
   actualHeight.value = el.scrollHeight
@@ -954,9 +968,9 @@ const containerClasses = computed(() => {
 
 const textareaClasses = computed(() => {
   if (hasAttachments.value || (isLongText.value && !isRecording.value) || isSlashModalOpen.value || props.isEditMode || props.isProposalMode) {
-    return 'w-full bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[36px] max-h-[140px] h-[36px] py-2 px-1.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
+    return 'w-full bg-transparent border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] py-2.5 px-2.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
   }
-  return 'w-full bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] h-10 py-2.5 px-3 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
+  return 'w-full bg-white dark:bg-muted/20 border border-border/40 dark:border-border/20 outline-none focus:border-primary/40 focus-within:border-primary/40 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none focus-visible:outline-none text-xs font-semibold min-h-[40px] max-h-[140px] py-2.5 px-2.5 rounded-2xl flex-1 text-foreground placeholder:text-muted-foreground/60 transition-all duration-200 shadow-none resize-none overflow-y-auto scrollbar-none align-bottom text-start leading-relaxed'
 })
 
 const recordingStatusClasses = computed(() => {

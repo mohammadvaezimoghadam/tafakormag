@@ -88,9 +88,9 @@ class ShelfBookSerializer(BaseModelSerializer):
     available_quantity = serializers.IntegerField(read_only=True)
     donated_count = serializers.IntegerField(read_only=True)
     is_gift = serializers.BooleanField(read_only=True)
-    can_donate = serializers.BooleanField(read_only=True)
-    can_edit = serializers.BooleanField(read_only=True)
-    can_delete = serializers.BooleanField(read_only=True)
+    can_donate = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
     gifted_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -184,6 +184,15 @@ class ShelfBookSerializer(BaseModelSerializer):
                 return obj.gifted_by.get_full_name() or getattr(obj.gifted_by, "username", "") or "ادمین تفکر"
             return "ادمین تفکر"
         return None
+
+    def get_can_donate(self, obj) -> bool:
+        return False
+
+    def get_can_edit(self, obj) -> bool:
+        return False
+
+    def get_can_delete(self, obj) -> bool:
+        return False
 
 
 class ShelfBookCreateInputSerializer(BaseInputSerializer):

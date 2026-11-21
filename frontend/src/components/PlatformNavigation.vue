@@ -4,16 +4,20 @@ import {
   HomeIcon, 
   LayersIcon, 
   HandHeartIcon, 
-  UserIcon
+  UserIcon,
+  SunIcon,
+  MoonIcon
 } from '@lucide/vue'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const props = withDefaults(defineProps<{
   mode?: 'auto' | 'inline' | 'mobile' | 'desktop'
   showMobileNav?: boolean
+  dark?: boolean
 }>(), {
   mode: 'auto',
-  showMobileNav: true
+  showMobileNav: true,
+  dark: false
 })
 
 const languageStore = useLanguageStore()
@@ -23,6 +27,7 @@ const activeTab = defineModel<'home' | 'topics' | 'donate' | 'marketplace' | 'pr
 
 const emit = defineEmits<{
   (e: 'change', tab: 'home' | 'topics' | 'donate' | 'marketplace' | 'profile'): void
+  (e: 'toggle-theme'): void
 }>()
 
 const selectTab = (tab: 'home' | 'topics' | 'donate' | 'marketplace' | 'profile') => {
@@ -71,32 +76,49 @@ const navItems = [
   <template v-else>
     <!-- ======================================================================= -->
     <!-- 2. MOBILE BOTTOM NAVIGATION (Visible on mobile/tablet screens < md)    -->
+    <!-- Standard fixed bottom bar: edge-to-edge, flush at bottom, icon on top,  -->
+    <!-- text underneath.                                                       -->
     <!-- ======================================================================= -->
-    <div 
+    <nav 
       v-if="(props.mode === 'auto' || props.mode === 'mobile') && props.showMobileNav" 
-      class="md:hidden fixed bottom-6 inset-x-0 flex justify-center z-45 pointer-events-none px-6"
+      class="md:hidden fixed bottom-0 inset-x-0 z-45 w-full bg-background/95 dark:bg-card/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] select-none font-sans" 
+      :dir="languageStore.dir"
+      style="padding-bottom: max(env(safe-area-inset-bottom), 0.25rem);"
     >
-      <div 
-        class="pointer-events-auto inline-flex items-center gap-1 bg-background/80 dark:bg-card/85 backdrop-blur-xl border border-border/70 rounded-2xl p-1.5 shadow-xl select-none font-sans" 
-        :dir="languageStore.dir"
-      >
+      <div class="grid grid-cols-4 items-center h-16 w-full max-w-lg mx-auto px-1">
         <button
           v-for="item in navItems"
           :key="'mobile-' + item.id"
+          type="button"
           @click="selectTab(item.id)"
           :class="[
-            'px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer border border-transparent',
+            'flex flex-col items-center justify-center gap-1 h-full w-full py-1.5 rounded-lg transition-all duration-200 active:scale-95 cursor-pointer outline-none',
             activeTab === item.id
-              ? 'bg-primary/10 text-primary font-bold shadow-xs'
-              : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
+              ? 'text-primary'
+              : 'text-muted-foreground hover:text-foreground'
           ]"
           :title="languageStore.t(item.labelFa, item.labelEn)"
         >
-          <component :is="item.icon" class="size-4 shrink-0" />
-          <span>{{ languageStore.t(item.labelFa, item.labelEn) }}</span>
+          <div class="relative flex items-center justify-center">
+            <component 
+              :is="item.icon" 
+              class="size-[22px] transition-all duration-200 shrink-0" 
+              :class="[
+                activeTab === item.id ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'
+              ]"
+            />
+          </div>
+          <span 
+            class="text-[11px] leading-none transition-all duration-200 tracking-tight"
+            :class="[
+              activeTab === item.id ? 'font-bold' : 'font-medium'
+            ]"
+          >
+            {{ languageStore.t(item.labelFa, item.labelEn) }}
+          </span>
         </button>
       </div>
-    </div>
+    </nav>
 
     <!-- ======================================================================= -->
     <!-- 3. DESKTOP INSTAGRAM-STYLE SIDEBAR (Visible on laptop/desktop >= md)   -->
@@ -109,48 +131,53 @@ const navItems = [
       :class="[
         'hidden md:flex fixed top-0 bottom-0 start-0 z-50 h-screen select-none font-sans',
         'bg-background border-none shadow-none',
-        'flex flex-col py-8 px-3',
+        'flex flex-col py-6 px-3',
         'transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-        isHovered ? 'w-60' : 'w-[92px]'
+        isHovered ? 'w-60' : 'w-[72px]'
       ]"
       :dir="languageStore.dir"
     >
       <!-- Top Section: Brand Typography (تفکر) - Fixed position, unclipped throughout transitions -->
       <div 
         @click="selectTab('home')"
-        class="h-14 flex items-center justify-start px-2 rounded-2xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none mb-6 overflow-visible"
+        class="h-12 flex items-center rounded-xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none overflow-visible"
+        :class="isHovered ? 'justify-start px-2.5' : 'justify-center px-0'"
         :title="languageStore.t('صفحه اصلی تفکر', 'Tafakor Home')"
       >
-        <span class="font-black text-2xl text-foreground whitespace-nowrap overflow-visible">
+        <span 
+          class="font-black text-2xl text-foreground whitespace-nowrap overflow-visible"
+          :class="isHovered ? 'opacity-100' : 'text-xl'"
+        >
           {{ languageStore.t('تفکر', 'Tafakor') }}
         </span>
       </div>
 
-      <!-- Navigation Links (Under the brand logo, icons completely stationary with zero shift) -->
-      <nav class="flex flex-col gap-2 w-full">
+      <!-- Navigation Links (Centered vertically like Instagram) -->
+      <nav class="flex-1 flex flex-col justify-center gap-3 w-full my-auto">
         <button
           v-for="item in navItems"
           :key="'desktop-' + item.id"
           @click="selectTab(item.id)"
           :class="[
-            'w-full h-12 rounded-xl flex items-center justify-start px-2.5 gap-6 transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden'
+            'w-full h-12 rounded-xl flex items-center transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden',
+            isHovered ? 'justify-start px-3.5 gap-4' : 'justify-center px-0 gap-0'
           ]"
           :title="languageStore.t(item.labelFa, item.labelEn)"
         >
-          <!-- Nav Icon (Stationary in place, size strictly fixed at size-6, bolder stroke when active) -->
+          <!-- Nav Icon (Stationary in place, standard size-6 / 24px) -->
           <div class="size-6 flex items-center justify-center shrink-0">
             <component 
               :is="item.icon" 
               class="size-6 shrink-0 transition-colors duration-200"
               :class="[
                 activeTab === item.id 
-                  ? 'stroke-[2.5px] text-foreground' 
+                  ? 'stroke-[2.25px] text-foreground' 
                   : 'stroke-[1.75px] text-muted-foreground'
               ]"
             />
           </div>
 
-          <!-- Nav Label (Generous 24px gap-6, smooth slide/fade, no layout shift for icon) -->
+          <!-- Nav Label (Smooth slide/fade) -->
           <span 
             class="inline-block whitespace-nowrap text-base transition-all duration-300 overflow-hidden"
             :class="[
@@ -164,6 +191,23 @@ const navItems = [
           </span>
         </button>
       </nav>
+
+      <!-- Bottom Section: Dark/Light Mode Toggle Button (Icon only, at the bottom) -->
+      <div 
+        class="mt-auto w-full pt-2 flex items-center"
+        :class="isHovered ? 'justify-start px-1' : 'justify-center'"
+      >
+        <button
+          type="button"
+          @click="emit('toggle-theme')"
+          class="size-11 rounded-xl flex items-center justify-center hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer active:scale-95 outline-none"
+          :title="props.dark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
+          :aria-label="props.dark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
+        >
+          <SunIcon v-if="props.dark" class="size-6 text-amber-400 hover:rotate-45 transition-transform duration-300" />
+          <MoonIcon v-else class="size-6 text-muted-foreground hover:text-foreground hover:-rotate-12 transition-transform duration-300" />
+        </button>
+      </div>
 
     </aside>
   </template>

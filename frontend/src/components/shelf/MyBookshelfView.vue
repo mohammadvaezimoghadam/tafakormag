@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useToastStore } from '@/stores/toastStore'
+import { useUserStore } from '@/stores/userStore'
 import {
   confirmGift,
-  deleteShelfBook,
   extractApiErrorMessage,
   getMyShelfSummary,
   listIncomingGifts,
@@ -16,9 +16,6 @@ import type {
   ShelfBook,
   ShelfSummary,
 } from '@/types/shelf'
-import AddShelfBookDialog from './AddShelfBookDialog.vue'
-import BookDonationDetailDialog from './BookDonationDetailDialog.vue'
-import DonateSpecificBookDialog from './DonateSpecificBookDialog.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,29 +30,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
   BookCheckIcon,
   BookOpenIcon,
   CheckIcon,
   EyeIcon,
   GiftIcon,
-  HandHeartIcon,
   Loader2Icon,
-  PencilIcon,
-  PlusIcon,
   SearchIcon,
   SmartphoneIcon,
   SparklesIcon,
-  Trash2Icon,
 } from '@lucide/vue'
 
 const emit = defineEmits<{
@@ -64,6 +47,7 @@ const emit = defineEmits<{
 
 const languageStore = useLanguageStore()
 const toastStore = useToastStore()
+const userStore = useUserStore()
 
 const books = ref<ShelfBook[]>([])
 const incomingGifts = ref<IncomingGiftItem[]>([])
@@ -71,49 +55,18 @@ const isActioningGift = ref<number | null>(null)
 
 const summary = ref<ShelfSummary>({
   total: 0,
-  reading_count: 0,
-  finished_count: 0,
-  want_to_read_count: 0,
-  keeping_count: 0,
-  offering_count: 0,
+  total_copies: 0,
 })
 
 const isLoading = ref(true)
 const searchQuery = ref('')
 
-type ShelfTab = 'gifts' | 'reading' | 'finished'
-const activeTab = ref<ShelfTab>('gifts')
-
-const isAddEditDialogOpen = ref(false)
-const editingBook = ref<ShelfBook | null>(null)
-
-const isDeleteDialogOpen = ref(false)
-const deletingBook = ref<ShelfBook | null>(null)
-const isDeleting = ref(false)
-
-const isDonateDialogOpen = ref(false)
-const donatingBook = ref<ShelfBook | null>(null)
-
-const isClaimDialogOpen = ref(false)
-
 // View-Only Book Detail Modal
 const isViewDetailOpen = ref(false)
 const viewingBook = ref<ShelfBook | null>(null)
 
-const giftsCount = computed(() => books.value.filter((b) => b.is_gift === true).length)
-const readingCount = computed(() => books.value.filter((b) => b.reading_status === 'reading').length)
-const finishedCount = computed(() => books.value.filter((b) => b.reading_status === 'finished').length)
-
 const filteredBooks = computed(() => {
-  let list = books.value
-  if (activeTab.value === 'reading') {
-    return list.filter((b) => b.reading_status === 'reading')
-  } else if (activeTab.value === 'finished') {
-    return list.filter((b) => b.reading_status === 'finished')
-  }
-  // Default 'gifts': show all gifted books (or all shelf books if none explicitly marked)
-  const gifted = list.filter((b) => b.is_gift === true)
-  return gifted.length > 0 ? gifted : list
+  return books.value
 })
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
@@ -128,11 +81,7 @@ const loadShelfData = async () => {
       }),
       getMyShelfSummary().catch(() => ({
         total: 0,
-        reading_count: 0,
-        finished_count: 0,
-        want_to_read_count: 0,
-        keeping_count: 0,
-        offering_count: 0,
+        total_copies: 0,
       })),
       listIncomingGifts().catch(() => []),
     ])
@@ -213,58 +162,9 @@ const clearFilters = () => {
   loadShelfData()
 }
 
-const openAddDialog = () => {
-  editingBook.value = null
-  isAddEditDialogOpen.value = true
-}
-
-const openEditDialog = (book: ShelfBook) => {
-  editingBook.value = book
-  isAddEditDialogOpen.value = true
-}
-
 const openViewDetailDialog = (book: ShelfBook) => {
   viewingBook.value = book
   isViewDetailOpen.value = true
-}
-
-const handleDonateClick = (book: ShelfBook) => {
-  donatingBook.value = book
-  isDonateDialogOpen.value = true
-}
-
-const handleBookSaved = async () => {
-  await loadShelfData()
-  emit('shelf-changed')
-}
-
-const confirmDeleteBook = (book: ShelfBook) => {
-  deletingBook.value = book
-  isDeleteDialogOpen.value = true
-}
-
-const executeDeleteBook = async () => {
-  if (!deletingBook.value) return
-  isDeleting.value = true
-  try {
-    await deleteShelfBook(deletingBook.value.id)
-    books.value = books.value.filter((b) => b.id !== deletingBook.value?.id)
-    await refreshSummaryOnly()
-    emit('shelf-changed')
-    toastStore.triggerToast(
-      languageStore.t('کتاب از قفسه حذف شد', 'Book removed from shelf'),
-      'success'
-    )
-    isDeleteDialogOpen.value = false
-    deletingBook.value = null
-  } catch (err) {
-    toastStore.triggerToast(
-      extractApiErrorMessage(err, languageStore.t('حذف کتاب انجام نشد', 'Failed to delete book')),
-      'error'
-    )
-  } finally {
-    isDeleting.value = false
-  }
 }
 
 const resolveMediaUrl = (raw?: string | null): string | null => {
@@ -291,21 +191,9 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
                 {{ languageStore.t('قفسه کتاب من', 'My Bookshelf') }}
               </h2>
               <p class="text-xs text-muted-foreground">
-                {{ languageStore.t('مدیریت کتاب‌های شخصی، در حال مطالعه و هدایای دریافتی', 'Manage personal books, reading list and received gifts') }}
+                {{ languageStore.t('مشاهده کتاب‌ها و هدایای دریافتی', 'View books and received gifts') }}
               </p>
             </div>
-          </div>
-
-          <!-- Header Action Button: Add Book to Shelf -->
-          <div class="flex items-center gap-2 flex-wrap">
-            <Button
-              type="button"
-              class="rounded-2xl shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-              @click="openAddDialog"
-            >
-              <PlusIcon data-icon="inline-start" />
-              <span>{{ languageStore.t('افزودن کتاب', 'Add Book') }}</span>
-            </Button>
           </div>
         </div>
 
@@ -421,53 +309,6 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
       </CardContent>
     </Card>
 
-    <!-- Client Filter Tabs -->
-    <div
-      v-if="readingCount > 0 || finishedCount > 0"
-      class="flex items-center justify-center gap-1.5 p-1 bg-muted/60 dark:bg-muted/40 rounded-2xl border border-border/50 self-center mx-auto text-xs flex-wrap"
-    >
-      <button
-        type="button"
-        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-        :class="activeTab === 'gifts' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-        @click="activeTab = 'gifts'"
-      >
-        <SparklesIcon class="size-3.5 text-primary" />
-        <span>{{ languageStore.t('کتاب‌های اهدایی', 'Gifted Books') }}</span>
-        <Badge class="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-4 rounded-full">
-          {{ languageStore.n(giftsCount || books.length) }}
-        </Badge>
-      </button>
-
-      <button
-        v-if="readingCount > 0"
-        type="button"
-        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-        :class="activeTab === 'reading' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-        @click="activeTab = 'reading'"
-      >
-        <BookOpenIcon class="size-3.5 text-primary" />
-        <span>{{ languageStore.t('در حال مطالعه', 'Reading') }}</span>
-        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
-          {{ languageStore.n(readingCount) }}
-        </Badge>
-      </button>
-
-      <button
-        v-if="finishedCount > 0"
-        type="button"
-        class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-        :class="activeTab === 'finished' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-        @click="activeTab = 'finished'"
-      >
-        <BookCheckIcon class="size-3.5 text-primary" />
-        <span>{{ languageStore.t('خوانده شده', 'Finished') }}</span>
-        <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 rounded-full">
-          {{ languageStore.n(finishedCount) }}
-        </Badge>
-      </button>
-    </div>
-
     <!-- Search Input -->
     <div class="relative">
       <SearchIcon class="size-4 text-muted-foreground absolute top-1/2 -translate-y-1/2 start-3.5 pointer-events-none" />
@@ -524,26 +365,20 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
           {{
             hasActiveFilter
               ? languageStore.t('کتابی با این عبارت پیدا نشد', 'No matching books found')
-              : activeTab === 'gifts'
-              ? languageStore.t('هنوز کتابی به شما اهدا نشده است', 'No books gifted to you yet')
-              : languageStore.t('هنوز کتابی در قفسه خود ثبت نکرده‌اید', 'No books in your bookshelf yet')
+              : languageStore.t('هنوز کتابی در قفسه شما ثبت نشده است', 'No books in your bookshelf yet')
           }}
         </span>
         <span class="text-xs text-muted-foreground leading-relaxed">
           {{
             hasActiveFilter
               ? languageStore.t('عبارت جستجو را تغییر دهید یا پاک کنید.', 'Try changing or clearing your search.')
-              : languageStore.t('با دکمه «افزودن کتاب»، کتب مورد علاقه یا مطالعه خود را ثبت نمایید.', 'Click "Add Book" to add titles to your personal shelf.')
+              : languageStore.t('کتاب‌های اهدا شده به شما پس از تأیید در این بخش نمایش داده می‌شوند.', 'Books gifted to you will appear here.')
           }}
         </span>
       </div>
-      <div class="flex items-center gap-2">
-        <Button v-if="hasActiveFilter" type="button" variant="outline" size="sm" class="rounded-xl" @click="clearFilters">
+      <div v-if="hasActiveFilter" class="flex items-center gap-2">
+        <Button type="button" variant="outline" size="sm" class="rounded-xl" @click="clearFilters">
           {{ languageStore.t('پاک کردن جستجو', 'Reset Search') }}
-        </Button>
-        <Button v-else type="button" size="sm" class="rounded-xl" @click="openAddDialog">
-          <PlusIcon data-icon="inline-start" />
-          <span>{{ languageStore.t('افزودن اولین کتاب', 'Add First Book') }}</span>
         </Button>
       </div>
     </div>
@@ -555,8 +390,8 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
         :key="book.id"
         role="button"
         tabindex="0"
-        @click="book.is_gift ? openViewDetailDialog(book) : openEditDialog(book)"
-        @keydown.enter.prevent="book.is_gift ? openViewDetailDialog(book) : openEditDialog(book)"
+        @click="openViewDetailDialog(book)"
+        @keydown.enter.prevent="openViewDetailDialog(book)"
         class="w-full min-w-0 h-auto rounded-2xl border border-border/60 bg-card/85 dark:bg-card/65 backdrop-blur-md shadow-xs transition-all overflow-hidden flex flex-col select-none cursor-pointer hover:border-primary/40 hover:shadow-sm group"
       >
         <!-- Cover Container -->
@@ -573,25 +408,13 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
           />
           <BookOpenIcon v-else class="size-7 text-muted-foreground/70" />
 
-          <!-- Top-Start Badge: Gift or Reading Status -->
+          <!-- Top-Start Badge: Gift Only -->
           <div
             v-if="book.is_gift"
             class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-foreground text-background text-[9.5px] font-bold shadow-2xs flex items-center gap-1 backdrop-blur-xs"
           >
             <SparklesIcon class="size-2.5" />
             <span>{{ languageStore.t('هدیه', 'Gift') }}</span>
-          </div>
-          <div
-            v-else-if="book.reading_status === 'reading'"
-            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[9.5px] font-bold shadow-2xs"
-          >
-            <span>{{ languageStore.t('در حال مطالعه', 'Reading') }}</span>
-          </div>
-          <div
-            v-else-if="book.reading_status === 'finished'"
-            class="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground border border-border/60 text-[9.5px] font-bold shadow-2xs"
-          >
-            <span>{{ languageStore.t('خوانده شده', 'Finished') }}</span>
           </div>
 
           <!-- Quantity Badge (if multiple copies) -->
@@ -623,53 +446,16 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
               <span class="truncate">هدیه از طرف {{ book.gifted_by_name || 'ادمین تفکر' }}</span>
             </div>
 
-            <!-- Donate Button (if can donate) -->
-            <Button
-              v-if="(book.available_quantity ?? book.quantity ?? 1) > 0 && book.can_donate !== false"
-              type="button"
-              size="xs"
-              class="w-full h-7 rounded-xl text-[10.5px] font-bold gap-1 justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs"
-              @click.stop="handleDonateClick(book)"
-            >
-              <HandHeartIcon class="size-3.5" />
-              <span>{{ languageStore.t('اهدا', 'Donate') }}</span>
-              <span
-                v-if="book.reserved_quantity && book.reserved_quantity > 0"
-                class="text-[9.5px] opacity-75 font-normal ms-0.5"
-              >
-                ({{ languageStore.n(book.available_quantity ?? (book.quantity - book.reserved_quantity)) }})
-              </span>
-            </Button>
-
-            <!-- Action Row: Details/Edit & Delete -->
-            <div class="flex items-center justify-between gap-1 pt-0.5">
+            <!-- Action Row -->
+            <div class="flex items-center justify-center pt-0.5">
               <button
                 type="button"
-                class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] text-muted-foreground hover:text-foreground py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                :title="languageStore.t('مشخصات', 'Details')"
+                class="w-full flex items-center justify-center gap-1.5 text-[10.5px] font-bold text-muted-foreground hover:text-foreground py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                :title="languageStore.t('مشخصات کتاب', 'Book Details')"
                 @click.stop="openViewDetailDialog(book)"
               >
-                <EyeIcon class="size-2.5" />
-                <span>مشخصات</span>
-              </button>
-              <div class="h-3 w-px bg-border/50" />
-              <button
-                type="button"
-                class="flex-1 flex items-center justify-center gap-0.5 text-[9.5px] text-muted-foreground hover:text-foreground py-1 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                :title="languageStore.t('ویرایش', 'Edit')"
-                @click.stop="openEditDialog(book)"
-              >
-                <PencilIcon class="size-2.5" />
-                <span>ویرایش</span>
-              </button>
-              <div class="h-3 w-px bg-border/50" />
-              <button
-                type="button"
-                class="flex items-center justify-center p-1 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10 transition-colors cursor-pointer"
-                :title="languageStore.t('حذف', 'Delete')"
-                @click.stop="confirmDeleteBook(book)"
-              >
-                <Trash2Icon class="size-3" />
+                <EyeIcon class="size-3.5" />
+                <span>{{ languageStore.t('مشخصات کتاب', 'Book Details') }}</span>
               </button>
             </div>
           </div>
@@ -717,33 +503,32 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
                 >
                   هدیه از طرف {{ viewingBook.gifted_by_name || 'ادمین تفکر' }}
                 </Badge>
-                <Badge
-                  v-if="viewingBook.reading_status_display"
-                  variant="outline"
-                  class="text-[10px] px-2 py-0.5 rounded-full"
-                >
-                  {{ viewingBook.reading_status_display }}
-                </Badge>
               </div>
             </div>
           </div>
 
           <!-- Info Details -->
           <div class="flex flex-col gap-2 text-xs">
+            <div class="flex items-center justify-between p-2 rounded-xl bg-card border border-border/40">
+              <span class="text-muted-foreground">{{ languageStore.t('تعداد جلد:', 'Volumes / Copies:') }}</span>
+              <span class="font-extrabold text-foreground">
+                {{ languageStore.n(viewingBook.quantity || 1) }} {{ languageStore.t('جلد', 'copies') }}
+              </span>
+            </div>
             <div v-if="viewingBook.book_title.publisher" class="flex items-center justify-between p-2 rounded-xl bg-card border border-border/40">
-              <span class="text-muted-foreground">ناشر:</span>
+              <span class="text-muted-foreground">{{ languageStore.t('ناشر:', 'Publisher:') }}</span>
               <span class="font-bold text-foreground">{{ viewingBook.book_title.publisher }}</span>
             </div>
             <div v-if="viewingBook.book_title.category" class="flex items-center justify-between p-2 rounded-xl bg-card border border-border/40">
-              <span class="text-muted-foreground">دسته‌بندی:</span>
+              <span class="text-muted-foreground">{{ languageStore.t('دسته‌بندی:', 'Category:') }}</span>
               <span class="font-bold text-foreground">{{ viewingBook.book_title.category }}</span>
             </div>
             <div v-if="viewingBook.personal_note" class="flex flex-col gap-1 p-2.5 rounded-xl bg-card border border-border/40">
-              <span class="text-muted-foreground font-semibold">یادداشت شخصی شما:</span>
+              <span class="text-muted-foreground font-semibold">{{ languageStore.t('یادداشت شخصی شما:', 'Personal Note:') }}</span>
               <p class="text-foreground leading-relaxed text-[11.5px]">{{ viewingBook.personal_note }}</p>
             </div>
             <div v-if="viewingBook.book_title.description" class="flex flex-col gap-1 p-2.5 rounded-xl bg-card border border-border/40">
-              <span class="text-muted-foreground font-semibold">توضیحات کتاب:</span>
+              <span class="text-muted-foreground font-semibold">{{ languageStore.t('توضیحات کتاب:', 'Description:') }}</span>
               <p class="text-muted-foreground leading-relaxed text-[11.5px]">{{ viewingBook.book_title.description }}</p>
             </div>
           </div>
@@ -756,57 +541,5 @@ const resolveMediaUrl = (raw?: string | null): string | null => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
-    <!-- QR Handover / Claim Dialog -->
-    <BookDonationDetailDialog
-      v-model:open="isClaimDialogOpen"
-      :code-lookup-mode="true"
-      @changed="handleBookSaved"
-    />
-
-    <!-- Add / Edit Dialog -->
-    <AddShelfBookDialog
-      v-model:open="isAddEditDialogOpen"
-      :book="editingBook"
-      @saved="handleBookSaved"
-    />
-
-    <!-- Donate Book Dialog -->
-    <DonateSpecificBookDialog
-      v-model:open="isDonateDialogOpen"
-      :book="donatingBook"
-      @donated="handleBookSaved"
-    />
-
-    <!-- Delete Confirmation AlertDialog -->
-    <AlertDialog v-model:open="isDeleteDialogOpen">
-      <AlertDialogContent class="rounded-3xl bg-card border-border/60">
-        <AlertDialogHeader class="text-start">
-          <AlertDialogTitle class="text-base font-extrabold">
-            {{ languageStore.t('حذف کتاب از قفسه؟', 'Remove book from shelf?') }}
-          </AlertDialogTitle>
-          <AlertDialogDescription class="text-xs text-muted-foreground leading-relaxed">
-            {{
-              languageStore.t(
-                `آیا مطمئن هستید که می‌خواهید «${deletingBook?.book_title.title || ''}» را از قفسه خود حذف کنید؟`,
-                `Are you sure you want to remove "${deletingBook?.book_title.title || ''}" from your shelf?`
-              )
-            }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter class="gap-2 sm:justify-start">
-          <AlertDialogAction
-            class="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-2xl"
-            :disabled="isDeleting"
-            @click.prevent="executeDeleteBook"
-          >
-            {{ isDeleting ? languageStore.t('در حال حذف...', 'Removing...') : languageStore.t('بله، حذف شود', 'Delete') }}
-          </AlertDialogAction>
-          <AlertDialogCancel class="rounded-2xl" :disabled="isDeleting">
-            {{ languageStore.t('انصراف', 'Cancel') }}
-          </AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   </div>
 </template>

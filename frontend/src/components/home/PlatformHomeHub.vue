@@ -405,9 +405,9 @@ defineExpose({
               </div>
               <div
                 v-else
-                class="w-full py-1 text-center text-[10px] font-medium text-muted-foreground bg-muted/40 border border-border/40 rounded-xl truncate"
+                class="w-full py-1 text-center text-[10px] font-bold text-muted-foreground bg-muted/40 border border-border/40 rounded-xl truncate"
               >
-                <span>{{ book.reading_status_display || languageStore.t('در قفسه', 'In Shelf') }}</span>
+                <span>{{ languageStore.n(book.quantity || 1) }} {{ languageStore.t('جلد', 'copies') }}</span>
               </div>
             </div>
           </div>

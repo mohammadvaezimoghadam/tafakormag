@@ -97,11 +97,11 @@ export interface ShelfBook {
 export interface ShelfSummary {
   total: number
   total_copies?: number
-  reading_count: number
-  finished_count: number
-  want_to_read_count: number
-  keeping_count: number
-  offering_count: number
+  reading_count?: number
+  finished_count?: number
+  want_to_read_count?: number
+  keeping_count?: number
+  offering_count?: number
 }
 
 export interface ShelfListFilters {

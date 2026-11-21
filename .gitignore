@@ -132,3 +132,4 @@ docs/internal/
 .agents/*
 !.agents/skills/
 !.agents/rules/
+backups/

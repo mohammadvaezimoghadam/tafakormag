@@ -225,12 +225,12 @@ class PhysicalCopy(MarketplaceBaseModel):
 def _build_transfer_quantity_constraint():
     try:
         return models.CheckConstraint(
-            condition=models.Q(quantity__gte=1),
+            check=models.Q(quantity__gte=1),
             name="chk_transfer_quantity_gte_1",
         )
     except TypeError:
         return models.CheckConstraint(
-            check=models.Q(quantity__gte=1),
+            condition=models.Q(quantity__gte=1),
             name="chk_transfer_quantity_gte_1",
         )
 

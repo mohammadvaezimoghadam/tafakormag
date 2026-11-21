@@ -126,10 +126,11 @@ const handleCreateTopic = () => {
       </template>
     </div>
 
-    <!-- Floating Action Button (FAB) to Create Topic (Responsive: Minimal Circle on Mobile, Extended Action Button on Tablet/Desktop - Anchored completely on Left side) -->
+    <!-- Floating Action Button (FAB) to Create Topic (Mirrored across RTL/LTR on language switch) -->
     <Button
       @click="handleCreateTopic"
-      class="fixed bottom-24 left-6 md:bottom-8 md:left-10 lg:left-16 z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
+      class="fixed bottom-24 md:bottom-8 z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
+      :class="languageStore.isFa ? 'left-6 md:left-10 lg:left-16' : 'right-6 md:right-10 lg:right-16'"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
     >
       <PlusIcon class="size-5 shrink-0" />

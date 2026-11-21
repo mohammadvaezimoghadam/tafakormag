@@ -39,14 +39,18 @@ export default defineConfig(({ mode }) => {
       strictPort: false,
       proxy: {
         '/api': {
-          target: 'https://tafakormag.ir',
-          changeOrigin: true,
-          secure: false,
+          target: 'http://tafakor_dev_backend:8000',
+          changeOrigin: false,
+          headers: {
+            Host: 'localhost',
+          },
         },
         '/media': {
-          target: 'https://tafakormag.ir',
-          changeOrigin: true,
-          secure: false,
+          target: 'http://tafakor_dev_backend:8000',
+          changeOrigin: false,
+          headers: {
+            Host: 'localhost',
+          },
         }
       }
     },

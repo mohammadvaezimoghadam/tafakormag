@@ -3,19 +3,15 @@ import { computed } from 'vue'
 import { useLanguageStore } from '@/stores/languageStore'
 import type { UserProfile } from '@/stores/userStore'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 import {
   BookOpenIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   HandHeartIcon,
   LanguagesIcon,
-  LayoutGridIcon,
   LinkIcon,
   LogOutIcon,
-  MoonIcon,
   PencilIcon,
-  SunIcon,
   UserIcon,
 } from '@lucide/vue'
 
@@ -63,7 +59,7 @@ const statusDotClass = computed(() => {
       return 'bg-muted-foreground/60'
     case 'success':
     default:
-      return 'bg-primary'
+      return 'bg-emerald-500'
   }
 })
 
@@ -114,7 +110,7 @@ const stats = computed(() => [
           </div>
           <!-- Status dot -->
           <span
-            class="absolute bottom-2 end-2 size-5 rounded-full border-3 border-background"
+            class="absolute bottom-2 end-2 size-5 rounded-full border-2 border-background shadow-xs"
             :class="statusDotClass"
             :title="userProfile.statusText || 'Active'"
           />
@@ -123,19 +119,11 @@ const stats = computed(() => [
         <!-- Details Column -->
         <div class="flex-1 min-w-0 flex flex-col gap-4 text-start justify-center">
           
-          <!-- Row 1: Username / Display Name + Action Buttons -->
+          <!-- Row 1: Username / Display Name + Action Button -->
           <div class="flex items-center gap-3.5 flex-wrap">
             <h2 class="text-2xl font-bold text-foreground tracking-tight truncate select-all">
               {{ userProfile.name }}
             </h2>
-
-            <!-- Status Badge if present -->
-            <span
-              v-if="userProfile.statusText"
-              class="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-semibold"
-            >
-              {{ userProfile.statusText }}
-            </span>
 
             <!-- Edit Profile Button (Instagram Style) -->
             <button
@@ -145,27 +133,6 @@ const stats = computed(() => [
             >
               <PencilIcon class="size-3.5 shrink-0" />
               <span>{{ languageStore.t('ویرایش پروفایل', 'Edit Profile') }}</span>
-            </button>
-
-            <!-- Quick Dark Mode Toggle Button -->
-            <button
-              type="button"
-              @click="emit('update:dark', !dark)"
-              class="size-9 rounded-xl bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95 shadow-xs"
-              :title="dark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-            >
-              <SunIcon v-if="dark" class="size-4 text-amber-400" />
-              <MoonIcon v-else class="size-4" />
-            </button>
-
-            <!-- Quick Logout Button -->
-            <button
-              type="button"
-              @click="emit('logout')"
-              class="size-9 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95 shadow-xs"
-              :title="languageStore.t('خروج از حساب کاربری', 'Log Out')"
-            >
-              <LogOutIcon class="size-4" />
             </button>
           </div>
 
@@ -231,50 +198,23 @@ const stats = computed(() => [
 
         <!-- Name & Phone -->
         <div class="flex flex-col text-start gap-0.5">
-          <div class="flex items-center gap-2">
-            <h3 class="text-base font-bold text-foreground truncate select-all">
-              {{ userProfile.name }}
-            </h3>
-            <span
-              v-if="userProfile.statusText"
-              class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold"
-            >
-              {{ userProfile.statusText }}
-            </span>
-          </div>
+          <h3 class="text-base font-bold text-foreground truncate select-all">
+            {{ userProfile.name }}
+          </h3>
           <span class="text-xs text-muted-foreground font-medium dir-ltr text-start select-all">
             {{ languageStore.n(userProfile.phone) }}
           </span>
         </div>
 
-        <!-- Action Buttons (Full width Edit Profile + Dark Mode + Logout) -->
-        <div class="flex items-center gap-2 w-full mt-1">
+        <!-- Action Button (Full width Edit Profile) -->
+        <div class="w-full mt-1">
           <button
             type="button"
             @click="emit('edit')"
-            class="flex-1 h-9 rounded-xl bg-secondary/80 hover:bg-secondary text-secondary-foreground text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
+            class="w-full h-9 rounded-xl bg-secondary/80 hover:bg-secondary text-secondary-foreground text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-xs"
           >
             <PencilIcon class="size-3.5 shrink-0" />
             <span>{{ languageStore.t('ویرایش حساب کاربری', 'Edit Profile') }}</span>
-          </button>
-
-          <button
-            type="button"
-            @click="emit('update:dark', !dark)"
-            class="size-9 rounded-xl bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-xs"
-            :title="dark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-          >
-            <SunIcon v-if="dark" class="size-4 text-amber-400" />
-            <MoonIcon v-else class="size-4" />
-          </button>
-
-          <button
-            type="button"
-            @click="emit('logout')"
-            class="size-9 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-xs"
-            :title="languageStore.t('خروج از حساب کاربری', 'Log Out')"
-          >
-            <LogOutIcon class="size-4" />
           </button>
         </div>
       </div>
@@ -363,18 +303,10 @@ const stats = computed(() => [
     </div>
 
     <!-- ======================================================================= -->
-    <!-- 3. INSTAGRAM TAB DIVIDER & OPTIONS GRID                                  -->
+    <!-- 3. OPTIONS GRID & MINIMAL LOGOUT                                        -->
     <!-- ======================================================================= -->
-    <div class="w-full border-t border-border/50 pt-6">
+    <div class="w-full border-t border-border/50 pt-5">
       
-      <!-- Instagram-Style Tab Header -->
-      <div class="flex items-center justify-center gap-8 -mt-[25px] mb-6">
-        <div class="border-t-2 border-foreground pt-3 flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer tracking-wider uppercase">
-          <LayoutGridIcon class="size-3.5 shrink-0" />
-          <span>{{ languageStore.t('تنظیمات و دسترسی‌ها', 'Options & Access') }}</span>
-        </div>
-      </div>
-
       <!-- Compact, Comfortable 2-Column Grid on Laptop/Desktop (1-Column on Mobile) -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
         
@@ -490,53 +422,18 @@ const stats = computed(() => [
           </div>
         </button>
 
-        <!-- Tile 5: Dark Mode Toggle Card -->
-        <div
-          @click="emit('update:dark', !dark)"
-          class="w-full p-4 rounded-2xl bg-card/60 hover:bg-card/90 border border-border/60 hover:border-border transition-all duration-200 flex items-center justify-between gap-3 text-start cursor-pointer shadow-xs active:scale-[0.99] group select-none"
-        >
-          <div class="flex items-center gap-3.5 min-w-0">
-            <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <SunIcon v-if="dark" class="size-5 text-amber-400" />
-              <MoonIcon v-else class="size-5 text-primary" />
-            </div>
-            <div class="flex flex-col text-start">
-              <span class="text-sm font-bold text-foreground truncate">
-                {{ languageStore.t('حالت نمایش (تم)', 'Display Theme') }}
-              </span>
-              <span class="text-[11px] text-muted-foreground font-medium">
-                {{ dark ? languageStore.t('حالت تاریک فعال است', 'Dark mode active') : languageStore.t('حالت روشن فعال است', 'Light mode active') }}
-              </span>
-            </div>
-          </div>
-          <div class="shrink-0" @click.stop>
-            <Switch :checked="dark" @update:checked="emit('update:dark', $event)" />
-          </div>
-        </div>
+      </div>
 
-        <!-- Tile 6: Log Out Card -->
+      <!-- Clean Minimal Logout (Text with Icon under the list) -->
+      <div class="w-full flex justify-center pt-8 pb-4">
         <button
           type="button"
           @click="emit('logout')"
-          class="w-full p-4 rounded-2xl bg-destructive/5 hover:bg-destructive/10 border border-destructive/20 hover:border-destructive/30 transition-all duration-200 flex items-center justify-between gap-3 text-start cursor-pointer shadow-xs active:scale-[0.99] group select-none"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-destructive hover:bg-destructive/10 text-xs md:text-sm font-bold transition-all duration-200 cursor-pointer active:scale-95 group"
         >
-          <div class="flex items-center gap-3.5 min-w-0">
-            <div class="size-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <LogOutIcon class="size-5" />
-            </div>
-            <div class="flex flex-col text-start">
-              <span class="text-sm font-bold text-destructive truncate">
-                {{ languageStore.t('خروج از حساب کاربری', 'Log Out') }}
-              </span>
-              <span class="text-[11px] text-destructive/70 font-medium">
-                {{ languageStore.t('پایان نشست فعلی', 'End current session') }}
-              </span>
-            </div>
-          </div>
-          <ChevronLeftIcon v-if="languageStore.isFa" class="size-4 text-destructive/60 group-hover:translate-x-[-2px] transition-transform" />
-          <ChevronRightIcon v-else class="size-4 text-destructive/60 group-hover:translate-x-[2px] transition-transform" />
+          <LogOutIcon class="size-4 group-hover:-translate-x-1 transition-transform" />
+          <span>{{ languageStore.t('خروج از حساب کاربری', 'Log Out') }}</span>
         </button>
-
       </div>
     </div>
 

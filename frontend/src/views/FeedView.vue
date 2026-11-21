@@ -1425,7 +1425,7 @@ const toggleTheme = useToggle(isDark)
 
 <template>
   <div 
-    class="w-full max-w-[500px] md:max-w-[680px] lg:max-w-[760px] flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
+    class="w-full max-w-[500px] flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
     :class="[languageStore.isFa ? 'text-right' : 'text-left']"
     :dir="languageStore.dir"
   >
@@ -1437,7 +1437,6 @@ const toggleTheme = useToggle(isDark)
       :inner-title="headerInnerTitle" 
       :title="headerTitle" 
       :center-title="!headerIsInnerPage"
-      :show-theme-toggle="!headerIsInnerPage"
       :loading="!!((telegramBotStatus === 'connecting' || baleBotStatus === 'connecting') && isTopicCreator)"
       :show-options-button="!!((currentTab === 'home' || currentTab === 'topics') && selectedTopic !== null && activeTopicSubView === 'feed')"
       :show-faq-button="!!((currentTab === 'home' || currentTab === 'topics') && selectedTopic !== null && activeTopicSubView === 'feed')"
@@ -1643,7 +1642,7 @@ const toggleTheme = useToggle(isDark)
 
               <!-- Message Input component at the bottom of the feed -->
               <div 
-                class="fixed left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] md:max-w-[680px] lg:max-w-[760px] w-full"
+                class="fixed left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] w-full"
                 :style="feedInputBarStyle"
               >
                 <TopicMessageInput 
@@ -1836,7 +1835,9 @@ const toggleTheme = useToggle(isDark)
     <!-- Platform Navigation (Responsive: Mobile Floating Bottom Bar + Desktop Collapsible Instagram-style Sidebar) -->
     <PlatformNavigation
       v-model="currentTab"
+      :dark="isDark"
       :show-mobile-nav="selectedTopic === null && selectedDonationCampaign === null"
+      @toggle-theme="toggleTheme()"
       @change="(tab) => {
         selectedDonationCampaign = null;
         pendingDonationId = null;
@@ -1852,11 +1853,12 @@ const toggleTheme = useToggle(isDark)
       }"
     />
 
-    <!-- Floating Plus Button to Create Topic (Responsive: Minimal Circle on Mobile, Extended Action Button with Text on Tablet/Desktop - Anchored completely on Left side) -->
+    <!-- Floating Plus Button to Create Topic (Responsive: Minimal Circle on Mobile, Extended Action Button on Desktop - Mirrored on Language Switch) -->
     <Button 
-      v-if="(currentTab === 'topics' || (currentTab === 'home' && homeSubView === 'topics')) && selectedTopic === null"
+      v-if="currentTab === 'topics' && selectedTopic === null"
       @click="handleCreateTopicClick()"
-      class="fixed bottom-24 left-6 md:bottom-8 md:left-10 lg:left-16 z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
+      class="fixed bottom-24 md:bottom-8 z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
+      :class="languageStore.isFa ? 'left-6 md:left-10 lg:left-16' : 'right-6 md:right-10 lg:right-16'"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
     >
       <PlusIcon class="size-5 shrink-0" />
@@ -1899,42 +1901,40 @@ const toggleTheme = useToggle(isDark)
     />
 
     <!-- Language Switcher Dialog -->
-    <Dialog v-slot="{ open }" v-model:open="showLanguageDialog">
-      <DialogContent :show-close-button="false" class="sm:max-w-[420px] p-0 overflow-hidden bg-card/90 dark:bg-zinc-950/90 backdrop-blur-lg border border-border/40">
-        <DialogHeader class="p-6 pb-4 border-b border-border/10">
-          <div class="flex items-center gap-2 justify-start">
-            <div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <LanguagesIcon class="size-4.5" />
+    <Dialog v-model:open="showLanguageDialog">
+      <DialogContent class="sm:max-w-md rounded-3xl p-6 bg-card border border-border/60 shadow-xl">
+        <DialogHeader class="text-start">
+          <div class="flex items-center gap-2.5 mb-1">
+            <div class="size-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <LanguagesIcon class="size-5 text-primary" />
             </div>
-            <DialogTitle class="text-sm font-black text-foreground flex flex-col gap-0.5 text-start">
-              <span>تنظیم زبان و چیدمان برنامه</span>
-              <span class="text-[10px] text-muted-foreground font-normal">App Language & Direction</span>
+            <DialogTitle class="text-base font-black text-foreground">
+              {{ languageStore.t('تنظیم زبان و چیدمان برنامه', 'Language & Layout') }}
             </DialogTitle>
           </div>
-          <DialogDescription class="text-[10px] text-muted-foreground text-start mt-2.5 flex flex-col gap-1 leading-relaxed">
-            <span>زبان و جهت چیدمان رابط کاربری سامانه را در این قسمت انتخاب کنید.</span>
-            <span class="opacity-80">Choose your preferred language and UI layout direction.</span>
+          <DialogDescription class="text-xs text-muted-foreground leading-relaxed">
+            {{ languageStore.t('زبان مورد نظر و جهت چیدمان رابط کاربری سامانه را انتخاب کنید.', 'Select your preferred language and UI layout direction.') }}
           </DialogDescription>
         </DialogHeader>
 
         <!-- Selection List -->
-        <div class="p-6 flex flex-col gap-3">
+        <div class="flex flex-col gap-3 py-3">
           <!-- Persian Option -->
           <div 
             @click="selectedLang = 'fa'"
-            class="flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200"
-            :class="selectedLang === 'fa' ? 'bg-primary/5 border-primary text-primary font-bold shadow-xs' : 'border-border/40 hover:bg-muted/40 text-foreground'"
+            class="flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 select-none"
+            :class="selectedLang === 'fa' ? 'bg-primary/10 border-primary text-primary font-bold shadow-xs' : 'border-border/60 hover:bg-muted/40 text-foreground'"
           >
             <div class="flex items-center gap-3">
-              <span class="text-lg">🇮🇷</span>
+              <span class="text-2xl">🇮🇷</span>
               <div class="flex flex-col text-start gap-0.5">
-                <span class="text-xs font-bold">فارسی (Persian)</span>
-                <span class="text-[9px] text-muted-foreground">راست‌چین / RTL Layout</span>
+                <span class="text-xs font-bold text-foreground">فارسی (Persian)</span>
+                <span class="text-[10px] text-muted-foreground">راست‌چین / RTL Layout</span>
               </div>
             </div>
             <div 
               v-if="selectedLang === 'fa'"
-              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-2xs"
             >
               <CheckIcon class="size-3" />
             </div>
@@ -1943,33 +1943,31 @@ const toggleTheme = useToggle(isDark)
           <!-- English Option -->
           <div 
             @click="selectedLang = 'en'"
-            class="flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-200"
-            :class="selectedLang === 'en' ? 'bg-primary/5 border-primary text-primary font-bold shadow-xs' : 'border-border/40 hover:bg-muted/40 text-foreground'"
+            class="flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 select-none"
+            :class="selectedLang === 'en' ? 'bg-primary/10 border-primary text-primary font-bold shadow-xs' : 'border-border/60 hover:bg-muted/40 text-foreground'"
           >
             <div class="flex items-center gap-3">
-              <span class="text-lg">🇬🇧</span>
+              <span class="text-2xl">🇬🇧</span>
               <div class="flex flex-col text-start gap-0.5">
-                <span class="text-xs font-bold">English (انگلیسی)</span>
-                <span class="text-[9px] text-muted-foreground">چپ‌چین / LTR Layout</span>
+                <span class="text-xs font-bold text-foreground">English (انگلیسی)</span>
+                <span class="text-[10px] text-muted-foreground">چپ‌چین / LTR Layout</span>
               </div>
             </div>
             <div 
               v-if="selectedLang === 'en'"
-              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+              class="size-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-2xs"
             >
               <CheckIcon class="size-3" />
             </div>
           </div>
         </div>
 
-        <DialogFooter class="p-4 bg-muted/10 dark:bg-muted/5 border-t border-border/10 flex justify-end gap-2" :dir="languageStore.dir">
-          <Button variant="outline" size="sm" @click="showLanguageDialog = false" class="text-xs font-bold h-8 flex items-center gap-1.5 cursor-pointer">
-            <span>بستن</span>
-            <span class="text-[10px] opacity-70 border-s border-muted-foreground/30 ps-1.5 ms-1">Close</span>
+        <DialogFooter class="gap-2 sm:justify-start">
+          <Button type="button" variant="outline" class="rounded-2xl" @click="showLanguageDialog = false">
+            {{ languageStore.t('انصراف', 'Cancel') }}
           </Button>
-          <Button variant="default" size="sm" @click="handleConfirmLanguage" class="text-xs font-bold h-8 flex items-center gap-1.5 cursor-pointer">
-            <span>تایید</span>
-            <span class="text-[10px] opacity-70 border-s border-primary-foreground/30 ps-1.5 ms-1">Confirm</span>
+          <Button type="button" class="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold" @click="handleConfirmLanguage">
+            {{ languageStore.t('تایید و ذخیره', 'Confirm & Save') }}
           </Button>
         </DialogFooter>
       </DialogContent>

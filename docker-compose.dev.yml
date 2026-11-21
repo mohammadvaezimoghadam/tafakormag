@@ -82,22 +82,22 @@ services:
       - tafakor_dev_net
 
 
-  minio:
-    image: ${MINIO_IMAGE:-minio/minio:latest}
-    container_name: tafakor_dev_minio
-    restart: always
-    entrypoint: ["/usr/bin/minio"]
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-adminpassword123}
-    ports:
-      - "${MINIO_DEV_PORT:-9002}:9000"
-      - "${MINIO_DEV_CONSOLE_PORT:-9003}:9001"
-    volumes:
-      - dev_minio_data:/data
-    networks:
-      - tafakor_dev_net
+#  minio:
+#    image: ${MINIO_IMAGE:-minio/minio:latest}
+#    container_name: tafakor_dev_minio
+#    restart: always
+#    entrypoint: ["/usr/bin/minio"]
+#    command: ["server", "/data", "--console-address", ":9001"]
+#    environment:
+#      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
+#      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-adminpassword123}
+#    ports:
+#      - "${MINIO_DEV_PORT:-9002}:9000"
+#      - "${MINIO_DEV_CONSOLE_PORT:-9003}:9001"
+#    volumes:
+#      - dev_minio_data:/data
+#    networks:
+#      - tafakor_dev_net
 
 volumes:
   dev_postgres_data:

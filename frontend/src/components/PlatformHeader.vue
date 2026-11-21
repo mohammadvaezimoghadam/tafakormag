@@ -237,7 +237,7 @@ watch(() => props.showSearchButton, (newVal) => {
 
           <!-- Actions Section -->
           <div
-            v-if="!isInnerPage && (showSearchButton || showThemeToggle)"
+            v-if="!isInnerPage && showSearchButton"
             class="flex items-center gap-1 shrink-0 ms-auto z-10"
           >
             <slot name="actions">
@@ -251,20 +251,6 @@ watch(() => props.showSearchButton, (newVal) => {
                 <SearchIcon class="size-4" />
               </Button>
             </slot>
-
-            <Button
-              v-if="showThemeToggle"
-              @click="toggleTheme()"
-              variant="ghost"
-              class="size-7.5 rounded-xl hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-0"
-              :title="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-              :aria-label="isDark ? languageStore.t('حالت روشن', 'Light Mode') : languageStore.t('حالت تاریک', 'Dark Mode')"
-            >
-              <transition name="icon-pop" mode="out-in">
-                <SunIcon v-if="isDark" key="sun" class="size-4" />
-                <MoonIcon v-else key="moon" class="size-4" />
-              </transition>
-            </Button>
           </div>
         </div>
 
