@@ -11,7 +11,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      vueDevTools(),
       tailwindcss(),
       // Custom middleware plugin to redirect / to /labs.html in dev labs mode
       {
