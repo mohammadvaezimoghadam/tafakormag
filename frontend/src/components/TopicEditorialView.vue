@@ -398,7 +398,7 @@ onMounted(() => {
     <transition name="sheet-slide">
       <div 
         v-if="editingProposal"
-        class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/80 dark:bg-background/70 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] w-full shadow-lg"
+        class="fixed bottom-0 left-1/2 -translate-x-1/2 bg-background/80 dark:bg-background/70 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] md:max-w-[680px] lg:max-w-[760px] w-full shadow-lg"
       >
         <TopicMessageInput
           :key="'edit-prop-' + editingProposal.id"

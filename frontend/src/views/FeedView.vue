@@ -1425,7 +1425,7 @@ const toggleTheme = useToggle(isDark)
 
 <template>
   <div 
-    class="w-full max-w-[500px] flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
+    class="w-full max-w-[500px] md:max-w-[680px] lg:max-w-[760px] flex flex-col gap-5 pb-6 mx-auto relative animate-in fade-in slide-in-from-bottom-3 duration-300" 
     :class="[languageStore.isFa ? 'text-right' : 'text-left']"
     :dir="languageStore.dir"
   >
@@ -1477,8 +1477,8 @@ const toggleTheme = useToggle(isDark)
 
             <!-- List View: Search and vertical TopicCards -->
             <div v-else-if="selectedTopic === null" key="list" class="flex flex-col gap-5 w-full pb-20">
-              <!-- Grouped TopicCards Container (Borderless list grouped inside a single glass card wrapper) -->
-              <div class="flex flex-col gap-1 w-full bg-card/25 dark:bg-card/15 border border-border/50 rounded-3xl p-2.5 shadow-xs">
+              <!-- TopicCards Container (Clean, borderless list directly on background) -->
+              <div class="flex flex-col gap-2.5 w-full">
                 <!-- Skeleton Loading -->
                 <template v-if="topicStore.loading">
                   <div 
@@ -1643,7 +1643,7 @@ const toggleTheme = useToggle(isDark)
 
               <!-- Message Input component at the bottom of the feed -->
               <div 
-                class="fixed left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] w-full"
+                class="fixed left-1/2 -translate-x-1/2 bg-background/65 dark:bg-background/55 backdrop-blur-md border-t border-border/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40 max-w-[500px] md:max-w-[680px] lg:max-w-[760px] w-full"
                 :style="feedInputBarStyle"
               >
                 <TopicMessageInput 
@@ -1852,11 +1852,11 @@ const toggleTheme = useToggle(isDark)
       }"
     />
 
-    <!-- Floating Plus Button to Create Topic (Responsive: Minimal Circle on Mobile, Extended Action Button with Text on Tablet/Desktop) -->
+    <!-- Floating Plus Button to Create Topic (Responsive: Minimal Circle on Mobile, Extended Action Button with Text on Tablet/Desktop - Anchored completely on Left side) -->
     <Button 
       v-if="(currentTab === 'topics' || (currentTab === 'home' && homeSubView === 'topics')) && selectedTopic === null"
       @click="handleCreateTopicClick()"
-      class="fixed bottom-24 rtl:right-6 ltr:left-6 md:bottom-8 rtl:md:right-[calc(50vw-240px)] ltr:md:left-[calc(50vw-240px)] z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
+      class="fixed bottom-24 left-6 md:bottom-8 md:left-10 lg:left-16 z-45 pointer-events-auto h-12 w-12 sm:w-auto sm:px-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center sm:gap-2.5 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-primary/40 outline-none cursor-pointer p-0 sm:py-2.5"
       :title="languageStore.t('ایجاد تاپیک جدید', 'Create New Topic')"
     >
       <PlusIcon class="size-5 shrink-0" />

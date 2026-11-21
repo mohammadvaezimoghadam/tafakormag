@@ -100,7 +100,7 @@ const navItems = [
 
     <!-- ======================================================================= -->
     <!-- 3. DESKTOP INSTAGRAM-STYLE SIDEBAR (Visible on laptop/desktop >= md)   -->
-    <!-- Seamless blend, stationary icons with zero shift, smooth text fade      -->
+    <!-- Seamless blend, stationary icons with zero shift, unclipped brand text  -->
     <!-- ======================================================================= -->
     <aside
       v-if="props.mode === 'auto' || props.mode === 'desktop'"
@@ -111,17 +111,17 @@ const navItems = [
         'bg-background border-none shadow-none',
         'flex flex-col py-8 px-3',
         'transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-        isHovered ? 'w-60' : 'w-20'
+        isHovered ? 'w-60' : 'w-[88px]'
       ]"
       :dir="languageStore.dir"
     >
-      <!-- Top Section: Brand Typography (تفکر) - Fixed position, no shifting -->
+      <!-- Top Section: Brand Typography (تفکر) - Fixed position, unclipped throughout transitions -->
       <div 
         @click="selectTab('home')"
-        class="h-14 flex items-center justify-start px-3 rounded-2xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 overflow-hidden shrink-0 select-none"
+        class="h-14 flex items-center justify-start px-2.5 rounded-2xl cursor-pointer hover:bg-muted/30 transition-colors duration-200 shrink-0 select-none"
         :title="languageStore.t('صفحه اصلی تفکر', 'Tafakor Home')"
       >
-        <span class="font-black text-2xl text-foreground tracking-tight whitespace-nowrap">
+        <span class="font-black text-xl text-foreground tracking-tight whitespace-nowrap">
           {{ languageStore.t('تفکر', 'Tafakor') }}
         </span>
       </div>
@@ -133,7 +133,7 @@ const navItems = [
           :key="'desktop-' + item.id"
           @click="selectTab(item.id)"
           :class="[
-            'w-full h-12 rounded-xl flex items-center justify-start px-3 gap-5 transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden'
+            'w-full h-12 rounded-xl flex items-center justify-start px-2.5 gap-6 transition-colors duration-200 cursor-pointer outline-none bg-transparent hover:bg-muted/30 active:scale-95 overflow-hidden'
           ]"
           :title="languageStore.t(item.labelFa, item.labelEn)"
         >
@@ -150,7 +150,7 @@ const navItems = [
             />
           </div>
 
-          <!-- Nav Label (Generous gap-5, smooth slide/fade, no layout shift for icon) -->
+          <!-- Nav Label (Generous 24px gap-6, smooth slide/fade, no layout shift for icon) -->
           <span 
             class="inline-block whitespace-nowrap text-base transition-all duration-300 overflow-hidden"
             :class="[
