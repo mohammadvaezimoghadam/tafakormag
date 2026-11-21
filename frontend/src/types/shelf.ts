@@ -366,14 +366,20 @@ export interface UserSearchResult {
 export interface AdminDonationReportItem {
   id: number
   book_title: string
+  book_author?: string
   cover_image: string | null
   quantity: number
+  type?: 'donation' | 'return' | 'cancellation' | 'pending' | string
+  is_return?: boolean
   recipient_phone: string
   recipient_name: string | null
   admin_name: string
+  admin_id?: number
   status?: string
   status_display?: string
+  note?: string
   created_at: string
+  confirmed_at?: string | null
 }
 
 export interface AdminDonatePayload {

@@ -959,11 +959,28 @@ class ShelfService:
 
             if return_qty >= transfer.quantity:
                 transfer.status = Transfer.Status.CANCELLED
-                transfer.recipient_note = (note.strip() if note else "لغو و بازگردانی به انبار توسط ادمین")
+                transfer.recipient_note = (
+                    note.strip() if note else f"لغو کامل و بازگردانی {return_qty} جلد به انبار توسط مدیریت ({admin_user.get_full_name() or getattr(admin_user, 'phone', '')})"
+                )
                 transfer.save(update_fields=["status", "recipient_note", "updated_at"])
             else:
                 transfer.quantity -= return_qty
                 transfer.save(update_fields=["quantity", "updated_at"])
+
+                # Create audit transfer record for the partial return
+                Transfer.objects.create(
+                    copy=copy,
+                    from_user=transfer.to_user,
+                    to_user=admin_user,
+                    station=transfer.station,
+                    quantity=return_qty,
+                    recipient_phone=transfer.recipient_phone,
+                    method=Transfer.Method.SCAN_CONFIRM,
+                    status=Transfer.Status.CONFIRMED,
+                    confirmed_at=timezone.now(),
+                    donor_note="بازگردانی به انبار تفکر (بخشی از اهدای در انتظار تایید)",
+                    recipient_note=note.strip() if note else f"بازگردانی {return_qty} جلد به انبار تفکر توسط مدیریت ({admin_user.get_full_name() or getattr(admin_user, 'phone', '')})",
+                )
 
             copy.current_holder = admin_user
             copy.status = PhysicalCopy.Status.ACTIVE
@@ -1044,15 +1061,19 @@ class ShelfService:
         copy.save(update_fields=["current_holder", "status", "transfer_count", "updated_at"])
 
         # Audit transfer record
+        recipient_phone = getattr(recipient_user, "phone", "") or (transfer.recipient_phone if transfer else "")
         Transfer.objects.create(
             copy=copy,
             from_user=recipient_user or admin_user,
             to_user=admin_user,
+            station=transfer.station if transfer else None,
             quantity=return_qty,
+            recipient_phone=recipient_phone,
             method=Transfer.Method.SCAN_CONFIRM,
             status=Transfer.Status.CONFIRMED,
             confirmed_at=timezone.now(),
-            recipient_note=note.strip() if note else f"بازگردانی به انبار تفکر توسط مدیریت ({admin_user.get_full_name() or getattr(admin_user, 'phone', '')})",
+            donor_note="بازگردانی به انبار تفکر",
+            recipient_note=note.strip() if note else f"بازگردانی {return_qty} جلد به انبار تفکر توسط مدیریت ({admin_user.get_full_name() or getattr(admin_user, 'phone', '')})",
         )
 
         rem_gift_qty = recipient_shelf.quantity if (recipient_shelf and recipient_shelf.pk) else 0
@@ -1370,7 +1391,8 @@ class ShelfService:
     @classmethod
     def get_admin_donations_report(cls, admin_user) -> List[Dict[str, Any]]:
         """
-        Audit report listing all completed and pending donations performed by admin staff.
+        Audit report listing all completed, pending, cancelled, and returned donations
+        performed by admin staff or returned back to the warehouse.
         Zero N+1 queries enforced with select_related.
         """
         if not admin_user or not admin_user.is_authenticated or not getattr(admin_user, "is_staff", False):
@@ -1378,8 +1400,9 @@ class ShelfService:
 
         transfers = (
             Transfer.objects.filter(
-                from_user__is_staff=True,
-                status__in=[Transfer.Status.CONFIRMED, Transfer.Status.PENDING_RECIPIENT],
+                Q(from_user__is_staff=True) |
+                Q(to_user__is_staff=True, donor_note__icontains="بازگردانی") |
+                Q(to_user__is_staff=True, recipient_note__icontains="بازگردانی")
             )
             .select_related("copy__book_title", "from_user", "to_user")
             .order_by("-created_at")
@@ -1392,11 +1415,43 @@ class ShelfService:
             if book_title and book_title.cover_image:
                 cover_url = book_title.cover_image.url
 
-            recipient_name = None
-            if trf.to_user:
-                recipient_name = trf.to_user.get_full_name()
+            note = (trf.recipient_note or trf.donor_note or "").strip()
+            is_return_to_warehouse = bool(
+                trf.to_user and trf.to_user.is_staff and (
+                    "بازگردانی" in (trf.donor_note or "") or 
+                    "بازگردانی" in (trf.recipient_note or "") or
+                    (trf.from_user != trf.to_user and not (trf.from_user and trf.from_user.is_staff))
+                )
+            )
 
-            admin_name = trf.from_user.get_full_name() if trf.from_user else "ادمین تفکر"
+            if is_return_to_warehouse:
+                item_type = "return"
+                status_display = f"بازگردانی {trf.quantity} جلد به انبار"
+                recipient_name = trf.from_user.get_full_name() if trf.from_user else "کاربر تفکر"
+                recipient_phone = trf.recipient_phone or (trf.from_user.phone if trf.from_user else "")
+                admin_name = trf.to_user.get_full_name() if trf.to_user else "ادمین تفکر"
+                admin_id = trf.to_user_id
+            elif trf.status == Transfer.Status.CANCELLED:
+                item_type = "cancellation"
+                status_display = f"لغو اهدا و برگشت {trf.quantity} جلد به انبار"
+                recipient_name = trf.to_user.get_full_name() if trf.to_user else None
+                recipient_phone = trf.recipient_phone or (trf.to_user.phone if trf.to_user else "")
+                admin_name = trf.from_user.get_full_name() if trf.from_user else "ادمین تفکر"
+                admin_id = trf.from_user_id
+            elif trf.status == Transfer.Status.PENDING_RECIPIENT:
+                item_type = "pending"
+                status_display = f"در انتظار تایید گیرنده ({trf.quantity} جلد)"
+                recipient_name = trf.to_user.get_full_name() if trf.to_user else None
+                recipient_phone = trf.recipient_phone or (trf.to_user.phone if trf.to_user else "")
+                admin_name = trf.from_user.get_full_name() if trf.from_user else "ادمین تفکر"
+                admin_id = trf.from_user_id
+            else:
+                item_type = "donation"
+                status_display = f"اهدا شده ({trf.quantity} جلد)"
+                recipient_name = trf.to_user.get_full_name() if trf.to_user else None
+                recipient_phone = trf.recipient_phone or (trf.to_user.phone if trf.to_user else "")
+                admin_name = trf.from_user.get_full_name() if trf.from_user else "ادمین تفکر"
+                admin_id = trf.from_user_id
 
             results.append({
                 "id": trf.id,
@@ -1404,12 +1459,15 @@ class ShelfService:
                 "book_author": book_title.author if book_title else "",
                 "cover_image": cover_url,
                 "quantity": trf.quantity,
+                "type": item_type,
+                "is_return": is_return_to_warehouse or (item_type == "cancellation"),
                 "recipient_name": recipient_name,
-                "recipient_phone": trf.recipient_phone or (trf.to_user.phone if trf.to_user else ""),
+                "recipient_phone": recipient_phone,
                 "admin_name": admin_name,
-                "admin_id": trf.from_user_id,
+                "admin_id": admin_id,
                 "status": trf.status,
-                "status_display": trf.get_status_display(),
+                "status_display": status_display,
+                "note": note,
                 "created_at": trf.created_at.isoformat(),
                 "confirmed_at": trf.confirmed_at.isoformat() if trf.confirmed_at else None,
             })
