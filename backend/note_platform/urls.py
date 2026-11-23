@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
@@ -26,6 +27,16 @@ from plugins.quran.khatm_views import KhatmWebPreviewView
 def assetlinks_view(request):
     """Serves Android Digital Asset Links for app deep linking verification."""
     return JsonResponse([
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "com.qurantafakor.app",
+                "sha256_cert_fingerprints": [
+                    "8A:38:5A:7E:E7:0A:59:2D:5D:69:98:FA:5C:FE:5D:C9:69:EE:86:41:9C:3F:B1:7C:23:41:BB:4F:06:29:A6:BF"
+                ]
+            }
+        },
         {
             "relation": ["delegate_permission/common.handle_all_urls"],
             "target": {
@@ -61,5 +72,8 @@ urlpatterns = [
     # سرو فایل‌های آپلود شده بدون وابستگی به DEBUG
     re_path(r'^media/(?P<path>.*)$', serve, {
         'document_root': settings.MEDIA_ROOT,
+    }),
+    re_path(r'^static/(?P<path>.*)$', serve, {
+        'document_root': os.path.join(settings.BASE_DIR, 'static'),
     }),
 ]
