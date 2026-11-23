@@ -29,6 +29,9 @@ def release_expired_khatm_slots() -> int:
     for slot in expired_slots:
         campaign = slot.campaign
         with transaction.atomic():
+            # Lock campaign first to preserve lock ordering and eliminate deadlocks with API transactions
+            KhatmCampaign.objects.select_for_update().filter(id=campaign.id).first()
+
             if campaign.unit_type in [KhatmCampaign.UnitType.JUZ, KhatmCampaign.UnitType.HIZB]:
                 # Discrete slot: reset status to AVAILABLE
                 updated = KhatmSlot.objects.filter(

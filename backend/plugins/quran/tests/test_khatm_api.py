@@ -277,3 +277,115 @@ class KhatmApiTestCase(APITestCase):
         self.assertIn("ختم سوره یس برای اموات", content)
         self.assertIn('property="og:title"', content)
         self.assertIn(f"tafakor://quran/khatm/{campaign.invite_code}", content)
+
+    def test_double_complete_prevention_returns_400(self):
+        campaign = KhatmCampaign.objects.create(
+            creator=self.user1,
+            title="ختم ضد دابل‌کامل",
+            unit_type=KhatmCampaign.UnitType.JUZ,
+            target_units=30
+        )
+        slot = KhatmSlot.objects.create(
+            campaign=campaign,
+            unit_number=3,
+            quantity=1,
+            status=KhatmSlot.Status.RESERVED,
+            user=self.user2,
+            reserved_at=timezone.now(),
+            expires_at=timezone.now() + timedelta(hours=48)
+        )
+        campaign.reserved_units = 1
+        campaign.save()
+
+        self.client.force_authenticate(user=self.user2)
+        complete_url = reverse('quran-khatm-campaign-complete', kwargs={'invite_code': campaign.invite_code})
+
+        # First completion -> 200 OK
+        res1 = self.client.post(complete_url, {"unit_number": 3}, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.completed_units, 1)
+        self.assertEqual(campaign.reserved_units, 0)
+
+        # Second completion attempt -> must return 400 Bad Request
+        res2 = self.client.post(complete_url, {"unit_number": 3}, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("قبلاً", res2.data['detail'])
+
+        # Double check counters: no double increment!
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.completed_units, 1)
+        self.assertEqual(campaign.reserved_units, 0)
+
+    def test_invalid_unit_number_returns_400(self):
+        campaign = KhatmCampaign.objects.create(
+            creator=self.user1,
+            title="ختم اعتبارسنجی شماره",
+            unit_type=KhatmCampaign.UnitType.JUZ,
+            target_units=30
+        )
+        self.client.force_authenticate(user=self.user2)
+        reserve_url = reverse('quran-khatm-campaign-reserve', kwargs={'invite_code': campaign.invite_code})
+
+        # Unit 0 is invalid
+        res0 = self.client.post(reserve_url, {"unit_number": 0}, format='json')
+        self.assertEqual(res0.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Unit 31 is invalid for Juz
+        res31 = self.client.post(reserve_url, {"unit_number": 31}, format='json')
+        self.assertEqual(res31.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_my_participated_distinct_no_duplicates(self):
+        campaign = KhatmCampaign.objects.create(
+            creator=self.user1,
+            title="ختم با چند سهم",
+            unit_type=KhatmCampaign.UnitType.JUZ,
+            target_units=30
+        )
+        # User 2 holds both unit 1 and unit 2
+        KhatmSlot.objects.create(
+            campaign=campaign, unit_number=1, quantity=1,
+            status=KhatmSlot.Status.RESERVED, user=self.user2
+        )
+        KhatmSlot.objects.create(
+            campaign=campaign, unit_number=2, quantity=1,
+            status=KhatmSlot.Status.RESERVED, user=self.user2
+        )
+
+        self.client.force_authenticate(user=self.user2)
+        my_url = reverse('quran-khatm-campaign-my')
+        res = self.client.get(my_url, {'tab': 'participated'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Campaign must appear exactly once despite user having 2 slots
+        campaign_ids = [c['id'] for c in res.data['results']]
+        self.assertEqual(len(campaign_ids), 1)
+        self.assertEqual(campaign_ids[0], campaign.id)
+
+    def test_concurrent_reservation_conflict_returns_409(self):
+        campaign = KhatmCampaign.objects.create(
+            creator=self.user1,
+            title="ختم تست تداخل ۴۰۹",
+            unit_type=KhatmCampaign.UnitType.JUZ,
+            target_units=30
+        )
+        # Slot 4 is already reserved by User 1
+        slot = KhatmSlot.objects.create(
+            campaign=campaign,
+            unit_number=4,
+            quantity=1,
+            status=KhatmSlot.Status.RESERVED,
+            user=self.user1,
+            reserved_at=timezone.now(),
+            expires_at=timezone.now() + timedelta(hours=48)
+        )
+
+        # User 2 tries to reserve slot 4
+        self.client.force_authenticate(user=self.user2)
+        reserve_url = reverse('quran-khatm-campaign-reserve', kwargs={'invite_code': campaign.invite_code})
+        res = self.client.post(reserve_url, {"unit_number": 4}, format='json')
+
+        # Must return 409 Conflict
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("کاربر دیگری", res.data['detail'])
+

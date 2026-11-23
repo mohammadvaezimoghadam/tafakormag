@@ -1,6 +1,7 @@
 """
 DRF Serializers for Quran Khatm System (Group Campaigns & Personal Offline-First Plans).
 """
+import logging
 from rest_framework import serializers
 from django.db import transaction
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ from plugins.quran.models import (
     QuranSurah,
 )
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -284,38 +286,41 @@ class KhatmCampaignCreateSerializer(serializers.ModelSerializer):
 
             # For SURAH campaigns, slots are dynamic and allocated as users pick quantities.
 
-            # Optional topic integration (PostPluginReference)
+            # Optional topic integration (PostPluginReference) executed safely on commit
             if publish_to_topic_id:
-                try:
-                    from apps.notes.models import Topic, Post, TopicAdmin
-                    from apps.plugin_system.models import Plugin, PostPluginReference
+                def publish_to_topic():
+                    try:
+                        from apps.notes.models import Topic, Post, TopicAdmin
+                        from apps.plugin_system.models import Plugin, PostPluginReference
 
-                    topic = Topic.objects.filter(id=publish_to_topic_id).first()
-                    if topic:
-                        is_admin = (topic.created_by_id == user.id) or TopicAdmin.objects.filter(topic=topic, user=user).exists()
-                        if is_admin:
-                            quran_plugin = Plugin.objects.filter(identifier='quran').first()
-                            if quran_plugin:
-                                post = Post.objects.create(
-                                    topic=topic,
-                                    author=user,
-                                    content=f"📖 **{campaign.title}**\n\n{campaign.description or 'پویش جدید ختم قرآن کریم در تفکر ایجاد شد.'}\n\nجهت انتخاب سهم و قرائت: https://tafakor.ir/k/{campaign.invite_code}",
-                                    media_type='text'
-                                )
-                                PostPluginReference.objects.create(
-                                    post=post,
-                                    plugin=quran_plugin,
-                                    resource_type='khatm',
-                                    external_id=campaign.invite_code,
-                                    metadata={
-                                        'title': campaign.title,
-                                        'unit_type': campaign.unit_type,
-                                        'target_units': campaign.target_units,
-                                        'invite_code': campaign.invite_code,
-                                    }
-                                )
-                except Exception:
-                    pass
+                        topic = Topic.objects.filter(id=publish_to_topic_id).first()
+                        if topic:
+                            is_admin = (topic.created_by_id == user.id) or TopicAdmin.objects.filter(topic=topic, user=user).exists()
+                            if is_admin:
+                                quran_plugin = Plugin.objects.filter(identifier='quran').first()
+                                if quran_plugin:
+                                    post = Post.objects.create(
+                                        topic=topic,
+                                        author=user,
+                                        content=f"📖 **{campaign.title}**\n\n{campaign.description or 'پویش جدید ختم قرآن کریم در تفکر ایجاد شد.'}\n\nجهت انتخاب سهم و قرائت: https://tafakor.ir/k/{campaign.invite_code}",
+                                        media_type='text'
+                                    )
+                                    PostPluginReference.objects.create(
+                                        post=post,
+                                        plugin=quran_plugin,
+                                        resource_type='khatm',
+                                        external_id=campaign.invite_code,
+                                        metadata={
+                                            'title': campaign.title,
+                                            'unit_type': campaign.unit_type,
+                                            'target_units': campaign.target_units,
+                                            'invite_code': campaign.invite_code,
+                                        }
+                                    )
+                    except Exception:
+                        logger.exception("Failed to publish campaign %s to topic %s", campaign.invite_code, publish_to_topic_id)
+
+                transaction.on_commit(publish_to_topic)
 
         return campaign
 

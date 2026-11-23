@@ -4,7 +4,7 @@ DRF Views and ViewSets for Quran Khatm System (Group Campaigns & Personal Offlin
 import logging
 from datetime import timedelta
 from django.shortcuts import get_object_or_404, render
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Q, F
 from django.db.models.functions import Greatest
 from django.utils import timezone
@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.throttling import ScopedRateThrottle
 
 from plugins.quran.models import (
     KhatmCategory,
@@ -59,6 +60,8 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
     lookup_field = 'invite_code'
     lookup_url_kwarg = 'invite_code'
     pagination_class = KhatmStandardPagination
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'khatm_actions'
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -76,6 +79,9 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
         qs = KhatmCampaign.objects.filter(
             deleted_at__isnull=True
         ).select_related('category', 'creator', 'target_surah')
+
+        if self.action == 'retrieve':
+            qs = qs.prefetch_related('slots__user')
 
         if self.action == 'list':
             # Public showcase feed
@@ -128,7 +134,7 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
         ).select_related('category', 'creator', 'target_surah')
 
         if tab == 'created':
-            qs = qs.filter(creator=user)
+            qs = qs.filter(creator=user).distinct()
         elif tab == 'participated':
             qs = qs.filter(slots__user=user).exclude(creator=user).distinct()
         else:
@@ -212,7 +218,7 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
                     if slot.expires_at and slot.expires_at > now:
                         return Response(
                             {"detail": "این سهم در حال حاضر توسط کاربر دیگری در حال قرائت است."},
-                            status=status.HTTP_400_BAD_REQUEST
+                            status=status.HTTP_409_CONFLICT
                         )
 
                 # Claim slot
@@ -305,10 +311,10 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
                 )
 
             if slot.status == KhatmSlot.Status.COMPLETED:
-                return Response({
-                    "detail": "این سهم قبلاً به عنوان تکمیل‌شده ثبت گردیده است.",
-                    "slot": KhatmSlotSerializer(slot, context={'request': request}).data,
-                })
+                return Response(
+                    {"detail": "این سهم قبلاً به عنوان تکمیل‌شده ثبت گردیده است."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             # Check permission: slot owner or campaign creator
             if slot.user and slot.user_id != user.id and campaign.creator_id != user.id:
@@ -465,7 +471,7 @@ class PersonalKhatmPlanSyncView(APIView):
                 client_id = plan_data['client_id']
                 incoming_updated_at = plan_data['client_updated_at']
 
-                existing = PersonalKhatmPlan.objects.filter(
+                existing = PersonalKhatmPlan.objects.select_for_update().filter(
                     user=user,
                     client_id=client_id
                 ).first()
@@ -479,8 +485,24 @@ class PersonalKhatmPlanSyncView(APIView):
                         existing.save()
                         logger.info("Updated PersonalKhatm %s (LWW won by client)", client_id)
                 else:
-                    PersonalKhatmPlan.objects.create(user=user, **plan_data)
-                    logger.info("Created new PersonalKhatm %s for user %s", client_id, user.id)
+                    try:
+                        with transaction.atomic():
+                            PersonalKhatmPlan.objects.create(user=user, **plan_data)
+                            logger.info("Created new PersonalKhatm %s for user %s", client_id, user.id)
+                    except IntegrityError:
+                        # Concurrently created by another request; update if newer
+                        existing = PersonalKhatmPlan.objects.select_for_update().filter(
+                            user=user,
+                            client_id=client_id
+                        ).first()
+                        if existing and incoming_updated_at > existing.client_updated_at:
+                            for field, value in plan_data.items():
+                                if field not in ['id', 'user']:
+                                    setattr(existing, field, value)
+                            existing.save()
+
+        # Extract server_time before running the query to avoid clock skew
+        server_time = timezone.now()
 
         # Return updated records from server
         qs = PersonalKhatmPlan.objects.filter(user=user)
@@ -490,7 +512,7 @@ class PersonalKhatmPlanSyncView(APIView):
         response_serializer = PersonalKhatmPlanSerializer(qs.order_by('-updated_at'), many=True)
 
         return Response({
-            "server_time": timezone.now(),
+            "server_time": server_time,
             "synced_count": len(incoming_plans),
             "plans": response_serializer.data,
         })

@@ -91,7 +91,23 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'khatm_actions': '60/minute',
+    },
     'EXCEPTION_HANDLER': 'note_platform.exceptions.custom_exception_handler',
+}
+
+# ==============================================================================
+# Celery Periodic Tasks (Celery Beat Schedule)
+# ==============================================================================
+CELERY_BEAT_SCHEDULE = {
+    'release-expired-khatm-slots-every-5-mins': {
+        'task': 'plugins.quran.tasks.task_release_expired_khatm_slots',
+        'schedule': 300.0,
+    },
 }
 
 # ==============================================================================
