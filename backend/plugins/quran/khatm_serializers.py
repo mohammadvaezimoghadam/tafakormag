@@ -198,6 +198,12 @@ class KhatmCampaignCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    publish_to_topic_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        write_only=True,
+        help_text="شناسه تاپیک در صورتی که سازنده بخواهد همزمان در تاپیک تحت مدیریتش پست شود"
+    )
 
     class Meta:
         model = KhatmCampaign
@@ -212,6 +218,7 @@ class KhatmCampaignCreateSerializer(serializers.ModelSerializer):
             'target_surah_id',
             'is_public',
             'deadline',
+            'publish_to_topic_id',
             'created_at',
         ]
         read_only_fields = ['id', 'invite_code', 'created_at']
@@ -242,6 +249,7 @@ class KhatmCampaignCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['creator'] = user
+        publish_to_topic_id = validated_data.pop('publish_to_topic_id', None)
 
         unit_type = validated_data.get('unit_type')
         target_units = validated_data.get('target_units', 30)
@@ -275,6 +283,39 @@ class KhatmCampaignCreateSerializer(serializers.ModelSerializer):
                 KhatmSlot.objects.bulk_create(slots)
 
             # For SURAH campaigns, slots are dynamic and allocated as users pick quantities.
+
+            # Optional topic integration (PostPluginReference)
+            if publish_to_topic_id:
+                try:
+                    from apps.notes.models import Topic, Post, TopicAdmin
+                    from apps.plugin_system.models import Plugin, PostPluginReference
+
+                    topic = Topic.objects.filter(id=publish_to_topic_id).first()
+                    if topic:
+                        is_admin = (topic.created_by_id == user.id) or TopicAdmin.objects.filter(topic=topic, user=user).exists()
+                        if is_admin:
+                            quran_plugin = Plugin.objects.filter(identifier='quran').first()
+                            if quran_plugin:
+                                post = Post.objects.create(
+                                    topic=topic,
+                                    author=user,
+                                    content=f"📖 **{campaign.title}**\n\n{campaign.description or 'پویش جدید ختم قرآن کریم در تفکر ایجاد شد.'}\n\nجهت انتخاب سهم و قرائت: https://tafakor.ir/k/{campaign.invite_code}",
+                                    media_type='text'
+                                )
+                                PostPluginReference.objects.create(
+                                    post=post,
+                                    plugin=quran_plugin,
+                                    resource_type='khatm',
+                                    external_id=campaign.invite_code,
+                                    metadata={
+                                        'title': campaign.title,
+                                        'unit_type': campaign.unit_type,
+                                        'target_units': campaign.target_units,
+                                        'invite_code': campaign.invite_code,
+                                    }
+                                )
+                except Exception:
+                    pass
 
         return campaign
 
