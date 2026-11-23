@@ -14,18 +14,30 @@ from plugins.quran.views import (
     QuranFormatReferenceView,
     QuranJuzListView,
     QuranJuzDetailView,
+    KhatmCategoryListView,
+    KhatmCampaignViewSet,
+    PersonalKhatmPlanSyncView,
+    KhatmWebPreviewView,
 )
 
 router = SimpleRouter()
 router.register(r'editions', QuranEditionViewSet, basename='quran-edition')
 router.register(r'surahs', QuranSurahViewSet, basename='quran-surah')
 router.register(r'juzs', QuranJuzViewSet, basename='quran-juzs')
+router.register(r'campaigns', KhatmCampaignViewSet, basename='quran-khatm-campaign')
+router.register(r'khatms', KhatmCampaignViewSet, basename='quran-khatm')
 
 from apps.plugin_system.views import PluginDetailView
 
 urlpatterns = [
     # Root Plugin Detail for identifier='quran'
     path('', PluginDetailView.as_view(), {'identifier': 'quran'}, name='quran-plugin-detail'),
+
+    # Khatm System Endpoints
+    path('khatm-categories/', KhatmCategoryListView.as_view(), name='quran-khatm-categories'),
+    path('personal-khatms/sync/', PersonalKhatmPlanSyncView.as_view(), name='quran-personal-khatms-sync'),
+    path('personal-khatms/', PersonalKhatmPlanSyncView.as_view(), name='quran-personal-khatms-list'),
+    path('k/<str:invite_code>/', KhatmWebPreviewView.as_view(), name='quran-khatm-web-preview'),
 
     # Fixed action endpoints
     path('search/', QuranSearchView.as_view(), name='quran-search'),

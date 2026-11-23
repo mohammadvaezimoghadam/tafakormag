@@ -268,3 +268,20 @@ class QuranFormatReferenceResponseSerializer(serializers.Serializer):
     translation_author = serializers.CharField(required=False, allow_null=True)
     external_id = serializers.CharField()
     metadata = serializers.DictField()
+
+
+# ==============================================================================
+# Quran Khatm Serializers (Re-exported from khatm_serializers)
+# ==============================================================================
+from plugins.quran.khatm_serializers import (
+    KhatmCategorySerializer,
+    KhatmSlotSerializer,
+    KhatmCampaignListSerializer,
+    KhatmCampaignDetailSerializer,
+    KhatmCampaignCreateSerializer,
+    ReserveSlotRequestSerializer,
+    CompleteSlotRequestSerializer,
+    PersonalKhatmPlanSerializer,
+    PersonalKhatmPlanSyncRequestSerializer,
+)
+

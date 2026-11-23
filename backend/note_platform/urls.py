@@ -19,6 +19,8 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.views.static import serve
 from django.http import JsonResponse
+from plugins.quran.khatm_views import KhatmWebPreviewView
+
 
 
 def assetlinks_view(request):
@@ -39,6 +41,7 @@ def assetlinks_view(request):
 
 urlpatterns = [
     path('.well-known/assetlinks.json', assetlinks_view),
+    path('k/<str:invite_code>/', KhatmWebPreviewView.as_view(), name='khatm-short-link'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('apps.accounts.urls')),
     path('api/v1/accounts/', include('apps.accounts.urls')),

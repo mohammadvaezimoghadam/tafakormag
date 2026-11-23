@@ -549,3 +549,15 @@ class QuranFormatReferenceView(APIView):
             'external_id': external_id,
             'metadata': metadata,
         }, status=status.HTTP_200_OK)
+
+
+# ==============================================================================
+# Quran Khatm Views & ViewSets (Re-exported from khatm_views)
+# ==============================================================================
+from plugins.quran.khatm_views import (
+    KhatmCategoryListView,
+    KhatmCampaignViewSet,
+    PersonalKhatmPlanSyncView,
+    KhatmWebPreviewView,
+)
+
