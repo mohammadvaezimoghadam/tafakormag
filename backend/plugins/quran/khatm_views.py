@@ -37,6 +37,24 @@ from plugins.quran.khatm_serializers import (
 logger = logging.getLogger(__name__)
 
 
+def _check_profile_name_complete(user):
+    """
+    Requires authenticated users to have both first_name and last_name populated
+    before creating or participating in a Group Khatm campaign.
+    """
+    first_name = (getattr(user, 'first_name', '') or '').strip()
+    last_name = (getattr(user, 'last_name', '') or '').strip()
+    if not first_name or not last_name:
+        return Response(
+            {
+                "code": "profile_name_required",
+                "detail": "برای شرکت در ختم، لطفاً ابتدا نام و نام خانوادگی خود را تکمیل کنید.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return None
+
+
 class KhatmStandardPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
@@ -111,6 +129,10 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
         return qs.order_by('-created_at')
 
     def create(self, request, *args, **kwargs):
+        name_error = _check_profile_name_complete(request.user)
+        if name_error is not None:
+            return name_error
+
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         campaign = serializer.save()
@@ -153,6 +175,10 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
         """
         Atomically claims a slot in the campaign for the authenticated user.
         """
+        name_error = _check_profile_name_complete(request.user)
+        if name_error is not None:
+            return name_error
+
         serializer = ReserveSlotRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -508,6 +534,8 @@ class PersonalKhatmPlanSyncView(APIView):
         qs = PersonalKhatmPlan.objects.filter(user=user)
         if last_synced_at:
             qs = qs.filter(updated_at__gt=last_synced_at)
+        else:
+            qs = qs.filter(deleted_at__isnull=True)
 
         response_serializer = PersonalKhatmPlanSerializer(qs.order_by('-updated_at'), many=True)
 

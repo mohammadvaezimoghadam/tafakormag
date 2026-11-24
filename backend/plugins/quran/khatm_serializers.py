@@ -17,6 +17,22 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+def _resolve_display_name(target_user, request):
+    """
+    Returns privacy-safe display name for a campaign creator or slot holder.
+    Unauthenticated guests receive None; authenticated users see full_name or "کاربر قرآن"
+    without exposing raw or masked phone numbers.
+    """
+    if not (request and getattr(request, 'user', None) and request.user.is_authenticated):
+        return None
+    if not target_user:
+        return "کاربر قرآن"
+    full_name = (target_user.get_full_name() or "").strip()
+    if full_name and full_name != target_user.phone:
+        return full_name
+    return "کاربر قرآن"
+
+
 class KhatmCategorySerializer(serializers.ModelSerializer):
     """Serializer for Khatm Categories / Intentions."""
     class Meta:
@@ -57,13 +73,7 @@ class KhatmSlotSerializer(serializers.ModelSerializer):
     def get_user_display_name(self, obj):
         if not obj.user:
             return None
-        full_name = obj.user.get_full_name()
-        if full_name and full_name != obj.user.phone:
-            return full_name
-        phone = obj.user.phone or ''
-        if len(phone) >= 7:
-            return f"{phone[:4]}***{phone[-4:]}"
-        return "کاربر قرآن"
+        return _resolve_display_name(obj.user, self.context.get('request'))
 
     def get_is_mine(self, obj):
         request = self.context.get('request')
@@ -131,15 +141,7 @@ class KhatmCampaignListSerializer(serializers.ModelSerializer):
         ]
 
     def get_creator_display_name(self, obj):
-        if not obj.creator:
-            return "کاربر قرآن"
-        full_name = obj.creator.get_full_name()
-        if full_name and full_name != obj.creator.phone:
-            return full_name
-        phone = obj.creator.phone or ''
-        if len(phone) >= 7:
-            return f"{phone[:4]}***{phone[-4:]}"
-        return "کاربر قرآن"
+        return _resolve_display_name(obj.creator, self.context.get('request'))
 
     def get_remaining_units(self, obj):
         return max(obj.target_units - (obj.reserved_units + obj.completed_units), 0)

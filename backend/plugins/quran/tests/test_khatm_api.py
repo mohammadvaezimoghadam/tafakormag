@@ -389,3 +389,176 @@ class KhatmApiTestCase(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
         self.assertIn("کاربر دیگری", res.data['detail'])
 
+    def test_guest_privacy_hides_creator_and_slot_display_names(self):
+        unnamed_user = User.objects.create(phone="09123333333")
+        campaign = KhatmCampaign.objects.create(
+            creator=self.user1,
+            title="ختم حفظ حریم خصوصی",
+            unit_type=KhatmCampaign.UnitType.JUZ,
+            target_units=30,
+            reserved_units=2,
+            is_public=True,
+        )
+        KhatmSlot.objects.create(
+            campaign=campaign,
+            unit_number=1,
+            quantity=1,
+            status=KhatmSlot.Status.RESERVED,
+            user=self.user2,
+            reserved_at=timezone.now(),
+        )
+        KhatmSlot.objects.create(
+            campaign=campaign,
+            unit_number=2,
+            quantity=1,
+            status=KhatmSlot.Status.RESERVED,
+            user=unnamed_user,
+            reserved_at=timezone.now(),
+        )
+        KhatmSlot.objects.create(
+            campaign=campaign,
+            unit_number=3,
+            quantity=1,
+            status=KhatmSlot.Status.AVAILABLE,
+        )
+
+        list_url = reverse('quran-khatm-campaign-list')
+        detail_url = reverse(
+            'quran-khatm-campaign-detail',
+            kwargs={'invite_code': campaign.invite_code},
+        )
+
+        # Unauthenticated guest: must receive None for creator_display_name & user_display_name
+        guest_list_res = self.client.get(list_url)
+        self.assertEqual(guest_list_res.status_code, status.HTTP_200_OK)
+        self.assertIsNone(guest_list_res.data['results'][0]['creator_display_name'])
+
+        guest_detail_res = self.client.get(detail_url)
+        self.assertEqual(guest_detail_res.status_code, status.HTTP_200_OK)
+        self.assertIsNone(guest_detail_res.data['creator_display_name'])
+        for slot_data in guest_detail_res.data['slots']:
+            self.assertIsNone(slot_data['user_display_name'])
+
+        # Authenticated user: sees full_name or "کاربر قرآن" (never masked phone), None for empty slots
+        self.client.force_authenticate(user=self.user2)
+        auth_detail_res = self.client.get(detail_url)
+        self.assertEqual(auth_detail_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(auth_detail_res.data['creator_display_name'], "Ali Rezaei")
+        slots_by_unit = {s['unit_number']: s for s in auth_detail_res.data['slots']}
+        self.assertEqual(slots_by_unit[1]['user_display_name'], "Sara Ahmadi")
+        self.assertEqual(slots_by_unit[2]['user_display_name'], "کاربر قرآن")
+        self.assertIsNone(slots_by_unit[3]['user_display_name'])
+
+    def test_profile_name_required_for_create_and_reserve(self):
+        incomplete_user = User.objects.create(phone="09124444444", first_name="   ", last_name="")
+        partial_user = User.objects.create(phone="09125555555", first_name="Reza", last_name="")
+
+        campaign = KhatmCampaign.objects.create(
+            creator=self.user1,
+            title="ختم بررسی نام",
+            unit_type=KhatmCampaign.UnitType.JUZ,
+            target_units=30,
+        )
+        KhatmSlot.objects.create(
+            campaign=campaign,
+            unit_number=1,
+            quantity=1,
+            status=KhatmSlot.Status.AVAILABLE,
+        )
+
+        create_url = reverse('quran-khatm-campaign-list')
+        reserve_url = reverse(
+            'quran-khatm-campaign-reserve',
+            kwargs={'invite_code': campaign.invite_code},
+        )
+
+        for test_user in (incomplete_user, partial_user):
+            self.client.force_authenticate(user=test_user)
+
+            create_res = self.client.post(
+                create_url,
+                {"title": "ختم جدید", "unit_type": "juz", "is_public": True},
+                format='json',
+            )
+            self.assertEqual(create_res.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(create_res.data['code'], 'profile_name_required')
+            self.assertEqual(
+                create_res.data['detail'],
+                'برای شرکت در ختم، لطفاً ابتدا نام و نام خانوادگی خود را تکمیل کنید.',
+            )
+
+            reserve_res = self.client.post(
+                reserve_url,
+                {"unit_number": 1},
+                format='json',
+            )
+            self.assertEqual(reserve_res.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(reserve_res.data['code'], 'profile_name_required')
+            self.assertEqual(
+                reserve_res.data['detail'],
+                'برای شرکت در ختم، لطفاً ابتدا نام و نام خانوادگی خود را تکمیل کنید.',
+            )
+
+    def test_personal_khatm_sync_soft_delete_behavior(self):
+        now = timezone.now()
+        PersonalKhatmPlan.objects.create(
+            user=self.user1,
+            client_id="active-plan-uuid",
+            title="ختم فعال",
+            unit_type="page",
+            range_from=1,
+            range_to=604,
+            planning_mode="bySessionCount",
+            session_count=30,
+            quota_per_session=20,
+            cadence="daily",
+            start_date="2026-03-01",
+            end_date="2026-03-30",
+            sessions_progress=[],
+            completed_sessions=0,
+            client_updated_at=now,
+        )
+        deleted_plan = PersonalKhatmPlan.objects.create(
+            user=self.user1,
+            client_id="deleted-plan-uuid",
+            title="ختم حذف شده",
+            unit_type="juz",
+            range_from=1,
+            range_to=30,
+            planning_mode="bySessionCount",
+            session_count=30,
+            quota_per_session=1,
+            cadence="daily",
+            start_date="2026-03-01",
+            end_date="2026-03-30",
+            sessions_progress=[],
+            completed_sessions=0,
+            client_updated_at=now,
+            deleted_at=now,
+        )
+
+        self.client.force_authenticate(user=self.user1)
+        sync_url = reverse('quran-personal-khatms-sync')
+
+        # Initial sync (last_synced_at=None) -> only active plan returned
+        initial_res = self.client.post(
+            sync_url,
+            {"plans": [], "last_synced_at": None},
+            format='json',
+        )
+        self.assertEqual(initial_res.status_code, status.HTTP_200_OK)
+        initial_ids = [p['client_id'] for p in initial_res.data['plans']]
+        self.assertEqual(initial_ids, ["active-plan-uuid"])
+
+        # Incremental sync (last_synced_at before updated_at) -> includes soft-deleted plan
+        past_sync = (deleted_plan.updated_at - timedelta(minutes=5)).isoformat()
+        inc_res = self.client.post(
+            sync_url,
+            {"plans": [], "last_synced_at": past_sync},
+            format='json',
+        )
+        self.assertEqual(inc_res.status_code, status.HTTP_200_OK)
+        inc_by_id = {p['client_id']: p for p in inc_res.data['plans']}
+        self.assertIn("deleted-plan-uuid", inc_by_id)
+        self.assertIsNotNone(inc_by_id["deleted-plan-uuid"]["deleted_at"])
+
