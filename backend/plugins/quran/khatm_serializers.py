@@ -4,6 +4,7 @@ DRF Serializers for Quran Khatm System (Group Campaigns & Personal Offline-First
 import logging
 from rest_framework import serializers
 from django.db import transaction
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from plugins.quran.models import (
     KhatmCategory,
@@ -231,6 +232,12 @@ class KhatmCampaignCreateSerializer(serializers.ModelSerializer):
         unit_type = attrs.get('unit_type', KhatmCampaign.UnitType.JUZ)
         target_surah = attrs.get('target_surah')
         target_units = attrs.get('target_units')
+
+        deadline = attrs.get('deadline')
+        if deadline and deadline < timezone.now():
+            raise serializers.ValidationError({
+                'deadline': 'مهلت زمانی ختم نمی‌تواند در گذشته باشد.'
+            })
 
         if unit_type == KhatmCampaign.UnitType.JUZ:
             attrs['target_units'] = 30

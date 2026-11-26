@@ -174,3 +174,80 @@ class RegisterPhoneChatTestCase(TestCase):
 
         user = User.objects.get(phone="09123456789")
         self.assertEqual(user.telegram_chat_id, "112233")
+
+
+class UserAdminAndResendOtpTestCase(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.url_request_otp = reverse("auth-request-otp")
+        self.url_verify_otp = reverse("auth-verify-otp")
+
+    def test_user_admin_allows_editing_and_clearing_first_and_last_name(self):
+        from django.contrib import admin
+        from apps.accounts.admin import CustomUserChangeForm
+        from apps.accounts.models import User
+
+        user_admin = admin.site._registry[User]
+        field_names = [
+            f
+            for _, opts in user_admin.fieldsets
+            for f in opts.get("fields", ())
+        ]
+        self.assertIn("first_name", field_names)
+        self.assertIn("last_name", field_names)
+        self.assertIn("first_name", user_admin.list_display)
+        self.assertIn("last_name", user_admin.list_display)
+
+        user = User.objects.create_user(phone="09120001122")
+        user.first_name = "علی"
+        user.last_name = "رضایی"
+        user.save()
+
+        form = CustomUserChangeForm(
+            data={
+                "phone": "09120001122",
+                "first_name": "",
+                "last_name": "",
+                "is_active": True,
+                "is_staff": False,
+                "is_superuser": False,
+            },
+            instance=user,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        saved = form.save()
+        saved.refresh_from_db()
+        self.assertEqual(saved.first_name, "")
+        self.assertEqual(saved.last_name, "")
+
+    @patch("apps.accounts.views.send_sms_otp", return_value="sms")
+    @override_settings(DEBUG=False)
+    def test_request_otp_cooldown_and_delayed_previous_otp_verification(self, mock_send_sms_otp):
+        res1 = self.client.post(self.url_request_otp, {"phone": "09120009988"})
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        otp1 = cache.get("otp_09120009988")
+        self.assertIsNotNone(otp1)
+        self.assertTrue(otp1.isdigit() and 1000 <= int(otp1) <= 9999)
+
+        # Second request within 60s returns 429 with retry_after
+        res_fast = self.client.post(self.url_request_otp, {"phone": "09120009988"})
+        self.assertEqual(res_fast.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn("retry_after", res_fast.data)
+
+        # Simulate cooldown expiry while otp1 is still active, then request second OTP
+        cache.delete("otp_cooldown_09120009988")
+        res2 = self.client.post(self.url_request_otp, {"phone": "09120009988"})
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        otp2 = cache.get("otp_09120009988")
+        self.assertEqual(cache.get("otp_prev_09120009988"), otp1)
+        self.assertNotEqual(otp2, "")
+
+        # Delayed first OTP still verifies smoothly!
+        res_verify = self.client.post(
+            self.url_verify_otp,
+            {"phone": "09120009988", "otp": otp1},
+        )
+        self.assertEqual(res_verify.status_code, status.HTTP_200_OK)
+        self.assertIn("token", res_verify.data)
+        self.assertIsNone(cache.get("otp_09120009988"))
+        self.assertIsNone(cache.get("otp_prev_09120009988"))

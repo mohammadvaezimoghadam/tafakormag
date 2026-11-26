@@ -1,5 +1,6 @@
 import os
 import sys
+import secrets
 import uuid
 import logging
 import django
@@ -47,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await sync_to_async(User.objects.filter(bale_chat_id=chat_id).first)()
     if user:
         phone = user.phone
-        otp = str(uuid.uuid4().int)[:4]
+        otp = f"{secrets.randbelow(9000) + 1000}"
         cache_key = f"otp_{phone}"
         await sync_to_async(cache.set)(cache_key, otp, timeout=120)
         
@@ -111,7 +112,7 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # تولید کد ورود
-    otp = str(uuid.uuid4().int)[:4]
+    otp = f"{secrets.randbelow(9000) + 1000}"
     cache_key = f"otp_{phone}"
     
     # ذخیره در کش دیتابیس مشترک جنگو به مدت ۱۲۰ ثانیه

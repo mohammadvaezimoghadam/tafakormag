@@ -1,3 +1,5 @@
+import secrets
+import time
 import uuid
 import base64
 
@@ -26,6 +28,14 @@ class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [permissions.AllowAny]
     serializer_class = RequestOTPSerializer
 
+    OTP_TTL_SECONDS = 180
+    OTP_PREV_TTL_SECONDS = 120
+    OTP_COOLDOWN_SECONDS = 60
+
+    @staticmethod
+    def _generate_otp() -> str:
+        return f"{secrets.randbelow(9000) + 1000}"
+
     # ۱ - درخواست کد
     @action(methods=['post'], detail=False, url_path='request-otp')
     def request_otp(self, request):
@@ -35,29 +45,42 @@ class AuthViewSet(viewsets.GenericViewSet):
         force_sms = serializer.validated_data.get('force_sms', False)
 
         cache_key = f"otp_{phone}"
-        existing_otp = cache.get(cache_key)
+        prev_cache_key = f"otp_prev_{phone}"
+        cooldown_key = f"otp_cooldown_{phone}"
 
-        # در صورتی که درخواست پیامک اجباری باشد (bypass limit)، برای راحتی کاربر زمان‌بندی کش مجدد را نادیده می‌گیریم یا تایید می‌کنیم
-        if existing_otp and not force_sms:
+        existing_otp = cache.get(cache_key)
+        cooldown_until = cache.get(cooldown_key)
+        now_ts = int(time.time())
+
+        if existing_otp and cooldown_until and not force_sms:
+            remaining = max(1, int(cooldown_until) - now_ts)
             if settings.DEBUG:
-                print(f"\n📱 OTP قبلاً برای {phone} ارسال شده است: {existing_otp}\n")
+                print(f"\n📱 OTP قبلاً برای {phone} ارسال شده است: {existing_otp} (باقیمانده: {remaining}s)\n")
             return Response(
-                {"error": "کد تأیید قبلاً ارسال شده است. لطفاً ۲ دقیقه صبر کنید."},
-                status=status.HTTP_429_TOO_MANY_REQUESTS
+                {
+                    "error": f"کد تأیید به‌تازگی ارسال شده است. لطفاً {remaining} ثانیه دیگر تلاش کنید.",
+                    "retry_after": remaining,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        otp = str(uuid.uuid4().int)[:4]
+        otp = self._generate_otp()
+
+        # اگر کد قبلی هنوز منقضی نشده، به‌عنوان کد قبلی نگه می‌داریم تا در صورت تأخیر پیامک اول هر دو معتبر باشند
+        if existing_otp:
+            cache.set(prev_cache_key, existing_otp, timeout=self.OTP_PREV_TTL_SECONDS)
 
         try:
             # منحصراً تلاش برای ارسال پیامک
             channel = send_sms_otp(phone, otp)
-            cache.set(cache_key, otp, timeout=120)
             sent_via_kavenegar = (channel == "sms")
-        except OTPDeliveryError as e:
+        except OTPDeliveryError:
             # اگر ارسال پیامک با خطا مواجه شد، باز هم کد را در کش ذخیره کرده و به کانال بله سوئیچ می‌کنیم
-            cache.set(cache_key, otp, timeout=120)
             channel = "bale"
             sent_via_kavenegar = False
+
+        cache.set(cache_key, otp, timeout=self.OTP_TTL_SECONDS)
+        cache.set(cooldown_key, now_ts + self.OTP_COOLDOWN_SECONDS, timeout=self.OTP_COOLDOWN_SECONDS)
 
         print(f"\n======================================================\n[TAFAKOR OTP CODE]\nPhone: {phone}\nCODE:  {otp}\nChannel: {channel}\n======================================================\n", flush=True)
 
@@ -76,20 +99,23 @@ class AuthViewSet(viewsets.GenericViewSet):
         otp = serializer.validated_data['otp']
 
         cache_key = f"otp_{phone}"
+        prev_cache_key = f"otp_prev_{phone}"
+        cooldown_key = f"otp_cooldown_{phone}"
         stored_otp = cache.get(cache_key)
+        prev_otp = cache.get(prev_cache_key)
 
-        if stored_otp is None:
+        if stored_otp is None and prev_otp is None:
             return Response(
                 {"error": "کد تأیید منقضی شده است. لطفاً دوباره درخواست کنید."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        if stored_otp != otp:
+        if otp != stored_otp and (prev_otp is None or otp != prev_otp):
             return Response(
                 {"error": "کد تأیید نادرست است."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        cache.delete(cache_key)
+        cache.delete_many([cache_key, prev_cache_key, cooldown_key])
 
         user, created = User.objects.get_or_create(phone=phone)
         token, _ = Token.objects.get_or_create(user=user)

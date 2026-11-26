@@ -9,6 +9,9 @@ class CustomUserCreationForm(UserCreationForm):
         fields = ('phone',)
 
 class CustomUserChangeForm(UserChangeForm):
+    first_name = forms.CharField(max_length=150, required=False, label='نام')
+    last_name = forms.CharField(max_length=150, required=False, label='نام خانوادگی')
+
     class Meta:
         model = User
         fields = '__all__'
@@ -18,12 +21,13 @@ class UserAdmin(admin.ModelAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
-    list_display = ('phone', 'is_active', 'is_staff', 'is_superuser', 'telegram_chat_id', 'bale_chat_id')
+    list_display = ('phone', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'telegram_chat_id', 'bale_chat_id')
     list_filter = ('is_active', 'is_staff', 'is_superuser')
-    search_fields = ('phone',)
+    search_fields = ('phone', 'first_name', 'last_name')
     ordering = ('phone',)
     fieldsets = (
         (None, {'fields': ('phone', 'password')}),
+        ('اطلاعات شخصی', {'fields': ('first_name', 'last_name', 'profile_image')}),
         ('اطلاعات پیام‌رسان‌ها', {'fields': ('telegram_chat_id', 'bale_chat_id')}),
         ('دسترسی‌ها', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('تاریخ‌های مهم', {'fields': ('last_login',)}),

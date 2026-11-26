@@ -5,7 +5,7 @@ import logging
 from datetime import timedelta
 from django.shortcuts import get_object_or_404, render
 from django.db import transaction, IntegrityError
-from django.db.models import Q, F
+from django.db.models import Q, F, Exists, OuterRef
 from django.db.models.functions import Greatest
 from django.utils import timezone
 from django.views import View
@@ -155,12 +155,15 @@ class KhatmCampaignViewSet(viewsets.ModelViewSet):
             deleted_at__isnull=True
         ).select_related('category', 'creator', 'target_surah')
 
+        has_user_slot = Exists(
+            KhatmSlot.objects.filter(campaign=OuterRef('pk'), user=user)
+        )
         if tab == 'created':
-            qs = qs.filter(creator=user).distinct()
+            qs = qs.filter(creator=user)
         elif tab == 'participated':
-            qs = qs.filter(slots__user=user).exclude(creator=user).distinct()
+            qs = qs.filter(has_user_slot).exclude(creator=user)
         else:
-            qs = qs.filter(Q(creator=user) | Q(slots__user=user)).distinct()
+            qs = qs.filter(Q(creator=user) | has_user_slot)
 
         page = self.paginate_queryset(qs.order_by('-created_at'))
         if page is not None:
